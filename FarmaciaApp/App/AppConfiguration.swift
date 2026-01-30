@@ -22,10 +22,15 @@ enum AppConfiguration {
     
     // MARK: - API Configuration
     
+    // For physical device testing, replace with your Mac's local IP
+    // Find it with: ifconfig | grep "inet " | grep -v 127.0.0.1
+    // Example: "http://192.168.1.100:3000"
+    private static let localServerIP = "localhost" // Change to your Mac's IP for physical device
+    
     static var apiBaseURL: String {
         switch current {
         case .development:
-            return "http://localhost:3000"
+            return "http://\(localServerIP):3000"
         case .staging:
             return "https://farmacia-api-staging.railway.app"
         case .production:
