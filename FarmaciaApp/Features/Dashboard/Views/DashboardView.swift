@@ -120,7 +120,7 @@ struct DashboardView: View {
                 title: "Net Profit",
                 value: report.netProfit.amount,
                 icon: "banknote.fill",
-                color: report.netProfit.marginPercent >= 0 ? .green : .red
+                color: (Double(report.netProfit.marginPercent) ?? 0) >= 0 ? .green : .red
             )
         }
     }
@@ -135,7 +135,7 @@ struct DashboardView: View {
                 summaryRow(label: "Total Revenue", value: report.sales.totalRevenue)
                 summaryRow(label: "Cost of Goods Sold", value: report.sales.totalCOGS)
                 summaryRow(label: "Gross Profit", value: report.sales.grossProfit)
-                summaryRow(label: "Gross Margin", value: "\(String(format: "%.1f", report.sales.grossMarginPercent))%")
+                summaryRow(label: "Gross Margin", value: "\(report.sales.grossMarginPercent)%")
                 
                 Divider()
                 
@@ -175,10 +175,10 @@ struct DashboardView: View {
                         .foregroundColor(.secondary)
                     
                     HStack(spacing: 8) {
-                        agingBadge(label: "Fresh", count: aging.fresh, color: .green)
-                        agingBadge(label: "Normal", count: aging.normal, color: .blue)
-                        agingBadge(label: "Aging", count: aging.aging, color: .orange)
-                        agingBadge(label: "Old", count: aging.old, color: .red)
+                        agingBadge(label: "<30d", count: aging.under30Days.units, color: .green)
+                        agingBadge(label: "30-60d", count: aging.days30to60.units, color: .blue)
+                        agingBadge(label: "60-90d", count: aging.days60to90.units, color: .orange)
+                        agingBadge(label: ">90d", count: aging.over90Days.units, color: .red)
                     }
                 }
             }
@@ -225,7 +225,7 @@ struct DashboardView: View {
                     Spacer()
                     Text(report.netProfit.amount)
                         .fontWeight(.bold)
-                        .foregroundColor(report.netProfit.marginPercent >= 0 ? .green : .red)
+                        .foregroundColor((Double(report.netProfit.marginPercent) ?? 0) >= 0 ? .green : .red)
                 }
                 
                 HStack {
@@ -233,7 +233,7 @@ struct DashboardView: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                     Spacer()
-                    Text("\(String(format: "%.1f", report.netProfit.marginPercent))%")
+                    Text("\(report.netProfit.marginPercent)%")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -306,7 +306,7 @@ struct DashboardView: View {
         Menu {
             Section {
                 Label(authManager.currentEmployee?.name ?? "User", systemImage: "person")
-                Label(authManager.currentEmployee?.role.displayName ?? "", systemImage: "briefcase")
+                Label(authManager.currentEmployee?.role.rawValue ?? "", systemImage: "briefcase")
             }
             
             Divider()
@@ -319,7 +319,7 @@ struct DashboardView: View {
                 Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
             }
         } label: {
-            Text(authManager.currentEmployee?.initials ?? "??")
+            Text(String(authManager.currentEmployee?.name.prefix(2).uppercased() ?? "??"))
                 .font(.caption)
                 .fontWeight(.bold)
                 .frame(width: 32, height: 32)

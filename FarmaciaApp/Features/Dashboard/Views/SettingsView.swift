@@ -13,7 +13,7 @@ struct SettingsView: View {
                 // User Info Section
                 Section {
                     HStack(spacing: 12) {
-                        Text(authManager.currentEmployee?.initials ?? "??")
+                        Text(String(authManager.currentEmployee?.name.prefix(2).uppercased() ?? "??"))
                             .font(.title2)
                             .fontWeight(.bold)
                             .foregroundColor(.white)
@@ -25,7 +25,7 @@ struct SettingsView: View {
                             Text(authManager.currentEmployee?.name ?? "User")
                                 .font(.headline)
                             
-                            Text(authManager.currentEmployee?.role.displayName ?? "")
+                            Text(authManager.currentEmployee?.role.rawValue.capitalized ?? "")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
