@@ -1,5 +1,39 @@
 import SwiftUI
 
+// MARK: - Location Row
+
+struct LocationRow: View {
+    let location: SessionLocation
+    let isCurrent: Bool
+    let isLoading: Bool
+    
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(location.name)
+                    .font(.headline)
+                    .foregroundColor(.primary)
+            }
+            
+            Spacer()
+            
+            if isCurrent {
+                HStack(spacing: 4) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                    Text("Current")
+                        .font(.caption)
+                        .foregroundColor(.green)
+                }
+            } else if isLoading {
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle())
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}
+
 // MARK: - Location Switch View
 
 struct LocationSwitchView: View {
@@ -13,43 +47,22 @@ struct LocationSwitchView: View {
         NavigationStack {
             List {
                 ForEach(authManager.availableLocations) { location in
+                    let isCurrent = authManager.currentLocation?.id == location.id
+                    let disabled = isLoading || isCurrent
+                    
                     Button {
                         Task {
                             await switchToLocation(location)
                         }
                     } label: {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(location.name)
-                                    .font(.headline)
-                                    .foregroundColor(.primary)
-                                
-                                if let address = location.address {
-                                    Text(address)
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                            
-                            Spacer()
-                            
-                            if authManager.currentLocation?.id == location.id {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundColor(.green)
-                                    Text("Current")
-                                        .font(.caption)
-                                        .foregroundColor(.green)
-                                }
-                            } else if isLoading {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle())
-                            }
-                        }
-                        .padding(.vertical, 4)
+                        LocationRow(
+                            location: location,
+                            isCurrent: isCurrent,
+                            isLoading: isLoading
+                        )
                     }
                     .buttonStyle(.plain)
-                    .disabled(isLoading || authManager.currentLocation?.id == location.id)
+                    .disabled(disabled)
                 }
             }
             .navigationTitle("Switch Location")
@@ -69,7 +82,7 @@ struct LocationSwitchView: View {
         }
     }
     
-    private func switchToLocation(_ location: Location) async {
+    private func switchToLocation(_ location: SessionLocation) async {
         isLoading = true
         
         do {
@@ -93,3 +106,4 @@ struct LocationSwitchView: View {
     LocationSwitchView()
         .environmentObject(AuthManager.shared)
 }
+

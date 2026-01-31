@@ -21,6 +21,15 @@ struct SessionEmployee: Equatable {
     let role: EmployeeRole
 }
 
+extension SessionEmployee {
+    var initials: String {
+        let components = name.split(separator: " ", omittingEmptySubsequences: true)
+        let first = components.first?.first.map { String($0).uppercased() } ?? ""
+        let second = components.dropFirst().first?.first.map { String($0).uppercased() } ?? ""
+        return first + second
+    }
+}
+
 struct SessionLocation: Equatable, Identifiable {
     let id: String
     let name: String
@@ -383,3 +392,4 @@ struct CurrentUserResponse: Decodable {
     let availableLocations: [Location]
     let sessionExpiresAt: Date
 }
+

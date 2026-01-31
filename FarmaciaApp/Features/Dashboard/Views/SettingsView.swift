@@ -22,18 +22,12 @@ struct SettingsView: View {
                             .clipShape(Circle())
                         
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(authManager.currentEmployee?.fullName ?? "User")
+                            Text(authManager.currentEmployee?.name ?? "User")
                                 .font(.headline)
                             
                             Text(authManager.currentEmployee?.role.displayName ?? "")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
-                            
-                            if let email = authManager.currentEmployee?.email {
-                                Text(email)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
                         }
                     }
                     .padding(.vertical, 8)
@@ -48,12 +42,6 @@ struct SettingsView: View {
                         VStack(alignment: .leading) {
                             Text(authManager.currentLocation?.name ?? "No Location")
                                 .font(.headline)
-                            
-                            if let address = authManager.currentLocation?.address {
-                                Text(address)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
                         }
                     }
                     

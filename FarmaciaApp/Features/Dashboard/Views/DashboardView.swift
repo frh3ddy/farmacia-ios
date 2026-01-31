@@ -70,7 +70,7 @@ struct DashboardView: View {
                 .font(.subheadline)
                 .foregroundColor(.secondary)
             
-            Text(authManager.currentEmployee?.firstName ?? "User")
+            Text(authManager.currentEmployee?.name ?? "User")
                 .font(.title)
                 .fontWeight(.bold)
             
@@ -305,7 +305,7 @@ struct DashboardView: View {
     private var userButton: some View {
         Menu {
             Section {
-                Label(authManager.currentEmployee?.fullName ?? "User", systemImage: "person")
+                Label(authManager.currentEmployee?.name ?? "User", systemImage: "person")
                 Label(authManager.currentEmployee?.role.displayName ?? "", systemImage: "briefcase")
             }
             
@@ -455,3 +455,4 @@ class DashboardViewModel: ObservableObject {
     DashboardView()
         .environmentObject(AuthManager.shared)
 }
+
