@@ -13,6 +13,32 @@ enum AuthState: Equatable {
     case authenticated
 }
 
+// MARK: - Session Types (lightweight, matches backend responses)
+
+struct SessionEmployee: Equatable {
+    let id: String
+    let name: String
+    let role: EmployeeRole
+}
+
+struct SessionLocation: Equatable, Identifiable {
+    let id: String
+    let name: String
+    let role: EmployeeRole
+    
+    init(id: String, name: String, role: EmployeeRole) {
+        self.id = id
+        self.name = name
+        self.role = role
+    }
+    
+    init(from pinLocation: PINLoginLocation) {
+        self.id = pinLocation.locationId
+        self.name = pinLocation.locationName
+        self.role = EmployeeRole(rawValue: pinLocation.role) ?? .cashier
+    }
+}
+
 // MARK: - Auth Manager
 
 @MainActor
@@ -25,9 +51,9 @@ final class AuthManager: ObservableObject {
     // MARK: - Published Properties
     
     @Published private(set) var authState: AuthState = .loading
-    @Published private(set) var currentEmployee: Employee?
-    @Published private(set) var currentLocation: Location?
-    @Published private(set) var availableLocations: [Location] = []
+    @Published private(set) var currentEmployee: SessionEmployee?
+    @Published private(set) var currentLocation: SessionLocation?
+    @Published private(set) var availableLocations: [SessionLocation] = []
     @Published private(set) var sessionExpiresAt: Date?
     @Published var error: NetworkError?
     @Published var isLoading: Bool = false
@@ -124,10 +150,17 @@ final class AuthManager: ObservableObject {
             apiClient.sessionToken = response.sessionToken
             keychain.lastEmployeeId = response.employee.id
             
+            // Convert response to session types
+            let currentLoc = SessionLocation(from: response.currentLocation)
+            
             // Update state
-            currentEmployee = response.employee
-            currentLocation = response.location
-            availableLocations = response.availableLocations
+            currentEmployee = SessionEmployee(
+                id: response.employee.id,
+                name: response.employee.name,
+                role: currentLoc.role
+            )
+            currentLocation = currentLoc
+            availableLocations = response.accessibleLocations.map { SessionLocation(from: $0) }
             sessionExpiresAt = response.expiresAt
             
             // Start session refresh timer
@@ -159,12 +192,17 @@ final class AuthManager: ObservableObject {
                 body: request
             )
             
-            // Update session token
-            apiClient.sessionToken = response.sessionToken
+            // Update state with new location
+            currentLocation = SessionLocation(from: response.currentLocation)
             
-            // Update state
-            currentLocation = response.location
-            sessionExpiresAt = response.expiresAt
+            // Update employee role if it changed for this location
+            if let employee = currentEmployee {
+                currentEmployee = SessionEmployee(
+                    id: employee.id,
+                    name: employee.name,
+                    role: currentLocation?.role ?? employee.role
+                )
+            }
         } catch let networkError as NetworkError {
             error = networkError
             throw networkError
@@ -314,18 +352,29 @@ struct DeviceActivationResponse: Decodable {
     let activatedBy: ActivatedBy
 }
 
+// Lightweight structs for PIN login response (matches backend exactly)
+struct PINLoginEmployee: Decodable {
+    let id: String
+    let name: String
+}
+
+struct PINLoginLocation: Decodable {
+    let locationId: String
+    let locationName: String
+    let role: String
+}
+
 struct PINLoginResponse: Decodable {
     let sessionToken: String
-    let employee: Employee
-    let location: Location
-    let availableLocations: [Location]
+    let employee: PINLoginEmployee
+    let currentLocation: PINLoginLocation
+    let accessibleLocations: [PINLoginLocation]
     let expiresAt: Date
 }
 
 struct SwitchLocationResponse: Decodable {
-    let sessionToken: String
-    let location: Location
-    let expiresAt: Date
+    let previousLocation: PINLoginLocation?
+    let currentLocation: PINLoginLocation
 }
 
 struct CurrentUserResponse: Decodable {
