@@ -200,8 +200,19 @@ class PINEntryViewModel: ObservableObject {
     private let apiClient = APIClient.shared
     
     func loadLocations() async {
-        // In a real app, fetch locations from API
-        // For now, we'll get them during PIN login
+        do {
+            // Fetch locations from API
+            let response: [Location] = try await apiClient.request(endpoint: .listLocations)
+            locations = response
+            // Auto-select first location if only one
+            if locations.count == 1 {
+                selectedLocation = locations[0]
+            }
+        } catch {
+            print("Failed to load locations: \(error)")
+            errorMessage = "Could not load locations"
+            showError = true
+        }
     }
     
     func appendDigit(_ digit: Int, authManager: AuthManager) {
