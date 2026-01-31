@@ -26,7 +26,7 @@ struct SalesSummary: Decodable {
     let totalRevenue: String
     let totalCOGS: String
     let grossProfit: String
-    let grossMarginPercent: Double
+    let grossMarginPercent: String  // Backend returns as String
     let totalUnitsSold: Int
     let totalSales: Int
 }
@@ -41,11 +41,16 @@ struct InventorySummary: Decodable {
     let aging: AgingSummary?
 }
 
+struct AgingBucket: Decodable {
+    let units: Int
+    let value: String
+}
+
 struct AgingSummary: Decodable {
-    let fresh: Int        // < 30 days
-    let normal: Int       // 30-90 days
-    let aging: Int        // 90-180 days
-    let old: Int          // > 180 days
+    let under30Days: AgingBucket
+    let days30to60: AgingBucket
+    let days60to90: AgingBucket
+    let over90Days: AgingBucket
 }
 
 // MARK: - Adjustments Summary
@@ -76,13 +81,14 @@ struct OperatingExpensesSummary: Decodable {
 struct ExpenseByType: Decodable {
     let type: String
     let amount: String
+    let percentage: String?  // Optional since some contexts may not have it
 }
 
 // MARK: - Net Profit Summary
 
 struct NetProfitSummary: Decodable {
     let amount: String
-    let marginPercent: Double
+    let marginPercent: String  // Backend returns as String
 }
 
 // MARK: - COGS Report
@@ -151,7 +157,7 @@ struct ProfitMarginReport: Decodable {
     let totalRevenue: String
     let totalCOGS: String
     let grossProfit: String
-    let grossMarginPercent: Double
+    let grossMarginPercent: String  // Backend returns as String
     let byProduct: [ProductProfitMargin]?
 }
 
@@ -161,7 +167,7 @@ struct ProductProfitMargin: Decodable {
     let revenue: String
     let cogs: String
     let grossProfit: String
-    let marginPercent: Double
+    let marginPercent: String  // Backend returns as String
     let unitsSold: Int
 }
 
@@ -185,7 +191,7 @@ struct RevenueSummary: Decodable {
 
 struct GrossProfitSummary: Decodable {
     let amount: String
-    let marginPercent: Double
+    let marginPercent: String  // Backend returns as String
 }
 
 struct OperatingExpenses: Decodable {
@@ -196,12 +202,12 @@ struct OperatingExpenses: Decodable {
 struct ExpenseBreakdown: Decodable {
     let type: String
     let amount: String
-    let percentage: Double
+    let percentage: String  // Backend returns as String
 }
 
 struct NetProfit: Decodable {
     let amount: String
-    let marginPercent: Double
+    let marginPercent: String  // Backend returns as String
 }
 
 // MARK: - Adjustment Impact Report
@@ -213,7 +219,7 @@ struct AdjustmentImpactReport: Decodable {
     let totalLoss: String
     let totalGain: String
     let netImpact: String
-    let shrinkageRate: Double
+    let shrinkageRate: String  // Backend returns as String
     let byType: [AdjustmentTypeImpact]
     let byProduct: [ProductAdjustmentImpact]?
 }
@@ -223,7 +229,7 @@ struct AdjustmentTypeImpact: Decodable {
     let count: Int
     let totalQuantity: Int
     let totalCost: String
-    let percentOfTotal: Double
+    let percentOfTotal: String  // Backend returns as String
 }
 
 struct ProductAdjustmentImpact: Decodable {
