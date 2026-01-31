@@ -26,32 +26,11 @@ struct PINEntryView: View {
             .background(Color(.systemBackground))
             .navigationTitle("Employee Login")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Menu {
-                        Button(role: .destructive) {
-                            viewModel.showDeactivateAlert = true
-                        } label: {
-                            Label("Deactivate Device", systemImage: "xmark.shield")
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
-                    }
-                }
-            }
             .sheet(isPresented: $viewModel.showLocationPicker) {
                 LocationPickerView(
                     locations: viewModel.locations,
                     selectedLocation: $viewModel.selectedLocation
                 )
-            }
-            .alert("Deactivate Device", isPresented: $viewModel.showDeactivateAlert) {
-                Button("Cancel", role: .cancel) {}
-                Button("Deactivate", role: .destructive) {
-                    authManager.deactivateDevice()
-                }
-            } message: {
-                Text("This will remove this device from Farmacia. You'll need owner/manager credentials to reactivate.")
             }
             .alert("Login Error", isPresented: $viewModel.showError) {
                 Button("OK", role: .cancel) {
@@ -193,7 +172,6 @@ class PINEntryViewModel: ObservableObject {
     @Published var selectedLocation: Location?
     @Published var isLoading: Bool = false
     @Published var showLocationPicker: Bool = false
-    @Published var showDeactivateAlert: Bool = false
     @Published var showError: Bool = false
     @Published var errorMessage: String = ""
     
