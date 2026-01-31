@@ -29,11 +29,13 @@ final class APIClient {
         
         self.decoder = JSONDecoder()
         self.decoder.dateDecodingStrategy = .iso8601
-        self.decoder.keyDecodingStrategy = .convertFromSnakeCase
+        // Note: Backend returns camelCase keys, not snake_case
+        // self.decoder.keyDecodingStrategy = .convertFromSnakeCase
         
         self.encoder = JSONEncoder()
         self.encoder.dateEncodingStrategy = .iso8601
-        self.encoder.keyEncodingStrategy = .convertToSnakeCase
+        // Note: Backend expects camelCase keys, not snake_case
+        // self.encoder.keyEncodingStrategy = .convertToSnakeCase
     }
     
     // MARK: - Public Methods
