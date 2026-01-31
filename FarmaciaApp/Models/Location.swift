@@ -8,6 +8,7 @@ struct Location: Codable, Identifiable, Equatable, Hashable {
     let name: String
     let address: String?
     let isActive: Bool?  // Optional to handle minimal responses
+    let createdAt: Date?  // Optional for minimal responses
     
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
