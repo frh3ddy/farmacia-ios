@@ -69,7 +69,8 @@ final class AuthManager: ObservableObject {
     func activateDevice(
         email: String,
         password: String,
-        deviceName: String
+        deviceName: String,
+        locationId: String
     ) async throws {
         isLoading = true
         error = nil
@@ -80,9 +81,8 @@ final class AuthManager: ObservableObject {
             email: email,
             password: password,
             deviceName: deviceName,
-            deviceType: "MOBILE", // iPad/iPhone
-            osVersion: getOSVersion(),
-            appVersion: AppConfiguration.appVersion
+            locationId: locationId,
+            deviceType: "MOBILE" // iPad/iPhone
         )
         
         do {
@@ -291,10 +291,29 @@ final class AuthManager: ObservableObject {
 
 // MARK: - Response Types
 
+// Lightweight structs for device activation response (matches backend exactly)
+struct ActivatedDevice: Decodable {
+    let id: String
+    let name: String
+    let type: String
+    let activatedAt: Date
+}
+
+struct ActivatedBy: Decodable {
+    let id: String
+    let name: String
+}
+
+struct ActivationLocation: Decodable {
+    let id: String
+    let name: String
+}
+
 struct DeviceActivationResponse: Decodable {
     let deviceToken: String
-    let device: Device
-    let message: String
+    let device: ActivatedDevice
+    let location: ActivationLocation
+    let activatedBy: ActivatedBy
 }
 
 struct PINLoginResponse: Decodable {

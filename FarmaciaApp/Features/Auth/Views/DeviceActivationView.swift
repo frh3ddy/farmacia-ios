@@ -26,6 +26,9 @@ struct DeviceActivationView: View {
             }
             .navigationTitle("Setup Device")
             .navigationBarTitleDisplayMode(.inline)
+            .task {
+                await viewModel.loadLocations()
+            }
             .alert("Activation Error", isPresented: $viewModel.showError) {
                 Button("OK", role: .cancel) {}
             } message: {
@@ -66,6 +69,43 @@ struct DeviceActivationView: View {
                 TextField("e.g., Main Counter iPad", text: $viewModel.deviceName)
                     .textFieldStyle(.roundedBorder)
                     .autocorrectionDisabled()
+            }
+            
+            // Location Selection
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Location")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                
+                if viewModel.isLoadingLocations {
+                    HStack {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle())
+                        Text("Loading locations...")
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.vertical, 8)
+                } else if viewModel.locations.isEmpty {
+                    Text("No locations available")
+                        .foregroundColor(.red)
+                        .font(.caption)
+                } else {
+                    Picker("Select Location", selection: $viewModel.selectedLocationId) {
+                        Text("Select a location").tag("")
+                        ForEach(viewModel.locations, id: \.id) { location in
+                            Text(location.name).tag(location.id)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color(.systemBackground))
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color(.systemGray4), lineWidth: 1)
+                    )
+                }
             }
             
             Divider()
@@ -156,25 +196,59 @@ class DeviceActivationViewModel: ObservableObject {
     @Published var deviceName: String = ""
     @Published var email: String = ""
     @Published var password: String = ""
+    @Published var selectedLocationId: String = ""
+    @Published var locations: [Location] = []
     @Published var isLoading: Bool = false
+    @Published var isLoadingLocations: Bool = false
     @Published var showError: Bool = false
     @Published var errorMessage: String = ""
+    
+    private let apiClient = APIClient.shared
     
     var isFormValid: Bool {
         !deviceName.isEmpty &&
         !email.isEmpty &&
         email.contains("@") &&
-        password.count >= 6
+        password.count >= 6 &&
+        !selectedLocationId.isEmpty
+    }
+    
+    func loadLocations() async {
+        isLoadingLocations = true
+        
+        do {
+            // Backend returns locations as array in 'data' field
+            let response: [Location] = try await apiClient.request(endpoint: .listLocations)
+            locations = response
+            // Auto-select first location if only one
+            if locations.count == 1 {
+                selectedLocationId = locations[0].id
+            }
+        } catch {
+            print("Failed to load locations: \(error)")
+            // For development, allow manual entry or use default
+            errorMessage = "Could not load locations. Check backend connection."
+            showError = true
+        }
+        
+        isLoadingLocations = false
     }
     
     func activateDevice(authManager: AuthManager) async {
+        guard !selectedLocationId.isEmpty else {
+            errorMessage = "Please select a location"
+            showError = true
+            return
+        }
+        
         isLoading = true
         
         do {
             try await authManager.activateDevice(
                 email: email,
                 password: password,
-                deviceName: deviceName
+                deviceName: deviceName,
+                locationId: selectedLocationId
             )
         } catch let error as NetworkError {
             errorMessage = error.errorDescription ?? "Activation failed"

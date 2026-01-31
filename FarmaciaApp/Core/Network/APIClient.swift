@@ -221,9 +221,8 @@ struct DeviceActivationRequest: Encodable {
     let email: String
     let password: String
     let deviceName: String
+    let locationId: String
     let deviceType: String
-    let osVersion: String
-    let appVersion: String
 }
 
 struct PINLoginRequest: Encodable {

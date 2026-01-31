@@ -7,7 +7,7 @@ struct Location: Codable, Identifiable, Equatable, Hashable {
     let squareId: String?
     let name: String
     let address: String?
-    let isActive: Bool
+    let isActive: Bool?  // Optional to handle minimal responses
     
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
@@ -19,8 +19,6 @@ struct Location: Codable, Identifiable, Equatable, Hashable {
 }
 
 // MARK: - Location List Response
-
-struct LocationListResponse: Decodable {
-    let locations: [Location]
-    let count: Int
-}
+// Note: The backend returns locations directly as an array in the 'data' field
+// The APIClient wrapper extracts 'data', so we just decode the array
+typealias LocationListResponse = [Location]
