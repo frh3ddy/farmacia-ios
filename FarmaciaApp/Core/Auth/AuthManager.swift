@@ -69,8 +69,7 @@ final class AuthManager: ObservableObject {
     func activateDevice(
         email: String,
         password: String,
-        deviceName: String,
-        locationId: String
+        deviceName: String
     ) async throws {
         isLoading = true
         error = nil
@@ -81,7 +80,6 @@ final class AuthManager: ObservableObject {
             email: email,
             password: password,
             deviceName: deviceName,
-            locationId: locationId,
             deviceType: "MOBILE" // iPad/iPhone
         )
         

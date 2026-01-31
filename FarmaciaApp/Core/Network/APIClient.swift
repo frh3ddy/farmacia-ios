@@ -223,7 +223,6 @@ struct DeviceActivationRequest: Encodable {
     let email: String
     let password: String
     let deviceName: String
-    let locationId: String
     let deviceType: String
 }
 
