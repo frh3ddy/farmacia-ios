@@ -214,7 +214,7 @@ struct EmployeeDetailResponse: Decodable {
 
 // MARK: - Create Employee Response
 
-struct CreateEmployeeAtLocationResponse: Decodable {
+struct CreateEmployeeResponse: Decodable {
     let success: Bool
     let message: String
     let data: EmployeeDetail

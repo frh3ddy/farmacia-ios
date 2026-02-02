@@ -660,7 +660,7 @@ class EmployeesViewModel: ObservableObject {
             await loadEmployees()
             return true
         } catch let error as NetworkError {
-            errorMessage = error.userMessage
+            errorMessage = error.errorDescription
             showError = true
             return false
         } catch {
