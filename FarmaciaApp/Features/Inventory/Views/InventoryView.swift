@@ -220,21 +220,39 @@ class InventoryViewModel: ObservableObject {
         isSubmitting = true
         defer { isSubmitting = false }
         
-        // Determine endpoint based on type
+        // Check if this type has a quick endpoint
+        let useQuickEndpoint: Bool
         let endpoint: APIEndpoint
+        
         switch type {
-        case .damage: endpoint = .adjustmentDamage
-        case .theft: endpoint = .adjustmentTheft
-        case .expired: endpoint = .adjustmentExpired
-        case .found: endpoint = .adjustmentFound
-        case .returnType: endpoint = .adjustmentReturn
-        case .countCorrection: endpoint = .adjustmentCountCorrection
-        case .writeOff: endpoint = .adjustmentWriteOff
-        default: endpoint = .createAdjustment
+        case .damage:
+            endpoint = .adjustmentDamage
+            useQuickEndpoint = true
+        case .theft:
+            endpoint = .adjustmentTheft
+            useQuickEndpoint = true
+        case .expired:
+            endpoint = .adjustmentExpired
+            useQuickEndpoint = true
+        case .found:
+            endpoint = .adjustmentFound
+            useQuickEndpoint = true
+        case .returnType:
+            endpoint = .adjustmentReturn
+            useQuickEndpoint = true
+        case .countCorrection:
+            endpoint = .adjustmentCountCorrection
+            useQuickEndpoint = true
+        case .writeOff:
+            endpoint = .adjustmentWriteOff
+            useQuickEndpoint = true
+        default:
+            endpoint = .createAdjustment
+            useQuickEndpoint = false
         }
         
         // Use quick adjustment for specific types, full adjustment for generic
-        if endpoint == .createAdjustment {
+        if !useQuickEndpoint {
             let request = CreateAdjustmentRequest(
                 locationId: locationId,
                 productId: productId,
