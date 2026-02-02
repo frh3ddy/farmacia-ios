@@ -194,25 +194,26 @@ final class APIClient {
         
         // Decode response
         do {
-            // Try to decode wrapped response first
-            let wrappedResponse = try decoder.decode(APIResponse<T>.self, from: data)
-            if wrappedResponse.success, let responseData = wrappedResponse.data {
-                return responseData
-            } else if let error = wrappedResponse.error ?? wrappedResponse.message {
-                throw NetworkError.serverError(message: error)
+            // First, try direct decoding (for responses like {success, message} without data wrapper)
+            return try decoder.decode(T.self, from: data)
+        } catch {
+            // If direct decode fails, try wrapped response format {success, data: T}
+            do {
+                let wrappedResponse = try decoder.decode(APIResponse<T>.self, from: data)
+                if wrappedResponse.success, let responseData = wrappedResponse.data {
+                    return responseData
+                } else if !wrappedResponse.success, let error = wrappedResponse.error ?? wrappedResponse.message {
+                    // Only throw error if success is false
+                    throw NetworkError.serverError(message: error)
+                }
+                // If success is true but no data, fall through to error
+            } catch let networkError as NetworkError {
+                throw networkError
+            } catch {
+                // Both decoding attempts failed
             }
             
-            // Try direct decoding
-            return try decoder.decode(T.self, from: data)
-        } catch let error as NetworkError {
-            throw error
-        } catch {
-            // Last attempt: direct decode
-            do {
-                return try decoder.decode(T.self, from: data)
-            } catch {
-                throw NetworkError.decodingError(error)
-            }
+            throw NetworkError.decodingError(error)
         }
     }
 }
