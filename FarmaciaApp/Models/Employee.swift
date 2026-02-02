@@ -212,12 +212,32 @@ struct EmployeeDetailResponse: Decodable {
     let data: EmployeeDetail
 }
 
+// MARK: - Created Employee (response from POST /employees)
+
+struct CreatedEmployee: Decodable {
+    let id: String
+    let name: String
+    let email: String?
+    let isActive: Bool
+    let hasPIN: Bool
+    let hasPassword: Bool?
+    let createdAt: Date
+    let assignments: [CreatedEmployeeAssignment]
+}
+
+struct CreatedEmployeeAssignment: Decodable {
+    let locationId: String
+    let locationName: String
+    let role: EmployeeRole
+    let isActive: Bool
+}
+
 // MARK: - Create Employee Response
 
 struct CreateEmployeeResponse: Decodable {
     let success: Bool
     let message: String
-    let data: EmployeeDetail
+    let data: CreatedEmployee
 }
 
 // MARK: - Simple Success Response
