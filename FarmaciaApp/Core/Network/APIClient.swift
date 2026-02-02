@@ -235,22 +235,7 @@ struct SwitchLocationRequest: Encodable {
     let locationId: String
 }
 
-struct CreateEmployeeRequest: Encodable {
-    let firstName: String
-    let lastName: String
-    let email: String?
-    let phone: String?
-    let role: String
-    let locationIds: [String]
-}
-
-struct ResetPINRequest: Encodable {
-    let newPin: String
-}
-
-struct AssignLocationsRequest: Encodable {
-    let locationIds: [String]
-}
+// Employee request types are defined in Employee.swift
 
 struct ReceiveInventoryRequest: Encodable {
     let locationId: String
