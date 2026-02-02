@@ -2,24 +2,36 @@ import Foundation
 
 // MARK: - Product
 
-struct Product: Codable, Identifiable, Equatable {
+struct Product: Codable, Identifiable, Equatable, Hashable {
     let id: String
     let name: String
     let sku: String?
-    let barcode: String?
     let categoryId: String?
-    let isActive: Bool
-    let squareProductId: String?
-    let squareVariationId: String?
     let squareProductName: String?
     let squareDescription: String?
     let squareImageUrl: String?
     let squareVariationName: String?
     let squareDataSyncedAt: Date?
     let category: Category?
+    let supplierCount: Int?
+    let createdAt: Date?
     
     var displayName: String {
-        squareProductName ?? name
+        // Use Square product name, then variation name, then fallback to name
+        let cleanSquareName = squareProductName?.trimmingCharacters(in: .whitespaces)
+        let cleanVarName = squareVariationName?.trimmingCharacters(in: .whitespaces)
+        
+        if let sqName = cleanSquareName, !sqName.isEmpty, 
+           !sqName.lowercased().contains("sin variaci"),
+           !sqName.lowercased().contains("no variation") {
+            return sqName
+        }
+        if let varName = cleanVarName, !varName.isEmpty,
+           !varName.lowercased().contains("sin variaci"),
+           !varName.lowercased().contains("no variation") {
+            return varName
+        }
+        return name
     }
     
     var displayDescription: String? {
@@ -28,6 +40,10 @@ struct Product: Codable, Identifiable, Equatable {
     
     static func == (lhs: Product, rhs: Product) -> Bool {
         lhs.id == rhs.id
+    }
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
     }
 }
 
@@ -45,23 +61,35 @@ struct Category: Codable, Identifiable, Equatable {
 
 // MARK: - Supplier
 
-struct Supplier: Codable, Identifiable, Equatable {
+struct Supplier: Codable, Identifiable, Equatable, Hashable {
     let id: String
     let name: String
-    let contactName: String?
-    let email: String?
-    let phone: String?
-    let address: String?
-    let isActive: Bool
+    let normalizedName: String?
+    let initials: [String]?
+    let contactInfo: String?
+    let isActive: Bool?
+    let createdAt: Date?
+    let updatedAt: Date?
     
     static func == (lhs: Supplier, rhs: Supplier) -> Bool {
         lhs.id == rhs.id
+    }
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
     }
 }
 
 // MARK: - Product List Response
 
 struct ProductListResponse: Decodable {
-    let products: [Product]
+    let data: [Product]
+    let count: Int
+}
+
+// MARK: - Supplier List Response
+
+struct SupplierListResponse: Decodable {
+    let data: [Supplier]
     let count: Int
 }

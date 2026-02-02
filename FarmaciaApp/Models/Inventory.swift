@@ -1,16 +1,17 @@
 import Foundation
 
 // MARK: - Inventory Batch
+// Note: Some fields are optional to handle minimal responses in receiving endpoints
 
 struct InventoryBatch: Codable, Identifiable {
     let id: String
-    let locationId: String
-    let productId: String
+    let locationId: String?      // Optional for minimal responses
+    let productId: String?       // Optional for minimal responses
     let quantity: Int
-    let unitCost: String // Decimal as string
+    let unitCost: String         // Decimal as string
     let receivedAt: Date
-    let source: InventorySource
-    let costSource: CostSource
+    let source: InventorySource? // Optional for minimal responses
+    let costSource: CostSource?  // Optional for minimal responses
     let migrationId: String?
     let product: Product?
     let location: Location?
@@ -109,7 +110,7 @@ struct InventoryReceiving: Codable, Identifiable {
 }
 
 // MARK: - Receiving Create Response
-// Backend returns different structure for create vs get
+// Backend returns simplified structure for create (different from get)
 
 struct ReceivingCreateResponse: Decodable {
     let success: Bool
@@ -118,8 +119,27 @@ struct ReceivingCreateResponse: Decodable {
 }
 
 struct ReceivingCreateData: Decodable {
-    let receiving: InventoryReceiving
+    let receiving: CreatedReceiving
+    let inventoryBatch: CreatedBatch
     let squareSync: SquareSyncResult?
+    let inventoryTotal: Int
+}
+
+struct CreatedReceiving: Decodable {
+    let id: String
+    let quantity: Int
+    let unitCost: String
+    let totalCost: String
+    let invoiceNumber: String?
+    let batchNumber: String?
+    let receivedAt: Date
+}
+
+struct CreatedBatch: Decodable {
+    let id: String
+    let quantity: Int
+    let unitCost: String
+    let receivedAt: Date
 }
 
 // MARK: - Receiving Get Response
