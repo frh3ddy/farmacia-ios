@@ -642,22 +642,16 @@ class EmployeesViewModel: ObservableObject {
     // MARK: - Create Employee
     
     func createEmployee(name: String, email: String?, pin: String?, locationId: String, role: EmployeeRole) async -> Bool {
-        let nameParts = name.split(separator: " ")
-        let firstName = String(nameParts.first ?? "")
-        let lastName = nameParts.dropFirst().joined(separator: " ")
-        
-        let request = CreateEmployeeRequest(
-            firstName: firstName,
-            lastName: lastName,
-            email: email,
-            phone: nil,
-            pin: pin,
-            locations: [locationId],
-            role: role.rawValue
-        )
-        
         do {
-            let _: EmptyResponse = try await apiClient.request(
+            let request = CreateEmployeeRequest(
+                name: name,
+                email: email,
+                pin: pin,
+                locationId: locationId,
+                role: role
+            )
+            
+            let _: CreateEmployeeResponse = try await apiClient.request(
                 endpoint: .createEmployee,
                 body: request
             )
@@ -666,7 +660,7 @@ class EmployeesViewModel: ObservableObject {
             await loadEmployees()
             return true
         } catch let error as NetworkError {
-            errorMessage = error.localizedDescription
+            errorMessage = error.userMessage
             showError = true
             return false
         } catch {
