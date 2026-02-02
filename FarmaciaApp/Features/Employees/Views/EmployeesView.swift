@@ -22,7 +22,7 @@ struct EmployeesView: View {
             .navigationTitle("Employees")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    if authManager.currentLocation?.role == "OWNER" {
+                    if authManager.currentLocation?.role == .owner {
                         Button {
                             viewModel.showAddEmployee = true
                         } label: {
@@ -106,7 +106,7 @@ struct EmployeesView: View {
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
             
-            if authManager.currentLocation?.role == "OWNER" {
+            if authManager.currentLocation?.role == .owner {
                 Button {
                     viewModel.showAddEmployee = true
                 } label: {
@@ -339,27 +339,21 @@ struct AddEmployeeView: View {
     }
     
     private func createEmployee() async {
-        guard let locationId = authManager.currentLocation?.locationId else {
+        guard let locationId = authManager.currentLocation?.id else {
             viewModel.errorMessage = "No location selected"
             viewModel.showError = true
             return
         }
-        
         isSubmitting = true
-        
         let success = await viewModel.createEmployee(
-            name: name.trimmingCharacters(in: .whitespaces),
-            email: email.isEmpty ? nil : email.trimmingCharacters(in: .whitespaces),
-            pin: showPINField && isValidPIN ? pin : nil,
+            name: name,
+            email: email.isEmpty ? nil : email,
+            pin: showPINField ? (pin.isEmpty ? nil : pin) : nil,
             locationId: locationId,
             role: selectedRole
         )
-        
         isSubmitting = false
-        
-        if success {
-            dismiss()
-        }
+        if success { dismiss() }
     }
 }
 
@@ -380,7 +374,7 @@ struct EmployeeDetailView: View {
     @State private var isLoadingDetail = false
     
     private var isOwner: Bool {
-        authManager.currentLocation?.role == "OWNER"
+        authManager.currentLocation?.role == .owner
     }
     
     var body: some View {
@@ -614,7 +608,7 @@ class EmployeesViewModel: ObservableObject {
             let response: EmployeeListResponse = try await apiClient.request(endpoint: .listEmployees)
             employees = response.data
         } catch let error as NetworkError {
-            errorMessage = error.userMessage
+            errorMessage = error.localizedDescription
             if employees.isEmpty {
                 // Only show error alert if we have no data
             } else {
@@ -648,16 +642,22 @@ class EmployeesViewModel: ObservableObject {
     // MARK: - Create Employee
     
     func createEmployee(name: String, email: String?, pin: String?, locationId: String, role: EmployeeRole) async -> Bool {
+        let nameParts = name.split(separator: " ")
+        let firstName = String(nameParts.first ?? "")
+        let lastName = nameParts.dropFirst().joined(separator: " ")
+        
+        let request = CreateEmployeeRequest(
+            firstName: firstName,
+            lastName: lastName,
+            email: email,
+            phone: nil,
+            pin: pin,
+            locations: [locationId],
+            role: role.rawValue
+        )
+        
         do {
-            let request = CreateEmployeeRequest(
-                name: name,
-                email: email,
-                pin: pin,
-                locationId: locationId,
-                role: role
-            )
-            
-            let _: CreateEmployeeResponse = try await apiClient.request(
+            let _: EmptyResponse = try await apiClient.request(
                 endpoint: .createEmployee,
                 body: request
             )
@@ -666,7 +666,7 @@ class EmployeesViewModel: ObservableObject {
             await loadEmployees()
             return true
         } catch let error as NetworkError {
-            errorMessage = error.userMessage
+            errorMessage = error.localizedDescription
             showError = true
             return false
         } catch {
@@ -687,7 +687,7 @@ class EmployeesViewModel: ObservableObject {
             )
             return true
         } catch let error as NetworkError {
-            errorMessage = error.userMessage
+            errorMessage = error.localizedDescription
             showError = true
             return false
         } catch {
@@ -706,7 +706,7 @@ class EmployeesViewModel: ObservableObject {
             )
             return true
         } catch let error as NetworkError {
-            errorMessage = error.userMessage
+            errorMessage = error.localizedDescription
             showError = true
             return false
         } catch {
@@ -725,7 +725,7 @@ class EmployeesViewModel: ObservableObject {
             )
             return true
         } catch let error as NetworkError {
-            errorMessage = error.userMessage
+            errorMessage = error.localizedDescription
             showError = true
             return false
         } catch {
@@ -742,3 +742,4 @@ class EmployeesViewModel: ObservableObject {
     EmployeesView()
         .environmentObject(AuthManager.shared)
 }
+

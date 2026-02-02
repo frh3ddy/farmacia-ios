@@ -179,7 +179,7 @@ struct LocationAssignment: Codable, Identifiable, Equatable {
 
 // MARK: - API Request/Response Types
 
-struct CreateEmployeeRequest: Encodable {
+struct CreateEmployeeAtLocationRequest: Encodable {
     let name: String
     let email: String?
     let pin: String?
@@ -214,7 +214,7 @@ struct EmployeeDetailResponse: Decodable {
 
 // MARK: - Create Employee Response
 
-struct CreateEmployeeResponse: Decodable {
+struct CreateEmployeeAtLocationResponse: Decodable {
     let success: Bool
     let message: String
     let data: EmployeeDetail
@@ -226,3 +226,4 @@ struct EmployeeActionResponse: Decodable {
     let success: Bool
     let message: String
 }
+
