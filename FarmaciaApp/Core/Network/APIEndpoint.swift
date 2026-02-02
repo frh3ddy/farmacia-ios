@@ -84,6 +84,12 @@ enum APIEndpoint {
     case listLocations
     case getLocation(id: String)
     
+    // MARK: - Product Endpoints
+    case listProducts
+    
+    // MARK: - Supplier Endpoints
+    case listSuppliers
+    
     // MARK: - Properties
     
     var path: String {
@@ -151,6 +157,12 @@ enum APIEndpoint {
         // Locations
         case .listLocations: return "/locations"
         case .getLocation(let id): return "/locations/\(id)"
+            
+        // Products
+        case .listProducts: return "/api/products"
+            
+        // Suppliers
+        case .listSuppliers: return "/admin/inventory/cutover/suppliers"
         }
     }
     
@@ -208,6 +220,14 @@ enum APIEndpoint {
             
         // Locations
         case .listLocations, .getLocation:
+            return .get
+            
+        // Products
+        case .listProducts:
+            return .get
+            
+        // Suppliers
+        case .listSuppliers:
             return .get
         }
     }

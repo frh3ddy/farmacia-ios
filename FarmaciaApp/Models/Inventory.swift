@@ -89,23 +89,59 @@ struct InventoryReceiving: Codable, Identifiable {
     var totalCostDouble: Double {
         Double(totalCost) ?? 0
     }
+    
+    var formattedDate: String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: receivedAt)
+    }
+    
+    var formattedUnitCost: String {
+        let cost = unitCostDouble
+        return String(format: "$%.2f", cost)
+    }
+    
+    var formattedTotalCost: String {
+        let cost = totalCostDouble
+        return String(format: "$%.2f", cost)
+    }
 }
 
-// MARK: - Receiving Response
+// MARK: - Receiving Create Response
+// Backend returns different structure for create vs get
 
-struct ReceivingResponse: Decodable {
-    let receiving: InventoryReceiving
+struct ReceivingCreateResponse: Decodable {
+    let success: Bool
     let message: String
+    let data: ReceivingCreateData
+}
+
+struct ReceivingCreateData: Decodable {
+    let receiving: InventoryReceiving
     let squareSync: SquareSyncResult?
 }
 
-struct ReceivingListResponse: Decodable {
-    let receivings: [InventoryReceiving]
-    let count: Int
+// MARK: - Receiving Get Response
+
+struct ReceivingGetResponse: Decodable {
+    let success: Bool
+    let data: InventoryReceiving
 }
 
+// MARK: - Receiving List Response
+
+struct ReceivingListResponse: Decodable {
+    let success: Bool
+    let count: Int
+    let data: [InventoryReceiving]
+}
+
+// MARK: - Receiving Summary Response
+
 struct ReceivingSummaryResponse: Decodable {
-    let summary: ReceivingSummary
+    let success: Bool
+    let data: ReceivingSummary
 }
 
 struct ReceivingSummary: Decodable {
@@ -114,6 +150,11 @@ struct ReceivingSummary: Decodable {
     let totalCost: String
     let bySupplier: [SupplierSummary]?
     let byProduct: [ProductSummary]?
+    
+    var formattedTotalCost: String {
+        let cost = Double(totalCost) ?? 0
+        return String(format: "$%.2f", cost)
+    }
 }
 
 struct SupplierSummary: Decodable {
@@ -135,7 +176,48 @@ struct ProductSummary: Decodable {
 // MARK: - Square Sync Result
 
 struct SquareSyncResult: Decodable {
-    let success: Bool
+    let synced: Bool?  // Backend uses 'synced' not 'success'
+    let success: Bool? // Fallback
     let syncedAt: Date?
     let error: String?
+    
+    var isSuccess: Bool {
+        synced ?? success ?? false
+    }
+}
+
+// MARK: - Product List Response
+
+struct ProductsResponse: Decodable {
+    let success: Bool
+    let data: [Product]
+    let count: Int
+}
+
+// MARK: - Supplier List Response
+
+struct SuppliersResponse: Decodable {
+    let success: Bool
+    let suppliers: [SupplierInfo]
+}
+
+struct SupplierInfo: Codable, Identifiable, Equatable {
+    let id: String
+    let name: String
+    let initials: [String]?
+    let contactInfo: String?
+    let isActive: Bool
+    let createdAt: String?
+    let updatedAt: String?
+    
+    static func == (lhs: SupplierInfo, rhs: SupplierInfo) -> Bool {
+        lhs.id == rhs.id
+    }
+}
+
+// MARK: - Supplier Search Response
+
+struct SupplierSearchResponse: Decodable {
+    let success: Bool
+    let suppliers: [SupplierInfo]
 }
