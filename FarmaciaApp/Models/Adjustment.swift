@@ -123,14 +123,30 @@ struct InventoryAdjustment: Codable, Identifiable {
 // MARK: - Adjustment Responses
 
 struct AdjustmentResponse: Decodable {
-    let adjustment: InventoryAdjustment
+    let success: Bool
     let message: String
-    let squareSync: SquareSyncResult?
+    let data: AdjustmentData?
+    
+    struct AdjustmentData: Decodable {
+        let adjustment: AdjustmentInfo
+        let squareSync: SquareSyncResult?
+        let inventoryTotal: Int
+        
+        struct AdjustmentInfo: Decodable {
+            let id: String
+            let type: String
+            let quantity: Int
+            let unitCost: String?
+            let totalCost: String?
+            let adjustedAt: Date
+        }
+    }
 }
 
 struct AdjustmentListResponse: Decodable {
-    let adjustments: [InventoryAdjustment]
+    let success: Bool
     let count: Int
+    let data: [InventoryAdjustment]
 }
 
 struct AdjustmentSummaryResponse: Decodable {

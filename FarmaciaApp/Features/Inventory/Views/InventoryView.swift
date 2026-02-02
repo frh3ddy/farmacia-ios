@@ -4,7 +4,6 @@ import SwiftUI
 
 struct InventoryView: View {
     @EnvironmentObject var authManager: AuthManager
-    @StateObject private var viewModel = InventoryViewModel()
     @State private var selectedSegment: InventorySegment = .receive
     
     enum InventorySegment: String, CaseIterable {
@@ -29,7 +28,7 @@ struct InventoryView: View {
                 switch selectedSegment {
                 case .receive:
                     if authManager.canManageInventory {
-                        ReceiveInventoryView(viewModel: viewModel)
+                        ReceiveInventoryView()
                     } else {
                         noPermissionView
                     }
@@ -40,30 +39,10 @@ struct InventoryView: View {
                         noPermissionView
                     }
                 case .history:
-                    ReceivingHistoryView(viewModel: viewModel)
+                    ReceivingHistoryView()
                 }
             }
             .navigationTitle("Inventory")
-        }
-        .onAppear {
-            Task {
-                // Load data when view appears
-                await viewModel.loadProducts()
-                await viewModel.loadSuppliers()
-                if let locationId = authManager.currentLocation?.id {
-                    await viewModel.loadReceivings(locationId: locationId, limit: 20)
-                }
-            }
-        }
-        .alert("Error", isPresented: $viewModel.showError) {
-            Button("OK") { viewModel.clearError() }
-        } message: {
-            Text(viewModel.errorMessage ?? "An error occurred")
-        }
-        .alert("Success", isPresented: $viewModel.showSuccess) {
-            Button("OK") { viewModel.clearSuccess() }
-        } message: {
-            Text(viewModel.successMessage ?? "Operation completed")
         }
     }
     
@@ -86,11 +65,258 @@ struct InventoryView: View {
     }
 }
 
+// MARK: - Inventory ViewModel
+
+@MainActor
+class InventoryViewModel: ObservableObject {
+    // MARK: - Published Properties
+    @Published var products: [Product] = []
+    @Published var suppliers: [Supplier] = []
+    @Published var recentReceivings: [InventoryReceiving] = []
+    @Published var recentAdjustments: [InventoryAdjustment] = []
+    
+    @Published var isLoadingProducts = false
+    @Published var isLoadingReceivings = false
+    @Published var isLoadingAdjustments = false
+    @Published var isSubmitting = false
+    
+    @Published var errorMessage: String?
+    @Published var showError = false
+    @Published var successMessage: String?
+    @Published var showSuccess = false
+    
+    // MARK: - Dependencies
+    private let apiClient = APIClient.shared
+    
+    // MARK: - Load Products
+    func loadProducts() async {
+        isLoadingProducts = true
+        defer { isLoadingProducts = false }
+        
+        do {
+            let response: ProductListResponse = try await apiClient.request(endpoint: .listProducts)
+            products = response.data
+        } catch let error as NetworkError {
+            errorMessage = error.errorDescription
+            showError = true
+        } catch {
+            errorMessage = "Failed to load products"
+            showError = true
+        }
+    }
+    
+    // MARK: - Load Suppliers
+    func loadSuppliers() async {
+        do {
+            let response: SupplierListResponse = try await apiClient.request(endpoint: .listSuppliers)
+            suppliers = response.data
+        } catch {
+            // Suppliers are optional, don't show error
+            print("Failed to load suppliers: \(error)")
+        }
+    }
+    
+    // MARK: - Load Receivings
+    func loadReceivings(locationId: String) async {
+        isLoadingReceivings = true
+        defer { isLoadingReceivings = false }
+        
+        do {
+            let response: ReceivingListResponse = try await apiClient.request(
+                endpoint: .listReceivingsByLocation(locationId: locationId)
+            )
+            recentReceivings = response.data
+        } catch let error as NetworkError {
+            errorMessage = error.errorDescription
+            showError = true
+        } catch {
+            errorMessage = "Failed to load receivings"
+            showError = true
+        }
+    }
+    
+    // MARK: - Load Adjustments
+    func loadAdjustments(locationId: String) async {
+        isLoadingAdjustments = true
+        defer { isLoadingAdjustments = false }
+        
+        do {
+            let response: AdjustmentListResponse = try await apiClient.request(
+                endpoint: .adjustmentsByLocation(locationId: locationId)
+            )
+            recentAdjustments = response.data
+        } catch let error as NetworkError {
+            errorMessage = error.errorDescription
+            showError = true
+        } catch {
+            errorMessage = "Failed to load adjustments"
+            showError = true
+        }
+    }
+    
+    // MARK: - Receive Inventory
+    func receiveInventory(
+        productId: String,
+        quantity: Int,
+        unitCost: Double,
+        locationId: String,
+        supplierId: String?,
+        invoiceNumber: String?,
+        batchNumber: String?,
+        expiryDate: Date?,
+        notes: String?
+    ) async -> Bool {
+        isSubmitting = true
+        defer { isSubmitting = false }
+        
+        let request = ReceiveInventoryRequest(
+            locationId: locationId,
+            productId: productId,
+            quantity: quantity,
+            unitCost: unitCost,
+            supplierId: supplierId,
+            invoiceNumber: invoiceNumber?.isEmpty == true ? nil : invoiceNumber,
+            purchaseOrderId: nil,
+            batchNumber: batchNumber?.isEmpty == true ? nil : batchNumber,
+            expiryDate: expiryDate,
+            manufacturingDate: nil,
+            receivedBy: nil,
+            notes: notes?.isEmpty == true ? nil : notes,
+            syncToSquare: true
+        )
+        
+        do {
+            let response: ReceivingCreateResponse = try await apiClient.request(
+                endpoint: .receiveInventory,
+                body: request
+            )
+            successMessage = response.message
+            showSuccess = true
+            
+            // Reload receivings
+            await loadReceivings(locationId: locationId)
+            
+            return true
+        } catch let error as NetworkError {
+            errorMessage = error.errorDescription
+            showError = true
+            return false
+        } catch {
+            errorMessage = "Failed to receive inventory"
+            showError = true
+            return false
+        }
+    }
+    
+    // MARK: - Create Adjustment
+    func createAdjustment(
+        type: AdjustmentType,
+        productId: String,
+        quantity: Int,
+        locationId: String,
+        reason: String?,
+        notes: String?
+    ) async -> Bool {
+        isSubmitting = true
+        defer { isSubmitting = false }
+        
+        // Determine endpoint based on type
+        let endpoint: APIEndpoint
+        switch type {
+        case .damage: endpoint = .adjustmentDamage
+        case .theft: endpoint = .adjustmentTheft
+        case .expired: endpoint = .adjustmentExpired
+        case .found: endpoint = .adjustmentFound
+        case .returnType: endpoint = .adjustmentReturn
+        case .countCorrection: endpoint = .adjustmentCountCorrection
+        case .writeOff: endpoint = .adjustmentWriteOff
+        default: endpoint = .createAdjustment
+        }
+        
+        // Use quick adjustment for specific types, full adjustment for generic
+        if endpoint == .createAdjustment {
+            let request = CreateAdjustmentRequest(
+                locationId: locationId,
+                productId: productId,
+                type: type.rawValue,
+                quantity: quantity,
+                reason: reason,
+                notes: notes,
+                unitCost: nil,
+                effectiveDate: nil,
+                adjustedBy: nil,
+                syncToSquare: true
+            )
+            
+            do {
+                let response: AdjustmentResponse = try await apiClient.request(
+                    endpoint: endpoint,
+                    body: request
+                )
+                successMessage = response.message
+                showSuccess = true
+                await loadAdjustments(locationId: locationId)
+                return true
+            } catch let error as NetworkError {
+                errorMessage = error.errorDescription
+                showError = true
+                return false
+            } catch {
+                errorMessage = "Failed to create adjustment"
+                showError = true
+                return false
+            }
+        } else {
+            // Quick adjustment endpoints
+            let request = QuickAdjustmentRequest(
+                locationId: locationId,
+                productId: productId,
+                quantity: abs(quantity),
+                reason: reason,
+                notes: notes,
+                syncToSquare: true
+            )
+            
+            do {
+                let response: AdjustmentResponse = try await apiClient.request(
+                    endpoint: endpoint,
+                    body: request
+                )
+                successMessage = response.message
+                showSuccess = true
+                await loadAdjustments(locationId: locationId)
+                return true
+            } catch let error as NetworkError {
+                errorMessage = error.errorDescription
+                showError = true
+                return false
+            } catch {
+                errorMessage = "Failed to create adjustment"
+                showError = true
+                return false
+            }
+        }
+    }
+    
+    // MARK: - Search Products
+    func searchProducts(_ query: String) -> [Product] {
+        guard !query.isEmpty else { return products }
+        let lowercased = query.lowercased()
+        return products.filter { product in
+            product.displayName.lowercased().contains(lowercased) ||
+            product.sku?.lowercased().contains(lowercased) == true ||
+            product.name.lowercased().contains(lowercased)
+        }
+    }
+}
+
+// Note: ReceivingCreateResponse is defined in Inventory.swift
+
 // MARK: - Receive Inventory View
 
 struct ReceiveInventoryView: View {
-    @ObservedObject var viewModel: InventoryViewModel
     @EnvironmentObject var authManager: AuthManager
+    @StateObject private var viewModel = InventoryViewModel()
     @State private var showReceiveSheet = false
     
     var body: some View {
@@ -113,106 +339,99 @@ struct ReceiveInventoryView: View {
             }
             .padding()
             
-            // Recent receivings list
+            Divider()
+            
+            // Recent receivings
             if viewModel.isLoadingReceivings {
-                Spacer()
-                ProgressView("Loading receivings...")
-                Spacer()
-            } else if viewModel.receivings.isEmpty {
-                Spacer()
-                VStack(spacing: 8) {
+                ProgressView("Loading...")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if viewModel.recentReceivings.isEmpty {
+                VStack(spacing: 12) {
                     Image(systemName: "shippingbox")
-                        .font(.system(size: 40))
+                        .font(.system(size: 50))
                         .foregroundColor(.secondary)
                     Text("No recent receivings")
                         .foregroundColor(.secondary)
-                    Text("Tap the button above to receive inventory")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
                 }
-                Spacer()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                Text("Recent Receivings")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal)
-                
-                List(viewModel.receivings.prefix(5)) { receiving in
-                    ReceivingRowView(receiving: receiving)
+                List {
+                    Section("Recent Receivings") {
+                        ForEach(viewModel.recentReceivings.prefix(10)) { receiving in
+                            ReceivingRow(receiving: receiving)
+                        }
+                    }
                 }
-                .listStyle(.plain)
+                .listStyle(.insetGrouped)
             }
         }
         .sheet(isPresented: $showReceiveSheet) {
             ReceiveInventoryFormView(viewModel: viewModel)
         }
-        .refreshable {
-            if let locationId = authManager.currentLocation?.id {
-                await viewModel.loadReceivings(locationId: locationId, limit: 20)
+        .onAppear {
+            Task {
+                await viewModel.loadProducts()
+                await viewModel.loadSuppliers()
+                if let locationId = authManager.currentLocation?.id {
+                    await viewModel.loadReceivings(locationId: locationId)
+                }
             }
+        }
+        .refreshable {
+            await viewModel.loadProducts()
+            if let locationId = authManager.currentLocation?.id {
+                await viewModel.loadReceivings(locationId: locationId)
+            }
+        }
+        .alert("Error", isPresented: $viewModel.showError) {
+            Button("OK") {}
+        } message: {
+            Text(viewModel.errorMessage ?? "An error occurred")
+        }
+        .alert("Success", isPresented: $viewModel.showSuccess) {
+            Button("OK") {}
+        } message: {
+            Text(viewModel.successMessage ?? "Operation completed")
         }
     }
 }
 
-// MARK: - Receiving Row View
+// MARK: - Receiving Row
 
-struct ReceivingRowView: View {
+struct ReceivingRow: View {
     let receiving: InventoryReceiving
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(receiving.product?.displayName ?? "Unknown Product")
                     .font(.headline)
-                    .lineLimit(1)
-                
                 Spacer()
-                
-                Text(receiving.formattedTotalCost)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
+                Text("+\(receiving.quantity)")
+                    .font(.headline)
+                    .foregroundColor(.green)
             }
             
             HStack {
-                Label("\(receiving.quantity) units", systemImage: "cube.box")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                
-                Text("@")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                
-                Text(receiving.formattedUnitCost)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                
-                Spacer()
-                
-                if let squareSynced = receiving.squareSynced {
-                    Image(systemName: squareSynced ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                        .font(.caption)
-                        .foregroundColor(squareSynced ? .green : .orange)
-                }
-            }
-            
-            HStack {
-                if let supplier = receiving.supplier {
-                    Text(supplier.name)
-                        .font(.caption2)
-                        .foregroundColor(.blue)
-                }
-                
                 if let invoiceNumber = receiving.invoiceNumber {
                     Text("Invoice: \(invoiceNumber)")
-                        .font(.caption2)
+                        .font(.caption)
                         .foregroundColor(.secondary)
                 }
-                
                 Spacer()
-                
-                Text(receiving.formattedDate)
-                    .font(.caption2)
+                Text("$\(receiving.unitCost)/unit")
+                    .font(.caption)
                     .foregroundColor(.secondary)
+            }
+            
+            HStack {
+                Text(receiving.receivedAt, style: .date)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Spacer()
+                Text("Total: $\(receiving.totalCost)")
+                    .font(.caption)
+                    .fontWeight(.medium)
             }
         }
         .padding(.vertical, 4)
@@ -222,23 +441,21 @@ struct ReceivingRowView: View {
 // MARK: - Receive Inventory Form View
 
 struct ReceiveInventoryFormView: View {
-    @ObservedObject var viewModel: InventoryViewModel
-    @EnvironmentObject var authManager: AuthManager
     @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var authManager: AuthManager
+    @ObservedObject var viewModel: InventoryViewModel
     
     @State private var selectedProduct: Product?
-    @State private var selectedSupplier: SupplierInfo?
+    @State private var showProductPicker = false
     @State private var quantity = ""
     @State private var unitCost = ""
     @State private var invoiceNumber = ""
     @State private var batchNumber = ""
-    @State private var notes = ""
-    @State private var expiryDate: Date?
-    @State private var showExpiryPicker = false
-    @State private var syncToSquare = false
-    
-    @State private var showProductPicker = false
+    @State private var hasExpiry = false
+    @State private var expiryDate = Date().addingTimeInterval(365 * 24 * 60 * 60) // 1 year
+    @State private var selectedSupplier: Supplier?
     @State private var showSupplierPicker = false
+    @State private var notes = ""
     
     private var isValid: Bool {
         selectedProduct != nil &&
@@ -248,16 +465,10 @@ struct ReceiveInventoryFormView: View {
         Double(unitCost) ?? 0 >= 0
     }
     
-    private var totalCost: Double {
-        let qty = Double(quantity) ?? 0
-        let cost = Double(unitCost) ?? 0
-        return qty * cost
-    }
-    
     var body: some View {
         NavigationStack {
             Form {
-                // Product Section
+                // Product Selection
                 Section("Product") {
                     Button {
                         showProductPicker = true
@@ -284,29 +495,39 @@ struct ReceiveInventoryFormView: View {
                     }
                 }
                 
-                // Quantity & Cost Section
+                // Quantity & Cost
                 Section("Quantity & Cost") {
-                    TextField("Quantity", text: $quantity)
-                        .keyboardType(.numberPad)
-                    
                     HStack {
-                        Text("$")
-                        TextField("Unit Cost", text: $unitCost)
-                            .keyboardType(.decimalPad)
+                        Text("Quantity")
+                        Spacer()
+                        TextField("0", text: $quantity)
+                            .keyboardType(.numberPad)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 100)
                     }
                     
-                    if totalCost > 0 {
+                    HStack {
+                        Text("Unit Cost")
+                        Spacer()
+                        Text("$")
+                        TextField("0.00", text: $unitCost)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 100)
+                    }
+                    
+                    if let qty = Int(quantity), qty > 0,
+                       let cost = Double(unitCost), cost > 0 {
                         HStack {
                             Text("Total Cost")
                             Spacer()
-                            Text(String(format: "$%.2f", totalCost))
+                            Text("$\(String(format: "%.2f", Double(qty) * cost))")
                                 .fontWeight(.semibold)
                         }
-                        .foregroundColor(.secondary)
                     }
                 }
                 
-                // Supplier Section
+                // Supplier
                 Section("Supplier (Optional)") {
                     Button {
                         showSupplierPicker = true
@@ -335,42 +556,25 @@ struct ReceiveInventoryFormView: View {
                     }
                 }
                 
-                // Optional Details
-                Section("Additional Details (Optional)") {
+                // Invoice & Batch
+                Section("Reference Numbers (Optional)") {
                     TextField("Invoice Number", text: $invoiceNumber)
-                    
                     TextField("Batch Number", text: $batchNumber)
-                    
-                    // Expiry Date
-                    HStack {
-                        Text("Expiry Date")
-                        Spacer()
-                        if let date = expiryDate {
-                            Text(date, style: .date)
-                                .foregroundColor(.primary)
-                            Button {
-                                expiryDate = nil
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.secondary)
-                            }
-                            .buttonStyle(.plain)
-                        } else {
-                            Button("Set Date") {
-                                showExpiryPicker = true
-                            }
-                        }
-                    }
-                    
-                    TextField("Notes", text: $notes, axis: .vertical)
-                        .lineLimit(3...5)
                 }
                 
-                // Square Sync
+                // Expiry Date
                 Section {
-                    Toggle("Sync to Square", isOn: $syncToSquare)
-                } footer: {
-                    Text("Enable to sync this receiving to Square inventory")
+                    Toggle("Has Expiry Date", isOn: $hasExpiry)
+                    
+                    if hasExpiry {
+                        DatePicker("Expiry Date", selection: $expiryDate, displayedComponents: .date)
+                    }
+                }
+                
+                // Notes
+                Section("Notes (Optional)") {
+                    TextEditor(text: $notes)
+                        .frame(minHeight: 60)
                 }
             }
             .navigationTitle("Receive Inventory")
@@ -384,9 +588,7 @@ struct ReceiveInventoryFormView: View {
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
-                        Task {
-                            await saveReceiving()
-                        }
+                        Task { await saveReceiving() }
                     }
                     .disabled(!isValid || viewModel.isSubmitting)
                 }
@@ -395,30 +597,14 @@ struct ReceiveInventoryFormView: View {
                 ProductPickerView(
                     products: viewModel.products,
                     selectedProduct: $selectedProduct,
-                    isLoading: viewModel.isLoadingProducts,
-                    onRefresh: { await viewModel.loadProducts() }
+                    isLoading: viewModel.isLoadingProducts
                 )
             }
             .sheet(isPresented: $showSupplierPicker) {
                 SupplierPickerView(
                     suppliers: viewModel.suppliers,
-                    selectedSupplier: $selectedSupplier,
-                    isLoading: viewModel.isLoadingSuppliers,
-                    onRefresh: { await viewModel.loadSuppliers() }
+                    selectedSupplier: $selectedSupplier
                 )
-            }
-            .sheet(isPresented: $showExpiryPicker) {
-                DatePickerSheet(selectedDate: $expiryDate, title: "Expiry Date")
-            }
-            .overlay {
-                if viewModel.isSubmitting {
-                    Color.black.opacity(0.3)
-                        .ignoresSafeArea()
-                    ProgressView("Saving...")
-                        .padding()
-                        .background(Color(.systemBackground))
-                        .cornerRadius(12)
-                }
             }
         }
     }
@@ -427,8 +613,7 @@ struct ReceiveInventoryFormView: View {
         guard let product = selectedProduct,
               let qty = Int(quantity),
               let cost = Double(unitCost),
-              let locationId = authManager.currentLocation?.id
-        else { return }
+              let locationId = authManager.currentLocation?.id else { return }
         
         let success = await viewModel.receiveInventory(
             productId: product.id,
@@ -438,9 +623,8 @@ struct ReceiveInventoryFormView: View {
             supplierId: selectedSupplier?.id,
             invoiceNumber: invoiceNumber,
             batchNumber: batchNumber,
-            expiryDate: expiryDate,
-            notes: notes,
-            syncToSquare: syncToSquare
+            expiryDate: hasExpiry ? expiryDate : nil,
+            notes: notes
         )
         
         if success {
@@ -455,7 +639,6 @@ struct ProductPickerView: View {
     let products: [Product]
     @Binding var selectedProduct: Product?
     let isLoading: Bool
-    let onRefresh: () async -> Void
     
     @Environment(\.dismiss) var dismiss
     @State private var searchText = ""
@@ -464,10 +647,11 @@ struct ProductPickerView: View {
         if searchText.isEmpty {
             return products
         }
-        let query = searchText.lowercased()
+        let lowercased = searchText.lowercased()
         return products.filter { product in
-            product.displayName.lowercased().contains(query) ||
-            (product.sku?.lowercased().contains(query) ?? false)
+            product.displayName.lowercased().contains(lowercased) ||
+            product.sku?.lowercased().contains(lowercased) == true ||
+            product.name.lowercased().contains(lowercased)
         }
     }
     
@@ -476,62 +660,63 @@ struct ProductPickerView: View {
             Group {
                 if isLoading {
                     ProgressView("Loading products...")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if products.isEmpty {
                     VStack(spacing: 12) {
-                        Image(systemName: "shippingbox")
-                            .font(.system(size: 40))
+                        Image(systemName: "cube.box")
+                            .font(.system(size: 50))
                             .foregroundColor(.secondary)
                         Text("No products found")
                             .foregroundColor(.secondary)
-                        Button("Refresh") {
-                            Task { await onRefresh() }
-                        }
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
-                    List(filteredProducts) { product in
-                        Button {
-                            selectedProduct = product
-                            dismiss()
-                        } label: {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(product.displayName)
-                                        .foregroundColor(.primary)
-                                    if let sku = product.sku {
-                                        Text("SKU: \(sku)")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
+                    List {
+                        ForEach(filteredProducts) { product in
+                            Button {
+                                selectedProduct = product
+                                dismiss()
+                            } label: {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(product.displayName)
+                                            .foregroundColor(.primary)
+                                        
+                                        HStack(spacing: 8) {
+                                            if let sku = product.sku {
+                                                Text("SKU: \(sku)")
+                                                    .font(.caption)
+                                                    .foregroundColor(.secondary)
+                                            }
+                                            if let category = product.category {
+                                                Text(category.name)
+                                                    .font(.caption)
+                                                    .foregroundColor(.blue)
+                                            }
+                                        }
                                     }
-                                    if let category = product.category {
-                                        Text(category.name)
-                                            .font(.caption2)
+                                    
+                                    Spacer()
+                                    
+                                    if selectedProduct?.id == product.id {
+                                        Image(systemName: "checkmark")
                                             .foregroundColor(.blue)
                                     }
-                                }
-                                
-                                Spacer()
-                                
-                                if selectedProduct?.id == product.id {
-                                    Image(systemName: "checkmark")
-                                        .foregroundColor(.blue)
                                 }
                             }
                         }
                     }
-                    .searchable(text: $searchText, prompt: "Search products...")
+                    .searchable(text: $searchText, prompt: "Search products")
                 }
             }
             .navigationTitle("Select Product")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Cancel") {
                         dismiss()
                     }
                 }
-            }
-            .refreshable {
-                await onRefresh()
             }
         }
     }
@@ -540,125 +725,71 @@ struct ProductPickerView: View {
 // MARK: - Supplier Picker View
 
 struct SupplierPickerView: View {
-    let suppliers: [SupplierInfo]
-    @Binding var selectedSupplier: SupplierInfo?
-    let isLoading: Bool
-    let onRefresh: () async -> Void
+    let suppliers: [Supplier]
+    @Binding var selectedSupplier: Supplier?
     
     @Environment(\.dismiss) var dismiss
     @State private var searchText = ""
     
-    private var filteredSuppliers: [SupplierInfo] {
+    private var filteredSuppliers: [Supplier] {
         if searchText.isEmpty {
             return suppliers
         }
-        let query = searchText.lowercased()
+        let lowercased = searchText.lowercased()
         return suppliers.filter { supplier in
-            supplier.name.lowercased().contains(query) ||
-            (supplier.initials?.contains { $0.lowercased().contains(query) } ?? false)
+            supplier.name.lowercased().contains(lowercased)
         }
     }
     
     var body: some View {
         NavigationStack {
             Group {
-                if isLoading {
-                    ProgressView("Loading suppliers...")
-                } else if suppliers.isEmpty {
+                if suppliers.isEmpty {
                     VStack(spacing: 12) {
-                        Image(systemName: "person.2")
-                            .font(.system(size: 40))
+                        Image(systemName: "building.2")
+                            .font(.system(size: 50))
                             .foregroundColor(.secondary)
                         Text("No suppliers found")
                             .foregroundColor(.secondary)
-                        Button("Refresh") {
-                            Task { await onRefresh() }
-                        }
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
-                    List(filteredSuppliers) { supplier in
-                        Button {
-                            selectedSupplier = supplier
-                            dismiss()
-                        } label: {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(supplier.name)
-                                        .foregroundColor(.primary)
-                                    if let initials = supplier.initials, !initials.isEmpty {
-                                        Text("Initials: \(initials.joined(separator: ", "))")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
+                    List {
+                        ForEach(filteredSuppliers) { supplier in
+                            Button {
+                                selectedSupplier = supplier
+                                dismiss()
+                            } label: {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(supplier.name)
+                                            .foregroundColor(.primary)
+                                        
+                                        if let contactInfo = supplier.contactInfo {
+                                            Text(contactInfo)
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
                                     }
-                                    if let contact = supplier.contactInfo {
-                                        Text(contact)
-                                            .font(.caption2)
-                                            .foregroundColor(.secondary)
+                                    
+                                    Spacer()
+                                    
+                                    if selectedSupplier?.id == supplier.id {
+                                        Image(systemName: "checkmark")
+                                            .foregroundColor(.blue)
                                     }
-                                }
-                                
-                                Spacer()
-                                
-                                if selectedSupplier?.id == supplier.id {
-                                    Image(systemName: "checkmark")
-                                        .foregroundColor(.blue)
                                 }
                             }
                         }
                     }
-                    .searchable(text: $searchText, prompt: "Search suppliers...")
+                    .searchable(text: $searchText, prompt: "Search suppliers")
                 }
             }
             .navigationTitle("Select Supplier")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-            }
-            .refreshable {
-                await onRefresh()
-            }
-        }
-    }
-}
-
-// MARK: - Date Picker Sheet
-
-struct DatePickerSheet: View {
-    @Binding var selectedDate: Date?
-    let title: String
-    @Environment(\.dismiss) var dismiss
-    @State private var tempDate = Date()
-    
-    var body: some View {
-        NavigationStack {
-            VStack {
-                DatePicker(
-                    title,
-                    selection: $tempDate,
-                    in: Date()...,
-                    displayedComponents: .date
-                )
-                .datePickerStyle(.graphical)
-                .padding()
-                
-                Spacer()
-            }
-            .navigationTitle(title)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-                
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        selectedDate = tempDate
+                    Button("Cancel") {
                         dismiss()
                     }
                 }
@@ -670,6 +801,8 @@ struct DatePickerSheet: View {
 // MARK: - Adjustments List View
 
 struct AdjustmentsListView: View {
+    @EnvironmentObject var authManager: AuthManager
+    @StateObject private var viewModel = InventoryViewModel()
     @State private var showAdjustmentSheet = false
     @State private var selectedAdjustmentType: AdjustmentType?
     
@@ -702,16 +835,116 @@ struct AdjustmentsListView: View {
             
             Divider()
             
-            // Placeholder for recent adjustments
-            Text("Recent adjustments will appear here")
-                .foregroundColor(.secondary)
+            // Recent adjustments
+            if viewModel.isLoadingAdjustments {
+                ProgressView("Loading...")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if viewModel.recentAdjustments.isEmpty {
+                VStack(spacing: 12) {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .font(.system(size: 50))
+                        .foregroundColor(.secondary)
+                    Text("No recent adjustments")
+                        .foregroundColor(.secondary)
+                }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                List {
+                    Section("Recent Adjustments") {
+                        ForEach(viewModel.recentAdjustments.prefix(10)) { adjustment in
+                            AdjustmentRow(adjustment: adjustment)
+                        }
+                    }
+                }
+                .listStyle(.insetGrouped)
+            }
         }
         .sheet(isPresented: $showAdjustmentSheet) {
             if let type = selectedAdjustmentType {
-                AdjustmentFormView(adjustmentType: type)
+                AdjustmentFormView(adjustmentType: type, viewModel: viewModel)
             }
         }
+        .onAppear {
+            Task {
+                await viewModel.loadProducts()
+                if let locationId = authManager.currentLocation?.id {
+                    await viewModel.loadAdjustments(locationId: locationId)
+                }
+            }
+        }
+        .refreshable {
+            await viewModel.loadProducts()
+            if let locationId = authManager.currentLocation?.id {
+                await viewModel.loadAdjustments(locationId: locationId)
+            }
+        }
+        .alert("Error", isPresented: $viewModel.showError) {
+            Button("OK") {}
+        } message: {
+            Text(viewModel.errorMessage ?? "An error occurred")
+        }
+        .alert("Success", isPresented: $viewModel.showSuccess) {
+            Button("OK") {}
+        } message: {
+            Text(viewModel.successMessage ?? "Operation completed")
+        }
+    }
+}
+
+// MARK: - Adjustment Row
+
+struct AdjustmentRow: View {
+    let adjustment: InventoryAdjustment
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Image(systemName: adjustment.type.icon)
+                    .foregroundColor(typeColor)
+                
+                Text(adjustment.product?.displayName ?? "Unknown Product")
+                    .font(.headline)
+                
+                Spacer()
+                
+                Text(adjustment.quantityDisplay)
+                    .font(.headline)
+                    .foregroundColor(typeColor)
+            }
+            
+            HStack {
+                Text(adjustment.type.displayName)
+                    .font(.caption)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(typeColor.opacity(0.15))
+                    .foregroundColor(typeColor)
+                    .cornerRadius(4)
+                
+                if let reason = adjustment.reason {
+                    Text(reason)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+                
+                Spacer()
+                
+                Text(adjustment.adjustedAt, style: .date)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+    
+    private var typeColor: Color {
+        if adjustment.type.isPositive {
+            return .green
+        } else if adjustment.type.isNegative {
+            return .red
+        }
+        return .orange
     }
 }
 
@@ -719,28 +952,74 @@ struct AdjustmentsListView: View {
 
 struct AdjustmentFormView: View {
     let adjustmentType: AdjustmentType
+    @ObservedObject var viewModel: InventoryViewModel
+    
     @Environment(\.dismiss) var dismiss
-    @State private var productSearch = ""
+    @EnvironmentObject var authManager: AuthManager
+    
+    @State private var selectedProduct: Product?
+    @State private var showProductPicker = false
     @State private var quantity = ""
     @State private var reason = ""
     @State private var notes = ""
-    @State private var isLoading = false
+    
+    private var isValid: Bool {
+        selectedProduct != nil &&
+        !quantity.isEmpty &&
+        Int(quantity) ?? 0 != 0
+    }
     
     var body: some View {
         NavigationStack {
             Form {
                 Section("Product") {
-                    TextField("Search product...", text: $productSearch)
+                    Button {
+                        showProductPicker = true
+                    } label: {
+                        HStack {
+                            if let product = selectedProduct {
+                                VStack(alignment: .leading) {
+                                    Text(product.displayName)
+                                        .foregroundColor(.primary)
+                                    if let sku = product.sku {
+                                        Text("SKU: \(sku)")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                            } else {
+                                Text("Select Product")
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(.secondary)
+                        }
+                    }
                 }
                 
                 Section("Quantity") {
-                    TextField("Quantity", text: $quantity)
-                        .keyboardType(.numberPad)
+                    HStack {
+                        Text("Quantity")
+                        Spacer()
+                        TextField("0", text: $quantity)
+                            .keyboardType(.numberPad)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 100)
+                    }
                     
                     if adjustmentType.isVariable {
                         Text("Enter positive to add, negative to remove")
                             .font(.caption)
                             .foregroundColor(.secondary)
+                    } else if adjustmentType.isNegative {
+                        Text("This will remove \(quantity.isEmpty ? "0" : quantity) units from inventory")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    } else {
+                        Text("This will add \(quantity.isEmpty ? "0" : quantity) units to inventory")
+                            .font(.caption)
+                            .foregroundColor(.green)
                     }
                 }
                 
@@ -760,12 +1039,40 @@ struct AdjustmentFormView: View {
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
-                        // TODO: Save adjustment
-                        dismiss()
+                        Task { await saveAdjustment() }
                     }
-                    .disabled(isLoading)
+                    .disabled(!isValid || viewModel.isSubmitting)
                 }
             }
+            .sheet(isPresented: $showProductPicker) {
+                ProductPickerView(
+                    products: viewModel.products,
+                    selectedProduct: $selectedProduct,
+                    isLoading: viewModel.isLoadingProducts
+                )
+            }
+        }
+    }
+    
+    private func saveAdjustment() async {
+        guard let product = selectedProduct,
+              let qty = Int(quantity),
+              let locationId = authManager.currentLocation?.id else { return }
+        
+        // For negative adjustment types, ensure quantity is positive (API handles sign)
+        let adjustedQty = adjustmentType.isNegative ? abs(qty) : qty
+        
+        let success = await viewModel.createAdjustment(
+            type: adjustmentType,
+            productId: product.id,
+            quantity: adjustedQty,
+            locationId: locationId,
+            reason: reason.isEmpty ? nil : reason,
+            notes: notes.isEmpty ? nil : notes
+        )
+        
+        if success {
+            dismiss()
         }
     }
 }
@@ -773,33 +1080,48 @@ struct AdjustmentFormView: View {
 // MARK: - Receiving History View
 
 struct ReceivingHistoryView: View {
-    @ObservedObject var viewModel: InventoryViewModel
     @EnvironmentObject var authManager: AuthManager
+    @StateObject private var viewModel = InventoryViewModel()
     
     var body: some View {
         Group {
             if viewModel.isLoadingReceivings {
                 ProgressView("Loading history...")
-            } else if viewModel.receivings.isEmpty {
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if viewModel.recentReceivings.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "clock.arrow.circlepath")
-                        .font(.system(size: 40))
+                        .font(.system(size: 50))
                         .foregroundColor(.secondary)
                     Text("No receiving history")
                         .foregroundColor(.secondary)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                List(viewModel.receivings) { receiving in
-                    ReceivingRowView(receiving: receiving)
+                List {
+                    ForEach(viewModel.recentReceivings) { receiving in
+                        ReceivingRow(receiving: receiving)
+                    }
                 }
-                .listStyle(.plain)
+                .listStyle(.insetGrouped)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear {
+            Task {
+                if let locationId = authManager.currentLocation?.id {
+                    await viewModel.loadReceivings(locationId: locationId)
+                }
+            }
+        }
         .refreshable {
             if let locationId = authManager.currentLocation?.id {
-                await viewModel.loadReceivings(locationId: locationId, limit: 100)
+                await viewModel.loadReceivings(locationId: locationId)
             }
+        }
+        .alert("Error", isPresented: $viewModel.showError) {
+            Button("OK") {}
+        } message: {
+            Text(viewModel.errorMessage ?? "An error occurred")
         }
     }
 }
