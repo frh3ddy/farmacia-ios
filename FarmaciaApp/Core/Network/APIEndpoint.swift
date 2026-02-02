@@ -29,6 +29,7 @@ enum APIEndpoint {
     case updateEmployee(id: String)
     case deleteEmployee(id: String)
     case resetPIN(employeeId: String)
+    case resetPINLockout(employeeId: String)
     case assignLocations(employeeId: String)
     
     // MARK: - Inventory Endpoints
@@ -99,6 +100,7 @@ enum APIEndpoint {
         case .createEmployee, .listEmployees: return "/employees"
         case .getEmployee(let id), .updateEmployee(let id), .deleteEmployee(let id): return "/employees/\(id)"
         case .resetPIN(let id): return "/employees/\(id)/pin"
+        case .resetPINLockout(let id): return "/employees/\(id)/pin/reset-lockout"
         case .assignLocations(let id): return "/employees/\(id)/locations"
             
         // Inventory Receiving
@@ -161,7 +163,7 @@ enum APIEndpoint {
             return .get
             
         // Employees
-        case .createEmployee, .resetPIN, .assignLocations:
+        case .createEmployee, .resetPIN, .resetPINLockout, .assignLocations:
             return .post
         case .listEmployees, .getEmployee:
             return .get

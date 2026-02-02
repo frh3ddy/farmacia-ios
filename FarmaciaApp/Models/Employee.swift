@@ -64,32 +64,81 @@ enum Permission: String, CaseIterable {
     case viewAllReports
 }
 
-// MARK: - Employee
+// MARK: - Employee (matches backend response)
 
 struct Employee: Codable, Identifiable, Equatable {
     let id: String
-    let firstName: String
-    let lastName: String
+    let name: String
     let email: String?
-    let phone: String?
-    let role: EmployeeRole
     let isActive: Bool
-    let pinSet: Bool
-    let failedPinAttempts: Int?
+    let hasPIN: Bool
+    let lastLoginAt: Date?
+    let assignments: [EmployeeAssignment]?
+    
+    // Computed properties
+    var displayName: String { name }
+    
+    var initials: String {
+        let words = name.split(separator: " ")
+        if words.count >= 2 {
+            return "\(words[0].prefix(1))\(words[1].prefix(1))".uppercased()
+        } else if let first = words.first {
+            return String(first.prefix(2)).uppercased()
+        }
+        return "??"
+    }
+    
+    // Get the primary role from assignments
+    var primaryRole: EmployeeRole {
+        // Return highest role from assignments
+        if let assignments = assignments, !assignments.isEmpty {
+            if assignments.contains(where: { $0.role == .owner }) { return .owner }
+            if assignments.contains(where: { $0.role == .manager }) { return .manager }
+            if assignments.contains(where: { $0.role == .accountant }) { return .accountant }
+            return assignments[0].role
+        }
+        return .cashier
+    }
+    
+    func hasPermission(_ permission: Permission) -> Bool {
+        primaryRole.permissions.contains(permission)
+    }
+}
+
+// MARK: - Employee Assignment (from list endpoint)
+
+struct EmployeeAssignment: Codable, Identifiable, Equatable {
+    let locationId: String
+    let locationName: String
+    let role: EmployeeRole
+    
+    var id: String { locationId }
+}
+
+// MARK: - Employee Detail (full employee from GET /employees/:id)
+
+struct EmployeeDetail: Codable, Identifiable, Equatable {
+    let id: String
+    let name: String
+    let email: String?
+    let isActive: Bool
+    let hasPIN: Bool
+    let failedPinAttempts: Int
     let lockedUntil: Date?
     let lastLoginAt: Date?
     let createdAt: Date
-    let updatedAt: Date
-    let locationAssignments: [LocationAssignment]?
+    let assignments: [EmployeeDetailAssignment]
     
-    var fullName: String {
-        "\(firstName) \(lastName)"
-    }
+    var displayName: String { name }
     
     var initials: String {
-        let firstInitial = firstName.prefix(1).uppercased()
-        let lastInitial = lastName.prefix(1).uppercased()
-        return "\(firstInitial)\(lastInitial)"
+        let words = name.split(separator: " ")
+        if words.count >= 2 {
+            return "\(words[0].prefix(1))\(words[1].prefix(1))".uppercased()
+        } else if let first = words.first {
+            return String(first.prefix(2)).uppercased()
+        }
+        return "??"
     }
     
     var isLocked: Bool {
@@ -99,12 +148,26 @@ struct Employee: Codable, Identifiable, Equatable {
         return false
     }
     
-    func hasPermission(_ permission: Permission) -> Bool {
-        role.permissions.contains(permission)
+    var primaryRole: EmployeeRole {
+        if let first = assignments.first {
+            return first.role
+        }
+        return .cashier
     }
 }
 
-// MARK: - Location Assignment
+// MARK: - Employee Detail Assignment
+
+struct EmployeeDetailAssignment: Codable, Identifiable, Equatable {
+    let id: String
+    let locationId: String
+    let locationName: String
+    let role: EmployeeRole
+    let isActive: Bool
+    let assignedAt: Date
+}
+
+// MARK: - Legacy Location Assignment (for backward compatibility)
 
 struct LocationAssignment: Codable, Identifiable, Equatable {
     let id: String
@@ -112,4 +175,54 @@ struct LocationAssignment: Codable, Identifiable, Equatable {
     let isDefault: Bool
     let assignedAt: Date
     let location: Location?
+}
+
+// MARK: - API Request/Response Types
+
+struct CreateEmployeeRequest: Encodable {
+    let name: String
+    let email: String?
+    let pin: String?
+    let locationId: String
+    let role: EmployeeRole
+}
+
+struct UpdateEmployeeRequest: Encodable {
+    let name: String?
+    let email: String?
+    let isActive: Bool?
+}
+
+struct SetPINRequest: Encodable {
+    let pin: String
+}
+
+// MARK: - Employee List Response
+
+struct EmployeeListResponse: Decodable {
+    let success: Bool
+    let count: Int
+    let data: [Employee]
+}
+
+// MARK: - Employee Detail Response
+
+struct EmployeeDetailResponse: Decodable {
+    let success: Bool
+    let data: EmployeeDetail
+}
+
+// MARK: - Create Employee Response
+
+struct CreateEmployeeResponse: Decodable {
+    let success: Bool
+    let message: String
+    let data: EmployeeDetail
+}
+
+// MARK: - Simple Success Response
+
+struct EmployeeActionResponse: Decodable {
+    let success: Bool
+    let message: String
 }
