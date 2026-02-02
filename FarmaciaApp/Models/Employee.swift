@@ -179,7 +179,7 @@ struct LocationAssignment: Codable, Identifiable, Equatable {
 
 // MARK: - API Request/Response Types
 
-struct CreateEmployeeAtLocationRequest: Encodable {
+struct CreateEmployeeRequest: Encodable {
     let name: String
     let email: String?
     let pin: String?
