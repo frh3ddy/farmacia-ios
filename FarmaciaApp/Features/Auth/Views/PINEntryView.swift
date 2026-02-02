@@ -26,6 +26,19 @@ struct PINEntryView: View {
             .background(Color(.systemBackground))
             .navigationTitle("Employee Login")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Menu {
+                        Button(role: .destructive) {
+                            viewModel.showDeactivateAlert = true
+                        } label: {
+                            Label("Deactivate Device", systemImage: "xmark.shield")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
+                }
+            }
             .sheet(isPresented: $viewModel.showLocationPicker) {
                 LocationPickerView(
                     locations: viewModel.locations,
@@ -39,8 +52,16 @@ struct PINEntryView: View {
             } message: {
                 Text(viewModel.errorMessage)
             }
+            .alert("Deactivate Device", isPresented: $viewModel.showDeactivateAlert) {
+                Button("Cancel", role: .cancel) {}
+                Button("Deactivate", role: .destructive) {
+                    authManager.deactivateDevice()
+                }
+            } message: {
+                Text("This will remove this device from Farmacia. You'll need owner/manager credentials to reactivate.")
+            }
             .task {
-                await viewModel.loadLocations()
+                await viewModel.loadLocations(authManager: authManager)
             }
         }
     }
@@ -172,12 +193,13 @@ class PINEntryViewModel: ObservableObject {
     @Published var selectedLocation: Location?
     @Published var isLoading: Bool = false
     @Published var showLocationPicker: Bool = false
+    @Published var showDeactivateAlert: Bool = false
     @Published var showError: Bool = false
     @Published var errorMessage: String = ""
     
     private let apiClient = APIClient.shared
     
-    func loadLocations() async {
+    func loadLocations(authManager: AuthManager) async {
         do {
             // Fetch locations from API
             let response: [Location] = try await apiClient.request(endpoint: .listLocations)
@@ -186,6 +208,19 @@ class PINEntryViewModel: ObservableObject {
             if locations.count == 1 {
                 selectedLocation = locations[0]
             }
+        } catch let error as NetworkError {
+            // If device is not activated or unauthorized, go back to activation
+            if case .deviceNotActivated = error {
+                authManager.deactivateDevice()
+                return
+            }
+            if case .unauthorized = error {
+                authManager.deactivateDevice()
+                return
+            }
+            print("Failed to load locations: \(error)")
+            errorMessage = "Could not load locations"
+            showError = true
         } catch {
             print("Failed to load locations: \(error)")
             errorMessage = "Could not load locations"
@@ -227,6 +262,20 @@ class PINEntryViewModel: ObservableObject {
         do {
             try await authManager.loginWithPIN(pin: pin, locationId: location.id)
         } catch let error as NetworkError {
+            // If device is not activated or unauthorized, go back to activation
+            if case .deviceNotActivated = error {
+                authManager.deactivateDevice()
+                isLoading = false
+                return
+            }
+            if case .unauthorized = error {
+                // Check if it's a device issue vs wrong PIN
+                if error.errorDescription?.contains("device") == true {
+                    authManager.deactivateDevice()
+                    isLoading = false
+                    return
+                }
+            }
             errorMessage = error.errorDescription ?? "Login failed"
             showError = true
         } catch {
