@@ -803,7 +803,7 @@ struct ProductValuationRow: View {
                     .font(.subheadline)
                     .fontWeight(.medium)
                 
-                Text("\(product.totalUnits) units")
+                Text("\(product.totalQuantity) units")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -936,12 +936,47 @@ struct ProductMarginRow: View {
             Spacer()
             
             VStack(alignment: .trailing, spacing: 2) {
-                Text(formatCurrency(product.grossProfit))
+                Text(formatCurrency(product.profit))
                     .font(.subheadline)
                     .fontWeight(.semibold)
                     .foregroundColor(.green)
                 
                 Text(formatPercent(product.marginPercent))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding()
+        .background(Color(.systemBackground))
+        .cornerRadius(8)
+        .padding(.horizontal)
+    }
+}
+
+struct TrendRow: View {
+    let trend: MarginTrend
+    
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(trend.date)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                
+                Text("Revenue: \(formatCurrency(trend.revenue))")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+            
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(formatCurrency(trend.profit))
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(Double(trend.profit) ?? 0 >= 0 ? .green : .red)
+                
+                Text(formatPercent(trend.marginPercent))
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
