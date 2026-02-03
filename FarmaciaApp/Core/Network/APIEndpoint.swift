@@ -17,6 +17,7 @@ enum APIEndpoint {
     // MARK: - Auth Endpoints
     case deviceActivate
     case pinLogin
+    case pinRefresh
     case switchLocation
     case currentUser
     case logout
@@ -97,6 +98,7 @@ enum APIEndpoint {
         // Auth
         case .deviceActivate: return "/auth/device/activate"
         case .pinLogin: return "/auth/pin"
+        case .pinRefresh: return "/auth/pin/refresh"
         case .switchLocation: return "/auth/switch-location"
         case .currentUser: return "/auth/me"
         case .logout: return "/auth/logout"
@@ -169,7 +171,7 @@ enum APIEndpoint {
     var method: HTTPMethod {
         switch self {
         // Auth
-        case .deviceActivate, .pinLogin, .switchLocation, .logout:
+        case .deviceActivate, .pinLogin, .pinRefresh, .switchLocation, .logout:
             return .post
         case .currentUser, .auditLogs:
             return .get

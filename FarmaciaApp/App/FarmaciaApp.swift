@@ -3,11 +3,20 @@ import SwiftUI
 @main
 struct FarmaciaApp: App {
     @StateObject private var authManager = AuthManager.shared
+    @Environment(\.scenePhase) private var scenePhase
     
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environmentObject(authManager)
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                // Validate session when app becomes active
+                Task {
+                    await authManager.validateSession()
+                }
+            }
         }
     }
 }

@@ -100,6 +100,23 @@ final class AuthManager: ObservableObject {
         authState = .needsPIN
     }
     
+    /// Validate and potentially refresh current session (call when app becomes active)
+    func validateSession() async {
+        guard authState == .authenticated, apiClient.sessionToken != nil else { return }
+        
+        // Check if session is expired or about to expire
+        if let expiresAt = sessionExpiresAt {
+            if expiresAt.timeIntervalSinceNow <= 0 {
+                // Session expired
+                clearSession()
+                return
+            } else if expiresAt.timeIntervalSinceNow <= AppConfiguration.sessionRefreshThresholdSeconds {
+                // Session expiring soon - refresh
+                await refreshSession()
+            }
+        }
+    }
+    
     /// Activate device with owner/manager credentials
     func activateDevice(
         email: String,
@@ -141,13 +158,14 @@ final class AuthManager: ObservableObject {
     }
     
     /// Login with PIN
-    func loginWithPIN(pin: String, locationId: String) async throws {
+    func loginWithPIN(pin: String, locationId: String? = nil) async throws {
         isLoading = true
         error = nil
         
         defer { isLoading = false }
         
-        let request = PINLoginRequest(pin: pin, locationId: locationId)
+        // Backend only needs PIN - device token provides location context
+        let request = PINLoginRequest(pin: pin, locationId: locationId ?? "")
         
         do {
             let response: PINLoginResponse = try await apiClient.request(
@@ -160,13 +178,23 @@ final class AuthManager: ObservableObject {
             keychain.lastEmployeeId = response.employee.id
             
             // Convert response to session types
-            let currentLoc = SessionLocation(from: response.currentLocation)
+            let currentLoc = response.currentLocation.map { SessionLocation(from: $0) }
+            
+            // Determine role - use current location role or first accessible location role
+            let employeeRole: EmployeeRole
+            if let loc = currentLoc {
+                employeeRole = loc.role
+            } else if let firstLocation = response.accessibleLocations.first {
+                employeeRole = EmployeeRole(rawValue: firstLocation.role) ?? .cashier
+            } else {
+                employeeRole = .cashier
+            }
             
             // Update state
             currentEmployee = SessionEmployee(
                 id: response.employee.id,
                 name: response.employee.name,
-                role: currentLoc.role
+                role: employeeRole
             )
             currentLocation = currentLoc
             availableLocations = response.accessibleLocations.map { SessionLocation(from: $0) }
@@ -287,9 +315,36 @@ final class AuthManager: ObservableObject {
             // Session expired
             clearSession()
         } else if timeRemaining <= AppConfiguration.sessionRefreshThresholdSeconds {
-            // Session expiring soon - notify user
-            // In a real app, you might want to refresh the session here
-            print("Session expiring in \(Int(timeRemaining)) seconds")
+            // Session expiring soon - refresh automatically
+            print("Session expiring in \(Int(timeRemaining)) seconds - refreshing...")
+            Task {
+                await refreshSession()
+            }
+        }
+    }
+    
+    /// Refresh the current session to extend expiry
+    func refreshSession() async {
+        do {
+            let response: SessionRefreshResponse = try await apiClient.request(
+                endpoint: .pinRefresh
+            )
+            
+            // Update session token and expiry
+            apiClient.sessionToken = response.sessionToken
+            sessionExpiresAt = response.expiresAt
+            
+            print("Session refreshed, new expiry: \(response.expiresAt)")
+        } catch let networkError as NetworkError {
+            print("Failed to refresh session: \(networkError.localizedDescription)")
+            // If refresh fails due to auth issues, clear session
+            if case .unauthorized = networkError {
+                clearSession()
+            } else if case .sessionExpired = networkError {
+                clearSession()
+            }
+        } catch {
+            print("Failed to refresh session: \(error.localizedDescription)")
         }
     }
     
@@ -376,8 +431,13 @@ struct PINLoginLocation: Decodable {
 struct PINLoginResponse: Decodable {
     let sessionToken: String
     let employee: PINLoginEmployee
-    let currentLocation: PINLoginLocation
+    let currentLocation: PINLoginLocation?  // Optional - may be null if no assignment
     let accessibleLocations: [PINLoginLocation]
+    let expiresAt: Date
+}
+
+struct SessionRefreshResponse: Decodable {
+    let sessionToken: String
     let expiresAt: Date
 }
 
