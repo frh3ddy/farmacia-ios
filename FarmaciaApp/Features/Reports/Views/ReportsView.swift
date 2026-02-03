@@ -483,32 +483,50 @@ struct COGSReportView: View {
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                         ReportHeaderCard(
                             title: "Total COGS",
-                            value: formatCurrency(report.totalCOGS),
+                            value: formatCurrency(report.summary.totalCOGS),
                             color: .red
                         )
                         
                         ReportHeaderCard(
-                            title: "Units Sold",
-                            value: "\(report.totalUnitsSold)",
+                            title: "Revenue",
+                            value: formatCurrency(report.summary.totalRevenue),
+                            color: .green
+                        )
+                        
+                        ReportHeaderCard(
+                            title: "Gross Profit",
+                            value: formatCurrency(report.summary.grossProfit),
                             color: .blue
                         )
                         
                         ReportHeaderCard(
-                            title: "Avg Cost/Unit",
-                            value: formatCurrency(report.averageCostPerUnit),
+                            title: "Margin",
+                            value: formatPercent(report.summary.grossMarginPercent),
+                            color: .purple
+                        )
+                        
+                        ReportHeaderCard(
+                            title: "Units Sold",
+                            value: "\(report.summary.totalUnitsSold)",
                             color: .orange
+                        )
+                        
+                        ReportHeaderCard(
+                            title: "Total Sales",
+                            value: "\(report.summary.totalSales)",
+                            color: .teal
                         )
                     }
                     .padding(.horizontal)
                     
                     // By Product
-                    if let products = report.byProduct, !products.isEmpty {
+                    if !report.byProduct.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("By Product")
                                 .font(.headline)
                                 .padding(.horizontal)
                             
-                            ForEach(products, id: \.productId) { product in
+                            ForEach(report.byProduct, id: \.productId) { product in
                                 ProductCOGSRow(product: product)
                             }
                         }
@@ -572,16 +590,22 @@ struct ProductCOGSRow: View {
                     .font(.subheadline)
                     .fontWeight(.medium)
                 
-                Text("\(product.unitsSold) units @ \(formatCurrency(product.averageCost))")
+                Text("\(product.unitsSold) units")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
             
             Spacer()
             
-            Text(formatCurrency(product.totalCOGS))
-                .font(.subheadline)
-                .fontWeight(.semibold)
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(formatCurrency(product.totalCost))
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                
+                Text(formatPercent(product.marginPercent))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
         }
         .padding()
         .background(Color(.systemBackground))
@@ -600,14 +624,14 @@ struct CategoryCOGSRow: View {
                     .font(.subheadline)
                     .fontWeight(.medium)
                 
-                Text("\(category.unitsSold) units")
+                Text("Profit: \(formatCurrency(category.grossProfit))")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
             
             Spacer()
             
-            Text(formatCurrency(category.totalCOGS))
+            Text(formatCurrency(category.totalCost))
                 .font(.subheadline)
                 .fontWeight(.semibold)
         }
@@ -635,47 +659,51 @@ struct ValuationReportView: View {
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                         ReportHeaderCard(
                             title: "Total Value",
-                            value: formatCurrency(report.totalValue),
+                            value: formatCurrency(report.summary.totalValue),
                             color: .green
                         )
                         
                         ReportHeaderCard(
                             title: "Total Units",
-                            value: "\(report.totalUnits)",
+                            value: "\(report.summary.totalUnits)",
                             color: .blue
                         )
                         
                         ReportHeaderCard(
+                            title: "Products",
+                            value: "\(report.summary.totalProducts)",
+                            color: .purple
+                        )
+                        
+                        ReportHeaderCard(
                             title: "Avg Cost/Unit",
-                            value: formatCurrency(report.averageCostPerUnit),
+                            value: formatCurrency(report.summary.averageCostPerUnit),
                             color: .orange
                         )
                     }
                     .padding(.horizontal)
                     
+                    // Aging Summary
+                    if let aging = report.agingSummary {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Aging Summary")
+                                .font(.headline)
+                                .padding(.horizontal)
+                            
+                            AgingSummaryView(aging: aging)
+                        }
+                        .padding(.top)
+                    }
+                    
                     // By Product
-                    if let products = report.byProduct, !products.isEmpty {
+                    if !report.byProduct.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("By Product")
                                 .font(.headline)
                                 .padding(.horizontal)
                             
-                            ForEach(products, id: \.productId) { product in
+                            ForEach(report.byProduct, id: \.productId) { product in
                                 ProductValuationRow(product: product)
-                            }
-                        }
-                        .padding(.top)
-                    }
-                    
-                    // Batches
-                    if let batches = report.batches, !batches.isEmpty {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Batches")
-                                .font(.headline)
-                                .padding(.horizontal)
-                            
-                            ForEach(batches, id: \.batchId) { batch in
-                                BatchValuationRow(batch: batch)
                             }
                         }
                         .padding(.top)
@@ -719,6 +747,52 @@ struct ValuationReportView: View {
     }
 }
 
+struct AgingSummaryView: View {
+    let aging: AgingSummary
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            AgingRow(label: "< 30 days", units: aging.under30Days.units, value: aging.under30Days.value, color: .green)
+            AgingRow(label: "30-60 days", units: aging.days30to60.units, value: aging.days30to60.value, color: .yellow)
+            AgingRow(label: "60-90 days", units: aging.days60to90.units, value: aging.days60to90.value, color: .orange)
+            AgingRow(label: "> 90 days", units: aging.over90Days.units, value: aging.over90Days.value, color: .red)
+        }
+        .padding()
+        .background(Color(.systemBackground))
+        .cornerRadius(8)
+        .padding(.horizontal)
+    }
+}
+
+struct AgingRow: View {
+    let label: String
+    let units: Int
+    let value: String
+    let color: Color
+    
+    var body: some View {
+        HStack {
+            Circle()
+                .fill(color)
+                .frame(width: 8, height: 8)
+            
+            Text(label)
+                .font(.subheadline)
+            
+            Spacer()
+            
+            Text("\(units) units")
+                .font(.caption)
+                .foregroundColor(.secondary)
+            
+            Text(formatCurrency(value))
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .frame(width: 80, alignment: .trailing)
+        }
+    }
+}
+
 struct ProductValuationRow: View {
     let product: ProductValuation
     
@@ -729,7 +803,7 @@ struct ProductValuationRow: View {
                     .font(.subheadline)
                     .fontWeight(.medium)
                 
-                Text("\(product.totalUnits) units • \(product.batchCount) batches")
+                Text("\(product.totalUnits) units")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -744,39 +818,6 @@ struct ProductValuationRow: View {
                 Text("@\(formatCurrency(product.averageCost))")
                     .font(.caption)
                     .foregroundColor(.secondary)
-            }
-        }
-        .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(8)
-        .padding(.horizontal)
-    }
-}
-
-struct BatchValuationRow: View {
-    let batch: BatchValuation
-    
-    var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Batch")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                
-                Text("\(batch.quantity) units @ \(formatCurrency(batch.unitCost))")
-                    .font(.subheadline)
-            }
-            
-            Spacer()
-            
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(formatCurrency(batch.totalValue))
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                
-                Text("\(batch.age) days old")
-                    .font(.caption)
-                    .foregroundColor(batch.age > 90 ? .red : .secondary)
             }
         }
         .padding()
@@ -808,43 +849,37 @@ struct ProfitMarginReportView: View {
                     ProgressView("Loading...")
                         .frame(maxWidth: .infinity, minHeight: 200)
                 } else if let report = viewModel.profitMarginReport {
-                    // Summary Cards
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                        ReportHeaderCard(
-                            title: "Revenue",
-                            value: formatCurrency(report.totalRevenue),
-                            color: .green
-                        )
-                        
-                        ReportHeaderCard(
-                            title: "COGS",
-                            value: formatCurrency(report.totalCOGS),
-                            color: .red
-                        )
-                        
-                        ReportHeaderCard(
-                            title: "Gross Profit",
-                            value: formatCurrency(report.grossProfit),
-                            color: .blue
-                        )
-                        
-                        ReportHeaderCard(
-                            title: "Margin",
-                            value: formatPercent(report.grossMarginPercent),
-                            color: .purple
-                        )
-                    }
+                    // Summary Card
+                    ReportHeaderCard(
+                        title: "Overall Margin",
+                        value: formatPercent(report.overallMargin),
+                        color: .purple
+                    )
                     .padding(.horizontal)
                     
                     // By Product
-                    if let products = report.byProduct, !products.isEmpty {
+                    if !report.byProduct.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("By Product")
                                 .font(.headline)
                                 .padding(.horizontal)
                             
-                            ForEach(products, id: \.productId) { product in
+                            ForEach(report.byProduct, id: \.productId) { product in
                                 ProductMarginRow(product: product)
+                            }
+                        }
+                        .padding(.top)
+                    }
+                    
+                    // Trends
+                    if let trends = report.trends, !trends.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Trends")
+                                .font(.headline)
+                                .padding(.horizontal)
+                            
+                            ForEach(trends, id: \.date) { trend in
+                                TrendRow(trend: trend)
                             }
                         }
                         .padding(.top)
@@ -943,16 +978,14 @@ struct ProfitLossReportView: View {
                     VStack(spacing: 0) {
                         // Revenue Section
                         PLSection(title: "Revenue", color: .green) {
-                            PLRow(label: "Total Sales", value: report.revenue.totalSales, isTotal: false)
-                            if let returns = report.revenue.returns {
-                                PLRow(label: "Returns", value: returns, isTotal: false, isNegative: true)
-                            }
-                            PLRow(label: "Net Revenue", value: report.revenue.netRevenue, isTotal: true)
+                            PLRow(label: "Total Sales", value: report.revenue.sales, isTotal: false)
+                            PLRow(label: "Total Revenue", value: report.revenue.total, isTotal: true)
                         }
                         
                         // COGS Section
                         PLSection(title: "Cost of Goods Sold", color: .red) {
-                            PLRow(label: "COGS", value: report.costOfGoodsSold, isTotal: true, isNegative: true)
+                            PLRow(label: "Product Costs", value: report.costOfGoodsSold.productCosts, isTotal: false, isNegative: true)
+                            PLRow(label: "Total COGS", value: report.costOfGoodsSold.total, isTotal: true, isNegative: true)
                         }
                         
                         // Gross Profit
@@ -965,9 +998,10 @@ struct ProfitLossReportView: View {
                         
                         // Operating Expenses
                         PLSection(title: "Operating Expenses", color: .orange) {
-                            ForEach(report.operatingExpenses.breakdown, id: \.type) { expense in
+                            ForEach(report.operatingExpenses.byType, id: \.type) { expense in
                                 PLRow(label: expense.type, value: expense.amount, isTotal: false, isNegative: true)
                             }
+                            PLRow(label: "Shrinkage", value: report.operatingExpenses.shrinkage, isTotal: false, isNegative: true)
                             PLRow(label: "Total Expenses", value: report.operatingExpenses.total, isTotal: true, isNegative: true)
                         }
                         
@@ -1147,19 +1181,6 @@ struct AdjustmentImpactReportView: View {
                     }
                     .padding(.top)
                     
-                    // By Product
-                    if let products = report.byProduct, !products.isEmpty {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("By Product")
-                                .font(.headline)
-                                .padding(.horizontal)
-                            
-                            ForEach(products, id: \.productId) { product in
-                                ProductAdjustmentRow(product: product)
-                            }
-                        }
-                        .padding(.top)
-                    }
                 } else {
                     emptyState
                 }
@@ -1211,41 +1232,7 @@ struct AdjustmentTypeRow: View {
             
             Spacer()
             
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(formatCurrency(impact.totalCost))
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                
-                Text(formatPercent(impact.percentOfTotal))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-        }
-        .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(8)
-        .padding(.horizontal)
-    }
-}
-
-struct ProductAdjustmentRow: View {
-    let product: ProductAdjustmentImpact
-    
-    var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(product.productName)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                
-                Text("\(product.adjustmentCount) adjustments")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            
-            Spacer()
-            
-            Text(formatCurrency(product.totalCost))
+            Text(formatCurrency(impact.totalCost))
                 .font(.subheadline)
                 .fontWeight(.semibold)
         }
@@ -1282,25 +1269,25 @@ struct ReceivingSummaryReportView: View {
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                         ReportHeaderCard(
                             title: "Total Cost",
-                            value: formatCurrency(report.totalCost),
+                            value: formatCurrency(report.summary.totalCost),
                             color: .green
                         )
                         
                         ReportHeaderCard(
                             title: "Total Qty",
-                            value: "\(report.totalQuantity)",
+                            value: "\(report.summary.totalQuantity)",
                             color: .blue
                         )
                         
                         ReportHeaderCard(
                             title: "Receivings",
-                            value: "\(report.totalReceivings)",
+                            value: "\(report.summary.totalReceivings)",
                             color: .purple
                         )
                         
                         ReportHeaderCard(
                             title: "Avg Cost",
-                            value: formatCurrency(report.averageCostPerUnit),
+                            value: formatCurrency(report.summary.averageCostPerUnit),
                             color: .orange
                         )
                     }
@@ -1315,20 +1302,6 @@ struct ReceivingSummaryReportView: View {
                             
                             ForEach(suppliers, id: \.supplierName) { supplier in
                                 SupplierReceivingRow(supplier: supplier)
-                            }
-                        }
-                        .padding(.top)
-                    }
-                    
-                    // By Product
-                    if let products = report.byProduct, !products.isEmpty {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("By Product")
-                                .font(.headline)
-                                .padding(.horizontal)
-                            
-                            ForEach(products, id: \.productId) { product in
-                                ProductReceivingRow(product: product)
                             }
                         }
                         .padding(.top)
@@ -1395,33 +1368,7 @@ struct SupplierReceivingRow: View {
     }
 }
 
-struct ProductReceivingRow: View {
-    let product: ProductReceivingSummary
-    
-    var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(product.productName)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                
-                Text("\(product.totalQuantity) units @ \(formatCurrency(product.averageCost))")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            
-            Spacer()
-            
-            Text(formatCurrency(product.totalCost))
-                .font(.subheadline)
-                .fontWeight(.semibold)
-        }
-        .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(8)
-        .padding(.horizontal)
-    }
-}
+
 
 // MARK: - Expense Summary Report View
 
@@ -1554,7 +1501,7 @@ struct ExpenseTypeRow: View {
                     .font(.subheadline)
                     .fontWeight(.semibold)
                 
-                Text(formatPercent(String(typeSummary.percentage)))
+                Text(formatPercent(typeSummary.percentage))
                     .font(.caption)
                     .foregroundColor(.secondary)
             }

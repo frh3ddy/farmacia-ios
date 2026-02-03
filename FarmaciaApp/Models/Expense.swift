@@ -123,12 +123,17 @@ struct ExpenseSummaryResponse: Decodable {
 }
 
 struct ExpenseSummary: Decodable {
-    let totalExpenses: String
-    let expenseCount: Int
-    let paidExpenses: String
-    let unpaidExpenses: String
+    let period: ExpensePeriod?
+    let locationId: String?
+    let totals: ExpenseTotals
     let byType: [ExpenseTypeSummary]
     let byMonth: [MonthlyExpenseSummary]?
+    
+    // Convenience accessors
+    var totalExpenses: String { totals.totalExpenses }
+    var expenseCount: Int { totals.expenseCount }
+    var paidExpenses: String { totals.paidExpenses }
+    var unpaidExpenses: String { totals.unpaidExpenses }
     
     var totalDouble: Double {
         Double(totalExpenses) ?? 0
@@ -143,14 +148,30 @@ struct ExpenseSummary: Decodable {
     }
 }
 
+struct ExpenseTotals: Decodable {
+    let totalExpenses: String
+    let expenseCount: Int
+    let paidExpenses: String
+    let unpaidExpenses: String
+}
+
+struct ExpensePeriod: Decodable {
+    let startDate: Date?
+    let endDate: Date?
+}
+
 struct ExpenseTypeSummary: Decodable {
     let type: ExpenseType
     let total: String
     let count: Int
-    let percentage: Double
+    let percentage: String
     
     var totalDouble: Double {
         Double(total) ?? 0
+    }
+    
+    var percentageDouble: Double {
+        Double(percentage) ?? 0
     }
 }
 
