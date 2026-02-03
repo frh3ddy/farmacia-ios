@@ -100,40 +100,68 @@ struct Expense: Codable, Identifiable {
 
 // MARK: - Expense Responses
 
-struct ExpenseResponse: Decodable {
-    let expense: Expense
-    let message: String?
+struct ExpenseCreateResponse: Decodable {
+    let success: Bool
+    let message: String
+    let data: Expense
 }
 
 struct ExpenseListResponse: Decodable {
-    let expenses: [Expense]
+    let success: Bool
     let count: Int
+    let data: [Expense]
+}
+
+struct ExpenseGetResponse: Decodable {
+    let success: Bool
+    let data: Expense
 }
 
 struct ExpenseSummaryResponse: Decodable {
-    let summary: ExpenseSummary
+    let success: Bool
+    let data: ExpenseSummary
 }
 
 struct ExpenseSummary: Decodable {
-    let totalAmount: String
-    let count: Int
+    let totalExpenses: String
+    let expenseCount: Int
+    let paidExpenses: String
+    let unpaidExpenses: String
     let byType: [ExpenseTypeSummary]
     let byMonth: [MonthlyExpenseSummary]?
-    let paid: String
-    let unpaid: String
+    
+    var totalDouble: Double {
+        Double(totalExpenses) ?? 0
+    }
+    
+    var paidDouble: Double {
+        Double(paidExpenses) ?? 0
+    }
+    
+    var unpaidDouble: Double {
+        Double(unpaidExpenses) ?? 0
+    }
 }
 
 struct ExpenseTypeSummary: Decodable {
     let type: ExpenseType
-    let amount: String
+    let total: String
     let count: Int
-    let percentage: Double?
+    let percentage: Double
+    
+    var totalDouble: Double {
+        Double(total) ?? 0
+    }
 }
 
 struct MonthlyExpenseSummary: Decodable {
     let month: String
-    let amount: String
+    let total: String
     let count: Int
+    
+    var totalDouble: Double {
+        Double(total) ?? 0
+    }
 }
 
 // MARK: - Expense Types Response

@@ -9,6 +9,7 @@ struct MainTabView: View {
     enum Tab: Hashable {
         case dashboard
         case inventory
+        case expenses
         case reports
         case employees
         case settings
@@ -29,6 +30,15 @@ struct MainTabView: View {
                     Label("Inventory", systemImage: "shippingbox")
                 }
                 .tag(Tab.inventory)
+            
+            // Expenses (if has permission)
+            if authManager.canManageExpenses {
+                ExpensesView()
+                    .tabItem {
+                        Label("Expenses", systemImage: "creditcard")
+                    }
+                    .tag(Tab.expenses)
+            }
             
             // Reports (if has permission)
             if authManager.canViewReports {
