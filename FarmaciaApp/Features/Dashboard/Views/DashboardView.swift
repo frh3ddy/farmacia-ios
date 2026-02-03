@@ -475,17 +475,6 @@ struct StatCard: View {
     }
 }
 
-// MARK: - Currency Formatter
-
-private func formatCurrency(_ value: String) -> String {
-    guard let doubleValue = Double(value) else { return "$\(value)" }
-    let formatter = NumberFormatter()
-    formatter.numberStyle = .currency
-    formatter.currencyCode = "USD"
-    formatter.maximumFractionDigits = 2
-    return formatter.string(from: NSNumber(value: doubleValue)) ?? "$\(value)"
-}
-
 // MARK: - Date Range Enum
 
 enum DashboardDateRange: CaseIterable {
