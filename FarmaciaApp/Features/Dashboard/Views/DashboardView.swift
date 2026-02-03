@@ -13,6 +13,9 @@ struct DashboardView: View {
                     // Welcome Header
                     welcomeHeader
                     
+                    // Date Range Selector
+                    dateRangeSelector
+                    
                     // Quick Stats
                     if let report = viewModel.dashboardReport {
                         quickStatsSection(report: report)
@@ -22,6 +25,9 @@ struct DashboardView: View {
                         
                         // Inventory Overview
                         inventorySummarySection(report: report)
+                        
+                        // Receivings Summary
+                        receivingsSummarySection(report: report)
                         
                         // Recent Adjustments
                         adjustmentsSummarySection(report: report)
@@ -88,6 +94,39 @@ struct DashboardView: View {
         .cornerRadius(16)
     }
     
+    // MARK: - Date Range Selector
+    
+    private var dateRangeSelector: some View {
+        HStack {
+            Text("Period:")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            
+            Picker("Date Range", selection: $viewModel.selectedDateRange) {
+                ForEach(DashboardDateRange.allCases, id: \.self) { range in
+                    Text(range.displayName).tag(range)
+                }
+            }
+            .pickerStyle(.menu)
+            .onChange(of: viewModel.selectedDateRange) { _, _ in
+                Task {
+                    await viewModel.loadDashboard()
+                }
+            }
+            
+            Spacer()
+            
+            Button {
+                Task {
+                    await viewModel.loadDashboard()
+                }
+            } label: {
+                Image(systemName: "arrow.clockwise")
+            }
+        }
+        .padding(.horizontal)
+    }
+    
     // MARK: - Quick Stats Section
     
     private func quickStatsSection(report: DashboardReport) -> some View {
@@ -96,31 +135,31 @@ struct DashboardView: View {
             GridItem(.flexible())
         ], spacing: 16) {
             StatCard(
-                title: "Today's Sales",
-                value: report.sales.totalRevenue,
+                title: "Revenue",
+                value: formatCurrency(report.sales.totalRevenue),
                 icon: "dollarsign.circle.fill",
                 color: .green
             )
             
             StatCard(
                 title: "Gross Profit",
-                value: report.sales.grossProfit,
+                value: formatCurrency(report.sales.grossProfit),
                 icon: "chart.line.uptrend.xyaxis",
                 color: .blue
             )
             
             StatCard(
                 title: "Inventory Value",
-                value: report.inventory.totalValue,
+                value: formatCurrency(report.inventory.totalValue),
                 icon: "shippingbox.fill",
                 color: .orange
             )
             
             StatCard(
                 title: "Net Profit",
-                value: report.netProfit.amount,
+                value: formatCurrency(report.netProfit.amount),
                 icon: "banknote.fill",
-                color: (Double(report.netProfit.marginPercent) ?? 0) >= 0 ? .green : .red
+                color: (Double(report.netProfit.amount) ?? 0) >= 0 ? .green : .red
             )
         }
     }
@@ -132,21 +171,32 @@ struct DashboardView: View {
             sectionHeader(title: "Sales Summary", icon: "cart.fill")
             
             VStack(spacing: 8) {
-                summaryRow(label: "Total Revenue", value: report.sales.totalRevenue)
-                summaryRow(label: "Cost of Goods Sold", value: report.sales.totalCOGS)
-                summaryRow(label: "Gross Profit", value: report.sales.grossProfit)
+                summaryRow(label: "Total Revenue", value: formatCurrency(report.sales.totalRevenue))
+                summaryRow(label: "Cost of Goods Sold", value: formatCurrency(report.sales.totalCOGS))
+                summaryRow(label: "Gross Profit", value: formatCurrency(report.sales.grossProfit), valueColor: .green)
                 summaryRow(label: "Gross Margin", value: "\(report.sales.grossMarginPercent)%")
                 
                 Divider()
                 
                 HStack {
-                    Text("Units Sold")
-                        .foregroundColor(.secondary)
+                    VStack(alignment: .leading) {
+                        Text("Units Sold")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Text("\(report.sales.totalUnitsSold)")
+                            .font(.headline)
+                    }
+                    
                     Spacer()
-                    Text("\(report.sales.totalUnitsSold)")
-                        .fontWeight(.medium)
+                    
+                    VStack(alignment: .trailing) {
+                        Text("Total Sales")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Text("\(report.sales.totalSales)")
+                            .font(.headline)
+                    }
                 }
-                .font(.subheadline)
             }
             .padding()
             .background(Color(.systemGray6))
@@ -162,9 +212,9 @@ struct DashboardView: View {
             
             VStack(spacing: 8) {
                 summaryRow(label: "Total Units", value: "\(report.inventory.totalUnits)")
-                summaryRow(label: "Total Value", value: report.inventory.totalValue)
+                summaryRow(label: "Total Value", value: formatCurrency(report.inventory.totalValue))
                 summaryRow(label: "Products", value: "\(report.inventory.totalProducts)")
-                summaryRow(label: "Avg Cost/Unit", value: report.inventory.averageCostPerUnit)
+                summaryRow(label: "Avg Cost/Unit", value: formatCurrency(report.inventory.averageCostPerUnit))
                 
                 // Aging breakdown if available
                 if let aging = report.inventory.aging {
@@ -188,6 +238,23 @@ struct DashboardView: View {
         }
     }
     
+    // MARK: - Receivings Summary Section
+    
+    private func receivingsSummarySection(report: DashboardReport) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeader(title: "Receivings", icon: "arrow.down.circle")
+            
+            VStack(spacing: 8) {
+                summaryRow(label: "Total Receivings", value: "\(report.receivings.totalReceivings)")
+                summaryRow(label: "Units Received", value: "\(report.receivings.totalQuantity)")
+                summaryRow(label: "Total Cost", value: formatCurrency(report.receivings.totalCost))
+            }
+            .padding()
+            .background(Color(.systemGray6))
+            .cornerRadius(12)
+        }
+    }
+    
     // MARK: - Adjustments Summary Section
     
     private func adjustmentsSummarySection(report: DashboardReport) -> some View {
@@ -196,9 +263,19 @@ struct DashboardView: View {
             
             VStack(spacing: 8) {
                 summaryRow(label: "Total Adjustments", value: "\(report.adjustments.totalAdjustments)")
-                summaryRow(label: "Total Loss", value: report.adjustments.totalLoss, valueColor: .red)
-                summaryRow(label: "Total Gain", value: report.adjustments.totalGain, valueColor: .green)
-                summaryRow(label: "Net Impact", value: report.adjustments.netImpact)
+                summaryRow(label: "Total Loss", value: formatCurrency(report.adjustments.totalLoss), valueColor: .red)
+                summaryRow(label: "Total Gain", value: formatCurrency(report.adjustments.totalGain), valueColor: .green)
+                
+                Divider()
+                
+                HStack {
+                    Text("Net Impact")
+                        .fontWeight(.medium)
+                    Spacer()
+                    Text(formatCurrency(report.adjustments.netImpact))
+                        .fontWeight(.bold)
+                        .foregroundColor((Double(report.adjustments.netImpact) ?? 0) >= 0 ? .green : .red)
+                }
             }
             .padding()
             .background(Color(.systemGray6))
@@ -213,29 +290,26 @@ struct DashboardView: View {
             sectionHeader(title: "Profit & Loss", icon: "chart.pie.fill")
             
             VStack(spacing: 8) {
-                summaryRow(label: "Revenue", value: report.sales.totalRevenue, valueColor: .green)
-                summaryRow(label: "COGS", value: "(\(report.sales.totalCOGS))")
-                summaryRow(label: "Operating Expenses", value: "(\(report.operatingExpenses.total))")
+                summaryRow(label: "Revenue", value: formatCurrency(report.sales.totalRevenue), valueColor: .green)
+                summaryRow(label: "COGS", value: "(\(formatCurrency(report.sales.totalCOGS)))", valueColor: .red)
+                summaryRow(label: "Operating Expenses", value: "(\(formatCurrency(report.operatingExpenses.total)))", valueColor: .red)
+                summaryRow(label: "Shrinkage", value: "(\(formatCurrency(report.operatingExpenses.shrinkage)))", valueColor: .orange)
                 
                 Divider()
                 
                 HStack {
-                    Text("Net Profit")
-                        .fontWeight(.semibold)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Net Profit")
+                            .fontWeight(.semibold)
+                        Text("\(report.netProfit.marginPercent)% margin")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
                     Spacer()
-                    Text(report.netProfit.amount)
+                    Text(formatCurrency(report.netProfit.amount))
+                        .font(.title3)
                         .fontWeight(.bold)
-                        .foregroundColor((Double(report.netProfit.marginPercent) ?? 0) >= 0 ? .green : .red)
-                }
-                
-                HStack {
-                    Text("Net Margin")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Spacer()
-                    Text("\(report.netProfit.marginPercent)%")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor((Double(report.netProfit.amount) ?? 0) >= 0 ? .green : .red)
                 }
             }
             .padding()
@@ -386,10 +460,10 @@ struct StatCard: View {
             }
             
             Text(value)
-                .font(.title2)
+                .font(.title3)
                 .fontWeight(.bold)
                 .lineLimit(1)
-                .minimumScaleFactor(0.8)
+                .minimumScaleFactor(0.7)
             
             Text(title)
                 .font(.caption)
@@ -401,6 +475,72 @@ struct StatCard: View {
     }
 }
 
+// MARK: - Currency Formatter
+
+private func formatCurrency(_ value: String) -> String {
+    guard let doubleValue = Double(value) else { return "$\(value)" }
+    let formatter = NumberFormatter()
+    formatter.numberStyle = .currency
+    formatter.currencyCode = "USD"
+    formatter.maximumFractionDigits = 2
+    return formatter.string(from: NSNumber(value: doubleValue)) ?? "$\(value)"
+}
+
+// MARK: - Date Range Enum
+
+enum DashboardDateRange: CaseIterable {
+    case today
+    case last7Days
+    case last30Days
+    case thisMonth
+    case lastMonth
+    case thisYear
+    
+    var displayName: String {
+        switch self {
+        case .today: return "Today"
+        case .last7Days: return "Last 7 Days"
+        case .last30Days: return "Last 30 Days"
+        case .thisMonth: return "This Month"
+        case .lastMonth: return "Last Month"
+        case .thisYear: return "This Year"
+        }
+    }
+    
+    var dateRange: (start: Date, end: Date) {
+        let calendar = Calendar.current
+        let now = Date()
+        
+        switch self {
+        case .today:
+            let start = calendar.startOfDay(for: now)
+            return (start, now)
+            
+        case .last7Days:
+            let start = calendar.date(byAdding: .day, value: -7, to: now)!
+            return (start, now)
+            
+        case .last30Days:
+            let start = calendar.date(byAdding: .day, value: -30, to: now)!
+            return (start, now)
+            
+        case .thisMonth:
+            let start = calendar.date(from: calendar.dateComponents([.year, .month], from: now))!
+            return (start, now)
+            
+        case .lastMonth:
+            let thisMonthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: now))!
+            let lastMonthStart = calendar.date(byAdding: .month, value: -1, to: thisMonthStart)!
+            let lastMonthEnd = calendar.date(byAdding: .day, value: -1, to: thisMonthStart)!
+            return (lastMonthStart, lastMonthEnd)
+            
+        case .thisYear:
+            let start = calendar.date(from: calendar.dateComponents([.year], from: now))!
+            return (start, now)
+        }
+    }
+}
+
 // MARK: - Dashboard View Model
 
 @MainActor
@@ -409,6 +549,7 @@ class DashboardViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var error: NetworkError?
     @Published var showLocationSwitcher = false
+    @Published var selectedDateRange: DashboardDateRange = .last30Days
     
     private let apiClient = APIClient.shared
     
@@ -424,11 +565,12 @@ class DashboardViewModel: ObservableObject {
                 return
             }
             
-            // Calculate date range (last 30 days)
-            let endDate = Date()
-            let startDate = Calendar.current.date(byAdding: .day, value: -30, to: endDate)!
+            // Get date range
+            let (startDate, endDate) = selectedDateRange.dateRange
             
             let dateFormatter = ISO8601DateFormatter()
+            dateFormatter.formatOptions = [.withFullDate]
+            
             let queryParams = [
                 "locationId": locationId,
                 "startDate": dateFormatter.string(from: startDate),
@@ -455,4 +597,3 @@ class DashboardViewModel: ObservableObject {
     DashboardView()
         .environmentObject(AuthManager.shared)
 }
-
