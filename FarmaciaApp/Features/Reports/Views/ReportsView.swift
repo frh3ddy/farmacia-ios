@@ -1145,42 +1145,57 @@ struct AdjustmentImpactReportView: View {
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                         ReportHeaderCard(
                             title: "Total Loss",
-                            value: formatCurrency(report.totalLoss),
+                            value: formatCurrency(report.summary.totalLoss),
                             color: .red
                         )
                         
                         ReportHeaderCard(
                             title: "Total Gain",
-                            value: formatCurrency(report.totalGain),
+                            value: formatCurrency(report.summary.totalGain),
                             color: .green
                         )
                         
                         ReportHeaderCard(
                             title: "Net Impact",
-                            value: formatCurrency(report.netImpact),
-                            color: Double(report.netImpact) ?? 0 >= 0 ? .green : .red
+                            value: formatCurrency(report.summary.netImpact),
+                            color: Double(report.summary.netImpact) ?? 0 >= 0 ? .green : .red
                         )
                         
                         ReportHeaderCard(
-                            title: "Shrinkage Rate",
-                            value: formatPercent(report.shrinkageRate),
+                            title: "Adjustments",
+                            value: "\(report.summary.totalAdjustments)",
                             color: .orange
                         )
                     }
                     .padding(.horizontal)
                     
                     // By Type
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("By Type")
-                            .font(.headline)
-                            .padding(.horizontal)
-                        
-                        ForEach(report.byType, id: \.type) { typeImpact in
-                            AdjustmentTypeRow(impact: typeImpact)
+                    if !report.byType.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("By Type")
+                                .font(.headline)
+                                .padding(.horizontal)
+                            
+                            ForEach(report.byType) { typeImpact in
+                                AdjustmentTypeRow(impact: typeImpact)
+                            }
                         }
+                        .padding(.top)
                     }
-                    .padding(.top)
                     
+                    // By Product
+                    if let products = report.byProduct, !products.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("By Product")
+                                .font(.headline)
+                                .padding(.horizontal)
+                            
+                            ForEach(products) { product in
+                                ProductAdjustmentRow(product: product)
+                            }
+                        }
+                        .padding(.top)
+                    }
                 } else {
                     emptyState
                 }
@@ -1235,6 +1250,47 @@ struct AdjustmentTypeRow: View {
             Text(formatCurrency(impact.totalCost))
                 .font(.subheadline)
                 .fontWeight(.semibold)
+        }
+        .padding()
+        .background(Color(.systemBackground))
+        .cornerRadius(8)
+        .padding(.horizontal)
+    }
+}
+
+struct ProductAdjustmentRow: View {
+    let product: ProductAdjustmentImpact
+    
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(product.productName)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                
+                Text("\(product.adjustmentCount) adjustments • \(product.totalQuantity) units")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+            
+            VStack(alignment: .trailing, spacing: 2) {
+                if Double(product.totalLoss) ?? 0 > 0 {
+                    Text("-\(formatCurrency(product.totalLoss))")
+                        .font(.caption)
+                        .foregroundColor(.red)
+                }
+                if Double(product.totalGain) ?? 0 > 0 {
+                    Text("+\(formatCurrency(product.totalGain))")
+                        .font(.caption)
+                        .foregroundColor(.green)
+                }
+                Text(formatCurrency(product.netImpact))
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(Double(product.netImpact) ?? 0 >= 0 ? .green : .red)
+            }
         }
         .padding()
         .background(Color(.systemBackground))
@@ -1300,8 +1356,22 @@ struct ReceivingSummaryReportView: View {
                                 .font(.headline)
                                 .padding(.horizontal)
                             
-                            ForEach(suppliers, id: \.supplierName) { supplier in
+                            ForEach(suppliers) { supplier in
                                 SupplierReceivingRow(supplier: supplier)
+                            }
+                        }
+                        .padding(.top)
+                    }
+                    
+                    // By Product
+                    if let products = report.byProduct, !products.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("By Product")
+                                .font(.headline)
+                                .padding(.horizontal)
+                            
+                            ForEach(products) { product in
+                                ProductReceivingRow(product: product)
                             }
                         }
                         .padding(.top)
@@ -1368,7 +1438,33 @@ struct SupplierReceivingRow: View {
     }
 }
 
-
+struct ProductReceivingRow: View {
+    let product: ProductReceivingSummary
+    
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(product.productName)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                
+                Text("\(product.receivingCount) receivings • \(product.totalQuantity) units @ \(formatCurrency(product.averageCost))")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+            
+            Text(formatCurrency(product.totalCost))
+                .font(.subheadline)
+                .fontWeight(.semibold)
+        }
+        .padding()
+        .background(Color(.systemBackground))
+        .cornerRadius(8)
+        .padding(.horizontal)
+    }
+}
 
 // MARK: - Expense Summary Report View
 

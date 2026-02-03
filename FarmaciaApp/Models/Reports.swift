@@ -269,13 +269,14 @@ struct PLSummary: Decodable {
 }
 
 // MARK: - Adjustment Impact Report
-// Backend returns: { period, locationId, summary: { totalAdjustments, totalLoss, totalGain, netImpact }, byType }
+// Backend returns: { period, locationId, summary: { totalAdjustments, totalLoss, totalGain, netImpact }, byType, byProduct }
 
 struct AdjustmentImpactReport: Decodable {
     let period: ReportPeriod
     let locationId: String?
     let summary: AdjustmentImpactSummary
     let byType: [AdjustmentTypeImpact]
+    let byProduct: [ProductAdjustmentImpact]?
 }
 
 struct AdjustmentImpactSummary: Decodable {
@@ -294,14 +295,27 @@ struct AdjustmentTypeImpact: Decodable, Identifiable {
     var id: String { type }
 }
 
+struct ProductAdjustmentImpact: Decodable, Identifiable {
+    let productId: String
+    let productName: String
+    let adjustmentCount: Int
+    let totalQuantity: Int
+    let totalLoss: String
+    let totalGain: String
+    let netImpact: String
+    
+    var id: String { productId }
+}
+
 // MARK: - Receiving Summary Report
-// Backend returns: { period, locationId, summary: { totalReceivings, totalQuantity, totalCost, averageCostPerUnit }, bySupplier }
+// Backend returns: { period, locationId, summary: { totalReceivings, totalQuantity, totalCost, averageCostPerUnit }, bySupplier, byProduct }
 
 struct ReceivingSummaryReport: Decodable {
     let period: ReportPeriod
     let locationId: String?
     let summary: ReceivingSummaryData
     let bySupplier: [SupplierReceivingSummary]?
+    let byProduct: [ProductReceivingSummary]?
 }
 
 struct ReceivingSummaryData: Decodable {
@@ -319,6 +333,17 @@ struct SupplierReceivingSummary: Decodable, Identifiable {
     let totalCost: String
     
     var id: String { supplierId ?? supplierName }
+}
+
+struct ProductReceivingSummary: Decodable, Identifiable {
+    let productId: String
+    let productName: String
+    let receivingCount: Int
+    let totalQuantity: Int
+    let totalCost: String
+    let averageCost: String
+    
+    var id: String { productId }
 }
 
 // MARK: - API Response Wrappers
