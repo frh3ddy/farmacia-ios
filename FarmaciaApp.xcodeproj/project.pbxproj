@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		37E697342F32AC3200F6CB5D /* ExpenseFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E697302F32AC3200F6CB5D /* ExpenseFormView.swift */; };
+		37E697352F32AC3200F6CB5D /* ExpensesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E697312F32AC3200F6CB5D /* ExpensesView.swift */; };
+		37E697362F32AC3200F6CB5D /* ExpenseDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E6972F2F32AC3200F6CB5D /* ExpenseDetailView.swift */; };
 		F000000100000001 /* FarmaciaApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000001 /* FarmaciaApp.swift */; };
 		F000000100000002 /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000002 /* AppConfiguration.swift */; };
 		F000000100000003 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000003 /* APIClient.swift */; };
@@ -34,6 +37,9 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		37E6972F2F32AC3200F6CB5D /* ExpenseDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseDetailView.swift; sourceTree = "<group>"; };
+		37E697302F32AC3200F6CB5D /* ExpenseFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseFormView.swift; sourceTree = "<group>"; };
+		37E697312F32AC3200F6CB5D /* ExpensesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpensesView.swift; sourceTree = "<group>"; };
 		F100000000000000 /* FarmaciaApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FarmaciaApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F100000100000001 /* FarmaciaApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FarmaciaApp.swift; sourceTree = "<group>"; };
 		F100000100000002 /* AppConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfiguration.swift; sourceTree = "<group>"; };
@@ -73,20 +79,30 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		37E697322F32AC3200F6CB5D /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				37E6972F2F32AC3200F6CB5D /* ExpenseDetailView.swift */,
+				37E697302F32AC3200F6CB5D /* ExpenseFormView.swift */,
+				37E697312F32AC3200F6CB5D /* ExpensesView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		37E697332F32AC3200F6CB5D /* Expenses */ = {
+			isa = PBXGroup;
+			children = (
+				37E697322F32AC3200F6CB5D /* Views */,
+			);
+			path = Expenses;
+			sourceTree = "<group>";
+		};
 		F300000000000000 = {
 			isa = PBXGroup;
 			children = (
 				F300000000000001 /* FarmaciaApp */,
 				F300000000000099 /* Products */,
 			);
-			sourceTree = "<group>";
-		};
-		F300000000000099 /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				F100000000000000 /* FarmaciaApp.app */,
-			);
-			name = Products;
 			sourceTree = "<group>";
 		};
 		F300000000000001 /* FarmaciaApp */ = {
@@ -119,28 +135,10 @@
 			path = Core;
 			sourceTree = "<group>";
 		};
-		F300000000000007 /* Network */ = {
-			isa = PBXGroup;
-			children = (
-				F100000100000003 /* APIClient.swift */,
-				F100000100000004 /* APIEndpoint.swift */,
-				F100000100000005 /* NetworkError.swift */,
-			);
-			path = Network;
-			sourceTree = "<group>";
-		};
-		F300000000000008 /* Auth */ = {
-			isa = PBXGroup;
-			children = (
-				F100000100000006 /* AuthManager.swift */,
-				F100000100000007 /* KeychainManager.swift */,
-			);
-			path = Auth;
-			sourceTree = "<group>";
-		};
 		F300000000000004 /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				37E697332F32AC3200F6CB5D /* Expenses */,
 				F300000000000009 /* Auth */,
 				F300000000000010 /* Dashboard */,
 				F300000000000011 /* Inventory */,
@@ -148,90 +146,6 @@
 				F300000000000013 /* Employees */,
 			);
 			path = Features;
-			sourceTree = "<group>";
-		};
-		F300000000000009 /* Auth */ = {
-			isa = PBXGroup;
-			children = (
-				F300000000000014 /* Views */,
-			);
-			path = Auth;
-			sourceTree = "<group>";
-		};
-		F300000000000014 /* Views */ = {
-			isa = PBXGroup;
-			children = (
-				F100000100000008 /* DeviceActivationView.swift */,
-				F100000100000009 /* PINEntryView.swift */,
-				F100000100000010 /* LocationSwitchView.swift */,
-			);
-			path = Views;
-			sourceTree = "<group>";
-		};
-		F300000000000010 /* Dashboard */ = {
-			isa = PBXGroup;
-			children = (
-				F300000000000015 /* Views */,
-			);
-			path = Dashboard;
-			sourceTree = "<group>";
-		};
-		F300000000000015 /* Views */ = {
-			isa = PBXGroup;
-			children = (
-				F100000100000011 /* MainTabView.swift */,
-				F100000100000012 /* DashboardView.swift */,
-				F100000100000013 /* SettingsView.swift */,
-			);
-			path = Views;
-			sourceTree = "<group>";
-		};
-		F300000000000011 /* Inventory */ = {
-			isa = PBXGroup;
-			children = (
-				F300000000000016 /* Views */,
-			);
-			path = Inventory;
-			sourceTree = "<group>";
-		};
-		F300000000000016 /* Views */ = {
-			isa = PBXGroup;
-			children = (
-				F100000100000014 /* InventoryView.swift */,
-			);
-			path = Views;
-			sourceTree = "<group>";
-		};
-		F300000000000012 /* Reports */ = {
-			isa = PBXGroup;
-			children = (
-				F300000000000017 /* Views */,
-			);
-			path = Reports;
-			sourceTree = "<group>";
-		};
-		F300000000000017 /* Views */ = {
-			isa = PBXGroup;
-			children = (
-				F100000100000015 /* ReportsView.swift */,
-			);
-			path = Views;
-			sourceTree = "<group>";
-		};
-		F300000000000013 /* Employees */ = {
-			isa = PBXGroup;
-			children = (
-				F300000000000018 /* Views */,
-			);
-			path = Employees;
-			sourceTree = "<group>";
-		};
-		F300000000000018 /* Views */ = {
-			isa = PBXGroup;
-			children = (
-				F100000100000016 /* EmployeesView.swift */,
-			);
-			path = Views;
 			sourceTree = "<group>";
 		};
 		F300000000000005 /* Models */ = {
@@ -255,6 +169,117 @@
 				F100000100000025 /* Info.plist */,
 			);
 			path = Resources;
+			sourceTree = "<group>";
+		};
+		F300000000000007 /* Network */ = {
+			isa = PBXGroup;
+			children = (
+				F100000100000003 /* APIClient.swift */,
+				F100000100000004 /* APIEndpoint.swift */,
+				F100000100000005 /* NetworkError.swift */,
+			);
+			path = Network;
+			sourceTree = "<group>";
+		};
+		F300000000000008 /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				F100000100000006 /* AuthManager.swift */,
+				F100000100000007 /* KeychainManager.swift */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
+		F300000000000009 /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				F300000000000014 /* Views */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
+		F300000000000010 /* Dashboard */ = {
+			isa = PBXGroup;
+			children = (
+				F300000000000015 /* Views */,
+			);
+			path = Dashboard;
+			sourceTree = "<group>";
+		};
+		F300000000000011 /* Inventory */ = {
+			isa = PBXGroup;
+			children = (
+				F300000000000016 /* Views */,
+			);
+			path = Inventory;
+			sourceTree = "<group>";
+		};
+		F300000000000012 /* Reports */ = {
+			isa = PBXGroup;
+			children = (
+				F300000000000017 /* Views */,
+			);
+			path = Reports;
+			sourceTree = "<group>";
+		};
+		F300000000000013 /* Employees */ = {
+			isa = PBXGroup;
+			children = (
+				F300000000000018 /* Views */,
+			);
+			path = Employees;
+			sourceTree = "<group>";
+		};
+		F300000000000014 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				F100000100000008 /* DeviceActivationView.swift */,
+				F100000100000009 /* PINEntryView.swift */,
+				F100000100000010 /* LocationSwitchView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		F300000000000015 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				F100000100000011 /* MainTabView.swift */,
+				F100000100000012 /* DashboardView.swift */,
+				F100000100000013 /* SettingsView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		F300000000000016 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				F100000100000014 /* InventoryView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		F300000000000017 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				F100000100000015 /* ReportsView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		F300000000000018 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				F100000100000016 /* EmployeesView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		F300000000000099 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				F100000000000000 /* FarmaciaApp.app */,
+			);
+			name = Products;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -335,6 +360,9 @@
 				F000000100000019 /* Location.swift in Sources */,
 				F000000100000020 /* Product.swift in Sources */,
 				F000000100000021 /* Inventory.swift in Sources */,
+				37E697342F32AC3200F6CB5D /* ExpenseFormView.swift in Sources */,
+				37E697352F32AC3200F6CB5D /* ExpensesView.swift in Sources */,
+				37E697362F32AC3200F6CB5D /* ExpenseDetailView.swift in Sources */,
 				F000000100000022 /* Adjustment.swift in Sources */,
 				F000000100000023 /* Expense.swift in Sources */,
 				F000000100000024 /* Reports.swift in Sources */,
