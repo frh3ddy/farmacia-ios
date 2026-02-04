@@ -5,8 +5,47 @@ import SwiftUI
 struct DeviceActivationView: View {
     @EnvironmentObject var authManager: AuthManager
     @StateObject private var viewModel = DeviceActivationViewModel()
+    @State private var showSetup = false
+    @State private var needsSetup = false
+    @State private var checkingSetup = true
     
     var body: some View {
+        Group {
+            if checkingSetup {
+                loadingView
+            } else if showSetup && needsSetup {
+                InitialSetupView(
+                    onSetupComplete: {
+                        showSetup = false
+                        needsSetup = false
+                    },
+                    onSwitchToLogin: {
+                        showSetup = false
+                    }
+                )
+            } else {
+                activationView
+            }
+        }
+        .task {
+            await checkSetupStatus()
+        }
+    }
+    
+    // MARK: - Loading View
+    
+    private var loadingView: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .scaleEffect(1.5)
+            Text("Checking setup status...")
+                .foregroundColor(.secondary)
+        }
+    }
+    
+    // MARK: - Activation View
+    
+    private var activationView: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 32) {
@@ -18,6 +57,11 @@ struct DeviceActivationView: View {
                     
                     // Activate Button
                     activateButton
+                    
+                    // Setup Link (if needed)
+                    if needsSetup {
+                        setupLink
+                    }
                     
                     // Help Text
                     helpSection
@@ -32,6 +76,22 @@ struct DeviceActivationView: View {
                 Text(viewModel.errorMessage)
             }
         }
+    }
+    
+    // MARK: - Check Setup Status
+    
+    private func checkSetupStatus() async {
+        do {
+            let response: SetupStatusResponse = try await APIClient.shared.request(
+                endpoint: .setupStatus
+            )
+            needsSetup = response.data.needsSetup
+            showSetup = response.data.needsSetup
+        } catch {
+            // If we can't check, assume setup is done
+            needsSetup = false
+        }
+        checkingSetup = false
     }
     
     // MARK: - Header Section
@@ -129,6 +189,30 @@ struct DeviceActivationView: View {
             .fontWeight(.semibold)
         }
         .disabled(!viewModel.isFormValid || viewModel.isLoading)
+    }
+    
+    // MARK: - Setup Link
+    
+    private var setupLink: some View {
+        VStack(spacing: 12) {
+            Divider()
+            
+            Text("First time using Farmacia?")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            
+            Button {
+                showSetup = true
+            } label: {
+                HStack {
+                    Image(systemName: "sparkles")
+                    Text("Set Up Your Pharmacy")
+                }
+                .font(.headline)
+                .foregroundColor(.green)
+            }
+        }
+        .padding(.top, 8)
     }
     
     // MARK: - Help Section

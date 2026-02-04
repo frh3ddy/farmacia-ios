@@ -14,6 +14,10 @@ enum HTTPMethod: String {
 
 enum APIEndpoint {
     
+    // MARK: - Setup Endpoints
+    case setupStatus
+    case initialSetup
+    
     // MARK: - Auth Endpoints
     case deviceActivate
     case pinLogin
@@ -98,6 +102,10 @@ enum APIEndpoint {
     
     var path: String {
         switch self {
+        // Setup
+        case .setupStatus: return "/auth/setup/status"
+        case .initialSetup: return "/auth/setup/initial"
+            
         // Auth
         case .deviceActivate: return "/auth/device/activate"
         case .pinLogin: return "/auth/pin"
@@ -176,6 +184,12 @@ enum APIEndpoint {
     
     var method: HTTPMethod {
         switch self {
+        // Setup
+        case .setupStatus:
+            return .get
+        case .initialSetup:
+            return .post
+            
         // Auth
         case .deviceActivate, .pinLogin, .pinRefresh, .switchLocation, .logout:
             return .post
@@ -246,7 +260,7 @@ enum APIEndpoint {
     
     var requiresDeviceToken: Bool {
         switch self {
-        case .deviceActivate:
+        case .deviceActivate, .setupStatus, .initialSetup:
             return false
         default:
             return true
@@ -255,7 +269,7 @@ enum APIEndpoint {
     
     var requiresSessionToken: Bool {
         switch self {
-        case .deviceActivate, .pinLogin:
+        case .deviceActivate, .pinLogin, .setupStatus, .initialSetup:
             return false
         default:
             return true
