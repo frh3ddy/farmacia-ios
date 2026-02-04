@@ -336,15 +336,6 @@ class CreateProductViewModel: ObservableObject {
     }
 }
 
-// MARK: - API Response wrapper (if not already defined)
-
-struct APIResponse<T: Decodable>: Decodable {
-    let success: Bool
-    let data: T?
-    let message: String?
-    let error: String?
-}
-
 // MARK: - Preview
 
 #Preview {
