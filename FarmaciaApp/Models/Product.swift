@@ -16,6 +16,13 @@ struct Product: Codable, Identifiable, Equatable, Hashable {
     let supplierCount: Int?
     let createdAt: Date?
     
+    // Price and inventory fields (from new products endpoint)
+    let sellingPrice: Double?
+    let currency: String?
+    let totalInventory: Int?
+    let averageCost: Double?
+    let hasSquareSync: Bool?
+    
     var displayName: String {
         // Use Square product name, then variation name, then fallback to name
         let cleanSquareName = squareProductName?.trimmingCharacters(in: .whitespaces)
@@ -38,6 +45,32 @@ struct Product: Codable, Identifiable, Equatable, Hashable {
         squareDescription
     }
     
+    /// Formatted selling price in MXN
+    var formattedPrice: String? {
+        guard let price = sellingPrice else { return nil }
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = currency ?? "MXN"
+        formatter.locale = Locale(identifier: "es_MX")
+        return formatter.string(from: NSNumber(value: price))
+    }
+    
+    /// Formatted average cost in MXN
+    var formattedCost: String? {
+        guard let cost = averageCost else { return nil }
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = currency ?? "MXN"
+        formatter.locale = Locale(identifier: "es_MX")
+        return formatter.string(from: NSNumber(value: cost))
+    }
+    
+    /// Profit margin percentage
+    var profitMargin: Double? {
+        guard let price = sellingPrice, let cost = averageCost, price > 0 else { return nil }
+        return ((price - cost) / price) * 100
+    }
+    
     static func == (lhs: Product, rhs: Product) -> Bool {
         lhs.id == rhs.id
     }
@@ -45,6 +78,46 @@ struct Product: Codable, Identifiable, Equatable, Hashable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
+}
+
+// MARK: - Create Product Request
+
+struct CreateProductRequest: Encodable {
+    let name: String
+    let sku: String?
+    let description: String?
+    let sellingPrice: Double
+    let costPrice: Double?
+    let initialStock: Int?
+    let locationId: String?
+    let syncToSquare: Bool
+}
+
+// MARK: - Create Product Response
+
+struct CreateProductResponse: Decodable {
+    let product: Product
+    let squareSynced: Bool
+    let squareItemId: String?
+    let squareVariationId: String?
+    let inventoryCreated: Bool
+}
+
+// MARK: - Update Price Request
+
+struct UpdatePriceRequest: Encodable {
+    let sellingPrice: Double
+    let locationId: String?
+    let syncToSquare: Bool
+}
+
+// MARK: - Update Price Response
+
+struct UpdatePriceResponse: Decodable {
+    let product: Product
+    let previousPrice: Double?
+    let newPrice: Double
+    let squareSynced: Bool
 }
 
 // MARK: - Category

@@ -8,6 +8,7 @@ struct MainTabView: View {
     
     enum Tab: Hashable {
         case dashboard
+        case products
         case inventory
         case expenses
         case reports
@@ -23,6 +24,13 @@ struct MainTabView: View {
                     Label("Dashboard", systemImage: "chart.bar.xaxis")
                 }
                 .tag(Tab.dashboard)
+            
+            // Products
+            ProductsView()
+                .tabItem {
+                    Label("Products", systemImage: "tag")
+                }
+                .tag(Tab.products)
             
             // Inventory
             InventoryView()

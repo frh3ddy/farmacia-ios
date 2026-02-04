@@ -87,6 +87,9 @@ enum APIEndpoint {
     
     // MARK: - Product Endpoints
     case listProducts
+    case getProduct(id: String)
+    case createProduct
+    case updateProductPrice(id: String)
     
     // MARK: - Supplier Endpoints
     case listSuppliers
@@ -161,7 +164,10 @@ enum APIEndpoint {
         case .getLocation(let id): return "/locations/\(id)"
             
         // Products
-        case .listProducts: return "/api/products"
+        case .listProducts: return "/products"
+        case .getProduct(let id): return "/products/\(id)"
+        case .createProduct: return "/products"
+        case .updateProductPrice(let id): return "/products/\(id)/price"
             
         // Suppliers
         case .listSuppliers: return "/admin/inventory/cutover/suppliers"
@@ -225,8 +231,12 @@ enum APIEndpoint {
             return .get
             
         // Products
-        case .listProducts:
+        case .listProducts, .getProduct:
             return .get
+        case .createProduct:
+            return .post
+        case .updateProductPrice:
+            return .patch
             
         // Suppliers
         case .listSuppliers:
