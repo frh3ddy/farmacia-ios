@@ -451,6 +451,15 @@ class ExpensesViewModel: ObservableObject {
         }
     }
     
+    // MARK: - Date Formatter (for date-only fields)
+    
+    private static let dateOnlyFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = TimeZone.current  // Use local timezone
+        return formatter
+    }()
+    
     // MARK: - Create Expense
     
     func createExpense(
@@ -468,11 +477,14 @@ class ExpensesViewModel: ObservableObject {
         isSubmitting = true
         defer { isSubmitting = false }
         
+        // Format date as YYYY-MM-DD string to avoid timezone issues
+        let dateString = Self.dateOnlyFormatter.string(from: date)
+        
         let request = CreateExpenseRequest(
             locationId: locationId,
             type: type.rawValue,
             amount: amount,
-            date: date,
+            date: dateString,
             description: description,
             vendor: vendor,
             reference: reference,
@@ -521,10 +533,13 @@ class ExpensesViewModel: ObservableObject {
         isSubmitting = true
         defer { isSubmitting = false }
         
+        // Format date as YYYY-MM-DD string if provided
+        let dateString = date.map { Self.dateOnlyFormatter.string(from: $0) }
+        
         let request = UpdateExpenseRequest(
             type: type?.rawValue,
             amount: amount,
-            date: date,
+            date: dateString,
             description: description,
             vendor: vendor,
             reference: reference,

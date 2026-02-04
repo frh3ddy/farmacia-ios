@@ -280,7 +280,7 @@ struct CreateExpenseRequest: Encodable {
     let locationId: String
     let type: String
     let amount: Double
-    let date: Date
+    let date: String  // Date-only string in YYYY-MM-DD format
     let description: String?
     let vendor: String?
     let reference: String?
@@ -293,7 +293,7 @@ struct CreateExpenseRequest: Encodable {
 struct UpdateExpenseRequest: Encodable {
     let type: String?
     let amount: Double?
-    let date: Date?
+    let date: String?  // Date-only string in YYYY-MM-DD format
     let description: String?
     let vendor: String?
     let reference: String?
