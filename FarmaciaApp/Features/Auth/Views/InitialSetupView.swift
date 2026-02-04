@@ -28,6 +28,9 @@ struct InitialSetupView: View {
             }
             .navigationTitle("Welcome")
             .navigationBarTitleDisplayMode(.inline)
+            .task {
+                await viewModel.loadAvailableLocations()
+            }
             .alert("Setup Error", isPresented: $viewModel.showError) {
                 Button("OK", role: .cancel) {}
             } message: {
@@ -127,9 +130,44 @@ struct InitialSetupView: View {
                 Label("Pharmacy Location", systemImage: "building.2.fill")
                     .font(.headline)
                 
-                TextField("Pharmacy Name", text: $viewModel.locationName)
-                    .textFieldStyle(.roundedBorder)
-                    .autocorrectionDisabled()
+                // Show location choice if locations exist
+                if !viewModel.availableLocations.isEmpty {
+                    Picker("Location Option", selection: $viewModel.useExistingLocation) {
+                        Text("Use existing location").tag(true)
+                        Text("Create new location").tag(false)
+                    }
+                    .pickerStyle(.segmented)
+                    
+                    if viewModel.useExistingLocation {
+                        // Location picker
+                        Picker("Select Location", selection: $viewModel.selectedLocationId) {
+                            ForEach(viewModel.availableLocations, id: \.id) { location in
+                                HStack {
+                                    Text(location.name)
+                                    if let squareId = location.squareId {
+                                        Text("(Square)")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                                .tag(location.id)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        
+                        Text("\(viewModel.availableLocations.count) location(s) available from Square sync")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    } else {
+                        TextField("Pharmacy Name", text: $viewModel.locationName)
+                            .textFieldStyle(.roundedBorder)
+                            .autocorrectionDisabled()
+                    }
+                } else {
+                    TextField("Pharmacy Name", text: $viewModel.locationName)
+                        .textFieldStyle(.roundedBorder)
+                        .autocorrectionDisabled()
+                }
             }
             .padding(16)
             .background(Color(.systemGray6))
@@ -189,22 +227,57 @@ class InitialSetupViewModel: ObservableObject {
     @Published var confirmPin = ""
     @Published var locationName = ""
     
+    // Location selection
+    @Published var availableLocations: [SetupAvailableLocation] = []
+    @Published var useExistingLocation = false
+    @Published var selectedLocationId = ""
+    @Published var isLoadingLocations = true
+    
     @Published var isLoading = false
     @Published var showError = false
     @Published var errorMessage = ""
     @Published var showSuccess = false
     
     var isFormValid: Bool {
-        !ownerName.isEmpty &&
-        ownerName.count >= 2 &&
-        !ownerEmail.isEmpty &&
-        ownerEmail.contains("@") &&
-        ownerPassword.count >= 6 &&
-        ownerPassword == confirmPassword &&
-        ownerPin.count >= 4 &&
-        ownerPin == confirmPin &&
-        !locationName.isEmpty &&
-        locationName.count >= 2
+        let ownerValid = !ownerName.isEmpty &&
+            ownerName.count >= 2 &&
+            !ownerEmail.isEmpty &&
+            ownerEmail.contains("@") &&
+            ownerPassword.count >= 6 &&
+            ownerPassword == confirmPassword &&
+            ownerPin.count >= 4 &&
+            ownerPin == confirmPin
+        
+        // Location validation
+        let locationValid: Bool
+        if useExistingLocation {
+            locationValid = !selectedLocationId.isEmpty
+        } else {
+            locationValid = !locationName.isEmpty && locationName.count >= 2
+        }
+        
+        return ownerValid && locationValid
+    }
+    
+    func loadAvailableLocations() async {
+        isLoadingLocations = true
+        
+        do {
+            let response: SetupStatusResponse = try await APIClient.shared.request(
+                endpoint: .setupStatus
+            )
+            
+            if let locations = response.data.locations, !locations.isEmpty {
+                availableLocations = locations
+                useExistingLocation = true
+                selectedLocationId = locations.first?.id ?? ""
+            }
+        } catch {
+            print("[Setup] Failed to load locations: \(error)")
+            // Not critical - just means user will create a new location
+        }
+        
+        isLoadingLocations = false
     }
     
     func submitSetup() async {
@@ -218,7 +291,8 @@ class InitialSetupViewModel: ObservableObject {
                 ownerEmail: ownerEmail,
                 ownerPassword: ownerPassword,
                 ownerPin: ownerPin,
-                locationName: locationName,
+                locationId: useExistingLocation ? selectedLocationId : nil,
+                locationName: useExistingLocation ? nil : locationName,
                 squareLocationId: nil
             )
             

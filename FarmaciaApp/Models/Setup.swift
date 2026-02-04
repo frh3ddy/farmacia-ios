@@ -2,12 +2,20 @@ import Foundation
 
 // MARK: - Setup Status
 
+struct SetupAvailableLocation: Codable {
+    let id: String
+    let name: String
+    let squareId: String?
+    let isActive: Bool
+}
+
 struct SetupStatus: Codable {
     let needsSetup: Bool
     let hasEmployees: Bool
     let hasLocations: Bool
     let employeeCount: Int
     let locationCount: Int
+    let locations: [SetupAvailableLocation]?  // Available locations for selection
 }
 
 struct SetupStatusResponse: Codable {
@@ -22,7 +30,8 @@ struct InitialSetupRequest: Encodable {
     let ownerEmail: String
     let ownerPassword: String
     let ownerPin: String
-    let locationName: String
+    let locationId: String?       // Use existing location
+    let locationName: String?     // Create new location
     let squareLocationId: String?
 }
 
