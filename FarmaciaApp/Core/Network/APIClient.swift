@@ -247,8 +247,8 @@ struct ReceiveInventoryRequest: Encodable {
     let invoiceNumber: String?
     let purchaseOrderId: String?
     let batchNumber: String?
-    let expiryDate: Date?
-    let manufacturingDate: Date?
+    let expiryDate: String?  // Date-only string in YYYY-MM-DD format
+    let manufacturingDate: String?  // Date-only string in YYYY-MM-DD format
     let receivedBy: String?
     let notes: String?
     let syncToSquare: Bool?
@@ -262,7 +262,7 @@ struct CreateAdjustmentRequest: Encodable {
     let reason: String?
     let notes: String?
     let unitCost: Double?
-    let effectiveDate: Date?
+    let effectiveDate: String?  // Date-only string in YYYY-MM-DD format
     let adjustedBy: String?
     let syncToSquare: Bool?
 }

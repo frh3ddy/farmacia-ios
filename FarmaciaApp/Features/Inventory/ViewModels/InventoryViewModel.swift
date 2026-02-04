@@ -27,6 +27,15 @@ class InventoryViewModel: ObservableObject {
     @Published var successMessage: String?
     @Published var showSuccess = false
     
+    // MARK: - Date Formatter (for date-only fields)
+    
+    private static let dateOnlyFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = TimeZone.current  // Use local timezone
+        return formatter
+    }()
+    
     // MARK: - Private Properties
     
     private let apiClient = APIClient.shared
@@ -148,6 +157,10 @@ class InventoryViewModel: ObservableObject {
         isSubmitting = true
         errorMessage = nil
         
+        // Format dates as YYYY-MM-DD strings to avoid timezone issues
+        let expiryDateString = expiryDate.map { Self.dateOnlyFormatter.string(from: $0) }
+        let manufacturingDateString = manufacturingDate.map { Self.dateOnlyFormatter.string(from: $0) }
+        
         let request = ReceiveInventoryRequest(
             locationId: locationId,
             productId: productId,
@@ -157,8 +170,8 @@ class InventoryViewModel: ObservableObject {
             invoiceNumber: invoiceNumber?.isEmpty == true ? nil : invoiceNumber,
             purchaseOrderId: nil,
             batchNumber: batchNumber?.isEmpty == true ? nil : batchNumber,
-            expiryDate: expiryDate,
-            manufacturingDate: manufacturingDate,
+            expiryDate: expiryDateString,
+            manufacturingDate: manufacturingDateString,
             receivedBy: nil, // Backend gets this from session
             notes: notes?.isEmpty == true ? nil : notes,
             syncToSquare: syncToSquare
