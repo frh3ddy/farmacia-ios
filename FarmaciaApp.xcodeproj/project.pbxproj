@@ -10,6 +10,9 @@
 		37E697342F32AC3200F6CB5D /* ExpenseFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E697302F32AC3200F6CB5D /* ExpenseFormView.swift */; };
 		37E697352F32AC3200F6CB5D /* ExpensesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E697312F32AC3200F6CB5D /* ExpensesView.swift */; };
 		37E697362F32AC3200F6CB5D /* ExpenseDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E6972F2F32AC3200F6CB5D /* ExpenseDetailView.swift */; };
+		37E6973C2F32F2A400F6CB5D /* ProductDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E697382F32F2A400F6CB5D /* ProductDetailView.swift */; };
+		37E6973D2F32F2A400F6CB5D /* ProductsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E697392F32F2A400F6CB5D /* ProductsView.swift */; };
+		37E6973E2F32F2A400F6CB5D /* CreateProductView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E697372F32F2A400F6CB5D /* CreateProductView.swift */; };
 		F000000100000001 /* FarmaciaApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000001 /* FarmaciaApp.swift */; };
 		F000000100000002 /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000002 /* AppConfiguration.swift */; };
 		F000000100000003 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000003 /* APIClient.swift */; };
@@ -40,6 +43,9 @@
 		37E6972F2F32AC3200F6CB5D /* ExpenseDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseDetailView.swift; sourceTree = "<group>"; };
 		37E697302F32AC3200F6CB5D /* ExpenseFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseFormView.swift; sourceTree = "<group>"; };
 		37E697312F32AC3200F6CB5D /* ExpensesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpensesView.swift; sourceTree = "<group>"; };
+		37E697372F32F2A400F6CB5D /* CreateProductView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateProductView.swift; sourceTree = "<group>"; };
+		37E697382F32F2A400F6CB5D /* ProductDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductDetailView.swift; sourceTree = "<group>"; };
+		37E697392F32F2A400F6CB5D /* ProductsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductsView.swift; sourceTree = "<group>"; };
 		F100000000000000 /* FarmaciaApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FarmaciaApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F100000100000001 /* FarmaciaApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FarmaciaApp.swift; sourceTree = "<group>"; };
 		F100000100000002 /* AppConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfiguration.swift; sourceTree = "<group>"; };
@@ -97,6 +103,24 @@
 			path = Expenses;
 			sourceTree = "<group>";
 		};
+		37E6973A2F32F2A400F6CB5D /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				37E697372F32F2A400F6CB5D /* CreateProductView.swift */,
+				37E697382F32F2A400F6CB5D /* ProductDetailView.swift */,
+				37E697392F32F2A400F6CB5D /* ProductsView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		37E6973B2F32F2A400F6CB5D /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				37E6973A2F32F2A400F6CB5D /* Views */,
+			);
+			path = Products;
+			sourceTree = "<group>";
+		};
 		F300000000000000 = {
 			isa = PBXGroup;
 			children = (
@@ -144,6 +168,7 @@
 				F300000000000011 /* Inventory */,
 				F300000000000012 /* Reports */,
 				F300000000000013 /* Employees */,
+				37E6973B2F32F2A400F6CB5D /* Products */,
 			);
 			path = Features;
 			sourceTree = "<group>";
@@ -350,6 +375,9 @@
 				F000000100000009 /* PINEntryView.swift in Sources */,
 				F000000100000010 /* LocationSwitchView.swift in Sources */,
 				F000000100000011 /* MainTabView.swift in Sources */,
+				37E6973C2F32F2A400F6CB5D /* ProductDetailView.swift in Sources */,
+				37E6973D2F32F2A400F6CB5D /* ProductsView.swift in Sources */,
+				37E6973E2F32F2A400F6CB5D /* CreateProductView.swift in Sources */,
 				F000000100000012 /* DashboardView.swift in Sources */,
 				F000000100000013 /* SettingsView.swift in Sources */,
 				F000000100000014 /* InventoryView.swift in Sources */,
