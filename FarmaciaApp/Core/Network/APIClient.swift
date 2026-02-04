@@ -252,6 +252,9 @@ struct ReceiveInventoryRequest: Encodable {
     let receivedBy: String?
     let notes: String?
     let syncToSquare: Bool?
+    // Optional selling price update
+    let sellingPrice: Double?
+    let syncPriceToSquare: Bool?
 }
 
 struct CreateAdjustmentRequest: Encodable {

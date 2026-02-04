@@ -172,7 +172,9 @@ class InventoryViewModel: ObservableObject {
         invoiceNumber: String?,
         batchNumber: String?,
         expiryDate: Date?,
-        notes: String?
+        notes: String?,
+        sellingPrice: Double? = nil,
+        syncPriceToSquare: Bool = true
     ) async -> Bool {
         isSubmitting = true
         defer { isSubmitting = false }
@@ -193,7 +195,9 @@ class InventoryViewModel: ObservableObject {
             manufacturingDate: nil,
             receivedBy: nil,
             notes: notes?.isEmpty == true ? nil : notes,
-            syncToSquare: true
+            syncToSquare: true,
+            sellingPrice: sellingPrice,
+            syncPriceToSquare: sellingPrice != nil ? syncPriceToSquare : nil
         )
         
         do {
@@ -478,6 +482,8 @@ struct ReceiveInventoryFormView: View {
     @State private var showProductPicker = false
     @State private var quantity = ""
     @State private var unitCost = ""
+    @State private var updateSellingPrice = false
+    @State private var newSellingPrice = ""
     @State private var invoiceNumber = ""
     @State private var batchNumber = ""
     @State private var hasExpiry = false
@@ -553,6 +559,57 @@ struct ReceiveInventoryFormView: View {
                             Text("$\(String(format: "%.2f", Double(qty) * cost))")
                                 .fontWeight(.semibold)
                         }
+                    }
+                }
+                
+                // Selling Price Update (Optional)
+                Section {
+                    Toggle("Update Selling Price", isOn: $updateSellingPrice)
+                    
+                    if updateSellingPrice {
+                        HStack {
+                            Text("New Price")
+                            Spacer()
+                            Text("$")
+                                .foregroundColor(.secondary)
+                            TextField("0.00", text: $newSellingPrice)
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.trailing)
+                                .frame(width: 100)
+                            Text("MXN")
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        // Show current price if available
+                        if let currentPrice = selectedProduct?.sellingPrice {
+                            HStack {
+                                Text("Current Price")
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                                Text("$\(String(format: "%.2f", currentPrice)) MXN")
+                                    .foregroundColor(.secondary)
+                            }
+                            .font(.caption)
+                        }
+                        
+                        // Margin preview
+                        if let cost = Double(unitCost), cost > 0,
+                           let newPrice = Double(newSellingPrice), newPrice > 0 {
+                            let margin = ((newPrice - cost) / newPrice) * 100
+                            HStack {
+                                Text("New Margin")
+                                Spacer()
+                                Text(String(format: "%.1f%%", margin))
+                                    .foregroundColor(margin >= 20 ? .green : (margin >= 10 ? .orange : .red))
+                                    .fontWeight(.semibold)
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Selling Price (Optional)")
+                } footer: {
+                    if updateSellingPrice {
+                        Text("Price will be updated in Square POS.")
                     }
                 }
                 
@@ -644,6 +701,9 @@ struct ReceiveInventoryFormView: View {
               let cost = Double(unitCost),
               let locationId = authManager.currentLocation?.id else { return }
         
+        // Parse selling price if updating
+        let priceToUpdate: Double? = updateSellingPrice ? Double(newSellingPrice.replacingOccurrences(of: ",", with: ".")) : nil
+        
         let success = await viewModel.receiveInventory(
             productId: product.id,
             quantity: qty,
@@ -653,7 +713,9 @@ struct ReceiveInventoryFormView: View {
             invoiceNumber: invoiceNumber,
             batchNumber: batchNumber,
             expiryDate: hasExpiry ? expiryDate : nil,
-            notes: notes
+            notes: notes,
+            sellingPrice: priceToUpdate,
+            syncPriceToSquare: true
         )
         
         if success {
