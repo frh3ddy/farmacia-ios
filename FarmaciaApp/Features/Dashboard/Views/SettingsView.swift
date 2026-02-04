@@ -34,23 +34,68 @@ struct SettingsView: View {
                 }
                 
                 // Location Section
-                Section("Current Location") {
-                    HStack {
-                        Image(systemName: "building.2")
-                            .foregroundColor(.blue)
+                Section {
+                    HStack(spacing: 12) {
+                        // Location icon
+                        ZStack {
+                            Circle()
+                                .fill(Color.blue.opacity(0.15))
+                                .frame(width: 44, height: 44)
+                            
+                            Image(systemName: "building.2.fill")
+                                .font(.system(size: 18))
+                                .foregroundColor(.blue)
+                        }
                         
-                        VStack(alignment: .leading) {
+                        VStack(alignment: .leading, spacing: 4) {
                             Text(authManager.currentLocation?.name ?? "No Location")
                                 .font(.headline)
+                            
+                            if let role = authManager.currentLocation?.role {
+                                HStack(spacing: 4) {
+                                    Image(systemName: roleIcon(for: role))
+                                        .font(.caption2)
+                                    Text(role.displayName)
+                                        .font(.caption)
+                                }
+                                .foregroundColor(roleColor(for: role))
+                            }
                         }
+                        
+                        Spacer()
+                        
+                        // Active indicator
+                        HStack(spacing: 4) {
+                            Circle()
+                                .fill(Color.green)
+                                .frame(width: 8, height: 8)
+                            Text("Active")
+                                .font(.caption)
+                        }
+                        .foregroundColor(.green)
                     }
+                    .padding(.vertical, 4)
                     
                     if authManager.availableLocations.count > 1 {
                         NavigationLink {
                             LocationSwitchView()
                         } label: {
-                            Label("Switch Location", systemImage: "arrow.left.arrow.right")
+                            HStack {
+                                Image(systemName: "arrow.left.arrow.right")
+                                    .foregroundColor(.blue)
+                                Text("Switch Location")
+                                Spacer()
+                                Text("\(authManager.availableLocations.count) available")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
                         }
+                    }
+                } header: {
+                    Text("Current Location")
+                } footer: {
+                    if authManager.availableLocations.count > 1 {
+                        Text("Your role and permissions may differ at other locations.")
                     }
                 }
                 
@@ -129,6 +174,24 @@ struct SettingsView: View {
         case .development: return "Development"
         case .staging: return "Staging"
         case .production: return "Production"
+        }
+    }
+    
+    private func roleIcon(for role: EmployeeRole) -> String {
+        switch role {
+        case .owner: return "crown.fill"
+        case .manager: return "person.badge.key.fill"
+        case .accountant: return "dollarsign.circle.fill"
+        case .cashier: return "cart.fill"
+        }
+    }
+    
+    private func roleColor(for role: EmployeeRole) -> Color {
+        switch role {
+        case .owner: return .purple
+        case .manager: return .blue
+        case .accountant: return .green
+        case .cashier: return .orange
         }
     }
 }

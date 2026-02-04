@@ -62,6 +62,14 @@ struct DashboardView: View {
             .sheet(isPresented: $viewModel.showLocationSwitcher) {
                 LocationSwitchView()
             }
+            .onChange(of: authManager.currentLocation?.id) { oldId, newId in
+                // Refresh dashboard when location changes
+                if oldId != nil && newId != nil && oldId != newId {
+                    Task {
+                        await viewModel.loadDashboard()
+                    }
+                }
+            }
             .task {
                 await viewModel.loadDashboard()
             }
@@ -365,15 +373,34 @@ struct DashboardView: View {
         Button {
             viewModel.showLocationSwitcher = true
         } label: {
-            HStack(spacing: 4) {
-                Image(systemName: "building.2")
-                Text(authManager.currentLocation?.name ?? "Location")
-                    .lineLimit(1)
+            HStack(spacing: 6) {
+                // Location icon with subtle pulse when loading
+                Image(systemName: "building.2.fill")
+                    .foregroundColor(.blue)
+                
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(authManager.currentLocation?.name ?? "Location")
+                        .lineLimit(1)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    
+                    if let role = authManager.currentLocation?.role {
+                        Text(role.displayName)
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
                 Image(systemName: "chevron.down")
                     .font(.caption2)
+                    .foregroundColor(.secondary)
             }
-            .font(.subheadline)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Color(.systemGray6))
+            .cornerRadius(8)
         }
+        .buttonStyle(.plain)
     }
     
     private var userButton: some View {
