@@ -64,3 +64,18 @@ struct InitialSetupResponse: Codable {
     let message: String
     let data: InitialSetupData
 }
+
+// MARK: - Sync Locations Response
+
+struct SyncLocationsData: Codable {
+    let total: Int
+    let created: Int
+    let updated: Int
+    let locations: [SetupAvailableLocation]?
+}
+
+struct SyncLocationsResponse: Codable {
+    let success: Bool
+    let message: String
+    let data: SyncLocationsData
+}

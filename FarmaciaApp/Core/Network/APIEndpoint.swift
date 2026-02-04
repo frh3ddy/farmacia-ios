@@ -16,6 +16,7 @@ enum APIEndpoint {
     
     // MARK: - Setup Endpoints
     case setupStatus
+    case setupSyncLocations   // Sync locations from Square during setup
     case initialSetup
     
     // MARK: - Auth Endpoints
@@ -104,6 +105,7 @@ enum APIEndpoint {
         switch self {
         // Setup
         case .setupStatus: return "/auth/setup/status"
+        case .setupSyncLocations: return "/auth/setup/sync-locations"
         case .initialSetup: return "/auth/setup/initial"
             
         // Auth
@@ -187,7 +189,7 @@ enum APIEndpoint {
         // Setup
         case .setupStatus:
             return .get
-        case .initialSetup:
+        case .setupSyncLocations, .initialSetup:
             return .post
             
         // Auth
@@ -260,7 +262,7 @@ enum APIEndpoint {
     
     var requiresDeviceToken: Bool {
         switch self {
-        case .deviceActivate, .setupStatus, .initialSetup:
+        case .deviceActivate, .setupStatus, .setupSyncLocations, .initialSetup:
             return false
         default:
             return true
@@ -269,7 +271,7 @@ enum APIEndpoint {
     
     var requiresSessionToken: Bool {
         switch self {
-        case .deviceActivate, .pinLogin, .setupStatus, .initialSetup:
+        case .deviceActivate, .pinLogin, .setupStatus, .setupSyncLocations, .initialSetup:
             return false
         default:
             return true

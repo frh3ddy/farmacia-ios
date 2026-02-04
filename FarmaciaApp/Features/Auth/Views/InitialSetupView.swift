@@ -127,8 +127,32 @@ struct InitialSetupView: View {
             
             // Location Section
             VStack(alignment: .leading, spacing: 16) {
-                Label("Pharmacy Location", systemImage: "building.2.fill")
-                    .font(.headline)
+                HStack {
+                    Label("Pharmacy Location", systemImage: "building.2.fill")
+                        .font(.headline)
+                    
+                    Spacer()
+                    
+                    // Sync from Square button
+                    Button {
+                        Task {
+                            await viewModel.syncFromSquare()
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            if viewModel.isSyncingSquare {
+                                ProgressView()
+                                    .scaleEffect(0.7)
+                            } else {
+                                Image(systemName: "arrow.triangle.2.circlepath.icloud")
+                            }
+                            Text("Sync Square")
+                                .font(.caption)
+                        }
+                    }
+                    .disabled(viewModel.isSyncingSquare)
+                    .foregroundColor(.blue)
+                }
                 
                 // Show location choice if locations exist
                 if !viewModel.availableLocations.isEmpty {
@@ -144,7 +168,7 @@ struct InitialSetupView: View {
                             ForEach(viewModel.availableLocations, id: \.id) { location in
                                 HStack {
                                     Text(location.name)
-                                    if let squareId = location.squareId {
+                                    if location.squareId != nil {
                                         Text("(Square)")
                                             .font(.caption)
                                             .foregroundColor(.secondary)
@@ -164,6 +188,10 @@ struct InitialSetupView: View {
                             .autocorrectionDisabled()
                     }
                 } else {
+                    Text("No locations found. Tap 'Sync Square' to import from Square, or enter a name below.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    
                     TextField("Pharmacy Name", text: $viewModel.locationName)
                         .textFieldStyle(.roundedBorder)
                         .autocorrectionDisabled()
@@ -232,6 +260,7 @@ class InitialSetupViewModel: ObservableObject {
     @Published var useExistingLocation = false
     @Published var selectedLocationId = ""
     @Published var isLoadingLocations = true
+    @Published var isSyncingSquare = false
     
     @Published var isLoading = false
     @Published var showError = false
@@ -278,6 +307,30 @@ class InitialSetupViewModel: ObservableObject {
         }
         
         isLoadingLocations = false
+    }
+    
+    func syncFromSquare() async {
+        isSyncingSquare = true
+        
+        do {
+            let response: SyncLocationsResponse = try await APIClient.shared.request(
+                endpoint: .setupSyncLocations
+            )
+            
+            if let locations = response.data.locations, !locations.isEmpty {
+                availableLocations = locations
+                useExistingLocation = true
+                selectedLocationId = locations.first?.id ?? ""
+            }
+        } catch let error as NetworkError {
+            errorMessage = error.errorDescription ?? "Failed to sync from Square"
+            showError = true
+        } catch {
+            errorMessage = error.localizedDescription
+            showError = true
+        }
+        
+        isSyncingSquare = false
     }
     
     func submitSetup() async {
