@@ -25,7 +25,7 @@ enum AppConfiguration {
     // For physical device testing, replace with your Mac's local IP
     // Find it with: ifconfig | grep "inet " | grep -v 127.0.0.1
     // Example: "http://192.168.1.100:3000"
-    private static let localServerIP = "localhost" // Change to your Mac's IP for physical device
+    private static let localServerIP = "192.168.1.22" // Change to your Mac's IP for physical device
     
     static var apiBaseURL: String {
         switch current {
