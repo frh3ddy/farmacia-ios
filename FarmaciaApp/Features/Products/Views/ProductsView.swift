@@ -1,21 +1,117 @@
 import SwiftUI
 
 // MARK: - Products View
+// Unified product + inventory hub. Includes search, smart filters,
+// attention banner, sort options, and a toolbar link to global activity history.
 
 struct ProductsView: View {
     @EnvironmentObject var authManager: AuthManager
     @StateObject private var viewModel = ProductsViewModel()
     @State private var showCreateProduct = false
     @State private var searchText = ""
+    @State private var activeFilter: ProductFilter = .all
+    @State private var sortOption: ProductSortOption = .name
+    
+    // MARK: - Filter / Sort enums
+    
+    enum ProductFilter: String, CaseIterable {
+        case all = "All"
+        case lowStock = "Low Stock"
+        case outOfStock = "Out of Stock"
+        case inStock = "In Stock"
+        case lowMargin = "Low Margin"
+        
+        var icon: String {
+            switch self {
+            case .all: return "square.grid.2x2"
+            case .lowStock: return "exclamationmark.triangle"
+            case .outOfStock: return "xmark.circle"
+            case .inStock: return "checkmark.circle"
+            case .lowMargin: return "percent"
+            }
+        }
+        
+        var color: Color {
+            switch self {
+            case .all: return .blue
+            case .lowStock: return .orange
+            case .outOfStock: return .red
+            case .inStock: return .green
+            case .lowMargin: return .purple
+            }
+        }
+    }
+    
+    enum ProductSortOption: String, CaseIterable {
+        case name = "Name"
+        case stockAsc = "Stock (Low)"
+        case stockDesc = "Stock (High)"
+        case margin = "Margin"
+        case priceAsc = "Price (Low)"
+        case priceDesc = "Price (High)"
+    }
+    
+    // MARK: - Computed products
     
     private var filteredProducts: [Product] {
-        if searchText.isEmpty {
-            return viewModel.products
+        var products = viewModel.products
+        
+        // Apply text search
+        if !searchText.isEmpty {
+            products = products.filter { product in
+                product.displayName.localizedCaseInsensitiveContains(searchText) ||
+                (product.sku?.localizedCaseInsensitiveContains(searchText) ?? false)
+            }
         }
-        return viewModel.products.filter { product in
-            product.displayName.localizedCaseInsensitiveContains(searchText) ||
-            (product.sku?.localizedCaseInsensitiveContains(searchText) ?? false)
+        
+        // Apply filter
+        switch activeFilter {
+        case .all:
+            break
+        case .lowStock:
+            products = products.filter { ($0.totalInventory ?? 0) > 0 && ($0.totalInventory ?? 0) < 10 }
+        case .outOfStock:
+            products = products.filter { ($0.totalInventory ?? 0) == 0 }
+        case .inStock:
+            products = products.filter { ($0.totalInventory ?? 0) >= 10 }
+        case .lowMargin:
+            products = products.filter { ($0.profitMargin ?? 100) < 10 }
         }
+        
+        // Apply sort
+        switch sortOption {
+        case .name:
+            products.sort { $0.displayName.localizedCompare($1.displayName) == .orderedAscending }
+        case .stockAsc:
+            products.sort { ($0.totalInventory ?? 0) < ($1.totalInventory ?? 0) }
+        case .stockDesc:
+            products.sort { ($0.totalInventory ?? 0) > ($1.totalInventory ?? 0) }
+        case .margin:
+            products.sort { ($0.profitMargin ?? 0) > ($1.profitMargin ?? 0) }
+        case .priceAsc:
+            products.sort { ($0.sellingPrice ?? 0) < ($1.sellingPrice ?? 0) }
+        case .priceDesc:
+            products.sort { ($0.sellingPrice ?? 0) > ($1.sellingPrice ?? 0) }
+        }
+        
+        return products
+    }
+    
+    // Stock count helpers for attention banner
+    private var outOfStockCount: Int {
+        viewModel.products.filter { ($0.totalInventory ?? 0) == 0 }.count
+    }
+    
+    private var lowStockCount: Int {
+        viewModel.products.filter { ($0.totalInventory ?? 0) > 0 && ($0.totalInventory ?? 0) < 10 }.count
+    }
+    
+    private var lowMarginCount: Int {
+        viewModel.products.filter { ($0.profitMargin ?? 100) < 10 }.count
+    }
+    
+    private var needsAttention: Bool {
+        outOfStockCount > 0 || lowStockCount > 0 || lowMarginCount > 0
     }
     
     var body: some View {
@@ -31,7 +127,38 @@ struct ProductsView: View {
             }
             .navigationTitle("Products")
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                // Activity history (left)
+                ToolbarItem(placement: .navigationBarLeading) {
+                    if authManager.canManageInventory {
+                        NavigationLink {
+                            GlobalActivityHistoryView()
+                        } label: {
+                            Image(systemName: "clock.arrow.circlepath")
+                        }
+                    }
+                }
+                
+                // Sort + Add (right)
+                ToolbarItemGroup(placement: .navigationBarTrailing) {
+                    // Sort menu
+                    Menu {
+                        ForEach(ProductSortOption.allCases, id: \.self) { option in
+                            Button {
+                                sortOption = option
+                            } label: {
+                                HStack {
+                                    Text(option.rawValue)
+                                    if sortOption == option {
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "arrow.up.arrow.down.circle")
+                    }
+                    
+                    // Add product
                     if authManager.isOwner || authManager.isManager {
                         Button {
                             showCreateProduct = true
@@ -114,6 +241,22 @@ struct ProductsView: View {
     
     private var productsList: some View {
         List {
+            // Attention Banner
+            if needsAttention {
+                Section {
+                    attentionBanner
+                }
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+            }
+            
+            // Filter Chips
+            Section {
+                filterChips
+            }
+            .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+            .listRowBackground(Color.clear)
+            
             // Summary Section
             Section {
                 HStack {
@@ -155,12 +298,195 @@ struct ProductsView: View {
                     }
                 }
             } header: {
-                if !searchText.isEmpty {
-                    Text("\(filteredProducts.count) results")
+                HStack {
+                    if activeFilter != .all {
+                        Text("\(filteredProducts.count) \(activeFilter.rawValue)")
+                    } else if !searchText.isEmpty {
+                        Text("\(filteredProducts.count) results")
+                    }
+                    
+                    Spacer()
+                    
+                    if sortOption != .name {
+                        Text("Sorted by: \(sortOption.rawValue)")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
                 }
             }
         }
         .listStyle(.insetGrouped)
+    }
+    
+    // MARK: - Attention Banner
+    
+    private var attentionBanner: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 12) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.orange)
+                    .font(.title3)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Attention Required")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                    
+                    Text(attentionMessage)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+            }
+            
+            // Quick filter buttons in the banner
+            HStack(spacing: 8) {
+                if outOfStockCount > 0 {
+                    Button {
+                        activeFilter = .outOfStock
+                    } label: {
+                        HStack(spacing: 4) {
+                            Circle()
+                                .fill(Color.red)
+                                .frame(width: 8, height: 8)
+                            Text("\(outOfStockCount) Out of Stock")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Color.red.opacity(0.1))
+                        .foregroundColor(.red)
+                        .cornerRadius(8)
+                    }
+                    .buttonStyle(.plain)
+                }
+                
+                if lowStockCount > 0 {
+                    Button {
+                        activeFilter = .lowStock
+                    } label: {
+                        HStack(spacing: 4) {
+                            Circle()
+                                .fill(Color.orange)
+                                .frame(width: 8, height: 8)
+                            Text("\(lowStockCount) Low Stock")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Color.orange.opacity(0.1))
+                        .foregroundColor(.orange)
+                        .cornerRadius(8)
+                    }
+                    .buttonStyle(.plain)
+                }
+                
+                if lowMarginCount > 0 {
+                    Button {
+                        activeFilter = .lowMargin
+                    } label: {
+                        HStack(spacing: 4) {
+                            Circle()
+                                .fill(Color.purple)
+                                .frame(width: 8, height: 8)
+                            Text("\(lowMarginCount) Low Margin")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Color.purple.opacity(0.1))
+                        .foregroundColor(.purple)
+                        .cornerRadius(8)
+                    }
+                    .buttonStyle(.plain)
+                }
+                
+                Spacer()
+            }
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
+        .padding(.horizontal)
+        .padding(.top, 4)
+    }
+    
+    private var attentionMessage: String {
+        var parts: [String] = []
+        if outOfStockCount > 0 {
+            parts.append("\(outOfStockCount) product\(outOfStockCount == 1 ? "" : "s") out of stock")
+        }
+        if lowStockCount > 0 {
+            parts.append("\(lowStockCount) product\(lowStockCount == 1 ? "" : "s") running low")
+        }
+        if lowMarginCount > 0 {
+            parts.append("\(lowMarginCount) with low margin")
+        }
+        return parts.joined(separator: " \u{2022} ")
+    }
+    
+    // MARK: - Filter Chips
+    
+    private var filterChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(ProductFilter.allCases, id: \.self) { filter in
+                    filterChip(filter)
+                }
+            }
+            .padding(.vertical, 4)
+        }
+    }
+    
+    private func filterChip(_ filter: ProductFilter) -> some View {
+        let isActive = activeFilter == filter
+        let count = filterCount(for: filter)
+        
+        return Button {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                activeFilter = filter
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: filter.icon)
+                    .font(.caption2)
+                Text(filter.rawValue)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                
+                if filter != .all {
+                    Text("\(count)")
+                        .font(.caption2)
+                        .fontWeight(.bold)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .background(
+                            isActive ? Color.white.opacity(0.3) : filter.color.opacity(0.15)
+                        )
+                        .cornerRadius(4)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(isActive ? filter.color : Color(.systemGray6))
+            .foregroundColor(isActive ? .white : .primary)
+            .cornerRadius(20)
+        }
+        .buttonStyle(.plain)
+    }
+    
+    private func filterCount(for filter: ProductFilter) -> Int {
+        switch filter {
+        case .all: return viewModel.products.count
+        case .lowStock: return lowStockCount
+        case .outOfStock: return outOfStockCount
+        case .inStock: return viewModel.products.filter { ($0.totalInventory ?? 0) >= 10 }.count
+        case .lowMargin: return lowMarginCount
+        }
     }
     
     // MARK: - Summary Item
@@ -189,7 +515,7 @@ struct ProductsView: View {
     }
 }
 
-// MARK: - Product Row
+// MARK: - Product Row (Enhanced with stock badges and margin)
 
 struct ProductRow: View {
     let product: Product
@@ -222,7 +548,7 @@ struct ProductRow: View {
                     .font(.headline)
                     .lineLimit(1)
                 
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     if let sku = product.sku {
                         Text(sku)
                             .font(.caption)
@@ -231,20 +557,35 @@ struct ProductRow: View {
                     
                     if product.hasSquareSync == true {
                         Image(systemName: "checkmark.circle.fill")
-                            .font(.caption)
+                            .font(.caption2)
                             .foregroundColor(.green)
                     }
+                    
+                    // Stock badge
+                    stockBadge
                 }
             }
             
             Spacer()
             
-            // Price and Stock
+            // Price, Margin, and Stock
             VStack(alignment: .trailing, spacing: 4) {
                 if let price = product.formattedPrice {
                     Text(price)
                         .font(.subheadline)
                         .fontWeight(.semibold)
+                }
+                
+                // Margin indicator
+                if let margin = product.profitMargin {
+                    Text(String(format: "%.0f%%", margin))
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .background(marginColor(margin).opacity(0.15))
+                        .foregroundColor(marginColor(margin))
+                        .cornerRadius(4)
                 }
                 
                 if let stock = product.totalInventory {
@@ -255,6 +596,35 @@ struct ProductRow: View {
             }
         }
         .padding(.vertical, 4)
+    }
+    
+    private var stockBadge: some View {
+        Group {
+            let stock = product.totalInventory ?? 0
+            if stock == 0 {
+                Text("OUT")
+                    .font(.system(size: 9, weight: .bold))
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .background(Color.red.opacity(0.15))
+                    .foregroundColor(.red)
+                    .cornerRadius(3)
+            } else if stock < 10 {
+                Text("LOW")
+                    .font(.system(size: 9, weight: .bold))
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .background(Color.orange.opacity(0.15))
+                    .foregroundColor(.orange)
+                    .cornerRadius(3)
+            }
+        }
+    }
+    
+    private func marginColor(_ margin: Double) -> Color {
+        if margin >= 20 { return .green }
+        if margin >= 10 { return .orange }
+        return .red
     }
     
     private var productPlaceholder: some View {
