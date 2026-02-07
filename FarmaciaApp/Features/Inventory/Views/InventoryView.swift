@@ -104,10 +104,19 @@ class InventoryViewModel: ObservableObject {
         do {
             let response: ProductListResponse = try await apiClient.request(endpoint: .listProducts)
             products = response.data
+        } catch is CancellationError {
+            // Request was cancelled, don't show error
+            return
         } catch let error as NetworkError {
+            if error.errorDescription?.lowercased().contains("cancel") == true {
+                return
+            }
             errorMessage = error.errorDescription
             showError = true
         } catch {
+            if error.localizedDescription.lowercased().contains("cancel") {
+                return
+            }
             errorMessage = "Failed to load products"
             showError = true
         }
@@ -134,10 +143,21 @@ class InventoryViewModel: ObservableObject {
                 endpoint: .listReceivingsByLocation(locationId: locationId)
             )
             recentReceivings = response.data
+        } catch is CancellationError {
+            // Request was cancelled, don't show error
+            return
         } catch let error as NetworkError {
+            // Don't show cancelled errors
+            if error.errorDescription?.lowercased().contains("cancel") == true {
+                return
+            }
             errorMessage = error.errorDescription
             showError = true
         } catch {
+            // Don't show cancelled errors
+            if error.localizedDescription.lowercased().contains("cancel") {
+                return
+            }
             errorMessage = "Failed to load receivings"
             showError = true
         }
@@ -153,10 +173,19 @@ class InventoryViewModel: ObservableObject {
                 endpoint: .adjustmentsByLocation(locationId: locationId)
             )
             recentAdjustments = response.data
+        } catch is CancellationError {
+            // Request was cancelled, don't show error
+            return
         } catch let error as NetworkError {
+            if error.errorDescription?.lowercased().contains("cancel") == true {
+                return
+            }
             errorMessage = error.errorDescription
             showError = true
         } catch {
+            if error.localizedDescription.lowercased().contains("cancel") {
+                return
+            }
             errorMessage = "Failed to load adjustments"
             showError = true
         }
