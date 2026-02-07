@@ -13,6 +13,8 @@
 		37E6973C2F32F2A400F6CB5D /* ProductDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E697382F32F2A400F6CB5D /* ProductDetailView.swift */; };
 		37E6973D2F32F2A400F6CB5D /* ProductsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E697392F32F2A400F6CB5D /* ProductsView.swift */; };
 		37E6973E2F32F2A400F6CB5D /* CreateProductView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E697372F32F2A400F6CB5D /* CreateProductView.swift */; };
+		37E697402F34065A00F6CB5D /* InitialSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E6973F2F34065A00F6CB5D /* InitialSetupView.swift */; };
+		37E697422F3408EF00F6CB5D /* Setup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E697412F3408EF00F6CB5D /* Setup.swift */; };
 		F000000100000001 /* FarmaciaApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000001 /* FarmaciaApp.swift */; };
 		F000000100000002 /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000002 /* AppConfiguration.swift */; };
 		F000000100000003 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000003 /* APIClient.swift */; };
@@ -46,6 +48,8 @@
 		37E697372F32F2A400F6CB5D /* CreateProductView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateProductView.swift; sourceTree = "<group>"; };
 		37E697382F32F2A400F6CB5D /* ProductDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductDetailView.swift; sourceTree = "<group>"; };
 		37E697392F32F2A400F6CB5D /* ProductsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductsView.swift; sourceTree = "<group>"; };
+		37E6973F2F34065A00F6CB5D /* InitialSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InitialSetupView.swift; sourceTree = "<group>"; };
+		37E697412F3408EF00F6CB5D /* Setup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Setup.swift; sourceTree = "<group>"; };
 		F100000000000000 /* FarmaciaApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FarmaciaApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F100000100000001 /* FarmaciaApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FarmaciaApp.swift; sourceTree = "<group>"; };
 		F100000100000002 /* AppConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfiguration.swift; sourceTree = "<group>"; };
@@ -184,6 +188,7 @@
 				F100000100000022 /* Adjustment.swift */,
 				F100000100000023 /* Expense.swift */,
 				F100000100000024 /* Reports.swift */,
+				37E697412F3408EF00F6CB5D /* Setup.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -261,6 +266,7 @@
 				F100000100000008 /* DeviceActivationView.swift */,
 				F100000100000009 /* PINEntryView.swift */,
 				F100000100000010 /* LocationSwitchView.swift */,
+				37E6973F2F34065A00F6CB5D /* InitialSetupView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -383,9 +389,11 @@
 				F000000100000014 /* InventoryView.swift in Sources */,
 				F000000100000015 /* ReportsView.swift in Sources */,
 				F000000100000016 /* EmployeesView.swift in Sources */,
+				37E697402F34065A00F6CB5D /* InitialSetupView.swift in Sources */,
 				F000000100000017 /* Employee.swift in Sources */,
 				F000000100000018 /* Device.swift in Sources */,
 				F000000100000019 /* Location.swift in Sources */,
+				37E697422F3408EF00F6CB5D /* Setup.swift in Sources */,
 				F000000100000020 /* Product.swift in Sources */,
 				F000000100000021 /* Inventory.swift in Sources */,
 				37E697342F32AC3200F6CB5D /* ExpenseFormView.swift in Sources */,
