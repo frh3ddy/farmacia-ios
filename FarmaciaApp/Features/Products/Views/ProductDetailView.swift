@@ -392,6 +392,7 @@ struct EditPriceView: View {
     
     @State private var priceText: String = ""
     @State private var syncToSquare = true
+    @State private var applyToAllLocations = false
     @State private var isSubmitting = false
     @State private var showError = false
     @State private var errorMessage = ""
@@ -436,9 +437,17 @@ struct EditPriceView: View {
                 if product.hasSquareSync == true {
                     Section {
                         Toggle("Update in Square", isOn: $syncToSquare)
+                        
+                        if syncToSquare {
+                            Toggle("Apply to all locations", isOn: $applyToAllLocations)
+                        }
                     } footer: {
                         if syncToSquare {
-                            Text("Price will be updated in Square POS immediately.")
+                            if applyToAllLocations {
+                                Text("Price will be updated in Square POS at ALL locations immediately.")
+                            } else {
+                                Text("Price will be updated in Square POS for the current location only.")
+                            }
                         } else {
                             Text("Price will only be updated locally. Square POS will show the old price.")
                         }
@@ -520,7 +529,8 @@ struct EditPriceView: View {
             let request = UpdatePriceRequest(
                 sellingPrice: price,
                 locationId: locationId,
-                syncToSquare: syncToSquare
+                syncToSquare: syncToSquare,
+                applyToAllLocations: syncToSquare ? applyToAllLocations : nil
             )
             
             let response: APIResponse<UpdatePriceResponse> = try await APIClient.shared.request(

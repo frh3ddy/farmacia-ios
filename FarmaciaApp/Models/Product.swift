@@ -109,6 +109,7 @@ struct UpdatePriceRequest: Encodable {
     let sellingPrice: Double
     let locationId: String?
     let syncToSquare: Bool
+    let applyToAllLocations: Bool?
 }
 
 // MARK: - Update Price Response
