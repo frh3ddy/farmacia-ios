@@ -1,6 +1,9 @@
 import SwiftUI
 
 // MARK: - Main Tab View
+// Architecture: Products tab is the unified hub for product catalog + inventory operations.
+// The standalone Inventory tab has been merged into Products to eliminate context switching.
+// Users search once, see product info, and perform receive/adjust actions in the same context.
 
 struct MainTabView: View {
     @EnvironmentObject var authManager: AuthManager
@@ -9,7 +12,6 @@ struct MainTabView: View {
     enum Tab: Hashable {
         case dashboard
         case products
-        case inventory
         case expenses
         case reports
         case employees
@@ -25,19 +27,12 @@ struct MainTabView: View {
                 }
                 .tag(Tab.dashboard)
             
-            // Products
+            // Products (unified: catalog + inventory operations)
             ProductsView()
                 .tabItem {
-                    Label("Products", systemImage: "tag")
+                    Label("Products", systemImage: "shippingbox.fill")
                 }
                 .tag(Tab.products)
-            
-            // Inventory
-            InventoryView()
-                .tabItem {
-                    Label("Inventory", systemImage: "shippingbox")
-                }
-                .tag(Tab.inventory)
             
             // Expenses (if has permission)
             if authManager.canManageExpenses {

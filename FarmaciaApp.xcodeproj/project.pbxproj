@@ -39,6 +39,7 @@
 		F000000100000022 /* Adjustment.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000022 /* Adjustment.swift */; };
 		F000000100000023 /* Expense.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000023 /* Expense.swift */; };
 		F000000100000024 /* Reports.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000024 /* Reports.swift */; };
+		AA00000100000001 /* GlobalActivityHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000200000001 /* GlobalActivityHistoryView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -76,6 +77,7 @@
 		F100000100000023 /* Expense.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Expense.swift; sourceTree = "<group>"; };
 		F100000100000024 /* Reports.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Reports.swift; sourceTree = "<group>"; };
 		F100000100000025 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		AA00000200000001 /* GlobalActivityHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalActivityHistoryView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -113,6 +115,7 @@
 				37E697372F32F2A400F6CB5D /* CreateProductView.swift */,
 				37E697382F32F2A400F6CB5D /* ProductDetailView.swift */,
 				37E697392F32F2A400F6CB5D /* ProductsView.swift */,
+				AA00000200000001 /* GlobalActivityHistoryView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -402,6 +405,7 @@
 				F000000100000022 /* Adjustment.swift in Sources */,
 				F000000100000023 /* Expense.swift in Sources */,
 				F000000100000024 /* Reports.swift in Sources */,
+				AA00000100000001 /* GlobalActivityHistoryView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

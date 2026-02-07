@@ -515,6 +515,12 @@ struct ReceiveInventoryFormView: View {
     @EnvironmentObject var authManager: AuthManager
     @ObservedObject var viewModel: InventoryViewModel
     
+    /// When set, the product is pre-selected and locked (coming from ProductDetailView).
+    /// When nil, the user picks a product from the full list (standalone inventory flow).
+    let preSelectedProduct: Product?
+    /// Called after a successful receive so the parent can refresh data
+    var onComplete: (() -> Void)?
+    
     @State private var selectedProduct: Product?
     @State private var showProductPicker = false
     @State private var quantity = ""
@@ -529,6 +535,24 @@ struct ReceiveInventoryFormView: View {
     @State private var showSupplierPicker = false
     @State private var notes = ""
     
+    /// Convenience initializer for standalone use (no pre-selected product)
+    init(viewModel: InventoryViewModel) {
+        self.viewModel = viewModel
+        self.preSelectedProduct = nil
+        self.onComplete = nil
+    }
+    
+    /// Initializer for use from ProductDetailView with a pre-selected product
+    init(viewModel: InventoryViewModel, preSelectedProduct: Product, onComplete: (() -> Void)? = nil) {
+        self.viewModel = viewModel
+        self.preSelectedProduct = preSelectedProduct
+        self.onComplete = onComplete
+    }
+    
+    private var isProductLocked: Bool {
+        preSelectedProduct != nil
+    }
+    
     private var isValid: Bool {
         selectedProduct != nil &&
         !quantity.isEmpty &&
@@ -542,27 +566,47 @@ struct ReceiveInventoryFormView: View {
             Form {
                 // Product Selection
                 Section("Product") {
-                    Button {
-                        showProductPicker = true
-                    } label: {
+                    if isProductLocked {
+                        // Product is pre-selected and locked — show as info, not a button
                         HStack {
-                            if let product = selectedProduct {
-                                VStack(alignment: .leading) {
-                                    Text(product.displayName)
-                                        .foregroundColor(.primary)
-                                    if let sku = product.sku {
-                                        Text("SKU: \(sku)")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                    }
+                            VStack(alignment: .leading) {
+                                Text(selectedProduct?.displayName ?? "")
+                                    .foregroundColor(.primary)
+                                if let sku = selectedProduct?.sku {
+                                    Text("SKU: \(sku)")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
                                 }
-                            } else {
-                                Text("Select Product")
-                                    .foregroundColor(.secondary)
                             }
                             Spacer()
-                            Image(systemName: "chevron.right")
+                            Image(systemName: "lock.fill")
+                                .font(.caption)
                                 .foregroundColor(.secondary)
+                        }
+                    } else {
+                        // Standard product picker button
+                        Button {
+                            showProductPicker = true
+                        } label: {
+                            HStack {
+                                if let product = selectedProduct {
+                                    VStack(alignment: .leading) {
+                                        Text(product.displayName)
+                                            .foregroundColor(.primary)
+                                        if let sku = product.sku {
+                                            Text("SKU: \(sku)")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
+                                } else {
+                                    Text("Select Product")
+                                        .foregroundColor(.secondary)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .foregroundColor(.secondary)
+                            }
                         }
                     }
                 }
@@ -729,6 +773,12 @@ struct ReceiveInventoryFormView: View {
                     selectedSupplier: $selectedSupplier
                 )
             }
+            .onAppear {
+                // Pre-select product if provided (from ProductDetailView context)
+                if let product = preSelectedProduct, selectedProduct == nil {
+                    selectedProduct = product
+                }
+            }
         }
     }
     
@@ -756,6 +806,7 @@ struct ReceiveInventoryFormView: View {
         )
         
         if success {
+            onComplete?()
             dismiss()
         }
     }
@@ -1093,6 +1144,11 @@ struct AdjustmentFormView: View {
     let adjustmentType: AdjustmentType
     @ObservedObject var viewModel: InventoryViewModel
     
+    /// When set, the product is pre-selected and locked (coming from ProductDetailView).
+    let preSelectedProduct: Product?
+    /// Called after a successful adjustment so the parent can refresh data
+    var onComplete: (() -> Void)?
+    
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var authManager: AuthManager
     
@@ -1101,6 +1157,26 @@ struct AdjustmentFormView: View {
     @State private var quantity = ""
     @State private var reason = ""
     @State private var notes = ""
+    
+    /// Convenience initializer for standalone use (no pre-selected product)
+    init(adjustmentType: AdjustmentType, viewModel: InventoryViewModel) {
+        self.adjustmentType = adjustmentType
+        self.viewModel = viewModel
+        self.preSelectedProduct = nil
+        self.onComplete = nil
+    }
+    
+    /// Initializer for use from ProductDetailView with a pre-selected product
+    init(adjustmentType: AdjustmentType, viewModel: InventoryViewModel, preSelectedProduct: Product, onComplete: (() -> Void)? = nil) {
+        self.adjustmentType = adjustmentType
+        self.viewModel = viewModel
+        self.preSelectedProduct = preSelectedProduct
+        self.onComplete = onComplete
+    }
+    
+    private var isProductLocked: Bool {
+        preSelectedProduct != nil
+    }
     
     private var isValid: Bool {
         selectedProduct != nil &&
@@ -1112,27 +1188,51 @@ struct AdjustmentFormView: View {
         NavigationStack {
             Form {
                 Section("Product") {
-                    Button {
-                        showProductPicker = true
-                    } label: {
+                    if isProductLocked {
+                        // Product is pre-selected and locked — show as info, not a button
                         HStack {
-                            if let product = selectedProduct {
-                                VStack(alignment: .leading) {
-                                    Text(product.displayName)
-                                        .foregroundColor(.primary)
-                                    if let sku = product.sku {
-                                        Text("SKU: \(sku)")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                    }
+                            VStack(alignment: .leading) {
+                                Text(selectedProduct?.displayName ?? "")
+                                    .foregroundColor(.primary)
+                                if let sku = selectedProduct?.sku {
+                                    Text("SKU: \(sku)")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
                                 }
-                            } else {
-                                Text("Select Product")
-                                    .foregroundColor(.secondary)
+                                if let stock = selectedProduct?.totalInventory {
+                                    Text("Current stock: \(stock) units")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
                             }
                             Spacer()
-                            Image(systemName: "chevron.right")
+                            Image(systemName: "lock.fill")
+                                .font(.caption)
                                 .foregroundColor(.secondary)
+                        }
+                    } else {
+                        Button {
+                            showProductPicker = true
+                        } label: {
+                            HStack {
+                                if let product = selectedProduct {
+                                    VStack(alignment: .leading) {
+                                        Text(product.displayName)
+                                            .foregroundColor(.primary)
+                                        if let sku = product.sku {
+                                            Text("SKU: \(sku)")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
+                                } else {
+                                    Text("Select Product")
+                                        .foregroundColor(.secondary)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .foregroundColor(.secondary)
+                            }
                         }
                     }
                 }
@@ -1190,6 +1290,12 @@ struct AdjustmentFormView: View {
                     isLoading: viewModel.isLoadingProducts
                 )
             }
+            .onAppear {
+                // Pre-select product if provided (from ProductDetailView context)
+                if let product = preSelectedProduct, selectedProduct == nil {
+                    selectedProduct = product
+                }
+            }
         }
     }
     
@@ -1211,6 +1317,7 @@ struct AdjustmentFormView: View {
         )
         
         if success {
+            onComplete?()
             dismiss()
         }
     }

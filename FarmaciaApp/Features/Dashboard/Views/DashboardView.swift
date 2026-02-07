@@ -5,6 +5,7 @@ import SwiftUI
 struct DashboardView: View {
     @EnvironmentObject var authManager: AuthManager
     @StateObject private var viewModel = DashboardViewModel()
+    @StateObject private var stockAlertViewModel = StockAlertViewModel()
     
     var body: some View {
         NavigationStack {
@@ -12,6 +13,11 @@ struct DashboardView: View {
                 VStack(spacing: 20) {
                     // Welcome Header
                     welcomeHeader
+                    
+                    // Stock Alert Card
+                    if stockAlertViewModel.needsAttention {
+                        stockAlertCard
+                    }
                     
                     // Date Range Selector
                     dateRangeSelector
@@ -72,8 +78,98 @@ struct DashboardView: View {
             }
             .task {
                 await viewModel.loadDashboard()
+                await loadStockAlerts()
             }
         }
+    }
+    
+    private func loadStockAlerts() async {
+        guard let locationId = authManager.currentLocation?.id else { return }
+        await stockAlertViewModel.loadProducts(locationId: locationId)
+    }
+    
+    // MARK: - Stock Alert Card
+    
+    private var stockAlertCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.orange)
+                    .font(.title3)
+                
+                Text("Inventory Alerts")
+                    .font(.headline)
+                
+                Spacer()
+                
+                NavigationLink {
+                    // Navigate to Products tab (via MainTabView)
+                    // For now, link to a filtered products view
+                    StockAlertProductsView(products: stockAlertViewModel.products)
+                } label: {
+                    Text("View Products")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color.blue.opacity(0.1))
+                        .foregroundColor(.blue)
+                        .cornerRadius(8)
+                }
+            }
+            
+            Divider()
+            
+            HStack(spacing: 16) {
+                if stockAlertViewModel.outOfStockCount > 0 {
+                    alertMetric(
+                        value: "\(stockAlertViewModel.outOfStockCount)",
+                        label: "Out of Stock",
+                        color: .red
+                    )
+                }
+                
+                if stockAlertViewModel.lowStockCount > 0 {
+                    alertMetric(
+                        value: "\(stockAlertViewModel.lowStockCount)",
+                        label: "Low Stock",
+                        color: .orange
+                    )
+                }
+                
+                if stockAlertViewModel.lowMarginCount > 0 {
+                    alertMetric(
+                        value: "\(stockAlertViewModel.lowMarginCount)",
+                        label: "Low Margin",
+                        color: .purple
+                    )
+                }
+                
+                Spacer()
+            }
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(.systemGray6))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+                )
+        )
+    }
+    
+    private func alertMetric(value: String, label: String, color: Color) -> some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(.title2)
+                .fontWeight(.bold)
+                .foregroundColor(color)
+            Text(label)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+        .frame(minWidth: 60)
     }
     
     // MARK: - Welcome Header
@@ -604,6 +700,110 @@ class DashboardViewModel: ObservableObject {
         }
         
         isLoading = false
+    }
+}
+
+// MARK: - Stock Alert ViewModel
+
+@MainActor
+class StockAlertViewModel: ObservableObject {
+    @Published var products: [Product] = []
+    @Published var isLoading = false
+    
+    private let apiClient = APIClient.shared
+    
+    var outOfStockCount: Int {
+        products.filter { ($0.totalInventory ?? 0) == 0 }.count
+    }
+    
+    var lowStockCount: Int {
+        products.filter { ($0.totalInventory ?? 0) > 0 && ($0.totalInventory ?? 0) < 10 }.count
+    }
+    
+    var lowMarginCount: Int {
+        products.filter { ($0.profitMargin ?? 100) < 10 }.count
+    }
+    
+    var needsAttention: Bool {
+        outOfStockCount > 0 || lowStockCount > 0 || lowMarginCount > 0
+    }
+    
+    func loadProducts(locationId: String) async {
+        isLoading = true
+        defer { isLoading = false }
+        
+        do {
+            let response: ProductListResponse = try await apiClient.request(
+                endpoint: .listProducts,
+                queryParams: ["locationId": locationId]
+            )
+            products = response.data
+        } catch {
+            // Silent fail — alerts are supplementary
+            print("Failed to load products for stock alerts: \(error)")
+        }
+    }
+}
+
+// MARK: - Stock Alert Products View (linked from Dashboard)
+
+struct StockAlertProductsView: View {
+    let products: [Product]
+    @State private var selectedFilter: AlertFilter = .outOfStock
+    
+    enum AlertFilter: String, CaseIterable {
+        case outOfStock = "Out of Stock"
+        case lowStock = "Low Stock"
+        case lowMargin = "Low Margin"
+    }
+    
+    private var filteredProducts: [Product] {
+        switch selectedFilter {
+        case .outOfStock:
+            return products.filter { ($0.totalInventory ?? 0) == 0 }
+        case .lowStock:
+            return products.filter { ($0.totalInventory ?? 0) > 0 && ($0.totalInventory ?? 0) < 10 }
+        case .lowMargin:
+            return products.filter { ($0.profitMargin ?? 100) < 10 }
+        }
+    }
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            Picker("Filter", selection: $selectedFilter) {
+                ForEach(AlertFilter.allCases, id: \.self) { filter in
+                    Text(filter.rawValue).tag(filter)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding()
+            
+            List {
+                if filteredProducts.isEmpty {
+                    VStack(spacing: 12) {
+                        Image(systemName: "checkmark.circle")
+                            .font(.system(size: 40))
+                            .foregroundColor(.green)
+                        Text("No products in this category")
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 40)
+                    .listRowBackground(Color.clear)
+                } else {
+                    ForEach(filteredProducts) { product in
+                        NavigationLink {
+                            ProductDetailView(product: product)
+                        } label: {
+                            ProductRow(product: product)
+                        }
+                    }
+                }
+            }
+            .listStyle(.insetGrouped)
+        }
+        .navigationTitle("Inventory Alerts")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
