@@ -382,7 +382,7 @@ struct ReceiveInventoryView: View {
     @State private var showReceiveSheet = false
     
     var body: some View {
-        VStack {
+        VStack(spacing: 0) {
             // Quick action button
             VStack(spacing: 12) {
                 Button {
@@ -403,44 +403,52 @@ struct ReceiveInventoryView: View {
             
             Divider()
             
-            // Recent receivings
-            if viewModel.isLoadingReceivings {
-                ProgressView("Loading...")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if viewModel.recentReceivings.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: "shippingbox")
-                        .font(.system(size: 50))
-                        .foregroundColor(.secondary)
-                    Text("No recent receivings")
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                List {
+            // Recent receivings - always show List to prevent refresh control issues
+            List {
+                if viewModel.recentReceivings.isEmpty {
+                    Section {
+                        if viewModel.isLoadingReceivings {
+                            HStack {
+                                Spacer()
+                                ProgressView("Loading...")
+                                Spacer()
+                            }
+                            .listRowBackground(Color.clear)
+                        } else {
+                            VStack(spacing: 12) {
+                                Image(systemName: "shippingbox")
+                                    .font(.system(size: 50))
+                                    .foregroundColor(.secondary)
+                                Text("No recent receivings")
+                                    .foregroundColor(.secondary)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 40)
+                            .listRowBackground(Color.clear)
+                        }
+                    }
+                } else {
                     Section("Recent Receivings") {
                         ForEach(viewModel.recentReceivings.prefix(10)) { receiving in
                             ReceivingRow(receiving: receiving)
                         }
                     }
                 }
-                .listStyle(.insetGrouped)
             }
-        }
-        .sheet(isPresented: $showReceiveSheet) {
-            ReceiveInventoryFormView(viewModel: viewModel)
-        }
-        .onAppear {
-            Task {
+            .listStyle(.insetGrouped)
+            .refreshable {
                 await viewModel.loadProducts()
-                await viewModel.loadSuppliers()
                 if let locationId = authManager.currentLocation?.id {
                     await viewModel.loadReceivings(locationId: locationId)
                 }
             }
         }
-        .refreshable {
+        .sheet(isPresented: $showReceiveSheet) {
+            ReceiveInventoryFormView(viewModel: viewModel)
+        }
+        .task {
             await viewModel.loadProducts()
+            await viewModel.loadSuppliers()
             if let locationId = authManager.currentLocation?.id {
                 await viewModel.loadReceivings(locationId: locationId)
             }
@@ -958,33 +966,43 @@ struct AdjustmentsListView: View {
             
             Divider()
             
-            // Recent adjustments
-            if viewModel.isLoadingAdjustments {
-                ProgressView("Loading...")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if viewModel.recentAdjustments.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: "arrow.triangle.2.circlepath")
-                        .font(.system(size: 50))
-                        .foregroundColor(.secondary)
-                    Text("No recent adjustments")
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                List {
+            // Recent adjustments - always show List to prevent refresh control issues
+            List {
+                if viewModel.recentAdjustments.isEmpty {
+                    Section {
+                        if viewModel.isLoadingAdjustments {
+                            HStack {
+                                Spacer()
+                                ProgressView("Loading...")
+                                Spacer()
+                            }
+                            .listRowBackground(Color.clear)
+                        } else {
+                            VStack(spacing: 12) {
+                                Image(systemName: "arrow.triangle.2.circlepath")
+                                    .font(.system(size: 50))
+                                    .foregroundColor(.secondary)
+                                Text("No recent adjustments")
+                                    .foregroundColor(.secondary)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 40)
+                            .listRowBackground(Color.clear)
+                        }
+                    }
+                } else {
                     Section("Recent Adjustments") {
                         ForEach(viewModel.recentAdjustments.prefix(10)) { adjustment in
                             AdjustmentRow(adjustment: adjustment)
                         }
                     }
                 }
-                .listStyle(.insetGrouped)
-                .refreshable {
-                    await viewModel.loadProducts()
-                    if let locationId = authManager.currentLocation?.id {
-                        await viewModel.loadAdjustments(locationId: locationId)
-                    }
+            }
+            .listStyle(.insetGrouped)
+            .refreshable {
+                await viewModel.loadProducts()
+                if let locationId = authManager.currentLocation?.id {
+                    await viewModel.loadAdjustments(locationId: locationId)
                 }
             }
         }
@@ -1205,36 +1223,43 @@ struct ReceivingHistoryView: View {
     @StateObject private var viewModel = InventoryViewModel()
     
     var body: some View {
-        Group {
-            if viewModel.isLoadingReceivings {
-                ProgressView("Loading history...")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if viewModel.recentReceivings.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: "clock.arrow.circlepath")
-                        .font(.system(size: 50))
-                        .foregroundColor(.secondary)
-                    Text("No receiving history")
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                List {
-                    ForEach(viewModel.recentReceivings) { receiving in
-                        ReceivingRow(receiving: receiving)
+        // Always show List to prevent refresh control issues
+        List {
+            if viewModel.recentReceivings.isEmpty {
+                Section {
+                    if viewModel.isLoadingReceivings {
+                        HStack {
+                            Spacer()
+                            ProgressView("Loading history...")
+                            Spacer()
+                        }
+                        .listRowBackground(Color.clear)
+                    } else {
+                        VStack(spacing: 12) {
+                            Image(systemName: "clock.arrow.circlepath")
+                                .font(.system(size: 50))
+                                .foregroundColor(.secondary)
+                            Text("No receiving history")
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 40)
+                        .listRowBackground(Color.clear)
                     }
                 }
-                .listStyle(.insetGrouped)
-            }
-        }
-        .onAppear {
-            Task {
-                if let locationId = authManager.currentLocation?.id {
-                    await viewModel.loadReceivings(locationId: locationId)
+            } else {
+                ForEach(viewModel.recentReceivings) { receiving in
+                    ReceivingRow(receiving: receiving)
                 }
             }
         }
+        .listStyle(.insetGrouped)
         .refreshable {
+            if let locationId = authManager.currentLocation?.id {
+                await viewModel.loadReceivings(locationId: locationId)
+            }
+        }
+        .task {
             if let locationId = authManager.currentLocation?.id {
                 await viewModel.loadReceivings(locationId: locationId)
             }
