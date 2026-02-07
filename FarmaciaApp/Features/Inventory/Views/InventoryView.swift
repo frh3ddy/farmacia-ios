@@ -895,14 +895,16 @@ struct AdjustmentsListView: View {
     @EnvironmentObject var authManager: AuthManager
     @StateObject private var viewModel = InventoryViewModel()
     @State private var showAdjustmentSheet = false
-    @State private var selectedAdjustmentType: AdjustmentType?
+    @State private var selectedAdjustmentType: AdjustmentType = .damage
+    
+    private let adjustmentTypes: [AdjustmentType] = [.damage, .theft, .expired, .found, .returnType, .countCorrection]
     
     var body: some View {
-        VStack {
-            // Quick adjustment buttons
+        VStack(spacing: 0) {
+            // Quick adjustment buttons - horizontal only, no pull to refresh
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
-                    ForEach([AdjustmentType.damage, .theft, .expired, .found, .returnType, .countCorrection], id: \.self) { type in
+                    ForEach(adjustmentTypes, id: \.self) { type in
                         Button {
                             selectedAdjustmentType = type
                             showAdjustmentSheet = true
@@ -922,7 +924,8 @@ struct AdjustmentsListView: View {
                 }
                 .padding(.horizontal)
             }
-            .padding(.vertical)
+            .frame(height: 90)
+            .padding(.vertical, 8)
             
             Divider()
             
@@ -948,12 +951,16 @@ struct AdjustmentsListView: View {
                     }
                 }
                 .listStyle(.insetGrouped)
+                .refreshable {
+                    await viewModel.loadProducts()
+                    if let locationId = authManager.currentLocation?.id {
+                        await viewModel.loadAdjustments(locationId: locationId)
+                    }
+                }
             }
         }
         .sheet(isPresented: $showAdjustmentSheet) {
-            if let type = selectedAdjustmentType {
-                AdjustmentFormView(adjustmentType: type, viewModel: viewModel)
-            }
+            AdjustmentFormView(adjustmentType: selectedAdjustmentType, viewModel: viewModel)
         }
         .onAppear {
             Task {
@@ -961,12 +968,6 @@ struct AdjustmentsListView: View {
                 if let locationId = authManager.currentLocation?.id {
                     await viewModel.loadAdjustments(locationId: locationId)
                 }
-            }
-        }
-        .refreshable {
-            await viewModel.loadProducts()
-            if let locationId = authManager.currentLocation?.id {
-                await viewModel.loadAdjustments(locationId: locationId)
             }
         }
         .alert("Error", isPresented: $viewModel.showError) {

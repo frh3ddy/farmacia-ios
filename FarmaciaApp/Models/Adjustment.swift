@@ -130,7 +130,8 @@ struct AdjustmentResponse: Decodable {
     struct AdjustmentData: Decodable {
         let adjustment: AdjustmentInfo
         let squareSync: SquareSyncResult?
-        let inventoryTotal: Int
+        let inventoryImpact: InventoryImpact?
+        let consumptions: [ConsumptionInfo]?
         
         struct AdjustmentInfo: Decodable {
             let id: String
@@ -139,6 +140,22 @@ struct AdjustmentResponse: Decodable {
             let unitCost: String?
             let totalCost: String?
             let adjustedAt: Date
+            let effectiveDate: Date?
+            let reason: String?
+            let notes: String?
+        }
+        
+        struct InventoryImpact: Decodable {
+            let previousTotal: Int
+            let newTotal: Int
+            let batchesConsumed: Int?
+            let batchCreated: String?
+        }
+        
+        struct ConsumptionInfo: Decodable {
+            let inventoryId: String
+            let quantity: Int
+            let unitCost: String
         }
     }
 }
