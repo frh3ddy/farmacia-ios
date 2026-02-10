@@ -167,3 +167,122 @@ struct SupplierListResponse: Decodable {
     let data: [Supplier]
     let count: Int
 }
+
+// MARK: - Product Supplier (from SupplierProduct table)
+
+struct ProductSupplier: Decodable, Identifiable {
+    let id: String
+    let name: String
+    let contactInfo: String?
+    let isActive: Bool?
+    let cost: String
+    let isPreferred: Bool
+    let notes: String?
+    
+    var costDouble: Double {
+        Double(cost) ?? 0
+    }
+    
+    var formattedCost: String {
+        String(format: "$%.2f", costDouble)
+    }
+}
+
+struct ProductSuppliersResponse: Decodable {
+    let success: Bool
+    let suppliers: [ProductSupplier]
+}
+
+// MARK: - Supplier Cost History (from SupplierCostHistory table)
+
+struct CostHistoryEntry: Decodable, Identifiable {
+    let id: String
+    let cost: String
+    let effectiveAt: Date
+    let createdAt: Date
+    let source: String
+    let isCurrent: Bool
+    
+    var costDouble: Double {
+        Double(cost) ?? 0
+    }
+    
+    var formattedCost: String {
+        String(format: "$%.2f", costDouble)
+    }
+    
+    var sourceLabel: String {
+        switch source {
+        case "MIGRATION": return "Migration"
+        case "INVENTORY_UPDATE": return "Inventory Update"
+        case "MANUAL": return "Manual"
+        default: return source
+        }
+    }
+}
+
+struct SupplierCostHistoryGroup: Decodable, Identifiable {
+    let supplierId: String
+    let supplierName: String
+    let costHistory: [CostHistoryEntry]
+    
+    var id: String { supplierId }
+    
+    var currentCost: CostHistoryEntry? {
+        costHistory.first { $0.isCurrent }
+    }
+    
+    var latestCost: CostHistoryEntry? {
+        costHistory.first // Already sorted by effectiveAt desc from backend
+    }
+    
+    var costTrend: (change: Double, percent: Double)? {
+        guard costHistory.count >= 2,
+              let latest = costHistory.first,
+              let previous = costHistory.dropFirst().first else { return nil }
+        let change = latest.costDouble - previous.costDouble
+        let percent = previous.costDouble > 0 ? (change / previous.costDouble) * 100 : 0
+        return (change, percent)
+    }
+}
+
+struct ProductCostHistoryResponse: Decodable {
+    let success: Bool
+    let suppliers: [SupplierCostHistoryGroup]
+}
+
+// MARK: - Supplier Catalog Item (for Purchase Orders / Shopping List)
+
+struct SupplierCatalogItem: Decodable, Identifiable {
+    let productId: String
+    let productName: String
+    let sku: String?
+    let imageUrl: String?
+    let lastCost: String
+    let isPreferred: Bool
+    let notes: String?
+    let currentStock: Int
+    
+    var id: String { productId }
+    
+    var lastCostDouble: Double {
+        Double(lastCost) ?? 0
+    }
+    
+    var formattedCost: String {
+        String(format: "$%.2f", lastCostDouble)
+    }
+    
+    var isLowStock: Bool {
+        currentStock > 0 && currentStock < 10
+    }
+    
+    var isOutOfStock: Bool {
+        currentStock <= 0
+    }
+}
+
+struct SupplierCatalogResponse: Decodable {
+    let success: Bool
+    let products: [SupplierCatalogItem]
+}
