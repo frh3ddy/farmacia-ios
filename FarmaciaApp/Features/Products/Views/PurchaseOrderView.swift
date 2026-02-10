@@ -661,7 +661,7 @@ struct CatalogItemRow: View {
                 }
             }
         }
-        .onChange(of: quantity) { newValue in
+        .onChange(of: quantity) { oldValue, newValue in
             // Auto-fill cost from last cost when quantity first entered
             if !newValue.isEmpty && newValue != "0" && unitCost.isEmpty {
                 unitCost = item.lastCost
@@ -677,7 +677,7 @@ struct CatalogItemRow: View {
                 batchNumber = ""
             }
         }
-        .onChange(of: hasExpiry) { newValue in
+        .onChange(of: hasExpiry) { _, newValue in
             if !newValue {
                 expiryDate = nil
             } else if expiryDate == nil {

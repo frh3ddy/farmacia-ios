@@ -550,6 +550,7 @@ struct ProductsView: View {
         case .outOfStock: return outOfStockCount
         case .inStock: return viewModel.products.filter { ($0.totalInventory ?? 0) >= 10 }.count
         case .atRisk: return atRiskCount
+        case .expiringSoon: return expiringViewModel.expiringProductIds.count
         case .lowMargin: return lowMarginCount
         }
     }
