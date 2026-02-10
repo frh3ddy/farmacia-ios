@@ -172,7 +172,45 @@ struct BatchValuation: Decodable, Identifiable {
     let receivedAt: Date
     let age: Int  // days since received
     
+    // Batch-level metadata (from linked InventoryReceiving)
+    let source: String?            // "PURCHASE", "OPENING_BALANCE", "ADJUSTMENT"
+    let batchNumber: String?       // Lot/batch number from supplier
+    let expiryDate: Date?          // Product expiration date
+    let manufacturingDate: Date?   // Manufacturing date if known
+    let invoiceNumber: String?     // Supplier invoice number
+    let supplierId: String?        // Supplier ID
+    let supplierName: String?      // Supplier display name
+    
     var id: String { batchId }
+    
+    /// True if batch has an expiry date that is within the given days threshold
+    func expiresWithin(days: Int) -> Bool {
+        guard let expiry = expiryDate else { return false }
+        let daysUntilExpiry = Calendar.current.dateComponents([.day], from: Date(), to: expiry).day ?? Int.max
+        return daysUntilExpiry <= days
+    }
+    
+    /// True if batch is already expired
+    var isExpired: Bool {
+        guard let expiry = expiryDate else { return false }
+        return expiry < Date()
+    }
+    
+    /// Days until expiry (nil if no expiry date, negative if expired)
+    var daysUntilExpiry: Int? {
+        guard let expiry = expiryDate else { return nil }
+        return Calendar.current.dateComponents([.day], from: Date(), to: expiry).day
+    }
+    
+    /// Human-readable source label
+    var sourceLabel: String {
+        switch source {
+        case "PURCHASE": return "Purchase"
+        case "OPENING_BALANCE": return "Opening Balance"
+        case "ADJUSTMENT": return "Adjustment"
+        default: return source ?? "Unknown"
+        }
+    }
 }
 
 // MARK: - Profit Margin Report

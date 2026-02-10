@@ -79,12 +79,22 @@ enum APIEndpoint {
     case expenseSummary
     case expenseTypes
     
+    // MARK: - Inventory Aging Endpoints
+    case agingSummary
+    case agingProducts
+    case agingLocation
+    case agingCategory
+    case agingSignals
+    case agingExpiring
+    case agingClearCache
+    
     // MARK: - Reconciliation Endpoints
     case reconcileProduct(productId: String)
     case reconcileLocation(locationId: String)
     case consumptionSummary(productId: String)
     case saleItemConsumption(saleItemId: String)
     case verifyFIFO(saleId: String)
+    case batchDetail(batchId: String)
     
     // MARK: - Location Endpoints
     case listLocations
@@ -95,6 +105,9 @@ enum APIEndpoint {
     case getProduct(id: String)
     case createProduct
     case updateProductPrice(id: String)
+    case productSuppliers(productId: String)
+    case productCostHistory(productId: String)
+    case supplierCatalog(supplierId: String)
     
     // MARK: - Supplier Endpoints
     case listSuppliers
@@ -162,11 +175,21 @@ enum APIEndpoint {
         case .expenseSummary: return "/expenses/summary/report"
         case .expenseTypes: return "/expenses/types/list"
             
+        // Inventory Aging
+        case .agingSummary: return "/inventory/aging/summary"
+        case .agingProducts: return "/inventory/aging/products"
+        case .agingLocation: return "/inventory/aging/location"
+        case .agingCategory: return "/inventory/aging/category"
+        case .agingSignals: return "/inventory/aging/signals"
+        case .agingExpiring: return "/inventory/aging/expiring"
+        case .agingClearCache: return "/inventory/aging/clear-cache"
+            
         // Reconciliation
         case .reconcileProduct(let productId): return "/inventory/reconciliation/product/\(productId)"
         case .reconcileLocation(let locationId): return "/inventory/reconciliation/location/\(locationId)"
         case .consumptionSummary(let productId): return "/inventory/reconciliation/consumption/\(productId)"
         case .saleItemConsumption(let saleItemId): return "/inventory/reconciliation/sale-item/\(saleItemId)"
+        case .batchDetail(let batchId): return "/inventory/reports/batch/\(batchId)"
         case .verifyFIFO(let saleId): return "/inventory/reconciliation/verify-fifo/\(saleId)"
             
         // Locations
@@ -178,6 +201,9 @@ enum APIEndpoint {
         case .getProduct(let id): return "/products/\(id)"
         case .createProduct: return "/products"
         case .updateProductPrice(let id): return "/products/\(id)/price"
+        case .productSuppliers(let productId): return "/products/\(productId)/suppliers"
+        case .productCostHistory(let productId): return "/products/\(productId)/cost-history"
+        case .supplierCatalog(let supplierId): return "/products/supplier-catalog/\(supplierId)"
             
         // Suppliers
         case .listSuppliers: return "/admin/inventory/cutover/suppliers"
@@ -227,6 +253,12 @@ enum APIEndpoint {
              .receivingSummaryReport, .profitLossReport, .dashboardReport:
             return .get
             
+        // Inventory Aging
+        case .agingSummary, .agingProducts, .agingLocation, .agingCategory, .agingSignals, .agingExpiring:
+            return .get
+        case .agingClearCache:
+            return .post
+            
         // Expenses
         case .createExpense:
             return .post
@@ -239,7 +271,7 @@ enum APIEndpoint {
             
         // Reconciliation
         case .reconcileProduct, .reconcileLocation, .consumptionSummary,
-             .saleItemConsumption, .verifyFIFO:
+             .saleItemConsumption, .verifyFIFO, .batchDetail:
             return .get
             
         // Locations
@@ -247,7 +279,7 @@ enum APIEndpoint {
             return .get
             
         // Products
-        case .listProducts, .getProduct:
+        case .listProducts, .getProduct, .productSuppliers, .productCostHistory, .supplierCatalog:
             return .get
         case .createProduct:
             return .post

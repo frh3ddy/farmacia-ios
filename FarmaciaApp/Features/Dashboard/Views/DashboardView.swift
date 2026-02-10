@@ -5,6 +5,9 @@ import SwiftUI
 struct DashboardView: View {
     @EnvironmentObject var authManager: AuthManager
     @StateObject private var viewModel = DashboardViewModel()
+    @StateObject private var stockAlertViewModel = StockAlertViewModel()
+    @StateObject private var signalsViewModel = ActionableSignalsViewModel()
+    @StateObject private var expiringViewModel = DashboardExpiringViewModel()
     
     var body: some View {
         NavigationStack {
@@ -12,6 +15,21 @@ struct DashboardView: View {
                 VStack(spacing: 20) {
                     // Welcome Header
                     welcomeHeader
+                    
+                    // Stock Alert Card
+                    if stockAlertViewModel.needsAttention {
+                        stockAlertCard
+                    }
+                    
+                    // Expiring Products Alert
+                    if expiringViewModel.hasExpiringProducts {
+                        expiringAlertCard
+                    }
+                    
+                    // Actionable Signals (from aging service)
+                    if !signalsViewModel.signals.isEmpty {
+                        actionableSignalsSection
+                    }
                     
                     // Date Range Selector
                     dateRangeSelector
@@ -72,8 +90,219 @@ struct DashboardView: View {
             }
             .task {
                 await viewModel.loadDashboard()
+                await loadStockAlerts()
+                await loadSignals()
+                await loadExpiringData()
             }
         }
+    }
+    
+    private func loadStockAlerts() async {
+        guard let locationId = authManager.currentLocation?.id else { return }
+        await stockAlertViewModel.loadProducts(locationId: locationId)
+    }
+    
+    private func loadSignals() async {
+        guard let locationId = authManager.currentLocation?.id else { return }
+        await signalsViewModel.loadSignals(locationId: locationId)
+    }
+    
+    private func loadExpiringData() async {
+        guard let locationId = authManager.currentLocation?.id else { return }
+        await expiringViewModel.loadExpiring(locationId: locationId)
+    }
+    
+    // MARK: - Stock Alert Card
+    
+    private var stockAlertCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.orange)
+                    .font(.title3)
+                
+                Text("Inventory Alerts")
+                    .font(.headline)
+                
+                Spacer()
+                
+                NavigationLink {
+                    // Navigate to Products tab (via MainTabView)
+                    // For now, link to a filtered products view
+                    StockAlertProductsView(products: stockAlertViewModel.products)
+                } label: {
+                    Text("View Products")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color.blue.opacity(0.1))
+                        .foregroundColor(.blue)
+                        .cornerRadius(8)
+                }
+            }
+            
+            Divider()
+            
+            HStack(spacing: 16) {
+                if stockAlertViewModel.outOfStockCount > 0 {
+                    alertMetric(
+                        value: "\(stockAlertViewModel.outOfStockCount)",
+                        label: "Out of Stock",
+                        color: .red
+                    )
+                }
+                
+                if stockAlertViewModel.lowStockCount > 0 {
+                    alertMetric(
+                        value: "\(stockAlertViewModel.lowStockCount)",
+                        label: "Low Stock",
+                        color: .orange
+                    )
+                }
+                
+                if stockAlertViewModel.lowMarginCount > 0 {
+                    alertMetric(
+                        value: "\(stockAlertViewModel.lowMarginCount)",
+                        label: "Low Margin",
+                        color: .purple
+                    )
+                }
+                
+                Spacer()
+            }
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(.systemGray6))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+                )
+        )
+    }
+    
+    private func alertMetric(value: String, label: String, color: Color) -> some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(.title2)
+                .fontWeight(.bold)
+                .foregroundColor(color)
+            Text(label)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+        .frame(minWidth: 60)
+    }
+    
+    // MARK: - Expiring Products Alert Card
+    
+    private var expiringAlertCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "clock.badge.exclamationmark")
+                    .foregroundColor(.orange)
+                    .font(.title3)
+                
+                Text("Expiring Products")
+                    .font(.headline)
+                
+                Spacer()
+                
+                if let summary = expiringViewModel.summary {
+                    Text("$\(String(format: "%.0f", summary.totalCashAtRisk)) at risk")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color.red.opacity(0.1))
+                        .foregroundColor(.red)
+                        .cornerRadius(6)
+                }
+            }
+            
+            Divider()
+            
+            if let summary = expiringViewModel.summary {
+                HStack(spacing: 16) {
+                    if summary.totalExpiredBatches > 0 {
+                        alertMetric(
+                            value: "\(summary.totalExpiredBatches)",
+                            label: "Expired",
+                            color: .red
+                        )
+                    }
+                    if summary.criticalCount > 0 {
+                        alertMetric(
+                            value: "\(summary.criticalCount)",
+                            label: "Critical",
+                            color: .red
+                        )
+                    }
+                    if summary.highCount > 0 {
+                        alertMetric(
+                            value: "\(summary.highCount)",
+                            label: "Expiring Soon",
+                            color: .orange
+                        )
+                    }
+                    alertMetric(
+                        value: "\(summary.totalProducts)",
+                        label: "Products",
+                        color: .secondary
+                    )
+                    Spacer()
+                }
+            }
+            
+            // Top 3 expiring products
+            ForEach(expiringViewModel.products.prefix(3)) { product in
+                HStack(spacing: 8) {
+                    Image(systemName: product.severityIcon)
+                        .font(.caption)
+                        .foregroundColor(product.severityColor)
+                        .frame(width: 16)
+                    
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(product.productName)
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .lineLimit(1)
+                        HStack(spacing: 4) {
+                            Text("\(product.totalUnits) units")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                            if product.expiredCount > 0 {
+                                Text("\u{2022} \(product.expiredCount) expired")
+                                    .font(.caption2)
+                                    .foregroundColor(.red)
+                            } else {
+                                Text("\u{2022} exp \(product.soonestExpiryDate.formatted(date: .abbreviated, time: .omitted))")
+                                    .font(.caption2)
+                                    .foregroundColor(.orange)
+                            }
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    Text(product.formattedCashAtRisk)
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(.systemGray6))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+                )
+        )
     }
     
     // MARK: - Welcome Header
@@ -604,6 +833,438 @@ class DashboardViewModel: ObservableObject {
         }
         
         isLoading = false
+    }
+}
+
+// MARK: - Stock Alert ViewModel
+
+@MainActor
+class StockAlertViewModel: ObservableObject {
+    @Published var products: [Product] = []
+    @Published var isLoading = false
+    
+    private let apiClient = APIClient.shared
+    
+    var outOfStockCount: Int {
+        products.filter { ($0.totalInventory ?? 0) == 0 }.count
+    }
+    
+    var lowStockCount: Int {
+        products.filter { ($0.totalInventory ?? 0) > 0 && ($0.totalInventory ?? 0) < 10 }.count
+    }
+    
+    var lowMarginCount: Int {
+        products.filter { ($0.profitMargin ?? 100) < 10 }.count
+    }
+    
+    var needsAttention: Bool {
+        outOfStockCount > 0 || lowStockCount > 0 || lowMarginCount > 0
+    }
+    
+    func loadProducts(locationId: String) async {
+        isLoading = true
+        defer { isLoading = false }
+        
+        do {
+            let response: ProductListResponse = try await apiClient.request(
+                endpoint: .listProducts,
+                queryParams: ["locationId": locationId]
+            )
+            products = response.data
+        } catch {
+            // Silent fail — alerts are supplementary
+            print("Failed to load products for stock alerts: \(error)")
+        }
+    }
+}
+
+// MARK: - Stock Alert Products View (linked from Dashboard)
+
+struct StockAlertProductsView: View {
+    let products: [Product]
+    @State private var selectedFilter: AlertFilter = .outOfStock
+    
+    enum AlertFilter: String, CaseIterable {
+        case outOfStock = "Out of Stock"
+        case lowStock = "Low Stock"
+        case lowMargin = "Low Margin"
+    }
+    
+    private var filteredProducts: [Product] {
+        switch selectedFilter {
+        case .outOfStock:
+            return products.filter { ($0.totalInventory ?? 0) == 0 }
+        case .lowStock:
+            return products.filter { ($0.totalInventory ?? 0) > 0 && ($0.totalInventory ?? 0) < 10 }
+        case .lowMargin:
+            return products.filter { ($0.profitMargin ?? 100) < 10 }
+        }
+    }
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            Picker("Filter", selection: $selectedFilter) {
+                ForEach(AlertFilter.allCases, id: \.self) { filter in
+                    Text(filter.rawValue).tag(filter)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding()
+            
+            List {
+                if filteredProducts.isEmpty {
+                    VStack(spacing: 12) {
+                        Image(systemName: "checkmark.circle")
+                            .font(.system(size: 40))
+                            .foregroundColor(.green)
+                        Text("No products in this category")
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 40)
+                    .listRowBackground(Color.clear)
+                } else {
+                    ForEach(filteredProducts) { product in
+                        NavigationLink {
+                            ProductDetailView(product: product)
+                        } label: {
+                            ProductRow(product: product)
+                        }
+                    }
+                }
+            }
+            .listStyle(.insetGrouped)
+        }
+        .navigationTitle("Inventory Alerts")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - Actionable Signals Section (in DashboardView)
+
+extension DashboardView {
+    var actionableSignalsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "lightbulb.fill")
+                    .foregroundColor(.yellow)
+                    .font(.title3)
+                
+                Text("Action Required")
+                    .font(.headline)
+                
+                Spacer()
+                
+                if signalsViewModel.signals.count > 3 {
+                    NavigationLink {
+                        AllSignalsView(signals: signalsViewModel.signals)
+                    } label: {
+                        Text("View All (\(signalsViewModel.signals.count))")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(Color.blue.opacity(0.1))
+                            .foregroundColor(.blue)
+                            .cornerRadius(8)
+                    }
+                }
+            }
+            
+            Divider()
+            
+            // Show up to 3 signals
+            ForEach(signalsViewModel.signals.prefix(3)) { signal in
+                signalRow(signal)
+                
+                if signal.id != signalsViewModel.signals.prefix(3).last?.id {
+                    Divider()
+                }
+            }
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(.systemGray6))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.yellow.opacity(0.3), lineWidth: 1)
+                )
+        )
+    }
+    
+    private func signalRow(_ signal: ActionableSignal) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                // Signal type icon
+                Image(systemName: signal.type.icon)
+                    .font(.subheadline)
+                    .foregroundColor(signal.severity.color)
+                    .frame(width: 28, height: 28)
+                    .background(signal.severity.color.opacity(0.12))
+                    .cornerRadius(6)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(signal.entityName)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .lineLimit(1)
+                    
+                    Text(signal.message)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                }
+                
+                Spacer()
+                
+                // Severity + cash badge
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(signal.severity.displayName)
+                        .font(.system(size: 9, weight: .bold))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(signal.severity.color.opacity(0.15))
+                        .foregroundColor(signal.severity.color)
+                        .cornerRadius(4)
+                    
+                    if let cash = signal.formattedCashAtRisk {
+                        Text(cash)
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            
+            // Recommended actions (compact)
+            if !signal.recommendedActions.isEmpty {
+                HStack(spacing: 6) {
+                    ForEach(signal.recommendedActions.prefix(2), id: \.self) { action in
+                        Text(action)
+                            .font(.system(size: 9))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(Color(.systemGray5))
+                            .foregroundColor(.secondary)
+                            .cornerRadius(4)
+                    }
+                    
+                    if signal.recommendedActions.count > 2 {
+                        Text("+\(signal.recommendedActions.count - 2)")
+                            .font(.system(size: 9))
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+// MARK: - All Signals View (full list)
+
+struct AllSignalsView: View {
+    let signals: [ActionableSignal]
+    @State private var selectedType: SignalTypeFilter = .all
+    
+    enum SignalTypeFilter: String, CaseIterable {
+        case all = "All"
+        case atRisk = "At Risk"
+        case slowMoving = "Slow Moving"
+        case overstocked = "Overstocked"
+    }
+    
+    private var filteredSignals: [ActionableSignal] {
+        switch selectedType {
+        case .all: return signals
+        case .atRisk: return signals.filter { $0.type == .atRisk }
+        case .slowMoving: return signals.filter { $0.type == .slowMovingExpensive }
+        case .overstocked: return signals.filter { $0.type == .overstockedCategory }
+        }
+    }
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            Picker("Type", selection: $selectedType) {
+                ForEach(SignalTypeFilter.allCases, id: \.self) { filter in
+                    Text(filter.rawValue).tag(filter)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding()
+            
+            List {
+                if filteredSignals.isEmpty {
+                    VStack(spacing: 12) {
+                        Image(systemName: "checkmark.circle")
+                            .font(.system(size: 40))
+                            .foregroundColor(.green)
+                        Text("No signals in this category")
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 40)
+                    .listRowBackground(Color.clear)
+                } else {
+                    ForEach(filteredSignals) { signal in
+                        SignalDetailRow(signal: signal)
+                    }
+                }
+            }
+            .listStyle(.insetGrouped)
+        }
+        .navigationTitle("Action Signals")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+struct SignalDetailRow: View {
+    let signal: ActionableSignal
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            // Header
+            HStack(spacing: 8) {
+                Image(systemName: signal.type.icon)
+                    .font(.subheadline)
+                    .foregroundColor(signal.severity.color)
+                    .frame(width: 32, height: 32)
+                    .background(signal.severity.color.opacity(0.12))
+                    .cornerRadius(8)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(signal.entityName)
+                        .font(.headline)
+                        .lineLimit(1)
+                    
+                    HStack(spacing: 6) {
+                        Text(signal.type.displayName)
+                            .font(.caption)
+                            .foregroundColor(signal.type.color)
+                        
+                        Text("\u{2022}")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        Text(signal.severity.displayName)
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(signal.severity.color)
+                    }
+                }
+                
+                Spacer()
+                
+                if let cash = signal.formattedCashAtRisk {
+                    VStack(alignment: .trailing, spacing: 1) {
+                        Text(cash)
+                            .font(.subheadline)
+                            .fontWeight(.bold)
+                            .foregroundColor(.red)
+                        Text("at risk")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            
+            // Message
+            Text(signal.message)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            
+            // Recommended actions
+            if !signal.recommendedActions.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Recommended Actions")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .textCase(.uppercase)
+                    
+                    ForEach(signal.recommendedActions, id: \.self) { action in
+                        HStack(spacing: 6) {
+                            Image(systemName: "arrow.right.circle.fill")
+                                .font(.caption2)
+                                .foregroundColor(.blue)
+                            Text(action)
+                                .font(.caption)
+                        }
+                    }
+                }
+                .padding(8)
+                .background(Color(.systemGray6))
+                .cornerRadius(8)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+// MARK: - Actionable Signals ViewModel
+
+@MainActor
+class ActionableSignalsViewModel: ObservableObject {
+    @Published var signals: [ActionableSignal] = []
+    @Published var isLoading = false
+    
+    private let apiClient = APIClient.shared
+    
+    func loadSignals(locationId: String) async {
+        isLoading = true
+        defer { isLoading = false }
+        
+        do {
+            let response: ActionableSignalsResponse = try await apiClient.request(
+                endpoint: .agingSignals,
+                queryParams: [
+                    "locationId": locationId,
+                    "limit": "20"
+                ]
+            )
+            signals = response.signals
+        } catch {
+            // Silent fail — signals are supplementary
+            print("Failed to load actionable signals: \(error)")
+            signals = []
+        }
+    }
+}
+
+// MARK: - Dashboard Expiring Products ViewModel
+
+@MainActor
+class DashboardExpiringViewModel: ObservableObject {
+    @Published var products: [ExpiringProduct] = []
+    @Published var summary: ExpiringProductsSummary?
+    @Published var isLoading = false
+    
+    private let apiClient = APIClient.shared
+    
+    var hasExpiringProducts: Bool {
+        !products.isEmpty
+    }
+    
+    func loadExpiring(locationId: String) async {
+        isLoading = true
+        defer { isLoading = false }
+        
+        do {
+            let response: ExpiringProductsResponse = try await apiClient.request(
+                endpoint: .agingExpiring,
+                queryParams: [
+                    "locationId": locationId,
+                    "withinDays": "90",
+                    "includeExpired": "true"
+                ]
+            )
+            products = response.products
+            summary = response.summary
+        } catch {
+            // Silent fail — expiry alerts are supplementary
+            print("Failed to load expiring products: \(error)")
+            products = []
+            summary = nil
+        }
     }
 }
 
