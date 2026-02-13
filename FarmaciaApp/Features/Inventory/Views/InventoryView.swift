@@ -535,6 +535,12 @@ struct ReceiveInventoryFormView: View {
     @State private var showSupplierPicker = false
     @State private var notes = ""
     
+    // Supplier intelligence
+    @State private var productSuppliers: [ProductSupplier] = []
+    @State private var isLoadingSuppliers = false
+    @State private var supplierLastCost: Double?
+    @State private var supplierCostNote: String?
+    
     /// Convenience initializer for standalone use (no pre-selected product)
     init(viewModel: InventoryViewModel) {
         self.viewModel = viewModel
@@ -695,14 +701,53 @@ struct ReceiveInventoryFormView: View {
                 }
                 
                 // Supplier
-                Section("Supplier (Optional)") {
+                Section {
                     Button {
                         showSupplierPicker = true
                     } label: {
                         HStack {
-                            if let supplier = selectedSupplier {
-                                Text(supplier.name)
-                                    .foregroundColor(.primary)
+                            if isLoadingSuppliers {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                                Text("Loading suppliers...")
+                                    .foregroundColor(.secondary)
+                            } else if let supplier = selectedSupplier {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    HStack(spacing: 6) {
+                                        Text(supplier.name)
+                                            .foregroundColor(.primary)
+                                        // Show preferred badge if this supplier is the preferred one
+                                        if let ps = productSuppliers.first(where: { $0.id == supplier.id }), ps.isPreferred {
+                                            Text("Preferred")
+                                                .font(.caption2)
+                                                .fontWeight(.medium)
+                                                .padding(.horizontal, 5)
+                                                .padding(.vertical, 1)
+                                                .background(Color.blue.opacity(0.15))
+                                                .foregroundColor(.blue)
+                                                .cornerRadius(4)
+                                        }
+                                    }
+                                    // Show last cost from this supplier
+                                    if let lastCost = supplierLastCost {
+                                        HStack(spacing: 4) {
+                                            Text("Last cost: $\(String(format: "%.2f", lastCost))")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                            // Show comparison with current unit cost entry
+                                            if let currentCost = Double(unitCost), currentCost > 0 {
+                                                let diff = currentCost - lastCost
+                                                let pct = lastCost > 0 ? (diff / lastCost) * 100 : 0
+                                                if abs(diff) > 0.01 {
+                                                    Text(diff > 0 ? "\u{2191}\(String(format: "+%.1f%%", pct))" : "\u{2193}\(String(format: "%.1f%%", pct))")
+                                                        .font(.caption)
+                                                        .fontWeight(.medium)
+                                                        .foregroundColor(diff > 0 ? .red : .green)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             } else {
                                 Text("Select Supplier")
                                     .foregroundColor(.secondary)
@@ -711,6 +756,8 @@ struct ReceiveInventoryFormView: View {
                             if selectedSupplier != nil {
                                 Button {
                                     selectedSupplier = nil
+                                    supplierLastCost = nil
+                                    supplierCostNote = nil
                                 } label: {
                                     Image(systemName: "xmark.circle.fill")
                                         .foregroundColor(.secondary)
@@ -720,6 +767,23 @@ struct ReceiveInventoryFormView: View {
                             Image(systemName: "chevron.right")
                                 .foregroundColor(.secondary)
                         }
+                    }
+                    
+                    // Show supplier cost note (e.g. "Auto-filled from preferred supplier")
+                    if let note = supplierCostNote {
+                        HStack(spacing: 4) {
+                            Image(systemName: "info.circle")
+                                .font(.caption)
+                            Text(note)
+                                .font(.caption)
+                        }
+                        .foregroundColor(.blue)
+                    }
+                } header: {
+                    Text("Supplier (Optional)")
+                } footer: {
+                    if !productSuppliers.isEmpty && selectedSupplier == nil {
+                        Text("\(productSuppliers.count) supplier(s) available for this product")
                     }
                 }
                 
@@ -777,8 +841,73 @@ struct ReceiveInventoryFormView: View {
                 // Pre-select product if provided (from ProductDetailView context)
                 if let product = preSelectedProduct, selectedProduct == nil {
                     selectedProduct = product
+                    // Fetch suppliers for the pre-selected product
+                    Task { await loadProductSuppliers(for: product.id) }
                 }
             }
+            .onChange(of: selectedProduct) { oldValue, newValue in
+                // When product changes, fetch its suppliers to find preferred one
+                if let product = newValue, product.id != oldValue?.id {
+                    // Reset supplier state
+                    productSuppliers = []
+                    selectedSupplier = nil
+                    supplierLastCost = nil
+                    supplierCostNote = nil
+                    Task { await loadProductSuppliers(for: product.id) }
+                }
+            }
+            .onChange(of: selectedSupplier) { oldValue, newValue in
+                // When supplier changes, update last cost display
+                if let supplier = newValue {
+                    if let ps = productSuppliers.first(where: { $0.id == supplier.id }) {
+                        supplierLastCost = ps.costDouble
+                        // Auto-fill unit cost if empty
+                        if unitCost.isEmpty && ps.costDouble > 0 {
+                            unitCost = String(format: "%.2f", ps.costDouble)
+                            supplierCostNote = "Cost auto-filled from supplier's last price"
+                        } else {
+                            supplierCostNote = nil
+                        }
+                    } else {
+                        supplierLastCost = nil
+                        supplierCostNote = nil
+                    }
+                } else {
+                    supplierLastCost = nil
+                    supplierCostNote = nil
+                }
+            }
+        }
+    }
+    
+    // MARK: - Load Product Suppliers
+    
+    private func loadProductSuppliers(for productId: String) async {
+        isLoadingSuppliers = true
+        defer { isLoadingSuppliers = false }
+        
+        do {
+            let response: ProductSuppliersResponse = try await APIClient.shared.request(
+                endpoint: .productSuppliers(productId: productId)
+            )
+            productSuppliers = response.suppliers
+            
+            // Auto-select preferred supplier if user hasn't picked one yet
+            if selectedSupplier == nil,
+               let preferred = response.suppliers.first(where: { $0.isPreferred }) {
+                // Find matching Supplier from the viewModel's supplier list
+                if let matchingSupplier = viewModel.suppliers.first(where: { $0.id == preferred.id }) {
+                    selectedSupplier = matchingSupplier
+                    supplierLastCost = preferred.costDouble
+                    if unitCost.isEmpty && preferred.costDouble > 0 {
+                        unitCost = String(format: "%.2f", preferred.costDouble)
+                        supplierCostNote = "Cost auto-filled from preferred supplier"
+                    }
+                }
+            }
+        } catch {
+            // Supplier loading is optional, don't block the form
+            print("Failed to load product suppliers: \(error)")
         }
     }
     

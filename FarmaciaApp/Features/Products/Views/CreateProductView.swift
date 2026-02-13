@@ -7,9 +7,79 @@ struct CreateProductView: View {
     @Environment(\.dismiss) var dismiss
     @StateObject private var viewModel = CreateProductViewModel()
     
+    // Image picker state
+    @State private var selectedImage: UIImage?
+    @State private var showImagePicker = false
+    @State private var showImageSourcePicker = false
+    @State private var imagePickerSource: UIImagePickerController.SourceType = .photoLibrary
+    
     var body: some View {
         NavigationStack {
             Form {
+                // Product Image Section
+                Section {
+                    HStack {
+                        Spacer()
+                        ZStack(alignment: .bottomTrailing) {
+                            if let image = selectedImage {
+                                Image(uiImage: image)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(width: 100, height: 100)
+                                    .cornerRadius(16)
+                            } else {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .fill(Color(.systemGray5))
+                                        .frame(width: 100, height: 100)
+                                    VStack(spacing: 4) {
+                                        Image(systemName: "camera.fill")
+                                            .font(.title2)
+                                            .foregroundColor(.secondary)
+                                        Text("Add Photo")
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                            }
+                            
+                            Image(systemName: selectedImage != nil ? "pencil.circle.fill" : "plus.circle.fill")
+                                .font(.title3)
+                                .foregroundColor(.white)
+                                .background(Circle().fill(Color.blue).frame(width: 28, height: 28))
+                                .offset(x: 4, y: 4)
+                        }
+                        .onTapGesture {
+                            showImageSourcePicker = true
+                        }
+                        Spacer()
+                    }
+                    .listRowBackground(Color.clear)
+                } header: {
+                    Text("Product Image (Optional)")
+                }
+                .confirmationDialog("Add Product Image", isPresented: $showImageSourcePicker) {
+                    Button("Take Photo") {
+                        imagePickerSource = .camera
+                        showImagePicker = true
+                    }
+                    Button("Choose from Library") {
+                        imagePickerSource = .photoLibrary
+                        showImagePicker = true
+                    }
+                    if selectedImage != nil {
+                        Button("Remove Photo", role: .destructive) {
+                            selectedImage = nil
+                        }
+                    }
+                    Button("Cancel", role: .cancel) {}
+                }
+                .sheet(isPresented: $showImagePicker) {
+                    ImagePicker(sourceType: imagePickerSource) { image in
+                        selectedImage = image
+                    }
+                }
+                
                 // Product Info Section
                 Section {
                     TextField("Product Name", text: $viewModel.name)
@@ -189,7 +259,11 @@ struct CreateProductView: View {
                 Text("Creating product...")
                     .font(.headline)
                 
-                if viewModel.syncToSquare {
+                if selectedImage != nil {
+                    Text("Will upload image after creation...")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                } else if viewModel.syncToSquare {
                     Text("Syncing to Square...")
                         .font(.caption)
                         .foregroundColor(.secondary)
@@ -210,7 +284,7 @@ struct CreateProductView: View {
             return
         }
         
-        await viewModel.createProduct(locationId: locationId)
+        await viewModel.createProduct(locationId: locationId, image: selectedImage)
     }
     
     // MARK: - Helpers
@@ -293,7 +367,7 @@ class CreateProductViewModel: ObservableObject {
     
     // MARK: - Actions
     
-    func createProduct(locationId: String) async {
+    func createProduct(locationId: String, image: UIImage? = nil) async {
         isSubmitting = true
         
         do {
@@ -321,6 +395,22 @@ class CreateProductViewModel: ObservableObject {
                 if data.inventoryCreated {
                     message += "\n✓ Initial inventory added"
                 }
+                
+                // Upload image if one was selected
+                if let image = image, let imageData = image.jpegData(compressionQuality: 0.8) {
+                    do {
+                        let _: ImageUploadResponse = try await apiClient.uploadImage(
+                            endpoint: .uploadProductImage(id: data.product.id),
+                            imageData: imageData,
+                            filename: "product_\(data.product.id).jpg"
+                        )
+                        message += "\n✓ Product image uploaded"
+                    } catch {
+                        message += "\n⚠ Image upload failed (product was created)"
+                        print("Failed to upload product image: \(error)")
+                    }
+                }
+                
                 successMessage = message
                 showSuccess = true
             }

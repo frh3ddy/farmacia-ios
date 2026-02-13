@@ -105,6 +105,7 @@ enum APIEndpoint {
     case getProduct(id: String)
     case createProduct
     case updateProductPrice(id: String)
+    case uploadProductImage(id: String)
     case productSuppliers(productId: String)
     case productCostHistory(productId: String)
     case supplierCatalog(supplierId: String)
@@ -201,6 +202,7 @@ enum APIEndpoint {
         case .getProduct(let id): return "/products/\(id)"
         case .createProduct: return "/products"
         case .updateProductPrice(let id): return "/products/\(id)/price"
+        case .uploadProductImage(let id): return "/products/\(id)/image"
         case .productSuppliers(let productId): return "/products/\(productId)/suppliers"
         case .productCostHistory(let productId): return "/products/\(productId)/cost-history"
         case .supplierCatalog(let supplierId): return "/products/supplier-catalog/\(supplierId)"
@@ -285,6 +287,8 @@ enum APIEndpoint {
             return .post
         case .updateProductPrice:
             return .patch
+        case .uploadProductImage:
+            return .post
             
         // Suppliers
         case .listSuppliers:

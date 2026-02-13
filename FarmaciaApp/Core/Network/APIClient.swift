@@ -70,6 +70,46 @@ final class APIClient {
         let _: EmptyResponse = try await perform(request)
     }
     
+    /// Uploads an image via multipart/form-data
+    func uploadImage<T: Decodable>(
+        endpoint: APIEndpoint,
+        imageData: Data,
+        filename: String = "image.jpg",
+        mimeType: String = "image/jpeg"
+    ) async throws -> T {
+        let urlString = AppConfiguration.apiBaseURL + endpoint.path
+        
+        guard let url = URL(string: urlString) else {
+            throw NetworkError.invalidURL
+        }
+        
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("FarmaciaApp/\(AppConfiguration.appVersion)", forHTTPHeaderField: "User-Agent")
+        
+        // Auth headers
+        if endpoint.requiresDeviceToken, let deviceToken = deviceToken {
+            request.setValue("Bearer \(deviceToken)", forHTTPHeaderField: "Authorization")
+        }
+        if endpoint.requiresSessionToken, let sessionToken = sessionToken {
+            request.setValue(sessionToken, forHTTPHeaderField: "X-Session-Token")
+        }
+        
+        // Build multipart body
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"image\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: \(mimeType)\r\n\r\n".data(using: .utf8)!)
+        body.append(imageData)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        request.httpBody = body
+        
+        return try await perform(request)
+    }
+    
     // MARK: - Private Methods
     
     private func buildRequest(
