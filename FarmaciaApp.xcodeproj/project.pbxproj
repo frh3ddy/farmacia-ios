@@ -43,6 +43,14 @@
 		AA00000100000001 /* GlobalActivityHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000200000001 /* GlobalActivityHistoryView.swift */; };
 		BB00000100000001 /* PurchaseOrderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00000200000001 /* PurchaseOrderView.swift */; };
 		CC00000100000001 /* BatchDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000200000001 /* BatchDetailView.swift */; };
+		DD00000100000001 /* ShoppingListsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000001 /* ShoppingListsView.swift */; };
+		DD00000100000002 /* ShoppingListDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000002 /* ShoppingListDetailView.swift */; };
+		DD00000100000003 /* AddItemsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000003 /* AddItemsSheet.swift */; };
+		DD00000100000004 /* ReceiveFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000004 /* ReceiveFlowView.swift */; };
+		DD00000100000005 /* ShoppingList.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000005 /* ShoppingList.swift */; };
+		DD00000100000006 /* ShoppingListStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000006 /* ShoppingListStore.swift */; };
+		EE00000100000001 /* ImagePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000001 /* ImagePicker.swift */; };
+		EE00000100000002 /* ProductImageViewer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000002 /* ProductImageViewer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -84,6 +92,14 @@
 		AA00000200000001 /* GlobalActivityHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalActivityHistoryView.swift; sourceTree = "<group>"; };
 		BB00000200000001 /* PurchaseOrderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseOrderView.swift; sourceTree = "<group>"; };
 		CC00000200000001 /* BatchDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchDetailView.swift; sourceTree = "<group>"; };
+		DD00000200000001 /* ShoppingListsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingListsView.swift; sourceTree = "<group>"; };
+		DD00000200000002 /* ShoppingListDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingListDetailView.swift; sourceTree = "<group>"; };
+		DD00000200000003 /* AddItemsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddItemsSheet.swift; sourceTree = "<group>"; };
+		DD00000200000004 /* ReceiveFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiveFlowView.swift; sourceTree = "<group>"; };
+		DD00000200000005 /* ShoppingList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingList.swift; sourceTree = "<group>"; };
+		DD00000200000006 /* ShoppingListStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingListStore.swift; sourceTree = "<group>"; };
+		EE00000200000001 /* ImagePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImagePicker.swift; sourceTree = "<group>"; };
+		EE00000200000002 /* ProductImageViewer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductImageViewer.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -124,6 +140,10 @@
 				AA00000200000001 /* GlobalActivityHistoryView.swift */,
 				BB00000200000001 /* PurchaseOrderView.swift */,
 				CC00000200000001 /* BatchDetailView.swift */,
+				DD00000200000001 /* ShoppingListsView.swift */,
+				DD00000200000002 /* ShoppingListDetailView.swift */,
+				DD00000200000003 /* AddItemsSheet.swift */,
+				DD00000200000004 /* ReceiveFlowView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -165,9 +185,19 @@
 			path = App;
 			sourceTree = "<group>";
 		};
+		EE00000300000001 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				EE00000200000001 /* ImagePicker.swift */,
+				EE00000200000002 /* ProductImageViewer.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
 		F300000000000003 /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				EE00000300000001 /* Components */,
 				F300000000000007 /* Network */,
 				F300000000000008 /* Auth */,
 			);
@@ -200,6 +230,8 @@
 				F100000100000023 /* Expense.swift */,
 				F100000100000024 /* Reports.swift */,
 				F100000100000030 /* InventoryAging.swift */,
+				DD00000200000005 /* ShoppingList.swift */,
+				DD00000200000006 /* ShoppingListStore.swift */,
 				37E697412F3408EF00F6CB5D /* Setup.swift */,
 			);
 			path = Models;
@@ -418,6 +450,14 @@
 				AA00000100000001 /* GlobalActivityHistoryView.swift in Sources */,
 				BB00000100000001 /* PurchaseOrderView.swift in Sources */,
 				CC00000100000001 /* BatchDetailView.swift in Sources */,
+				DD00000100000001 /* ShoppingListsView.swift in Sources */,
+				DD00000100000002 /* ShoppingListDetailView.swift in Sources */,
+				DD00000100000003 /* AddItemsSheet.swift in Sources */,
+				DD00000100000004 /* ReceiveFlowView.swift in Sources */,
+				DD00000100000005 /* ShoppingList.swift in Sources */,
+				DD00000100000006 /* ShoppingListStore.swift in Sources */,
+				EE00000100000001 /* ImagePicker.swift in Sources */,
+				EE00000100000002 /* ProductImageViewer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

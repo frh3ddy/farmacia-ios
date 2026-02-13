@@ -11,6 +11,7 @@ struct ProductsView: View {
     @StateObject private var expiringViewModel = ExpiringProductsViewModel()
     @State private var showCreateProduct = false
     @State private var showPurchaseOrder = false
+    @State private var showShoppingLists = false
     @State private var searchText = ""
     @State private var activeFilter: ProductFilter = .all
     @State private var sortOption: ProductSortOption = .name
@@ -177,7 +178,28 @@ struct ProductsView: View {
                         Image(systemName: "arrow.up.arrow.down.circle")
                     }
                     
-                    // Purchase Order (shopping list)
+                    // Shopping Lists (primary path)
+                    if authManager.canManageInventory {
+                        Button {
+                            showShoppingLists = true
+                        } label: {
+                            let activeCount = ShoppingListStore.shared.activeLists.count
+                            Image(systemName: "list.clipboard")
+                                .overlay(alignment: .topTrailing) {
+                                    if activeCount > 0 {
+                                        Text("\(activeCount)")
+                                            .font(.system(size: 9, weight: .bold))
+                                            .foregroundColor(.white)
+                                            .frame(minWidth: 14, minHeight: 14)
+                                            .background(Color.red)
+                                            .clipShape(Circle())
+                                            .offset(x: 6, y: -6)
+                                    }
+                                }
+                        }
+                    }
+                    
+                    // Quick Receive (legacy fast path)
                     if authManager.canManageInventory {
                         Button {
                             showPurchaseOrder = true
@@ -210,6 +232,14 @@ struct ProductsView: View {
             }
             .sheet(isPresented: $showPurchaseOrder) {
                 PurchaseOrderView()
+                    .onDisappear {
+                        Task {
+                            await loadProducts()
+                        }
+                    }
+            }
+            .fullScreenCover(isPresented: $showShoppingLists) {
+                ShoppingListsView(store: ShoppingListStore.shared)
                     .onDisappear {
                         Task {
                             await loadProducts()

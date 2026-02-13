@@ -8,6 +8,10 @@ struct DashboardView: View {
     @StateObject private var stockAlertViewModel = StockAlertViewModel()
     @StateObject private var signalsViewModel = ActionableSignalsViewModel()
     @StateObject private var expiringViewModel = DashboardExpiringViewModel()
+    @State private var showShoppingListCreated = false
+    @State private var createdListName = ""
+    
+    private var shoppingListStore: ShoppingListStore { ShoppingListStore.shared }
     
     var body: some View {
         NavigationStack {
@@ -171,6 +175,27 @@ struct DashboardView: View {
                 
                 Spacer()
             }
+            
+            // Create Shopping List action
+            Divider()
+            
+            Button {
+                createRestockShoppingList()
+            } label: {
+                HStack {
+                    Image(systemName: "list.clipboard")
+                    Text("Create Restock List")
+                    Spacer()
+                    Text("\(stockAlertViewModel.outOfStockCount + stockAlertViewModel.lowStockCount) items")
+                        .foregroundColor(.secondary)
+                    Image(systemName: "chevron.right")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+                .font(.caption)
+                .fontWeight(.medium)
+                .foregroundColor(.blue)
+            }
         }
         .padding()
         .background(
@@ -181,6 +206,11 @@ struct DashboardView: View {
                         .stroke(Color.orange.opacity(0.3), lineWidth: 1)
                 )
         )
+        .alert("Shopping List Created", isPresented: $showShoppingListCreated) {
+            Button("OK") {}
+        } message: {
+            Text("\"\(createdListName)\" has been created with items that need restocking. Open Shopping Lists from the Products tab to review.")
+        }
     }
     
     private func alertMetric(value: String, label: String, color: Color) -> some View {
@@ -303,6 +333,56 @@ struct DashboardView: View {
                         .stroke(Color.orange.opacity(0.3), lineWidth: 1)
                 )
         )
+    }
+    
+    // MARK: - Shopping List Creation Helpers
+    
+    private func createRestockShoppingList() {
+        let outOfStock = stockAlertViewModel.products.filter { ($0.totalInventory ?? 0) == 0 }
+        let lowStock = stockAlertViewModel.products.filter {
+            let inv = $0.totalInventory ?? 0
+            return inv > 0 && inv < 10
+        }
+        
+        let dateSuffix = Date().formatted(date: .abbreviated, time: .omitted)
+        let name = "Restock \(dateSuffix)"
+        
+        var list = ShoppingList(
+            name: name,
+            locationId: authManager.currentLocation?.id,
+            locationName: authManager.currentLocation?.name
+        )
+        
+        for product in outOfStock {
+            let reorderTarget = 10
+            let item = ShoppingListItem(
+                productId: product.id,
+                productName: product.displayName,
+                sku: product.sku,
+                plannedQuantity: reorderTarget,
+                unitCost: product.averageCost ?? 0,
+                previousCost: product.averageCost
+            )
+            list.addItem(item)
+        }
+        for product in lowStock {
+            let stock = product.totalInventory ?? 0
+            let reorderTarget = 10
+            let suggestedQty = max(1, reorderTarget - stock)
+            let item = ShoppingListItem(
+                productId: product.id,
+                productName: product.displayName,
+                sku: product.sku,
+                plannedQuantity: suggestedQty,
+                unitCost: product.averageCost ?? 0,
+                previousCost: product.averageCost
+            )
+            list.addItem(item)
+        }
+        
+        shoppingListStore.save(list)
+        createdListName = name
+        showShoppingListCreated = true
     }
     
     // MARK: - Welcome Header

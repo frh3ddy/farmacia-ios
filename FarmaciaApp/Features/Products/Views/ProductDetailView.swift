@@ -37,6 +37,15 @@ struct ProductDetailView: View {
     // Shared inventory view model for forms
     @StateObject private var inventoryViewModel = InventoryViewModel()
     
+    // Image upload state
+    @State private var showImagePicker = false
+    @State private var showImageSourcePicker = false
+    @State private var imagePickerSource: UIImagePickerController.SourceType = .photoLibrary
+    @State private var isUploadingImage = false
+    @State private var uploadedImageUrl: String? = nil
+    @State private var showImageUploadError = false
+    @State private var showImageViewer = false
+    
     private var displayProduct: Product {
         currentProduct ?? product
     }
@@ -101,8 +110,10 @@ struct ProductDetailView: View {
                 onComplete: {
                     Task {
                         await refreshProduct()
-                        await loadActivity()
-                        await loadCostSupplierData()
+                        async let activityLoad: () = loadActivity()
+                        async let batchLoad: () = loadBatchData()
+                        async let costSupplierLoad: () = loadCostSupplierData()
+                        _ = await (activityLoad, batchLoad, costSupplierLoad)
                     }
                 }
             )
@@ -115,8 +126,10 @@ struct ProductDetailView: View {
                 onComplete: {
                     Task {
                         await refreshProduct()
-                        await loadActivity()
-                        await loadCostSupplierData()
+                        async let activityLoad: () = loadActivity()
+                        async let batchLoad: () = loadBatchData()
+                        async let costSupplierLoad: () = loadCostSupplierData()
+                        _ = await (activityLoad, batchLoad, costSupplierLoad)
                     }
                 }
             )
@@ -156,6 +169,11 @@ struct ProductDetailView: View {
         } message: {
             Text(inventoryViewModel.successMessage ?? "Operation completed")
         }
+        .alert("Image Upload Failed", isPresented: $showImageUploadError) {
+            Button("OK") {}
+        } message: {
+            Text("Could not upload the product image. Please try again.")
+        }
     }
     
     // MARK: - Product Header
@@ -163,23 +181,78 @@ struct ProductDetailView: View {
     private var productHeader: some View {
         VStack(spacing: 12) {
             // Product Image or Placeholder
-            if let imageUrl = displayProduct.squareImageUrl, let url = URL(string: imageUrl) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    case .failure, .empty:
-                        productPlaceholder
-                    @unknown default:
+            ZStack(alignment: .bottomTrailing) {
+                // Image area — tapping opens full-screen viewer
+                Group {
+                    if let imageUrl = uploadedImageUrl ?? displayProduct.squareImageUrl, let url = URL(string: imageUrl) {
+                        AsyncImage(url: url) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                            case .failure, .empty:
+                                productPlaceholder
+                            @unknown default:
+                                productPlaceholder
+                            }
+                        }
+                        .frame(width: 100, height: 100)
+                        .cornerRadius(16)
+                        .onTapGesture {
+                            showImageViewer = true
+                        }
+                    } else {
                         productPlaceholder
                     }
                 }
-                .frame(width: 100, height: 100)
-                .cornerRadius(16)
-            } else {
-                productPlaceholder
+                
+                // Camera icon overlay — tapping opens upload picker (owners/managers only)
+                if (authManager.isOwner || authManager.isManager) && !isUploadingImage {
+                    Button {
+                        showImageSourcePicker = true
+                    } label: {
+                        Image(systemName: "camera.circle.fill")
+                            .font(.title3)
+                            .foregroundColor(.white)
+                            .background(Circle().fill(Color.blue).frame(width: 28, height: 28))
+                    }
+                    .offset(x: 4, y: 4)
+                }
+                
+                if isUploadingImage {
+                    ProgressView()
+                        .frame(width: 100, height: 100)
+                        .background(Color.black.opacity(0.3))
+                        .cornerRadius(16)
+                }
+            }
+            .confirmationDialog("Change Product Image", isPresented: $showImageSourcePicker) {
+                Button("Take Photo") {
+                    imagePickerSource = .camera
+                    showImagePicker = true
+                }
+                if UIImagePickerController.isSourceTypeAvailable(.camera) {} // camera availability check
+                Button("Choose from Library") {
+                    imagePickerSource = .photoLibrary
+                    showImagePicker = true
+                }
+                Button("Cancel", role: .cancel) {}
+            }
+            .sheet(isPresented: $showImagePicker) {
+                ImagePicker(sourceType: imagePickerSource) { image in
+                    Task {
+                        await uploadProductImage(image)
+                    }
+                }
+            }
+            .fullScreenCover(isPresented: $showImageViewer) {
+                if let imageUrl = uploadedImageUrl ?? displayProduct.squareImageUrl {
+                    ProductImageViewer(
+                        imageUrl: imageUrl,
+                        productName: displayProduct.displayName
+                    )
+                }
             }
             
             // Product Name
@@ -663,6 +736,28 @@ struct ProductDetailView: View {
             productId: displayProduct.id,
             locationId: locationId
         )
+    }
+    
+    private func uploadProductImage(_ image: UIImage) async {
+        // Compress image to JPEG
+        guard let imageData = image.jpegData(compressionQuality: 0.8) else { return }
+        
+        isUploadingImage = true
+        defer { isUploadingImage = false }
+        
+        do {
+            let response: ImageUploadResponse = try await APIClient.shared.uploadImage(
+                endpoint: .uploadProductImage(id: displayProduct.id),
+                imageData: imageData,
+                filename: "product_\(displayProduct.id).jpg"
+            )
+            if let url = response.imageUrl {
+                uploadedImageUrl = url
+            }
+        } catch {
+            print("Failed to upload product image: \(error)")
+            showImageUploadError = true
+        }
     }
     
     // MARK: - FIFO Batch Breakdown Section
@@ -1321,6 +1416,8 @@ class ProductActivityViewModel: ObservableObject {
         isLoading = true
         defer { isLoading = false }
         
+        guard !Task.isCancelled else { return }
+        
         // Load both in parallel
         async let receivingsResult: () = loadReceivings(productId: productId)
         async let adjustmentsResult: () = loadAdjustments(productId: productId)
@@ -1537,6 +1634,9 @@ class ProductBatchViewModel: ObservableObject {
         isLoading = true
         defer { isLoading = false }
         
+        // Guard against task cancellation to preserve existing data
+        guard !Task.isCancelled else { return }
+        
         // Load valuation and aging data in parallel
         async let valuationResult: () = loadValuation(productId: productId, locationId: locationId)
         async let agingResult: () = loadAgingAnalysis(productId: productId, locationId: locationId)
@@ -1558,9 +1658,13 @@ class ProductBatchViewModel: ObservableObject {
             } else {
                 batches = []
             }
+        } catch is CancellationError {
+            // Request was cancelled (e.g. pull-to-refresh ended) — keep existing data
+            return
         } catch {
             print("Failed to load batch valuation: \(error)")
-            batches = []
+            // Only clear if this is a fresh load (no existing data)
+            // On refresh, keep stale data visible rather than showing empty state
         }
     }
     
@@ -1575,10 +1679,12 @@ class ProductBatchViewModel: ObservableObject {
             )
             // Find this product in the aging analysis
             productAging = response.products.first { $0.productId == productId }
+        } catch is CancellationError {
+            // Request was cancelled — keep existing data
+            return
         } catch {
-            // Silent fail — aging data is supplementary
+            // Silent fail — aging data is supplementary, keep existing data on refresh
             print("Failed to load aging analysis: \(error)")
-            productAging = nil
         }
     }
 }
@@ -1785,6 +1891,9 @@ class CostSupplierViewModel: ObservableObject {
         isLoading = true
         defer { isLoading = false }
         
+        // Guard against task cancellation to preserve existing data
+        guard !Task.isCancelled else { return }
+        
         // Load both in parallel
         async let suppliersResult: () = loadSuppliers(productId: productId)
         async let costHistoryResult: () = loadCostHistory(productId: productId)
@@ -1797,9 +1906,12 @@ class CostSupplierViewModel: ObservableObject {
                 endpoint: .productSuppliers(productId: productId)
             )
             suppliers = response.suppliers
+        } catch is CancellationError {
+            // Request was cancelled (e.g. pull-to-refresh ended) — keep existing data
+            return
         } catch {
             print("Failed to load product suppliers: \(error)")
-            suppliers = []
+            // Keep existing data on refresh errors rather than clearing
         }
     }
     
@@ -1809,9 +1921,12 @@ class CostSupplierViewModel: ObservableObject {
                 endpoint: .productCostHistory(productId: productId)
             )
             costHistory = response.suppliers
+        } catch is CancellationError {
+            // Request was cancelled — keep existing data
+            return
         } catch {
             print("Failed to load product cost history: \(error)")
-            costHistory = []
+            // Keep existing data on refresh errors rather than clearing
         }
     }
 }

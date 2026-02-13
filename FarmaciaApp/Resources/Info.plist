@@ -18,5 +18,8 @@
             </dict>
         </dict>
     </dict>
+    <!-- Camera access for product image capture -->
+    <key>NSCameraUsageDescription</key>
+    <string>Farmacia needs camera access to take photos of products.</string>
 </dict>
 </plist>
