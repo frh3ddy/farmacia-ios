@@ -50,10 +50,10 @@ enum InventoryRiskLevel: String, Decodable, CaseIterable {
     
     var displayName: String {
         switch self {
-        case .low: return "Low"
-        case .medium: return "Medium"
-        case .high: return "High"
-        case .critical: return "Critical"
+        case .low: return "Bajo"
+        case .medium: return "Medio"
+        case .high: return "Alto"
+        case .critical: return "Crítico"
         }
     }
     
@@ -161,9 +161,9 @@ enum SignalType: String, Decodable {
     
     var displayName: String {
         switch self {
-        case .atRisk: return "At Risk"
-        case .slowMovingExpensive: return "Slow Moving"
-        case .overstockedCategory: return "Overstocked"
+        case .atRisk: return "En Riesgo"
+        case .slowMovingExpensive: return "Lento Movimiento"
+        case .overstockedCategory: return "Sobrestock"
         }
     }
     
@@ -241,9 +241,9 @@ struct ExpiringBatchInfo: Decodable, Identifiable {
     
     var expiryLabel: String {
         if isExpired {
-            return "Expired \(abs(daysUntilExpiry))d ago"
+            return "Venció hace \(abs(daysUntilExpiry))d"
         } else if daysUntilExpiry <= 30 {
-            return "Expires in \(daysUntilExpiry)d"
+            return "Vence en \(daysUntilExpiry)d"
         } else {
             return expiryDate.formatted(date: .abbreviated, time: .omitted)
         }
@@ -333,9 +333,9 @@ struct BatchConsumption: Decodable, Identifiable {
     
     var typeLabel: String {
         switch type {
-        case "SALE": return "Sale"
-        case "ADJUSTMENT": return adjustment?.type ?? "Adjustment"
-        default: return "Unknown"
+        case "SALE": return "Venta"
+        case "ADJUSTMENT": return adjustment?.type ?? "Ajuste"
+        default: return "Desconocido"
         }
     }
     
@@ -424,10 +424,10 @@ struct BatchDetail: Decodable {
     
     var sourceLabel: String {
         switch source {
-        case "PURCHASE": return "Purchase"
-        case "OPENING_BALANCE": return "Opening Balance"
-        case "ADJUSTMENT": return "Adjustment"
-        default: return source ?? "Unknown"
+        case "PURCHASE": return "Compra"
+        case "OPENING_BALANCE": return "Saldo Inicial"
+        case "ADJUSTMENT": return "Ajuste"
+        default: return source ?? "Desconocido"
         }
     }
 }

@@ -9,13 +9,13 @@ struct ReportsView: View {
         NavigationStack {
             List {
                 // Sales & Profit Reports
-                Section("Sales & Profit") {
+                Section("Ventas y Ganancias") {
                     NavigationLink {
                         COGSReportView()
                     } label: {
                         reportRow(
-                            title: "Cost of Goods Sold",
-                            subtitle: "Track product costs and sales",
+                            title: "Costo de Mercancía Vendida",
+                            subtitle: "Seguimiento de costos y ventas",
                             icon: "dollarsign.square",
                             color: .green
                         )
@@ -25,8 +25,8 @@ struct ReportsView: View {
                         ProfitMarginReportView()
                     } label: {
                         reportRow(
-                            title: "Profit Margin",
-                            subtitle: "Revenue vs. cost analysis",
+                            title: "Margen de Ganancia",
+                            subtitle: "Análisis de ingresos vs. costos",
                             icon: "chart.line.uptrend.xyaxis",
                             color: .blue
                         )
@@ -36,8 +36,8 @@ struct ReportsView: View {
                         ProfitLossReportView()
                     } label: {
                         reportRow(
-                            title: "Profit & Loss",
-                            subtitle: "Full P&L statement",
+                            title: "Pérdidas y Ganancias",
+                            subtitle: "Estado completo de P&G",
                             icon: "chart.bar.doc.horizontal",
                             color: .purple
                         )
@@ -45,13 +45,13 @@ struct ReportsView: View {
                 }
                 
                 // Inventory Reports
-                Section("Inventory") {
+                Section("Inventario") {
                     NavigationLink {
                         ValuationReportView()
                     } label: {
                         reportRow(
-                            title: "Inventory Valuation",
-                            subtitle: "Current stock value",
+                            title: "Valuación de Inventario",
+                            subtitle: "Valor actual del inventario",
                             icon: "shippingbox",
                             color: .orange
                         )
@@ -61,8 +61,8 @@ struct ReportsView: View {
                         ReceivingSummaryReportView()
                     } label: {
                         reportRow(
-                            title: "Receiving Summary",
-                            subtitle: "Inventory received",
+                            title: "Resumen de Recepciones",
+                            subtitle: "Inventario recibido",
                             icon: "arrow.down.circle",
                             color: .teal
                         )
@@ -72,8 +72,8 @@ struct ReportsView: View {
                         AdjustmentImpactReportView()
                     } label: {
                         reportRow(
-                            title: "Adjustment Impact",
-                            subtitle: "Shrinkage and gains",
+                            title: "Impacto de Ajustes",
+                            subtitle: "Merma y ganancias",
                             icon: "exclamationmark.triangle",
                             color: .red
                         )
@@ -82,13 +82,13 @@ struct ReportsView: View {
                 
                 // Expenses
                 if authManager.canManageExpenses {
-                    Section("Expenses") {
+                    Section("Gastos") {
                         NavigationLink {
                             ExpenseSummaryReportView()
                         } label: {
                             reportRow(
-                                title: "Expense Summary",
-                                subtitle: "Operating expenses breakdown",
+                                title: "Resumen de Gastos",
+                                subtitle: "Desglose de gastos operativos",
                                 icon: "creditcard",
                                 color: .indigo
                             )
@@ -96,7 +96,7 @@ struct ReportsView: View {
                     }
                 }
             }
-            .navigationTitle("Reports")
+            .navigationTitle("Reportes")
         }
     }
     
@@ -172,7 +172,7 @@ class ReportsViewModel: ObservableObject {
             errorMessage = error.errorDescription
             showError = true
         } catch {
-            errorMessage = "Failed to load COGS report"
+            errorMessage = "Error al cargar reporte de costos"
             showError = true
         }
     }
@@ -198,7 +198,7 @@ class ReportsViewModel: ObservableObject {
             errorMessage = error.errorDescription
             showError = true
         } catch {
-            errorMessage = "Failed to load valuation report"
+            errorMessage = "Error al cargar reporte de valuación"
             showError = true
         }
     }
@@ -227,7 +227,7 @@ class ReportsViewModel: ObservableObject {
             errorMessage = error.errorDescription
             showError = true
         } catch {
-            errorMessage = "Failed to load profit margin report"
+            errorMessage = "Error al cargar reporte de margen"
             showError = true
         }
     }
@@ -256,7 +256,7 @@ class ReportsViewModel: ObservableObject {
             errorMessage = error.errorDescription
             showError = true
         } catch {
-            errorMessage = "Failed to load P&L report"
+            errorMessage = "Error al cargar reporte de P&G"
             showError = true
         }
     }
@@ -285,7 +285,7 @@ class ReportsViewModel: ObservableObject {
             errorMessage = error.errorDescription
             showError = true
         } catch {
-            errorMessage = "Failed to load adjustment impact report"
+            errorMessage = "Error al cargar reporte de impacto"
             showError = true
         }
     }
@@ -314,7 +314,7 @@ class ReportsViewModel: ObservableObject {
             errorMessage = error.errorDescription
             showError = true
         } catch {
-            errorMessage = "Failed to load receiving summary report"
+            errorMessage = "Error al cargar resumen de recepciones"
             showError = true
         }
     }
@@ -344,7 +344,7 @@ class ReportsViewModel: ObservableObject {
             errorMessage = error.errorDescription
             showError = true
         } catch {
-            errorMessage = "Failed to load expense summary"
+            errorMessage = "Error al cargar resumen de gastos"
             showError = true
         }
     }
@@ -368,7 +368,7 @@ struct DateRangePicker: View {
         VStack(spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("From")
+                    Text("Desde")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     DatePicker("", selection: $startDate, displayedComponents: .date)
@@ -378,7 +378,7 @@ struct DateRangePicker: View {
                 Spacer()
                 
                 VStack(alignment: .trailing, spacing: 4) {
-                    Text("To")
+                    Text("Hasta")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     DatePicker("", selection: $endDate, displayedComponents: .date)
@@ -386,7 +386,7 @@ struct DateRangePicker: View {
                 }
             }
             
-            Button("Apply") {
+            Button("Aplicar") {
                 onApply()
             }
             .buttonStyle(.borderedProminent)
@@ -476,43 +476,43 @@ struct COGSReportView: View {
                 .padding(.horizontal)
                 
                 if viewModel.isLoading {
-                    ProgressView("Loading...")
+                    ProgressView("Cargando...")
                         .frame(maxWidth: .infinity, minHeight: 200)
                 } else if let report = viewModel.cogsReport {
                     // Summary Cards
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                         ReportHeaderCard(
-                            title: "Total COGS",
+                            title: "Costo Total de Ventas",
                             value: formatCurrency(report.summary.totalCOGS),
                             color: .red
                         )
                         
                         ReportHeaderCard(
-                            title: "Revenue",
+                            title: "Ingresos",
                             value: formatCurrency(report.summary.totalRevenue),
                             color: .green
                         )
                         
                         ReportHeaderCard(
-                            title: "Gross Profit",
+                            title: "Ganancia Bruta",
                             value: formatCurrency(report.summary.grossProfit),
                             color: .blue
                         )
                         
                         ReportHeaderCard(
-                            title: "Margin",
+                            title: "Margen",
                             value: formatPercent(report.summary.grossMarginPercent),
                             color: .purple
                         )
                         
                         ReportHeaderCard(
-                            title: "Units Sold",
+                            title: "Unidades Vendidas",
                             value: "\(report.summary.totalUnitsSold)",
                             color: .orange
                         )
                         
                         ReportHeaderCard(
-                            title: "Total Sales",
+                            title: "Total de Ventas",
                             value: "\(report.summary.totalSales)",
                             color: .teal
                         )
@@ -522,7 +522,7 @@ struct COGSReportView: View {
                     // By Product
                     if !report.byProduct.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("By Product")
+                            Text("Por Producto")
                                 .font(.headline)
                                 .padding(.horizontal)
                             
@@ -536,7 +536,7 @@ struct COGSReportView: View {
                     // By Category
                     if let categories = report.byCategory, !categories.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("By Category")
+                            Text("Por Categoría")
                                 .font(.headline)
                                 .padding(.horizontal)
                             
@@ -552,13 +552,13 @@ struct COGSReportView: View {
             }
             .padding(.vertical)
         }
-        .navigationTitle("Cost of Goods Sold")
+        .navigationTitle("Costo de Mercancía Vendida")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { loadReport() }
         .alert("Error", isPresented: $viewModel.showError) {
             Button("OK") {}
         } message: {
-            Text(viewModel.errorMessage ?? "An error occurred")
+            Text(viewModel.errorMessage ?? "Ocurrió un error")
         }
     }
     
@@ -567,7 +567,7 @@ struct COGSReportView: View {
             Image(systemName: "doc.text")
                 .font(.system(size: 50))
                 .foregroundColor(.secondary)
-            Text("No data available")
+            Text("No hay datos disponibles")
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity, minHeight: 200)
@@ -590,7 +590,7 @@ struct ProductCOGSRow: View {
                     .font(.subheadline)
                     .fontWeight(.medium)
                 
-                Text("\(product.unitsSold) units")
+                Text("\(product.unitsSold) uds")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -624,7 +624,7 @@ struct CategoryCOGSRow: View {
                     .font(.subheadline)
                     .fontWeight(.medium)
                 
-                Text("Profit: \(formatCurrency(category.grossProfit))")
+                Text("Ganancia: \(formatCurrency(category.grossProfit))")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -652,31 +652,31 @@ struct ValuationReportView: View {
         ScrollView {
             VStack(spacing: 16) {
                 if viewModel.isLoading {
-                    ProgressView("Loading...")
+                    ProgressView("Cargando...")
                         .frame(maxWidth: .infinity, minHeight: 200)
                 } else if let report = viewModel.valuationReport {
                     // Summary Cards
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                         ReportHeaderCard(
-                            title: "Total Value",
+                            title: "Valor Total",
                             value: formatCurrency(report.summary.totalValue),
                             color: .green
                         )
                         
                         ReportHeaderCard(
-                            title: "Total Units",
+                            title: "Unidades Totales",
                             value: "\(report.summary.totalUnits)",
                             color: .blue
                         )
                         
                         ReportHeaderCard(
-                            title: "Products",
+                            title: "Productos",
                             value: "\(report.summary.totalProducts)",
                             color: .purple
                         )
                         
                         ReportHeaderCard(
-                            title: "Avg Cost/Unit",
+                            title: "Costo Prom/Unidad",
                             value: formatCurrency(report.summary.averageCostPerUnit),
                             color: .orange
                         )
@@ -686,7 +686,7 @@ struct ValuationReportView: View {
                     // Aging Summary
                     if let aging = report.agingSummary {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Aging Summary")
+                            Text("Resumen de Antigüedad")
                                 .font(.headline)
                                 .padding(.horizontal)
                             
@@ -698,7 +698,7 @@ struct ValuationReportView: View {
                     // By Product
                     if !report.byProduct.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("By Product")
+                            Text("Por Producto")
                                 .font(.headline)
                                 .padding(.horizontal)
                             
@@ -714,14 +714,14 @@ struct ValuationReportView: View {
             }
             .padding(.vertical)
         }
-        .navigationTitle("Inventory Valuation")
+        .navigationTitle("Valuación de Inventario")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { loadReport() }
         .refreshable { await refreshReport() }
         .alert("Error", isPresented: $viewModel.showError) {
             Button("OK") {}
         } message: {
-            Text(viewModel.errorMessage ?? "An error occurred")
+            Text(viewModel.errorMessage ?? "Ocurrió un error")
         }
     }
     
@@ -730,7 +730,7 @@ struct ValuationReportView: View {
             Image(systemName: "shippingbox")
                 .font(.system(size: 50))
                 .foregroundColor(.secondary)
-            Text("No inventory data")
+            Text("No hay datos de inventario")
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity, minHeight: 200)
@@ -752,10 +752,10 @@ struct AgingSummaryView: View {
     
     var body: some View {
         VStack(spacing: 8) {
-            AgingRow(label: "< 30 days", units: aging.under30Days.units, value: aging.under30Days.value, color: .green)
-            AgingRow(label: "30-60 days", units: aging.days30to60.units, value: aging.days30to60.value, color: .yellow)
-            AgingRow(label: "60-90 days", units: aging.days60to90.units, value: aging.days60to90.value, color: .orange)
-            AgingRow(label: "> 90 days", units: aging.over90Days.units, value: aging.over90Days.value, color: .red)
+            AgingRow(label: "< 30 días", units: aging.under30Days.units, value: aging.under30Days.value, color: .green)
+            AgingRow(label: "30-60 días", units: aging.days30to60.units, value: aging.days30to60.value, color: .yellow)
+            AgingRow(label: "60-90 días", units: aging.days60to90.units, value: aging.days60to90.value, color: .orange)
+            AgingRow(label: "> 90 días", units: aging.over90Days.units, value: aging.over90Days.value, color: .red)
         }
         .padding()
         .background(Color(.systemBackground))
@@ -781,7 +781,7 @@ struct AgingRow: View {
             
             Spacer()
             
-            Text("\(units) units")
+            Text("\(units) uds")
                 .font(.caption)
                 .foregroundColor(.secondary)
             
@@ -803,7 +803,7 @@ struct ProductValuationRow: View {
                     .font(.subheadline)
                     .fontWeight(.medium)
                 
-                Text("\(product.totalQuantity) units")
+                Text("\(product.totalQuantity) uds")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -846,12 +846,12 @@ struct ProfitMarginReportView: View {
                 .padding(.horizontal)
                 
                 if viewModel.isLoading {
-                    ProgressView("Loading...")
+                    ProgressView("Cargando...")
                         .frame(maxWidth: .infinity, minHeight: 200)
                 } else if let report = viewModel.profitMarginReport {
                     // Summary Card
                     ReportHeaderCard(
-                        title: "Overall Margin",
+                        title: "Margen General",
                         value: formatPercent(report.overallMargin),
                         color: .purple
                     )
@@ -860,7 +860,7 @@ struct ProfitMarginReportView: View {
                     // By Product
                     if !report.byProduct.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("By Product")
+                            Text("Por Producto")
                                 .font(.headline)
                                 .padding(.horizontal)
                             
@@ -874,7 +874,7 @@ struct ProfitMarginReportView: View {
                     // Trends
                     if let trends = report.trends, !trends.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Trends")
+                            Text("Tendencias")
                                 .font(.headline)
                                 .padding(.horizontal)
                             
@@ -890,13 +890,13 @@ struct ProfitMarginReportView: View {
             }
             .padding(.vertical)
         }
-        .navigationTitle("Profit Margin")
+        .navigationTitle("Margen de Ganancia")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { loadReport() }
         .alert("Error", isPresented: $viewModel.showError) {
             Button("OK") {}
         } message: {
-            Text(viewModel.errorMessage ?? "An error occurred")
+            Text(viewModel.errorMessage ?? "Ocurrió un error")
         }
     }
     
@@ -905,7 +905,7 @@ struct ProfitMarginReportView: View {
             Image(systemName: "chart.line.uptrend.xyaxis")
                 .font(.system(size: 50))
                 .foregroundColor(.secondary)
-            Text("No margin data")
+            Text("No hay datos de margen")
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity, minHeight: 200)
@@ -928,7 +928,7 @@ struct ProductMarginRow: View {
                     .font(.subheadline)
                     .fontWeight(.medium)
                 
-                Text("\(product.unitsSold) units")
+                Text("\(product.unitsSold) uds")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -963,7 +963,7 @@ struct TrendRow: View {
                     .font(.subheadline)
                     .fontWeight(.medium)
                 
-                Text("Revenue: \(formatCurrency(trend.revenue))")
+                Text("Ingresos: \(formatCurrency(trend.revenue))")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -1007,42 +1007,42 @@ struct ProfitLossReportView: View {
                 .padding(.horizontal)
                 
                 if viewModel.isLoading {
-                    ProgressView("Loading...")
+                    ProgressView("Cargando...")
                         .frame(maxWidth: .infinity, minHeight: 200)
                 } else if let report = viewModel.profitLossReport {
                     VStack(spacing: 0) {
                         // Revenue Section
-                        PLSection(title: "Revenue", color: .green) {
-                            PLRow(label: "Total Sales", value: report.revenue.sales, isTotal: false)
-                            PLRow(label: "Total Revenue", value: report.revenue.total, isTotal: true)
+                        PLSection(title: "Ingresos", color: .green) {
+                            PLRow(label: "Total de Ventas", value: report.revenue.sales, isTotal: false)
+                            PLRow(label: "Ingresos Totales", value: report.revenue.total, isTotal: true)
                         }
                         
                         // COGS Section
-                        PLSection(title: "Cost of Goods Sold", color: .red) {
-                            PLRow(label: "Product Costs", value: report.costOfGoodsSold.productCosts, isTotal: false, isNegative: true)
-                            PLRow(label: "Total COGS", value: report.costOfGoodsSold.total, isTotal: true, isNegative: true)
+                        PLSection(title: "Costo de Mercancía Vendida", color: .red) {
+                            PLRow(label: "Costos de Productos", value: report.costOfGoodsSold.productCosts, isTotal: false, isNegative: true)
+                            PLRow(label: "Costo Total de Ventas", value: report.costOfGoodsSold.total, isTotal: true, isNegative: true)
                         }
                         
                         // Gross Profit
                         PLSummaryRow(
-                            label: "Gross Profit",
+                            label: "Ganancia Bruta",
                             value: report.grossProfit.amount,
                             subtitle: "\(formatPercent(report.grossProfit.marginPercent)) margin",
                             color: .blue
                         )
                         
                         // Operating Expenses
-                        PLSection(title: "Operating Expenses", color: .orange) {
+                        PLSection(title: "Gastos Operativos", color: .orange) {
                             ForEach(report.operatingExpenses.byType, id: \.type) { expense in
                                 PLRow(label: expense.type, value: expense.amount, isTotal: false, isNegative: true)
                             }
-                            PLRow(label: "Shrinkage", value: report.operatingExpenses.shrinkage, isTotal: false, isNegative: true)
-                            PLRow(label: "Total Expenses", value: report.operatingExpenses.total, isTotal: true, isNegative: true)
+                            PLRow(label: "Merma", value: report.operatingExpenses.shrinkage, isTotal: false, isNegative: true)
+                            PLRow(label: "Total de Gastos", value: report.operatingExpenses.total, isTotal: true, isNegative: true)
                         }
                         
                         // Net Profit
                         PLSummaryRow(
-                            label: "Net Profit",
+                            label: "Ganancia Neta",
                             value: report.netProfit.amount,
                             subtitle: "\(formatPercent(report.netProfit.marginPercent)) margin",
                             color: Double(report.netProfit.amount) ?? 0 >= 0 ? .green : .red
@@ -1055,13 +1055,13 @@ struct ProfitLossReportView: View {
             }
             .padding(.vertical)
         }
-        .navigationTitle("Profit & Loss")
+        .navigationTitle("Pérdidas y Ganancias")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { loadReport() }
         .alert("Error", isPresented: $viewModel.showError) {
             Button("OK") {}
         } message: {
-            Text(viewModel.errorMessage ?? "An error occurred")
+            Text(viewModel.errorMessage ?? "Ocurrió un error")
         }
     }
     
@@ -1070,7 +1070,7 @@ struct ProfitLossReportView: View {
             Image(systemName: "chart.bar.doc.horizontal")
                 .font(.system(size: 50))
                 .foregroundColor(.secondary)
-            Text("No P&L data")
+            Text("No hay datos de P&G")
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity, minHeight: 200)
@@ -1173,31 +1173,31 @@ struct AdjustmentImpactReportView: View {
                 .padding(.horizontal)
                 
                 if viewModel.isLoading {
-                    ProgressView("Loading...")
+                    ProgressView("Cargando...")
                         .frame(maxWidth: .infinity, minHeight: 200)
                 } else if let report = viewModel.adjustmentImpactReport {
                     // Summary Cards
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                         ReportHeaderCard(
-                            title: "Total Loss",
+                            title: "Pérdida Total",
                             value: formatCurrency(report.summary.totalLoss),
                             color: .red
                         )
                         
                         ReportHeaderCard(
-                            title: "Total Gain",
+                            title: "Ganancia Total",
                             value: formatCurrency(report.summary.totalGain),
                             color: .green
                         )
                         
                         ReportHeaderCard(
-                            title: "Net Impact",
+                            title: "Impacto Neto",
                             value: formatCurrency(report.summary.netImpact),
                             color: Double(report.summary.netImpact) ?? 0 >= 0 ? .green : .red
                         )
                         
                         ReportHeaderCard(
-                            title: "Adjustments",
+                            title: "Ajustes",
                             value: "\(report.summary.totalAdjustments)",
                             color: .orange
                         )
@@ -1207,7 +1207,7 @@ struct AdjustmentImpactReportView: View {
                     // By Type
                     if !report.byType.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("By Type")
+                            Text("Por Tipo")
                                 .font(.headline)
                                 .padding(.horizontal)
                             
@@ -1221,7 +1221,7 @@ struct AdjustmentImpactReportView: View {
                     // By Product
                     if let products = report.byProduct, !products.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("By Product")
+                            Text("Por Producto")
                                 .font(.headline)
                                 .padding(.horizontal)
                             
@@ -1237,13 +1237,13 @@ struct AdjustmentImpactReportView: View {
             }
             .padding(.vertical)
         }
-        .navigationTitle("Adjustment Impact")
+        .navigationTitle("Impacto de Ajustes")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { loadReport() }
         .alert("Error", isPresented: $viewModel.showError) {
             Button("OK") {}
         } message: {
-            Text(viewModel.errorMessage ?? "An error occurred")
+            Text(viewModel.errorMessage ?? "Ocurrió un error")
         }
     }
     
@@ -1252,7 +1252,7 @@ struct AdjustmentImpactReportView: View {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 50))
                 .foregroundColor(.secondary)
-            Text("No adjustment data")
+            Text("No hay datos de ajustes")
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity, minHeight: 200)
@@ -1275,7 +1275,7 @@ struct AdjustmentTypeRow: View {
                     .font(.subheadline)
                     .fontWeight(.medium)
                 
-                Text("\(impact.count) adjustments • \(impact.totalQuantity) units")
+                Text("\(impact.count) ajustes • \(impact.totalQuantity) uds")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -1303,7 +1303,7 @@ struct ProductAdjustmentRow: View {
                     .font(.subheadline)
                     .fontWeight(.medium)
                 
-                Text("\(product.adjustmentCount) adjustments • \(product.totalQuantity) units")
+                Text("\(product.adjustmentCount) ajustes • \(product.totalQuantity) uds")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -1353,31 +1353,31 @@ struct ReceivingSummaryReportView: View {
                 .padding(.horizontal)
                 
                 if viewModel.isLoading {
-                    ProgressView("Loading...")
+                    ProgressView("Cargando...")
                         .frame(maxWidth: .infinity, minHeight: 200)
                 } else if let report = viewModel.receivingSummaryReport {
                     // Summary Cards
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                         ReportHeaderCard(
-                            title: "Total Cost",
+                            title: "Costo Total",
                             value: formatCurrency(report.summary.totalCost),
                             color: .green
                         )
                         
                         ReportHeaderCard(
-                            title: "Total Qty",
+                            title: "Cantidad Total",
                             value: "\(report.summary.totalQuantity)",
                             color: .blue
                         )
                         
                         ReportHeaderCard(
-                            title: "Receivings",
+                            title: "Recepciones",
                             value: "\(report.summary.totalReceivings)",
                             color: .purple
                         )
                         
                         ReportHeaderCard(
-                            title: "Avg Cost",
+                            title: "Costo Prom.",
                             value: formatCurrency(report.summary.averageCostPerUnit),
                             color: .orange
                         )
@@ -1387,7 +1387,7 @@ struct ReceivingSummaryReportView: View {
                     // By Supplier
                     if let suppliers = report.bySupplier, !suppliers.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("By Supplier")
+                            Text("Por Proveedor")
                                 .font(.headline)
                                 .padding(.horizontal)
                             
@@ -1401,7 +1401,7 @@ struct ReceivingSummaryReportView: View {
                     // By Product
                     if let products = report.byProduct, !products.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("By Product")
+                            Text("Por Producto")
                                 .font(.headline)
                                 .padding(.horizontal)
                             
@@ -1417,13 +1417,13 @@ struct ReceivingSummaryReportView: View {
             }
             .padding(.vertical)
         }
-        .navigationTitle("Receiving Summary")
+        .navigationTitle("Resumen de Recepciones")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { loadReport() }
         .alert("Error", isPresented: $viewModel.showError) {
             Button("OK") {}
         } message: {
-            Text(viewModel.errorMessage ?? "An error occurred")
+            Text(viewModel.errorMessage ?? "Ocurrió un error")
         }
     }
     
@@ -1432,7 +1432,7 @@ struct ReceivingSummaryReportView: View {
             Image(systemName: "arrow.down.circle")
                 .font(.system(size: 50))
                 .foregroundColor(.secondary)
-            Text("No receiving data")
+            Text("No hay datos de recepciones")
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity, minHeight: 200)
@@ -1455,7 +1455,7 @@ struct SupplierReceivingRow: View {
                     .font(.subheadline)
                     .fontWeight(.medium)
                 
-                Text("\(supplier.receivingCount) receivings • \(supplier.totalQuantity) units")
+                Text("\(supplier.receivingCount) recepciones • \(supplier.totalQuantity) uds")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -1483,7 +1483,7 @@ struct ProductReceivingRow: View {
                     .font(.subheadline)
                     .fontWeight(.medium)
                 
-                Text("\(product.receivingCount) receivings • \(product.totalQuantity) units @ \(formatCurrency(product.averageCost))")
+                Text("\(product.receivingCount) recepciones • \(product.totalQuantity) units @ \(formatCurrency(product.averageCost))")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -1520,31 +1520,31 @@ struct ExpenseSummaryReportView: View {
                 .padding(.horizontal)
                 
                 if viewModel.isLoading {
-                    ProgressView("Loading...")
+                    ProgressView("Cargando...")
                         .frame(maxWidth: .infinity, minHeight: 200)
                 } else if let summary = viewModel.expenseSummary {
                     // Summary Cards
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                         ReportHeaderCard(
-                            title: "Total Expenses",
+                            title: "Total de Gastos",
                             value: formatCurrency(summary.totalExpenses),
                             color: .red
                         )
                         
                         ReportHeaderCard(
-                            title: "Expense Count",
+                            title: "Cantidad de Gastos",
                             value: "\(summary.expenseCount)",
                             color: .blue
                         )
                         
                         ReportHeaderCard(
-                            title: "Paid",
+                            title: "Pagado",
                             value: formatCurrency(summary.paidExpenses),
                             color: .green
                         )
                         
                         ReportHeaderCard(
-                            title: "Unpaid",
+                            title: "No Pagado",
                             value: formatCurrency(summary.unpaidExpenses),
                             color: .orange
                         )
@@ -1553,7 +1553,7 @@ struct ExpenseSummaryReportView: View {
                     
                     // By Type
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("By Type")
+                        Text("Por Tipo")
                             .font(.headline)
                             .padding(.horizontal)
                         
@@ -1566,7 +1566,7 @@ struct ExpenseSummaryReportView: View {
                     // By Month
                     if let byMonth = summary.byMonth, !byMonth.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("By Month")
+                            Text("Por Mes")
                                 .font(.headline)
                                 .padding(.horizontal)
                             
@@ -1582,13 +1582,13 @@ struct ExpenseSummaryReportView: View {
             }
             .padding(.vertical)
         }
-        .navigationTitle("Expense Summary")
+        .navigationTitle("Resumen de Gastos")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { loadReport() }
         .alert("Error", isPresented: $viewModel.showError) {
             Button("OK") {}
         } message: {
-            Text(viewModel.errorMessage ?? "An error occurred")
+            Text(viewModel.errorMessage ?? "Ocurrió un error")
         }
     }
     
@@ -1597,7 +1597,7 @@ struct ExpenseSummaryReportView: View {
             Image(systemName: "creditcard")
                 .font(.system(size: 50))
                 .foregroundColor(.secondary)
-            Text("No expense data")
+            Text("No hay datos de gastos")
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity, minHeight: 200)
@@ -1620,7 +1620,7 @@ struct ExpenseTypeRow: View {
                     .font(.subheadline)
                     .fontWeight(.medium)
                 
-                Text("\(typeSummary.count) expenses")
+                Text("\(typeSummary.count) gastos")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -1654,7 +1654,7 @@ struct MonthlyExpenseRow: View {
                     .font(.subheadline)
                     .fontWeight(.medium)
                 
-                Text("\(month.count) expenses")
+                Text("\(month.count) gastos")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }

@@ -45,7 +45,7 @@ struct Product: Codable, Identifiable, Equatable, Hashable {
         squareDescription
     }
     
-    /// Formatted selling price in MXN
+    /// Precio de venta formateado en MXN
     var formattedPrice: String? {
         guard let price = sellingPrice else { return nil }
         let formatter = NumberFormatter()
@@ -55,7 +55,7 @@ struct Product: Codable, Identifiable, Equatable, Hashable {
         return formatter.string(from: NSNumber(value: price))
     }
     
-    /// Formatted average cost in MXN
+    /// Costo promedio formateado en MXN
     var formattedCost: String? {
         guard let cost = averageCost else { return nil }
         let formatter = NumberFormatter()
@@ -154,11 +154,17 @@ struct Supplier: Codable, Identifiable, Equatable, Hashable {
     }
 }
 
-// MARK: - Product List Response
+// MARK: - Product List Response (paginated)
 
 struct ProductListResponse: Decodable {
     let data: [Product]
     let count: Int
+    // Pagination metadata (present when backend paginates)
+    let page: Int?
+    let limit: Int?
+    let totalCount: Int?
+    let totalPages: Int?
+    let hasMore: Bool?
 }
 
 // MARK: - Supplier List Response
@@ -213,8 +219,8 @@ struct CostHistoryEntry: Decodable, Identifiable {
     
     var sourceLabel: String {
         switch source {
-        case "MIGRATION": return "Migration"
-        case "INVENTORY_UPDATE": return "Inventory Update"
+        case "MIGRATION": return "Migración"
+        case "INVENTORY_UPDATE": return "Actualización de Inventario"
         case "MANUAL": return "Manual"
         default: return source
         }

@@ -52,7 +52,7 @@ struct PhotosPickerImage: View {
     
     var body: some View {
         PhotosPicker(selection: $selectedItem, matching: .images) {
-            Label("Photo Library", systemImage: "photo.on.rectangle")
+            Label("Biblioteca de Fotos", systemImage: "photo.on.rectangle")
         }
         .onChange(of: selectedItem) { _, newItem in
             guard let newItem else { return }

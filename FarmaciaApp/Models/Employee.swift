@@ -10,10 +10,10 @@ enum EmployeeRole: String, Codable, CaseIterable {
     
     var displayName: String {
         switch self {
-        case .owner: return "Owner"
-        case .manager: return "Manager"
-        case .cashier: return "Cashier"
-        case .accountant: return "Accountant"
+        case .owner: return "Dueño"
+        case .manager: return "Gerente"
+        case .cashier: return "Cajero"
+        case .accountant: return "Contador"
         }
     }
     

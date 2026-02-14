@@ -43,7 +43,7 @@ struct ExpenseDetailView: View {
                         // Status Badge
                         HStack(spacing: 8) {
                             if expense.isPaid {
-                                Label("Paid", systemImage: "checkmark.circle.fill")
+                                Label("Pagado", systemImage: "checkmark.circle.fill")
                                     .font(.caption)
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 4)
@@ -51,7 +51,7 @@ struct ExpenseDetailView: View {
                                     .foregroundColor(.green)
                                     .cornerRadius(8)
                             } else {
-                                Label("Unpaid", systemImage: "clock")
+                                Label("No Pagado", systemImage: "clock")
                                     .font(.caption)
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 4)
@@ -66,40 +66,40 @@ struct ExpenseDetailView: View {
                 }
                 
                 // Details Section
-                Section("Details") {
-                    LabeledContent("Date") {
+                Section("Detalles") {
+                    LabeledContent("Fecha") {
                         Text(expense.date, style: .date)
                     }
                     
                     if let description = expense.description, !description.isEmpty {
-                        LabeledContent("Description") {
+                        LabeledContent("Descripción") {
                             Text(description)
                                 .multilineTextAlignment(.trailing)
                         }
                     }
                     
                     if let vendor = expense.vendor, !vendor.isEmpty {
-                        LabeledContent("Vendor") {
+                        LabeledContent("Proveedor") {
                             Text(vendor)
                         }
                     }
                     
                     if let reference = expense.reference, !reference.isEmpty {
-                        LabeledContent("Reference") {
+                        LabeledContent("Referencia") {
                             Text(reference)
                         }
                     }
                 }
                 
                 // Payment Section
-                Section("Payment") {
-                    LabeledContent("Status") {
-                        Text(expense.isPaid ? "Paid" : "Unpaid")
+                Section("Pago") {
+                    LabeledContent("Estado") {
+                        Text(expense.isPaid ? "Pagado" : "No Pagado")
                             .foregroundColor(expense.isPaid ? .green : .orange)
                     }
                     
                     if expense.isPaid, let paidAt = expense.paidAt {
-                        LabeledContent("Paid On") {
+                        LabeledContent("Fecha de Pago") {
                             Text(paidAt, style: .date)
                         }
                     }
@@ -107,7 +107,7 @@ struct ExpenseDetailView: View {
                 
                 // Notes Section
                 if let notes = expense.notes, !notes.isEmpty {
-                    Section("Notes") {
+                    Section("Notas") {
                         Text(notes)
                             .font(.body)
                     }
@@ -115,12 +115,12 @@ struct ExpenseDetailView: View {
                 
                 // Metadata Section
                 Section("Info") {
-                    LabeledContent("Created") {
+                    LabeledContent("Creado") {
                         Text(expense.createdAt, style: .date)
                     }
                     
                     if let location = expense.location {
-                        LabeledContent("Location") {
+                        LabeledContent("Ubicación") {
                             Text(location.name)
                         }
                     }
@@ -132,7 +132,7 @@ struct ExpenseDetailView: View {
                         Button {
                             showMarkPaidConfirmation = true
                         } label: {
-                            Label("Mark as Paid", systemImage: "checkmark.circle")
+                            Label("Marcar como Pagado", systemImage: "checkmark.circle")
                         }
                         .foregroundColor(.green)
                     }
@@ -140,22 +140,22 @@ struct ExpenseDetailView: View {
                     Button {
                         showEditSheet = true
                     } label: {
-                        Label("Edit Expense", systemImage: "pencil")
+                        Label("Editar Gasto", systemImage: "pencil")
                     }
                     
                     Button(role: .destructive) {
                         showDeleteConfirmation = true
                     } label: {
-                        Label("Delete Expense", systemImage: "trash")
+                        Label("Eliminar Gasto", systemImage: "trash")
                     }
                 }
             }
             .listStyle(.insetGrouped)
-            .navigationTitle("Expense")
+            .navigationTitle("Gasto")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
+                    Button("Listo") {
                         dismiss()
                     }
                 }
@@ -163,21 +163,21 @@ struct ExpenseDetailView: View {
             .sheet(isPresented: $showEditSheet) {
                 ExpenseFormView(viewModel: viewModel, expense: expense)
             }
-            .alert("Delete Expense", isPresented: $showDeleteConfirmation) {
-                Button("Cancel", role: .cancel) {}
-                Button("Delete", role: .destructive) {
+            .alert("Eliminar Gasto", isPresented: $showDeleteConfirmation) {
+                Button("Cancelar", role: .cancel) {}
+                Button("Eliminar", role: .destructive) {
                     Task { await deleteExpense() }
                 }
             } message: {
-                Text("Are you sure you want to delete this expense? This action cannot be undone.")
+                Text("¿Estás seguro de que deseas eliminar este gasto? Esta acción no se puede deshacer.")
             }
-            .alert("Mark as Paid", isPresented: $showMarkPaidConfirmation) {
-                Button("Cancel", role: .cancel) {}
-                Button("Mark Paid") {
+            .alert("Marcar como Pagado", isPresented: $showMarkPaidConfirmation) {
+                Button("Cancelar", role: .cancel) {}
+                Button("Marcar Pagado") {
                     Task { await markAsPaid() }
                 }
             } message: {
-                Text("Mark this expense as paid?")
+                Text("¿Marcar este gasto como pagado?")
             }
         }
     }
@@ -231,12 +231,12 @@ struct ExpenseDetailView: View {
         type: .rent,
         amount: "1500.00",
         date: Date(),
-        description: "Monthly rent",
+        description: "Renta mensual",
         vendor: "ABC Properties",
         reference: "INV-001",
         isPaid: false,
         paidAt: nil,
-        notes: "Due on the 1st of each month",
+        notes: "Vence el 1ro de cada mes",
         createdBy: nil,
         createdAt: Date(),
         location: nil

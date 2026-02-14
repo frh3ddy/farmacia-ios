@@ -12,9 +12,9 @@ struct ExpensesView: View {
     @State private var filterPaidStatus: PaidFilter = .all
     
     enum PaidFilter: String, CaseIterable {
-        case all = "All"
-        case paid = "Paid"
-        case unpaid = "Unpaid"
+        case all = "Todos"
+        case paid = "Pagado"
+        case unpaid = "No Pagado"
     }
     
     var body: some View {
@@ -33,7 +33,7 @@ struct ExpensesView: View {
                 
                 // Expense List
                 if viewModel.isLoading {
-                    ProgressView("Loading expenses...")
+                    ProgressView("Cargando gastos...")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if filteredExpenses.isEmpty {
                     emptyStateView
@@ -41,7 +41,7 @@ struct ExpensesView: View {
                     expenseList
                 }
             }
-            .navigationTitle("Expenses")
+            .navigationTitle("Gastos")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
@@ -66,12 +66,12 @@ struct ExpensesView: View {
             .alert("Error", isPresented: $viewModel.showError) {
                 Button("OK") {}
             } message: {
-                Text(viewModel.errorMessage ?? "An error occurred")
+                Text(viewModel.errorMessage ?? "Ocurrió un error")
             }
-            .alert("Success", isPresented: $viewModel.showSuccess) {
+            .alert("Éxito", isPresented: $viewModel.showSuccess) {
                 Button("OK") {}
             } message: {
-                Text(viewModel.successMessage ?? "Operation completed")
+                Text(viewModel.successMessage ?? "Operación completada")
             }
         }
     }
@@ -81,18 +81,11 @@ struct ExpensesView: View {
     private var filterBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                // Paid Status Filter
+                // Paid Status Filter — uses Picker to avoid SwiftUI Menu+ForEach first-item bug
                 Menu {
-                    ForEach(PaidFilter.allCases, id: \.self) { filter in
-                        Button {
-                            filterPaidStatus = filter
-                        } label: {
-                            HStack {
-                                Text(filter.rawValue)
-                                if filterPaidStatus == filter {
-                                    Image(systemName: "checkmark")
-                                }
-                            }
+                    Picker("Estado de Pago", selection: $filterPaidStatus) {
+                        ForEach(PaidFilter.allCases, id: \.self) { filter in
+                            Text(filter.rawValue).tag(filter)
                         }
                     }
                 } label: {
@@ -102,13 +95,13 @@ struct ExpensesView: View {
                     )
                 }
                 
-                // Type Filter
+                // Type Filter — static buttons to avoid SwiftUI Menu+ForEach first-item bug
                 Menu {
                     Button {
                         filterType = nil
                     } label: {
                         HStack {
-                            Text("All Types")
+                            Text("Todos los Tipos")
                             if filterType == nil {
                                 Image(systemName: "checkmark")
                             }
@@ -117,22 +110,21 @@ struct ExpensesView: View {
                     
                     Divider()
                     
-                    ForEach(ExpenseType.allCases, id: \.self) { type in
-                        Button {
-                            filterType = type
-                        } label: {
-                            HStack {
-                                Image(systemName: type.icon)
-                                Text(type.displayName)
-                                if filterType == type {
-                                    Image(systemName: "checkmark")
-                                }
-                            }
-                        }
-                    }
+                    Button { filterType = .rent } label: { Label("Renta", systemImage: "building.2") }
+                    Button { filterType = .utilities } label: { Label("Servicios", systemImage: "bolt") }
+                    Button { filterType = .payroll } label: { Label("Nómina", systemImage: "person.3") }
+                    Button { filterType = .insurance } label: { Label("Seguro", systemImage: "shield") }
+                    Button { filterType = .supplies } label: { Label("Insumos", systemImage: "shippingbox") }
+                    Button { filterType = .marketing } label: { Label("Publicidad", systemImage: "megaphone") }
+                    Button { filterType = .maintenance } label: { Label("Mantenimiento", systemImage: "wrench.and.screwdriver") }
+                    Button { filterType = .taxes } label: { Label("Impuestos", systemImage: "doc.text") }
+                    Button { filterType = .bankFees } label: { Label("Comisiones Bancarias", systemImage: "banknote") }
+                    Button { filterType = .software } label: { Label("Software", systemImage: "desktopcomputer") }
+                    Button { filterType = .professional } label: { Label("Servicios Profesionales", systemImage: "briefcase") }
+                    Button { filterType = .other } label: { Label("Otro", systemImage: "ellipsis.circle") }
                 } label: {
                     FilterChip(
-                        title: filterType?.displayName ?? "All Types",
+                        title: filterType?.displayName ?? "Todos los Tipos",
                         isActive: filterType != nil
                     )
                 }
@@ -143,7 +135,7 @@ struct ExpensesView: View {
                         filterType = nil
                         filterPaidStatus = .all
                     } label: {
-                        Text("Clear")
+                        Text("Limpiar")
                             .font(.caption)
                             .foregroundColor(.red)
                     }
@@ -201,10 +193,10 @@ struct ExpensesView: View {
                 .font(.system(size: 60))
                 .foregroundColor(.secondary)
             
-            Text("No Expenses")
+            Text("No Hay Gastos")
                 .font(.headline)
             
-            Text("Tap + to add your first expense")
+            Text("Toca + para agregar tu primer gasto")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
         }
@@ -271,7 +263,7 @@ struct ExpenseSummaryCard: View {
         VStack(spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Total Expenses")
+                    Text("Total de Gastos")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                     Text(formatCurrency(summary.totalDouble))
@@ -282,7 +274,7 @@ struct ExpenseSummaryCard: View {
                 Spacer()
                 
                 VStack(alignment: .trailing, spacing: 4) {
-                    Text("\(summary.expenseCount) expenses")
+                    Text("\(summary.expenseCount) gastos")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -292,7 +284,7 @@ struct ExpenseSummaryCard: View {
             
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Paid")
+                    Text("Pagado")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     Text(formatCurrency(summary.paidDouble))
@@ -303,7 +295,7 @@ struct ExpenseSummaryCard: View {
                 Spacer()
                 
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text("Unpaid")
+                    Text("No Pagado")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     Text(formatCurrency(summary.unpaidDouble))
@@ -350,7 +342,7 @@ struct ExpenseRow: View {
                         .font(.headline)
                     
                     if !expense.isPaid {
-                        Text("Unpaid")
+                        Text("No Pagado")
                             .font(.caption2)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
@@ -431,7 +423,7 @@ class ExpensesViewModel: ObservableObject {
             errorMessage = error.errorDescription
             showError = true
         } catch {
-            errorMessage = "Failed to load expenses"
+            errorMessage = "Error al cargar gastos"
             showError = true
         }
     }
@@ -509,7 +501,7 @@ class ExpensesViewModel: ObservableObject {
             showError = true
             return false
         } catch {
-            errorMessage = "Failed to create expense"
+            errorMessage = "Error al crear gasto"
             showError = true
             return false
         }
@@ -553,7 +545,7 @@ class ExpensesViewModel: ObservableObject {
                 endpoint: .updateExpense(id: id),
                 body: request
             )
-            successMessage = "Expense updated"
+            successMessage = "Gasto actualizado"
             showSuccess = true
             await loadExpenses(locationId: locationId)
             await loadSummary(locationId: locationId)
@@ -563,7 +555,7 @@ class ExpensesViewModel: ObservableObject {
             showError = true
             return false
         } catch {
-            errorMessage = "Failed to update expense"
+            errorMessage = "Error al actualizar gasto"
             showError = true
             return false
         }
@@ -576,7 +568,7 @@ class ExpensesViewModel: ObservableObject {
             let _: ExpenseActionResponse = try await apiClient.request(
                 endpoint: .deleteExpense(id: id)
             )
-            successMessage = "Expense deleted"
+            successMessage = "Gasto eliminado"
             showSuccess = true
             await loadExpenses(locationId: locationId)
             await loadSummary(locationId: locationId)
@@ -586,7 +578,7 @@ class ExpensesViewModel: ObservableObject {
             showError = true
             return false
         } catch {
-            errorMessage = "Failed to delete expense"
+            errorMessage = "Error al eliminar gasto"
             showError = true
             return false
         }

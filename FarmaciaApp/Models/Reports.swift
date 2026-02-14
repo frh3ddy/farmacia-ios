@@ -7,10 +7,17 @@ struct DashboardReport: Decodable {
     let locationId: String?
     let sales: SalesSummary
     let inventory: InventorySummary
-    let adjustments: AdjustmentsSummary
-    let receivings: ReceivingsSummary
+    let ajustes: AdjustmentsSummary
+    let recepciones: ReceivingsSummary
     let operatingExpenses: OperatingExpensesSummary
     let netProfit: NetProfitSummary
+    
+    enum CodingKeys: String, CodingKey {
+        case period, locationId, sales, inventory
+        case ajustes = "adjustments"
+        case recepciones = "receivings"
+        case operatingExpenses, netProfit
+    }
 }
 
 // MARK: - Report Period
@@ -205,10 +212,10 @@ struct BatchValuation: Decodable, Identifiable {
     /// Human-readable source label
     var sourceLabel: String {
         switch source {
-        case "PURCHASE": return "Purchase"
-        case "OPENING_BALANCE": return "Opening Balance"
-        case "ADJUSTMENT": return "Adjustment"
-        default: return source ?? "Unknown"
+        case "PURCHASE": return "Compra"
+        case "OPENING_BALANCE": return "Saldo Inicial"
+        case "ADJUSTMENT": return "Ajuste"
+        default: return source ?? "Desconocido"
         }
     }
 }

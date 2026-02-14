@@ -30,8 +30,8 @@ struct AddItemsSheet: View {
     private let apiClient = APIClient.shared
     
     enum AddItemTab: String, CaseIterable {
-        case allProducts = "All Products"
-        case supplierCatalog = "Supplier Catalog"
+        case allProducts = "Todos los Productos"
+        case supplierCatalog = "Catálogo de Proveedor"
     }
     
     enum BulkAddType {
@@ -50,7 +50,7 @@ struct AddItemsSheet: View {
             VStack(spacing: 0) {
                 // Tab picker (only show supplier tab if supplier assigned)
                 if supplierId != nil {
-                    Picker("Source", selection: $selectedTab) {
+                    Picker("Fuente", selection: $selectedTab) {
                         ForEach(AddItemTab.allCases, id: \.self) { tab in
                             Text(tab.rawValue).tag(tab)
                         }
@@ -67,7 +67,7 @@ struct AddItemsSheet: View {
                 Group {
                     if isLoading {
                         Spacer()
-                        ProgressView("Loading products...")
+                        ProgressView("Cargando productos...")
                         Spacer()
                     } else if selectedTab == .allProducts {
                         allProductsList
@@ -76,11 +76,11 @@ struct AddItemsSheet: View {
                     }
                 }
             }
-            .navigationTitle("Add Items")
+            .navigationTitle("Agregar Artículos")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Done") { dismiss() }
+                    Button("Listo") { dismiss() }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     if !addedProductIds.isEmpty {
@@ -91,7 +91,7 @@ struct AddItemsSheet: View {
                     }
                 }
             }
-            .searchable(text: $searchText, prompt: "Search products...")
+            .searchable(text: $searchText, prompt: "Buscar productos...")
             .task {
                 await loadProducts()
                 if supplierId != nil {
@@ -104,9 +104,9 @@ struct AddItemsSheet: View {
                 // Pre-fill smart quantity suggestions
                 prefillSuggestedQuantities()
             }
-            .alert("Bulk Add", isPresented: $showBulkConfirm) {
-                Button("Cancel", role: .cancel) {}
-                Button("Add All") {
+            .alert("Agregar Todo", isPresented: $showBulkConfirm) {
+                Button("Cancelar", role: .cancel) {}
+                Button("Agregar Todo") {
                     performBulkAdd()
                 }
             } message: {

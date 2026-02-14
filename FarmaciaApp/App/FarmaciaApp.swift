@@ -54,7 +54,7 @@ struct LoadingView: View {
             ProgressView()
                 .scaleEffect(1.5)
             
-            Text("Loading...")
+            Text("Cargando...")
                 .font(.headline)
                 .foregroundColor(.secondary)
         }

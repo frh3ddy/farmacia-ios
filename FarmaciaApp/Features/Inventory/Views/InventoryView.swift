@@ -7,16 +7,16 @@ struct InventoryView: View {
     @State private var selectedSegment: InventorySegment = .receive
     
     enum InventorySegment: String, CaseIterable {
-        case receive = "Receive"
-        case adjustments = "Adjustments"
-        case history = "History"
+        case receive = "Recibir"
+        case ajustes = "Ajustes"
+        case history = "Historial"
     }
     
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 // Segment Control
-                Picker("Inventory", selection: $selectedSegment) {
+                Picker("Inventario", selection: $selectedSegment) {
                     ForEach(InventorySegment.allCases, id: \.self) { segment in
                         Text(segment.rawValue).tag(segment)
                     }
@@ -32,7 +32,7 @@ struct InventoryView: View {
                     } else {
                         noPermissionView
                     }
-                case .adjustments:
+                case .ajustes:
                     if authManager.canManageInventory {
                         AdjustmentsListView()
                     } else {
@@ -42,7 +42,7 @@ struct InventoryView: View {
                     ReceivingHistoryView()
                 }
             }
-            .navigationTitle("Inventory")
+            .navigationTitle("Inventario")
         }
     }
     
@@ -52,10 +52,10 @@ struct InventoryView: View {
                 .font(.system(size: 60))
                 .foregroundColor(.secondary)
             
-            Text("Access Restricted")
+            Text("Acceso Restringido")
                 .font(.headline)
             
-            Text("You don't have permission to access this feature.")
+            Text("No tienes permiso para acceder a esta función.")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -117,7 +117,7 @@ class InventoryViewModel: ObservableObject {
             if error.localizedDescription.lowercased().contains("cancel") {
                 return
             }
-            errorMessage = "Failed to load products"
+            errorMessage = "Error al cargar productos"
             showError = true
         }
     }
@@ -158,7 +158,7 @@ class InventoryViewModel: ObservableObject {
             if error.localizedDescription.lowercased().contains("cancel") {
                 return
             }
-            errorMessage = "Failed to load receivings"
+            errorMessage = "Error al cargar recepciones"
             showError = true
         }
     }
@@ -170,7 +170,7 @@ class InventoryViewModel: ObservableObject {
         
         do {
             let response: AdjustmentListResponse = try await apiClient.request(
-                endpoint: .adjustmentsByLocation(locationId: locationId)
+                endpoint: .ajustesByLocation(locationId: locationId)
             )
             recentAdjustments = response.data
         } catch is CancellationError {
@@ -186,7 +186,7 @@ class InventoryViewModel: ObservableObject {
             if error.localizedDescription.lowercased().contains("cancel") {
                 return
             }
-            errorMessage = "Failed to load adjustments"
+            errorMessage = "Error al cargar ajustes"
             showError = true
         }
     }
@@ -237,7 +237,7 @@ class InventoryViewModel: ObservableObject {
             successMessage = response.message
             showSuccess = true
             
-            // Reload receivings
+            // Reload recepciones
             await loadReceivings(locationId: locationId)
             
             return true
@@ -246,7 +246,7 @@ class InventoryViewModel: ObservableObject {
             showError = true
             return false
         } catch {
-            errorMessage = "Failed to receive inventory"
+            errorMessage = "Error al recibir inventario"
             showError = true
             return false
         }
@@ -324,7 +324,7 @@ class InventoryViewModel: ObservableObject {
                 showError = true
                 return false
             } catch {
-                errorMessage = "Failed to create adjustment"
+                errorMessage = "Error al crear ajuste"
                 showError = true
                 return false
             }
@@ -353,7 +353,7 @@ class InventoryViewModel: ObservableObject {
                 showError = true
                 return false
             } catch {
-                errorMessage = "Failed to create adjustment"
+                errorMessage = "Error al crear ajuste"
                 showError = true
                 return false
             }
@@ -390,7 +390,7 @@ struct ReceiveInventoryView: View {
                 } label: {
                     HStack {
                         Image(systemName: "plus.circle.fill")
-                        Text("Receive New Inventory")
+                        Text("Recibir Nuevo Inventario")
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
@@ -403,14 +403,14 @@ struct ReceiveInventoryView: View {
             
             Divider()
             
-            // Recent receivings - always show List to prevent refresh control issues
+            // Recent recepciones - always show List to prevent refresh control issues
             List {
                 if viewModel.recentReceivings.isEmpty {
                     Section {
                         if viewModel.isLoadingReceivings {
                             HStack {
                                 Spacer()
-                                ProgressView("Loading...")
+                                ProgressView("Cargando...")
                                 Spacer()
                             }
                             .listRowBackground(Color.clear)
@@ -419,7 +419,7 @@ struct ReceiveInventoryView: View {
                                 Image(systemName: "shippingbox")
                                     .font(.system(size: 50))
                                     .foregroundColor(.secondary)
-                                Text("No recent receivings")
+                                Text("No hay recepciones recientes")
                                     .foregroundColor(.secondary)
                             }
                             .frame(maxWidth: .infinity)
@@ -428,7 +428,7 @@ struct ReceiveInventoryView: View {
                         }
                     }
                 } else {
-                    Section("Recent Receivings") {
+                    Section("Recepciones Recientes") {
                         ForEach(viewModel.recentReceivings.prefix(10)) { receiving in
                             ReceivingRow(receiving: receiving)
                         }
@@ -456,12 +456,12 @@ struct ReceiveInventoryView: View {
         .alert("Error", isPresented: $viewModel.showError) {
             Button("OK") {}
         } message: {
-            Text(viewModel.errorMessage ?? "An error occurred")
+            Text(viewModel.errorMessage ?? "Ocurrió un error")
         }
-        .alert("Success", isPresented: $viewModel.showSuccess) {
+        .alert("Éxito", isPresented: $viewModel.showSuccess) {
             Button("OK") {}
         } message: {
-            Text(viewModel.successMessage ?? "Operation completed")
+            Text(viewModel.successMessage ?? "Operación completada")
         }
     }
 }
@@ -474,7 +474,7 @@ struct ReceivingRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text(receiving.product?.displayName ?? "Unknown Product")
+                Text(receiving.product?.displayName ?? "Producto Desconocido")
                     .font(.headline)
                 Spacer()
                 Text("+\(receiving.quantity)")
@@ -484,7 +484,7 @@ struct ReceivingRow: View {
             
             HStack {
                 if let invoiceNumber = receiving.invoiceNumber {
-                    Text("Invoice: \(invoiceNumber)")
+                    Text("Factura: \(invoiceNumber)")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -571,7 +571,7 @@ struct ReceiveInventoryFormView: View {
         NavigationStack {
             Form {
                 // Product Selection
-                Section("Product") {
+                Section("Producto") {
                     if isProductLocked {
                         // Product is pre-selected and locked — show as info, not a button
                         HStack {
@@ -606,7 +606,7 @@ struct ReceiveInventoryFormView: View {
                                         }
                                     }
                                 } else {
-                                    Text("Select Product")
+                                    Text("Seleccionar Producto")
                                         .foregroundColor(.secondary)
                                 }
                                 Spacer()
@@ -618,9 +618,9 @@ struct ReceiveInventoryFormView: View {
                 }
                 
                 // Quantity & Cost
-                Section("Quantity & Cost") {
+                Section("Cantidad y Costo") {
                     HStack {
-                        Text("Quantity")
+                        Text("Cantidad")
                         Spacer()
                         TextField("0", text: $quantity)
                             .keyboardType(.numberPad)
@@ -629,7 +629,7 @@ struct ReceiveInventoryFormView: View {
                     }
                     
                     HStack {
-                        Text("Unit Cost")
+                        Text("Costo Unitario")
                         Spacer()
                         Text("$")
                         TextField("0.00", text: $unitCost)
@@ -641,7 +641,7 @@ struct ReceiveInventoryFormView: View {
                     if let qty = Int(quantity), qty > 0,
                        let cost = Double(unitCost), cost > 0 {
                         HStack {
-                            Text("Total Cost")
+                            Text("Costo Total")
                             Spacer()
                             Text("$\(String(format: "%.2f", Double(qty) * cost))")
                                 .fontWeight(.semibold)
@@ -651,11 +651,11 @@ struct ReceiveInventoryFormView: View {
                 
                 // Selling Price Update (Optional)
                 Section {
-                    Toggle("Update Selling Price", isOn: $updateSellingPrice)
+                    Toggle("Actualizar Precio de Venta", isOn: $updateSellingPrice)
                     
                     if updateSellingPrice {
                         HStack {
-                            Text("New Price")
+                            Text("Nuevo Precio")
                             Spacer()
                             Text("$")
                                 .foregroundColor(.secondary)
@@ -670,7 +670,7 @@ struct ReceiveInventoryFormView: View {
                         // Show current price if available
                         if let currentPrice = selectedProduct?.sellingPrice {
                             HStack {
-                                Text("Current Price")
+                                Text("Precio Actual")
                                     .foregroundColor(.secondary)
                                 Spacer()
                                 Text("$\(String(format: "%.2f", currentPrice)) MXN")
@@ -684,7 +684,7 @@ struct ReceiveInventoryFormView: View {
                            let newPrice = Double(newSellingPrice), newPrice > 0 {
                             let margin = ((newPrice - cost) / newPrice) * 100
                             HStack {
-                                Text("New Margin")
+                                Text("Nuevo Margen")
                                 Spacer()
                                 Text(String(format: "%.1f%%", margin))
                                     .foregroundColor(margin >= 20 ? .green : (margin >= 10 ? .orange : .red))
@@ -693,10 +693,10 @@ struct ReceiveInventoryFormView: View {
                         }
                     }
                 } header: {
-                    Text("Selling Price (Optional)")
+                    Text("Precio de Venta (Opcional)")
                 } footer: {
                     if updateSellingPrice {
-                        Text("Price will be updated in Square POS.")
+                        Text("El precio se actualizará en Square POS.")
                     }
                 }
                 
@@ -709,7 +709,7 @@ struct ReceiveInventoryFormView: View {
                             if isLoadingSuppliers {
                                 ProgressView()
                                     .scaleEffect(0.8)
-                                Text("Loading suppliers...")
+                                Text("Cargando proveedores...")
                                     .foregroundColor(.secondary)
                             } else if let supplier = selectedSupplier {
                                 VStack(alignment: .leading, spacing: 2) {
@@ -718,7 +718,7 @@ struct ReceiveInventoryFormView: View {
                                             .foregroundColor(.primary)
                                         // Show preferred badge if this supplier is the preferred one
                                         if let ps = productSuppliers.first(where: { $0.id == supplier.id }), ps.isPreferred {
-                                            Text("Preferred")
+                                            Text("Preferido")
                                                 .font(.caption2)
                                                 .fontWeight(.medium)
                                                 .padding(.horizontal, 5)
@@ -731,7 +731,7 @@ struct ReceiveInventoryFormView: View {
                                     // Show last cost from this supplier
                                     if let lastCost = supplierLastCost {
                                         HStack(spacing: 4) {
-                                            Text("Last cost: $\(String(format: "%.2f", lastCost))")
+                                            Text("Último costo: $\(String(format: "%.2f", lastCost))")
                                                 .font(.caption)
                                                 .foregroundColor(.secondary)
                                             // Show comparison with current unit cost entry
@@ -749,7 +749,7 @@ struct ReceiveInventoryFormView: View {
                                     }
                                 }
                             } else {
-                                Text("Select Supplier")
+                                Text("Seleccionar Proveedor")
                                     .foregroundColor(.secondary)
                             }
                             Spacer()
@@ -780,7 +780,7 @@ struct ReceiveInventoryFormView: View {
                         .foregroundColor(.blue)
                     }
                 } header: {
-                    Text("Supplier (Optional)")
+                    Text("Proveedor (Opcional)")
                 } footer: {
                     if !productSuppliers.isEmpty && selectedSupplier == nil {
                         Text("\(productSuppliers.count) supplier(s) available for this product")
@@ -788,37 +788,37 @@ struct ReceiveInventoryFormView: View {
                 }
                 
                 // Invoice & Batch
-                Section("Reference Numbers (Optional)") {
-                    TextField("Invoice Number", text: $invoiceNumber)
-                    TextField("Batch Number", text: $batchNumber)
+                Section("Números de Referencia (Opcional)") {
+                    TextField("Número de Factura", text: $invoiceNumber)
+                    TextField("Número de Lote", text: $batchNumber)
                 }
                 
                 // Expiry Date
                 Section {
-                    Toggle("Has Expiry Date", isOn: $hasExpiry)
+                    Toggle("Tiene Fecha de Vencimiento", isOn: $hasExpiry)
                     
                     if hasExpiry {
-                        DatePicker("Expiry Date", selection: $expiryDate, displayedComponents: .date)
+                        DatePicker("Fecha de Vencimiento", selection: $expiryDate, displayedComponents: .date)
                     }
                 }
                 
                 // Notes
-                Section("Notes (Optional)") {
+                Section("Notas (Opcional)") {
                     TextEditor(text: $notes)
                         .frame(minHeight: 60)
                 }
             }
-            .navigationTitle("Receive Inventory")
+            .navigationTitle("Recibir Inventario")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
+                    Button("Cancelar") {
                         dismiss()
                     }
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
+                    Button("Guardar") {
                         Task { await saveReceiving() }
                     }
                     .disabled(!isValid || viewModel.isSubmitting)
@@ -864,7 +864,7 @@ struct ReceiveInventoryFormView: View {
                         // Auto-fill unit cost if empty
                         if unitCost.isEmpty && ps.costDouble > 0 {
                             unitCost = String(format: "%.2f", ps.costDouble)
-                            supplierCostNote = "Cost auto-filled from supplier's last price"
+                            supplierCostNote = "Costo auto-completado del último precio del proveedor"
                         } else {
                             supplierCostNote = nil
                         }
@@ -901,7 +901,7 @@ struct ReceiveInventoryFormView: View {
                     supplierLastCost = preferred.costDouble
                     if unitCost.isEmpty && preferred.costDouble > 0 {
                         unitCost = String(format: "%.2f", preferred.costDouble)
-                        supplierCostNote = "Cost auto-filled from preferred supplier"
+                        supplierCostNote = "Costo auto-completado del proveedor preferido"
                     }
                 }
             }
@@ -967,14 +967,14 @@ struct ProductPickerView: View {
         NavigationStack {
             Group {
                 if isLoading {
-                    ProgressView("Loading products...")
+                    ProgressView("Cargando productos...")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if products.isEmpty {
                     VStack(spacing: 12) {
                         Image(systemName: "cube.box")
                             .font(.system(size: 50))
                             .foregroundColor(.secondary)
-                        Text("No products found")
+                        Text("No se encontraron productos")
                             .foregroundColor(.secondary)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1014,14 +1014,14 @@ struct ProductPickerView: View {
                             }
                         }
                     }
-                    .searchable(text: $searchText, prompt: "Search products")
+                    .searchable(text: $searchText, prompt: "Buscar productos")
                 }
             }
-            .navigationTitle("Select Product")
+            .navigationTitle("Seleccionar Producto")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Cancel") {
+                    Button("Cancelar") {
                         dismiss()
                     }
                 }
@@ -1057,7 +1057,7 @@ struct SupplierPickerView: View {
                         Image(systemName: "building.2")
                             .font(.system(size: 50))
                             .foregroundColor(.secondary)
-                        Text("No suppliers found")
+                        Text("No se encontraron proveedores")
                             .foregroundColor(.secondary)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1090,14 +1090,14 @@ struct SupplierPickerView: View {
                             }
                         }
                     }
-                    .searchable(text: $searchText, prompt: "Search suppliers")
+                    .searchable(text: $searchText, prompt: "Buscar proveedores")
                 }
             }
-            .navigationTitle("Select Supplier")
+            .navigationTitle("Seleccionar Proveedor")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Cancel") {
+                    Button("Cancelar") {
                         dismiss()
                     }
                 }
@@ -1146,14 +1146,14 @@ struct AdjustmentsListView: View {
             
             Divider()
             
-            // Recent adjustments - always show List to prevent refresh control issues
+            // Recent ajustes - always show List to prevent refresh control issues
             List {
                 if viewModel.recentAdjustments.isEmpty {
                     Section {
                         if viewModel.isLoadingAdjustments {
                             HStack {
                                 Spacer()
-                                ProgressView("Loading...")
+                                ProgressView("Cargando...")
                                 Spacer()
                             }
                             .listRowBackground(Color.clear)
@@ -1162,7 +1162,7 @@ struct AdjustmentsListView: View {
                                 Image(systemName: "arrow.triangle.2.circlepath")
                                     .font(.system(size: 50))
                                     .foregroundColor(.secondary)
-                                Text("No recent adjustments")
+                                Text("No hay ajustes recientes")
                                     .foregroundColor(.secondary)
                             }
                             .frame(maxWidth: .infinity)
@@ -1171,7 +1171,7 @@ struct AdjustmentsListView: View {
                         }
                     }
                 } else {
-                    Section("Recent Adjustments") {
+                    Section("Ajustes Recientes") {
                         ForEach(viewModel.recentAdjustments.prefix(10)) { adjustment in
                             AdjustmentRow(adjustment: adjustment)
                         }
@@ -1200,12 +1200,12 @@ struct AdjustmentsListView: View {
         .alert("Error", isPresented: $viewModel.showError) {
             Button("OK") {}
         } message: {
-            Text(viewModel.errorMessage ?? "An error occurred")
+            Text(viewModel.errorMessage ?? "Ocurrió un error")
         }
-        .alert("Success", isPresented: $viewModel.showSuccess) {
+        .alert("Éxito", isPresented: $viewModel.showSuccess) {
             Button("OK") {}
         } message: {
-            Text(viewModel.successMessage ?? "Operation completed")
+            Text(viewModel.successMessage ?? "Operación completada")
         }
     }
 }
@@ -1221,7 +1221,7 @@ struct AdjustmentRow: View {
                 Image(systemName: adjustment.type.icon)
                     .foregroundColor(typeColor)
                 
-                Text(adjustment.product?.displayName ?? "Unknown Product")
+                Text(adjustment.product?.displayName ?? "Producto Desconocido")
                     .font(.headline)
                 
                 Spacer()
@@ -1316,7 +1316,7 @@ struct AdjustmentFormView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Product") {
+                Section("Producto") {
                     if isProductLocked {
                         // Product is pre-selected and locked — show as info, not a button
                         HStack {
@@ -1329,7 +1329,7 @@ struct AdjustmentFormView: View {
                                         .foregroundColor(.secondary)
                                 }
                                 if let stock = selectedProduct?.totalInventory {
-                                    Text("Current stock: \(stock) units")
+                                    Text("Stock actual: \(stock) unidades")
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                 }
@@ -1355,7 +1355,7 @@ struct AdjustmentFormView: View {
                                         }
                                     }
                                 } else {
-                                    Text("Select Product")
+                                    Text("Seleccionar Producto")
                                         .foregroundColor(.secondary)
                                 }
                                 Spacer()
@@ -1366,9 +1366,9 @@ struct AdjustmentFormView: View {
                     }
                 }
                 
-                Section("Quantity") {
+                Section("Cantidad") {
                     HStack {
-                        Text("Quantity")
+                        Text("Cantidad")
                         Spacer()
                         TextField("0", text: $quantity)
                             .keyboardType(.numberPad)
@@ -1377,36 +1377,36 @@ struct AdjustmentFormView: View {
                     }
                     
                     if adjustmentType.isVariable {
-                        Text("Enter positive to add, negative to remove")
+                        Text("Ingrese positivo para agregar, negativo para quitar")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     } else if adjustmentType.isNegative {
-                        Text("This will remove \(quantity.isEmpty ? "0" : quantity) units from inventory")
+                        Text("Esto eliminará \(quantity.isEmpty ? "0" : quantity) unidades del inventario")
                             .font(.caption)
                             .foregroundColor(.red)
                     } else {
-                        Text("This will add \(quantity.isEmpty ? "0" : quantity) units to inventory")
+                        Text("Esto agregará \(quantity.isEmpty ? "0" : quantity) unidades al inventario")
                             .font(.caption)
                             .foregroundColor(.green)
                     }
                 }
                 
-                Section("Details") {
-                    TextField("Reason", text: $reason)
-                    TextField("Notes (optional)", text: $notes)
+                Section("Detalles") {
+                    TextField("Razón", text: $reason)
+                    TextField("Notas (opcional)", text: $notes)
                 }
             }
             .navigationTitle(adjustmentType.displayName)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
+                    Button("Cancelar") {
                         dismiss()
                     }
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
+                    Button("Guardar") {
                         Task { await saveAdjustment() }
                     }
                     .disabled(!isValid || viewModel.isSubmitting)
@@ -1466,7 +1466,7 @@ struct ReceivingHistoryView: View {
                     if viewModel.isLoadingReceivings {
                         HStack {
                             Spacer()
-                            ProgressView("Loading history...")
+                            ProgressView("Cargando historial...")
                             Spacer()
                         }
                         .listRowBackground(Color.clear)
@@ -1475,7 +1475,7 @@ struct ReceivingHistoryView: View {
                             Image(systemName: "clock.arrow.circlepath")
                                 .font(.system(size: 50))
                                 .foregroundColor(.secondary)
-                            Text("No receiving history")
+                            Text("No hay historial de recepciones")
                                 .foregroundColor(.secondary)
                         }
                         .frame(maxWidth: .infinity)
@@ -1503,7 +1503,7 @@ struct ReceivingHistoryView: View {
         .alert("Error", isPresented: $viewModel.showError) {
             Button("OK") {}
         } message: {
-            Text(viewModel.errorMessage ?? "An error occurred")
+            Text(viewModel.errorMessage ?? "Ocurrió un error")
         }
     }
 }

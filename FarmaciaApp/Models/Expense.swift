@@ -18,18 +18,18 @@ enum ExpenseType: String, Codable, CaseIterable {
     
     var displayName: String {
         switch self {
-        case .rent: return "Rent"
-        case .utilities: return "Utilities"
-        case .payroll: return "Payroll"
-        case .insurance: return "Insurance"
-        case .supplies: return "Supplies"
-        case .marketing: return "Marketing"
-        case .maintenance: return "Maintenance"
-        case .taxes: return "Taxes"
-        case .bankFees: return "Bank Fees"
+        case .rent: return "Renta"
+        case .utilities: return "Servicios"
+        case .payroll: return "Nómina"
+        case .insurance: return "Seguro"
+        case .supplies: return "Insumos"
+        case .marketing: return "Publicidad"
+        case .maintenance: return "Mantenimiento"
+        case .taxes: return "Impuestos"
+        case .bankFees: return "Comisiones Bancarias"
         case .software: return "Software"
-        case .professional: return "Professional Services"
-        case .other: return "Other"
+        case .professional: return "Servicios Profesionales"
+        case .other: return "Otro"
         }
     }
     

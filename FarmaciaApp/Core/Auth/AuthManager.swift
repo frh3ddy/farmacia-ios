@@ -356,7 +356,7 @@ final class AuthManager: ObservableObject {
         #elseif os(macOS)
         return "macOS \(ProcessInfo.processInfo.operatingSystemVersionString)"
         #else
-        return "Unknown"
+        return "Desconocido"
         #endif
     }
     

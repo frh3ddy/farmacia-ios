@@ -24,7 +24,7 @@ struct PINEntryView: View {
             }
             .padding()
             .background(Color(.systemBackground))
-            .navigationTitle("Employee Login")
+            .navigationTitle("Inicio de Sesión")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -32,7 +32,7 @@ struct PINEntryView: View {
                         Button(role: .destructive) {
                             viewModel.showDeactivateAlert = true
                         } label: {
-                            Label("Deactivate Device", systemImage: "xmark.shield")
+                            Label("Desactivar Dispositivo", systemImage: "xmark.shield")
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
@@ -45,20 +45,20 @@ struct PINEntryView: View {
                     selectedLocation: $viewModel.selectedLocation
                 )
             }
-            .alert("Login Error", isPresented: $viewModel.showError) {
+            .alert("Error de Inicio", isPresented: $viewModel.showError) {
                 Button("OK", role: .cancel) {
                     viewModel.clearPIN()
                 }
             } message: {
                 Text(viewModel.errorMessage)
             }
-            .alert("Deactivate Device", isPresented: $viewModel.showDeactivateAlert) {
-                Button("Cancel", role: .cancel) {}
-                Button("Deactivate", role: .destructive) {
+            .alert("Desactivar Dispositivo", isPresented: $viewModel.showDeactivateAlert) {
+                Button("Cancelar", role: .cancel) {}
+                Button("Desactivar", role: .destructive) {
                     authManager.deactivateDevice()
                 }
             } message: {
-                Text("This will remove this device from Farmacia. You'll need owner/manager credentials to reactivate.")
+                Text("Esto eliminará este dispositivo de Farmacia. Necesitarás credenciales de dueño/gerente para reactivarlo.")
             }
             .task {
                 await viewModel.loadLocations(authManager: authManager)
@@ -78,7 +78,7 @@ struct PINEntryView: View {
                     Image(systemName: "building.2")
                         .foregroundColor(.blue)
                     
-                    Text(viewModel.selectedLocation?.name ?? "Select Location")
+                    Text(viewModel.selectedLocation?.name ?? "Seleccionar Ubicación")
                         .fontWeight(.medium)
                     
                     Spacer()
@@ -92,7 +92,7 @@ struct PINEntryView: View {
             }
             .buttonStyle(.plain)
             
-            Text("Enter your PIN to log in")
+            Text("Ingresa tu PIN para iniciar sesión")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
         }
@@ -219,11 +219,11 @@ class PINEntryViewModel: ObservableObject {
                 return
             }
             print("Failed to load locations: \(error)")
-            errorMessage = "Could not load locations"
+            errorMessage = "No se pudieron cargar las ubicaciones"
             showError = true
         } catch {
             print("Failed to load locations: \(error)")
-            errorMessage = "Could not load locations"
+            errorMessage = "No se pudieron cargar las ubicaciones"
             showError = true
         }
     }
@@ -251,7 +251,7 @@ class PINEntryViewModel: ObservableObject {
     
     func login(authManager: AuthManager) async {
         guard let location = selectedLocation else {
-            errorMessage = "Please select a location"
+            errorMessage = "Por favor selecciona una ubicación"
             showError = true
             clearPIN()
             return
@@ -276,7 +276,7 @@ class PINEntryViewModel: ObservableObject {
                     return
                 }
             }
-            errorMessage = error.errorDescription ?? "Login failed"
+            errorMessage = error.errorDescription ?? "Error de inicio de sesión"
             showError = true
         } catch {
             errorMessage = error.localizedDescription
@@ -323,11 +323,11 @@ struct LocationPickerView: View {
                 }
                 .buttonStyle(.plain)
             }
-            .navigationTitle("Select Location")
+            .navigationTitle("Seleccionar Ubicación")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
+                    Button("Cancelar") {
                         dismiss()
                     }
                 }

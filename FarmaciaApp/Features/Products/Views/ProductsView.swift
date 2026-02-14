@@ -1,4 +1,5 @@
 import SwiftUI
+import CodeScanner
 
 // MARK: - Products View
 // Unified product + inventory hub. Includes search, smart filters,
@@ -16,16 +17,25 @@ struct ProductsView: View {
     @State private var activeFilter: ProductFilter = .all
     @State private var sortOption: ProductSortOption = .name
     
+    // Barcode scanner state
+    @State private var showBarcodeScanner = false
+    @State private var scannedProduct: Product? = nil
+    @State private var navigateToScannedProduct = false
+    @State private var prefillSku: String? = nil
+    
+    /// Tab-switch refresh trigger (set by MainTabView)
+    var refreshTrigger: UUID = UUID()
+    
     // MARK: - Filter / Sort enums
     
     enum ProductFilter: String, CaseIterable {
-        case all = "All"
-        case lowStock = "Low Stock"
-        case outOfStock = "Out of Stock"
+        case all = "Todos"
+        case lowStock = "Stock Bajo"
+        case outOfStock = "Sin Stock"
         case inStock = "In Stock"
-        case atRisk = "At Risk"
-        case expiringSoon = "Expiring"
-        case lowMargin = "Low Margin"
+        case atRisk = "En Riesgo"
+        case expiringSoon = "Por Vencer"
+        case lowMargin = "Margen Bajo"
         
         var icon: String {
             switch self {
@@ -53,28 +63,25 @@ struct ProductsView: View {
     }
     
     enum ProductSortOption: String, CaseIterable {
-        case name = "Name"
+        case name = "Nombre"
         case stockAsc = "Stock (Low)"
         case stockDesc = "Stock (High)"
-        case margin = "Margin"
-        case priceAsc = "Price (Low)"
-        case priceDesc = "Price (High)"
+        case margin = "Margen"
+        case priceAsc = "Precio (Menor)"
+        case priceDesc = "Precio (Mayor)"
     }
     
+    // Debounced search — triggers server-side search after user stops typing
+    @State private var searchTask: Task<Void, Never>? = nil
+    
     // MARK: - Computed products
+    // Note: name/SKU filtering is handled server-side via the `search` query param.
+    // Only stock/risk/margin filters are applied client-side on the loaded page.
     
     private var filteredProducts: [Product] {
         var products = viewModel.products
         
-        // Apply text search
-        if !searchText.isEmpty {
-            products = products.filter { product in
-                product.displayName.localizedCaseInsensitiveContains(searchText) ||
-                (product.sku?.localizedCaseInsensitiveContains(searchText) ?? false)
-            }
-        }
-        
-        // Apply filter
+        // Apply client-side filter (stock, risk, margin — not name/sku)
         switch activeFilter {
         case .all:
             break
@@ -145,7 +152,7 @@ struct ProductsView: View {
                     productsList
                 }
             }
-            .navigationTitle("Products")
+            .navigationTitle("Productos")
             .toolbar {
                 // Activity history (left)
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -160,18 +167,18 @@ struct ProductsView: View {
                 
                 // Sort + Purchase Order + Add (right)
                 ToolbarItemGroup(placement: .navigationBarTrailing) {
-                    // Sort menu
+                    // Barcode scanner
+                    Button {
+                        showBarcodeScanner = true
+                    } label: {
+                        Image(systemName: "barcode.viewfinder")
+                    }
+                    
+                    // Sort menu — uses Picker to avoid SwiftUI Menu+ForEach first-item bug
                     Menu {
-                        ForEach(ProductSortOption.allCases, id: \.self) { option in
-                            Button {
-                                sortOption = option
-                            } label: {
-                                HStack {
-                                    Text(option.rawValue)
-                                    if sortOption == option {
-                                        Image(systemName: "checkmark")
-                                    }
-                                }
+                        Picker("Ordenar por", selection: $sortOption) {
+                            ForEach(ProductSortOption.allCases, id: \.self) { option in
+                                Text(option.rawValue).tag(option)
                             }
                         }
                     } label: {
@@ -218,13 +225,23 @@ struct ProductsView: View {
                     }
                 }
             }
-            .searchable(text: $searchText, prompt: "Search products...")
+            .searchable(text: $searchText, prompt: "Buscar productos...")
+            .onChange(of: searchText) { _, newValue in
+                // Debounce: cancel previous search, wait 400ms, then search server-side
+                searchTask?.cancel()
+                searchTask = Task {
+                    try? await Task.sleep(nanoseconds: 400_000_000) // 400ms
+                    guard !Task.isCancelled else { return }
+                    await loadProducts()
+                }
+            }
             .refreshable {
                 await loadProducts()
             }
             .sheet(isPresented: $showCreateProduct) {
-                CreateProductView()
+                CreateProductView(prefillSku: prefillSku)
                     .onDisappear {
+                        prefillSku = nil
                         Task {
                             await loadProducts()
                         }
@@ -246,13 +263,35 @@ struct ProductsView: View {
                         }
                     }
             }
+            .sheet(isPresented: $showBarcodeScanner) {
+                BarcodeScannerSheet { scannedCode in
+                    showBarcodeScanner = false
+                    handleScannedBarcode(scannedCode)
+                }
+            }
+            .navigationDestination(isPresented: $navigateToScannedProduct) {
+                if let product = scannedProduct {
+                    ProductDetailView(
+                        product: product,
+                        onProductUpdated: { updatedProduct in
+                            viewModel.updateProduct(updatedProduct)
+                        }
+                    )
+                }
+            }
             .task {
                 await loadProducts()
                 await loadAgingData()
             }
+            .onChange(of: refreshTrigger) { _, _ in
+                // Tab was selected — reload fresh data
+                Task {
+                    await loadProducts()
+                }
+            }
             .alert("Error", isPresented: $viewModel.showError) {
                 Button("OK", role: .cancel) {}
-                Button("Retry") {
+                Button("Reintentar") {
                     Task {
                         await loadProducts()
                     }
@@ -269,7 +308,7 @@ struct ProductsView: View {
         VStack(spacing: 16) {
             ProgressView()
                 .scaleEffect(1.5)
-            Text("Loading products...")
+            Text("Cargando productos...")
                 .foregroundColor(.secondary)
         }
     }
@@ -282,7 +321,7 @@ struct ProductsView: View {
                 .font(.system(size: 60))
                 .foregroundColor(.secondary)
             
-            Text("No Products")
+            Text("Sin Productos")
                 .font(.title2)
                 .fontWeight(.bold)
             
@@ -296,7 +335,7 @@ struct ProductsView: View {
                 Button {
                     showCreateProduct = true
                 } label: {
-                    Label("Create Product", systemImage: "plus")
+                    Label("Crear Producto", systemImage: "plus")
                         .font(.headline)
                 }
                 .buttonStyle(.borderedProminent)
@@ -329,7 +368,7 @@ struct ProductsView: View {
                 HStack {
                     summaryItem(
                         title: "Total",
-                        value: "\(viewModel.products.count)",
+                        value: "\(viewModel.totalCount)",
                         icon: "shippingbox.fill",
                         color: .blue
                     )
@@ -337,7 +376,7 @@ struct ProductsView: View {
                     Divider()
                     
                     summaryItem(
-                        title: "Synced",
+                        title: "Sincronizado",
                         value: "\(viewModel.products.filter { $0.hasSquareSync == true }.count)",
                         icon: "checkmark.circle.fill",
                         color: .green
@@ -359,12 +398,35 @@ struct ProductsView: View {
             Section {
                 ForEach(filteredProducts) { product in
                     NavigationLink {
-                        ProductDetailView(product: product)
+                        ProductDetailView(
+                            product: product,
+                            onProductUpdated: { updatedProduct in
+                                viewModel.updateProduct(updatedProduct)
+                            }
+                        )
                     } label: {
                         ProductRow(
                             product: product,
                             riskLevel: agingViewModel.productRiskLevels[product.id]
                         )
+                    }
+                    .onAppear {
+                        // Infinite scroll: trigger load-more when near the end
+                        if product.id == filteredProducts.last?.id && viewModel.hasMore {
+                            Task {
+                                await loadMoreProducts()
+                            }
+                        }
+                    }
+                }
+                
+                // Loading indicator at bottom while fetching next page
+                if viewModel.isLoadingMore {
+                    HStack {
+                        Spacer()
+                        ProgressView()
+                            .padding(.vertical, 8)
+                        Spacer()
                     }
                 }
             } header: {
@@ -372,16 +434,22 @@ struct ProductsView: View {
                     if activeFilter != .all {
                         Text("\(filteredProducts.count) \(activeFilter.rawValue)")
                     } else if !searchText.isEmpty {
-                        Text("\(filteredProducts.count) results")
+                        Text("\(filteredProducts.count) resultados")
                     }
                     
                     Spacer()
                     
                     if sortOption != .name {
-                        Text("Sorted by: \(sortOption.rawValue)")
+                        Text("Ordenado por: \(sortOption.rawValue)")
                             .font(.caption2)
                             .foregroundColor(.secondary)
                     }
+                }
+            } footer: {
+                if viewModel.totalCount > 0 {
+                    Text("Mostrando \(viewModel.products.count) de \(viewModel.totalCount) productos")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
                 }
             }
         }
@@ -398,7 +466,7 @@ struct ProductsView: View {
                     .font(.title3)
                 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Attention Required")
+                    Text("Atención Requerida")
                         .font(.subheadline)
                         .fontWeight(.semibold)
                     
@@ -607,13 +675,85 @@ struct ProductsView: View {
     
     private func loadProducts() async {
         guard let locationId = authManager.currentLocation?.id else { return }
-        await viewModel.loadProducts(locationId: locationId)
+        let search = searchText.isEmpty ? nil : searchText
+        await viewModel.loadProducts(locationId: locationId, search: search)
+    }
+    
+    private func loadMoreProducts() async {
+        guard let locationId = authManager.currentLocation?.id else { return }
+        await viewModel.loadMoreProducts(locationId: locationId)
     }
     
     private func loadAgingData() async {
         guard let locationId = authManager.currentLocation?.id else { return }
         await agingViewModel.loadAtRiskProducts(locationId: locationId)
         await expiringViewModel.loadExpiringProducts(locationId: locationId)
+    }
+    
+    private func handleScannedBarcode(_ code: String) {
+        // First check loaded products by SKU
+        if let match = viewModel.products.first(where: { $0.sku?.lowercased() == code.lowercased() }) {
+            // Found in current page — navigate to product detail
+            scannedProduct = match
+            navigateToScannedProduct = true
+        } else {
+            // Not in current page — try server-side search
+            Task {
+                guard let locationId = authManager.currentLocation?.id else { return }
+                await viewModel.loadProducts(locationId: locationId, search: code)
+                
+                if let match = viewModel.products.first(where: { $0.sku?.lowercased() == code.lowercased() }) {
+                    scannedProduct = match
+                    navigateToScannedProduct = true
+                    // Restore full list after navigating
+                    await viewModel.loadProducts(locationId: locationId)
+                } else {
+                    // Not found — open create product with SKU prefilled
+                    prefillSku = code
+                    showCreateProduct = true
+                    // Restore full list
+                    await viewModel.loadProducts(locationId: locationId)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Barcode Scanner Sheet
+
+private struct BarcodeScannerSheet: View {
+    let onCodeScanned: (String) -> Void
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        NavigationStack {
+            CodeScannerView(
+                codeTypes: [.ean13, .ean8, .upce, .code128, .code39, .code93, .itf14, .qr],
+                scanMode: .once,
+                showViewfinder: true,
+                shouldVibrateOnSuccess: true,
+                completion: handleScan
+            )
+            .navigationTitle("Escanear Código")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancelar") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+    
+    private func handleScan(result: Result<ScanResult, ScanError>) {
+        switch result {
+        case .success(let scanResult):
+            onCodeScanned(scanResult.string)
+        case .failure(let error):
+            print("Barcode scan failed: \(error.localizedDescription)")
+            dismiss()
+        }
     }
 }
 
@@ -703,7 +843,7 @@ struct ProductRow: View {
                 }
                 
                 if let stock = product.totalInventory {
-                    Text("\(stock) units")
+                    Text("\(stock) uds")
                         .font(.caption)
                         .foregroundColor(stock > 0 ? .secondary : .red)
                 }
@@ -753,28 +893,54 @@ struct ProductRow: View {
     }
 }
 
-// MARK: - Products View Model
+// MARK: - Products View Model (paginated, infinite scroll)
 
 @MainActor
 class ProductsViewModel: ObservableObject {
     @Published var products: [Product] = []
     @Published var isLoading = false
+    @Published var isLoadingMore = false
     @Published var showError = false
     @Published var errorMessage = ""
     
+    // Pagination state
+    private(set) var currentPage = 1
+    private(set) var hasMore = true
+    private(set) var totalCount = 0
+    private let pageSize = 50
+    
+    // Search state (server-side)
+    private var currentSearchQuery: String?
+    
     private let apiClient = APIClient.shared
     
-    func loadProducts(locationId: String) async {
+    /// Load first page (resets pagination). Called on appear, pull-to-refresh, and tab switch.
+    func loadProducts(locationId: String, search: String? = nil) async {
         isLoading = true
+        currentPage = 1
+        hasMore = true
+        currentSearchQuery = search
         
         do {
+            var params: [String: String] = [
+                "locationId": locationId,
+                "page": "1",
+                "limit": "\(pageSize)"
+            ]
+            if let search = search, !search.isEmpty {
+                params["search"] = search
+            }
+            
             let response: ProductListResponse = try await apiClient.request(
                 endpoint: .listProducts,
-                queryParams: ["locationId": locationId]
+                queryParams: params
             )
             products = response.data
+            totalCount = response.totalCount ?? response.count
+            hasMore = response.hasMore ?? false
+            currentPage = 1
         } catch let error as NetworkError {
-            errorMessage = error.errorDescription ?? "Failed to load products"
+            errorMessage = error.errorDescription ?? "Error al cargar productos"
             showError = true
         } catch {
             errorMessage = error.localizedDescription
@@ -782,6 +948,51 @@ class ProductsViewModel: ObservableObject {
         }
         
         isLoading = false
+    }
+    
+    /// Load next page (appends to existing products). Called by infinite scroll.
+    func loadMoreProducts(locationId: String) async {
+        guard hasMore, !isLoadingMore, !isLoading else { return }
+        
+        isLoadingMore = true
+        let nextPage = currentPage + 1
+        
+        do {
+            var params: [String: String] = [
+                "locationId": locationId,
+                "page": "\(nextPage)",
+                "limit": "\(pageSize)"
+            ]
+            if let search = currentSearchQuery, !search.isEmpty {
+                params["search"] = search
+            }
+            
+            let response: ProductListResponse = try await apiClient.request(
+                endpoint: .listProducts,
+                queryParams: params
+            )
+            
+            // Append new products, avoiding duplicates
+            let existingIds = Set(products.map { $0.id })
+            let newProducts = response.data.filter { !existingIds.contains($0.id) }
+            products.append(contentsOf: newProducts)
+            
+            totalCount = response.totalCount ?? totalCount
+            hasMore = response.hasMore ?? false
+            currentPage = nextPage
+        } catch {
+            // Silent fail for load-more — user can scroll again to retry
+            print("Failed to load more products: \(error)")
+        }
+        
+        isLoadingMore = false
+    }
+    
+    /// Update a single product in the list (e.g. after detail view refresh)
+    func updateProduct(_ product: Product) {
+        if let index = products.firstIndex(where: { $0.id == product.id }) {
+            products[index] = product
+        }
     }
 }
 
