@@ -57,7 +57,7 @@ struct ProductImageViewer: View {
                                     Image(systemName: "photo.badge.exclamationmark")
                                         .font(.system(size: 50))
                                         .foregroundColor(.gray)
-                                    Text("Failed to load image")
+                                    Text("Error al cargar imagen")
                                         .foregroundColor(.gray)
                                 }
                                 

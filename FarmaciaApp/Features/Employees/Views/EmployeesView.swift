@@ -19,7 +19,7 @@ struct EmployeesView: View {
                     employeeList
                 }
             }
-            .navigationTitle("Employees")
+            .navigationTitle("Empleados")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     if authManager.currentLocation?.role == .owner {
@@ -46,7 +46,7 @@ struct EmployeesView: View {
             .alert("Error", isPresented: $viewModel.showError) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text(viewModel.errorMessage ?? "Unknown error")
+                Text(viewModel.errorMessage ?? "Error desconocido")
             }
         }
     }
@@ -57,7 +57,7 @@ struct EmployeesView: View {
         VStack(spacing: 20) {
             ProgressView()
                 .scaleEffect(1.5)
-            Text("Loading employees...")
+            Text("Cargando empleados...")
                 .foregroundColor(.secondary)
         }
     }
@@ -70,7 +70,7 @@ struct EmployeesView: View {
                 .font(.system(size: 60))
                 .foregroundColor(.orange)
             
-            Text("Failed to Load")
+            Text("Error al Cargar")
                 .font(.headline)
             
             Text(message)
@@ -83,7 +83,7 @@ struct EmployeesView: View {
                     await viewModel.loadEmployees()
                 }
             } label: {
-                Label("Try Again", systemImage: "arrow.clockwise")
+                Label("Reintentar", systemImage: "arrow.clockwise")
             }
             .buttonStyle(.borderedProminent)
         }
@@ -98,10 +98,10 @@ struct EmployeesView: View {
                 .font(.system(size: 60))
                 .foregroundColor(.secondary)
             
-            Text("No Employees Yet")
+            Text("No Hay Empleados Aún")
                 .font(.headline)
             
-            Text("Add employees to allow them to log in and access the system.")
+            Text("Agrega empleados para permitirles iniciar sesión y acceder al sistema.")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -110,7 +110,7 @@ struct EmployeesView: View {
                 Button {
                     viewModel.showAddEmployee = true
                 } label: {
-                    Label("Add Employee", systemImage: "plus.circle.fill")
+                    Label("Agregar Empleado", systemImage: "plus.circle.fill")
                 }
                 .buttonStyle(.borderedProminent)
             }
@@ -178,7 +178,7 @@ struct EmployeeRow: View {
                         HStack(spacing: 2) {
                             Image(systemName: "key.slash")
                                 .font(.caption2)
-                            Text("No PIN")
+                            Text("Sin PIN")
                         }
                         .font(.caption)
                         .foregroundColor(.orange)
@@ -238,21 +238,21 @@ struct AddEmployeeView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Basic Info") {
-                    TextField("Full Name", text: $name)
+                Section("Información Básica") {
+                    TextField("Nombre Completo", text: $name)
                         .textContentType(.name)
                         .autocapitalization(.words)
                 }
                 
-                Section("Contact (Optional)") {
-                    TextField("Email", text: $email)
+                Section("Contacto (Opcional)") {
+                    TextField("Correo Electrónico", text: $email)
                         .keyboardType(.emailAddress)
                         .autocapitalization(.none)
                         .textContentType(.emailAddress)
                 }
                 
-                Section("Role") {
-                    Picker("Role", selection: $selectedRole) {
+                Section("Rol") {
+                    Picker("Rol", selection: $selectedRole) {
                         // Don't allow creating other Owners
                         ForEach([EmployeeRole.manager, .cashier, .accountant], id: \.self) { role in
                             Text(role.displayName).tag(role)
@@ -265,14 +265,14 @@ struct AddEmployeeView: View {
                 }
                 
                 Section {
-                    Toggle("Set PIN Now", isOn: $showPINField)
+                    Toggle("Establecer PIN Ahora", isOn: $showPINField)
                     
                     if showPINField {
-                        SecureField("4-6 Digit PIN", text: $pin)
+                        SecureField("PIN de 4-6 Dígitos", text: $pin)
                             .keyboardType(.numberPad)
                         
                         if !pin.isEmpty && !isValidPIN {
-                            Text("PIN must be 4-6 digits")
+                            Text("El PIN debe tener 4-6 dígitos")
                                 .font(.caption)
                                 .foregroundColor(.red)
                         }
@@ -280,21 +280,21 @@ struct AddEmployeeView: View {
                 } header: {
                     Text("PIN")
                 } footer: {
-                    Text("If not set now, you can set it later from the employee detail screen.")
+                    Text("Si no lo estableces ahora, puedes hacerlo después desde el detalle del empleado.")
                 }
             }
-            .navigationTitle("Add Employee")
+            .navigationTitle("Agregar Empleado")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
+                    Button("Cancelar") {
                         dismiss()
                     }
                     .disabled(isSubmitting)
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
+                    Button("Guardar") {
                         Task {
                             await createEmployee()
                         }
@@ -306,7 +306,7 @@ struct AddEmployeeView: View {
                 if isSubmitting {
                     Color.black.opacity(0.3)
                         .ignoresSafeArea()
-                    ProgressView("Creating...")
+                    ProgressView("Creando...")
                         .padding()
                         .background(.ultraThickMaterial)
                         .cornerRadius(10)
@@ -328,19 +328,19 @@ struct AddEmployeeView: View {
     private var roleDescription: String {
         switch selectedRole {
         case .owner:
-            return "Full access to all features"
+            return "Acceso completo a todas las funciones"
         case .manager:
-            return "Can manage inventory, view reports, and handle expenses"
+            return "Puede gestionar inventario, ver reportes y manejar gastos"
         case .cashier:
-            return "Can view inventory only"
+            return "Solo puede ver inventario"
         case .accountant:
-            return "Can manage expenses and view all reports"
+            return "Puede gestionar gastos y ver todos los reportes"
         }
     }
     
     private func createEmployee() async {
         guard let locationId = authManager.currentLocation?.id else {
-            viewModel.errorMessage = "No location selected"
+            viewModel.errorMessage = "No hay ubicación seleccionada"
             viewModel.showError = true
             return
         }
@@ -381,27 +381,27 @@ struct EmployeeDetailView: View {
         NavigationStack {
             List {
                 // Basic Info Section
-                Section("Information") {
-                    LabeledContent("Name", value: employee.displayName)
+                Section("Información") {
+                    LabeledContent("Nombre", value: employee.displayName)
                     
                     if let email = employee.email {
-                        LabeledContent("Email", value: email)
+                        LabeledContent("Correo Electrónico", value: email)
                     }
                     
-                    LabeledContent("Role", value: employee.primaryRole.displayName)
+                    LabeledContent("Rol", value: employee.primaryRole.displayName)
                 }
                 
                 // Status Section
-                Section("Status") {
+                Section("Estado") {
                     HStack {
-                        Text("Active")
+                        Text("Activo")
                         Spacer()
                         Image(systemName: employee.isActive ? "checkmark.circle.fill" : "xmark.circle.fill")
                             .foregroundColor(employee.isActive ? .green : .red)
                     }
                     
                     HStack {
-                        Text("PIN Set")
+                        Text("PIN Establecido")
                         Spacer()
                         Image(systemName: employee.hasPIN ? "checkmark.circle.fill" : "xmark.circle.fill")
                             .foregroundColor(employee.hasPIN ? .green : .orange)
@@ -410,7 +410,7 @@ struct EmployeeDetailView: View {
                     if let detail = detailEmployee {
                         if detail.isLocked, let lockedUntil = detail.lockedUntil {
                             HStack {
-                                Text("Locked Until")
+                                Text("Bloqueado Hasta")
                                 Spacer()
                                 Text(lockedUntil, style: .time)
                                     .foregroundColor(.red)
@@ -418,12 +418,12 @@ struct EmployeeDetailView: View {
                         }
                         
                         if detail.failedPinAttempts > 0 {
-                            LabeledContent("Failed PIN Attempts", value: "\(detail.failedPinAttempts)")
+                            LabeledContent("Intentos Fallidos de PIN", value: "\(detail.failedPinAttempts)")
                         }
                     }
                     
                     if let lastLogin = employee.lastLoginAt {
-                        LabeledContent("Last Login") {
+                        LabeledContent("Último Acceso") {
                             Text(lastLogin, style: .relative)
                         }
                     }
@@ -431,7 +431,7 @@ struct EmployeeDetailView: View {
                 
                 // Locations Section
                 if let assignments = employee.assignments, !assignments.isEmpty {
-                    Section("Locations") {
+                    Section("Ubicaciones") {
                         ForEach(assignments) { assignment in
                             HStack {
                                 VStack(alignment: .leading) {
@@ -448,12 +448,12 @@ struct EmployeeDetailView: View {
                 
                 // Actions Section - Only for Owners
                 if isOwner {
-                    Section("Actions") {
+                    Section("Acciones") {
                         // Set/Reset PIN
                         Button {
                             showSetPIN = true
                         } label: {
-                            Label(employee.hasPIN ? "Reset PIN" : "Set PIN", systemImage: "key")
+                            Label(employee.hasPIN ? "Restablecer PIN" : "Establecer PIN", systemImage: "key")
                         }
                         
                         // Reset lockout (if locked)
@@ -461,7 +461,7 @@ struct EmployeeDetailView: View {
                             Button {
                                 showResetLockout = true
                             } label: {
-                                Label("Unlock Account", systemImage: "lock.open")
+                                Label("Desbloquear Cuenta", systemImage: "lock.open")
                             }
                             .foregroundColor(.orange)
                         }
@@ -471,7 +471,7 @@ struct EmployeeDetailView: View {
                             Button(role: .destructive) {
                                 showDeactivate = true
                             } label: {
-                                Label("Deactivate Employee", systemImage: "person.slash")
+                                Label("Desactivar Empleado", systemImage: "person.slash")
                             }
                         }
                     }
@@ -481,7 +481,7 @@ struct EmployeeDetailView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
+                    Button("Listo") {
                         dismiss()
                     }
                 }
@@ -500,42 +500,42 @@ struct EmployeeDetailView: View {
                 }
             }
             // Set PIN Alert
-            .alert("Set PIN", isPresented: $showSetPIN) {
-                SecureField("4-6 Digit PIN", text: $newPIN)
+            .alert("Establecer PIN", isPresented: $showSetPIN) {
+                SecureField("PIN de 4-6 Dígitos", text: $newPIN)
                     .keyboardType(.numberPad)
-                Button("Cancel", role: .cancel) {
+                Button("Cancelar", role: .cancel) {
                     newPIN = ""
                 }
-                Button("Set") {
+                Button("Establecer") {
                     Task {
                         await setPIN()
                     }
                 }
                 .disabled(!isValidNewPIN)
             } message: {
-                Text("Enter a new 4-6 digit PIN for this employee.")
+                Text("Ingresa un nuevo PIN de 4-6 dígitos para este empleado.")
             }
             // Deactivate Confirmation
-            .alert("Deactivate Employee", isPresented: $showDeactivate) {
-                Button("Cancel", role: .cancel) {}
-                Button("Deactivate", role: .destructive) {
+            .alert("Desactivar Empleado", isPresented: $showDeactivate) {
+                Button("Cancelar", role: .cancel) {}
+                Button("Desactivar", role: .destructive) {
                     Task {
                         await deactivateEmployee()
                     }
                 }
             } message: {
-                Text("This employee will no longer be able to log in. This action can be undone by reactivating them.")
+                Text("Este empleado ya no podrá iniciar sesión. Esta acción se puede revertir reactivándolo.")
             }
             // Reset Lockout Confirmation
-            .alert("Unlock Account", isPresented: $showResetLockout) {
-                Button("Cancel", role: .cancel) {}
-                Button("Unlock") {
+            .alert("Desbloquear Cuenta", isPresented: $showResetLockout) {
+                Button("Cancelar", role: .cancel) {}
+                Button("Desbloquear") {
                     Task {
                         await resetLockout()
                     }
                 }
             } message: {
-                Text("This will reset the failed PIN attempts and allow the employee to log in again.")
+                Text("Esto restablecerá los intentos fallidos de PIN y permitirá al empleado iniciar sesión nuevamente.")
             }
         }
     }

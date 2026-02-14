@@ -31,10 +31,10 @@ enum InventorySource: String, Codable {
     
     var displayName: String {
         switch self {
-        case .purchase: return "Purchase"
-        case .adjustment: return "Adjustment"
-        case .migration: return "Migration"
-        case .transfer: return "Transfer"
+        case .purchase: return "Compra"
+        case .adjustment: return "Ajuste"
+        case .migration: return "Migración"
+        case .transfer: return "Transferencia"
         }
     }
 }
@@ -49,10 +49,10 @@ enum CostSource: String, Codable {
     
     var displayName: String {
         switch self {
-        case .invoice: return "Invoice"
-        case .estimated: return "Estimated"
-        case .migration: return "Migration"
-        case .manual: return "Manual Entry"
+        case .invoice: return "Factura"
+        case .estimated: return "Estimado"
+        case .migration: return "Migración"
+        case .manual: return "Entrada Manual"
         }
     }
 }

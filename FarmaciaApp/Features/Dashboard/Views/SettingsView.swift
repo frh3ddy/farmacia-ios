@@ -22,7 +22,7 @@ struct SettingsView: View {
                             .clipShape(Circle())
                         
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(authManager.currentEmployee?.name ?? "User")
+                            Text(authManager.currentEmployee?.name ?? "Usuario")
                                 .font(.headline)
                             
                             Text(authManager.currentEmployee?.role.rawValue.capitalized ?? "")
@@ -48,7 +48,7 @@ struct SettingsView: View {
                         }
                         
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(authManager.currentLocation?.name ?? "No Location")
+                            Text(authManager.currentLocation?.name ?? "Sin Ubicación")
                                 .font(.headline)
                             
                             if let role = authManager.currentLocation?.role {
@@ -69,7 +69,7 @@ struct SettingsView: View {
                             Circle()
                                 .fill(Color.green)
                                 .frame(width: 8, height: 8)
-                            Text("Active")
+                            Text("Activa")
                                 .font(.caption)
                         }
                         .foregroundColor(.green)
@@ -83,27 +83,27 @@ struct SettingsView: View {
                             HStack {
                                 Image(systemName: "arrow.left.arrow.right")
                                     .foregroundColor(.blue)
-                                Text("Switch Location")
+                                Text("Cambiar Ubicación")
                                 Spacer()
-                                Text("\(authManager.availableLocations.count) available")
+                                Text("\(authManager.availableLocations.count) disponibles")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
                         }
                     }
                 } header: {
-                    Text("Current Location")
+                    Text("Ubicación Actual")
                 } footer: {
                     if authManager.availableLocations.count > 1 {
-                        Text("Your role and permissions may differ at other locations.")
+                        Text("Tu rol y permisos pueden variar en otras ubicaciones.")
                     }
                 }
                 
                 // Session Info Section
-                Section("Session") {
+                Section("Sesión") {
                     if let expiresAt = authManager.sessionExpiresAt {
                         HStack {
-                            Text("Session Expires")
+                            Text("La Sesión Expira")
                             Spacer()
                             Text(expiresAt, style: .relative)
                                 .foregroundColor(.secondary)
@@ -113,21 +113,21 @@ struct SettingsView: View {
                     Button {
                         showLogoutAlert = true
                     } label: {
-                        Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                        Label("Cerrar Sesión", systemImage: "rectangle.portrait.and.arrow.right")
                     }
                 }
                 
                 // App Info Section
-                Section("App") {
+                Section("Aplicación") {
                     HStack {
-                        Text("Version")
+                        Text("Versión")
                         Spacer()
                         Text("\(AppConfiguration.appVersion) (\(AppConfiguration.buildNumber))")
                             .foregroundColor(.secondary)
                     }
                     
                     HStack {
-                        Text("Environment")
+                        Text("Ambiente")
                         Spacer()
                         Text(environmentName)
                             .foregroundColor(.secondary)
@@ -135,45 +135,45 @@ struct SettingsView: View {
                 }
                 
                 // Device Section
-                Section("Device") {
+                Section("Dispositivo") {
                     Button(role: .destructive) {
                         showDeactivateAlert = true
                     } label: {
-                        Label("Deactivate Device", systemImage: "xmark.shield")
+                        Label("Desactivar Dispositivo", systemImage: "xmark.shield")
                     }
                     
-                    Text("Deactivating will remove this device from Farmacia. You'll need owner or manager credentials to reactivate.")
+                    Text("Desactivar eliminará este dispositivo de Farmacia. Necesitarás credenciales de dueño o gerente para reactivarlo.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
-            .navigationTitle("Settings")
-            .alert("Sign Out", isPresented: $showLogoutAlert) {
-                Button("Cancel", role: .cancel) {}
-                Button("Sign Out") {
+            .navigationTitle("Ajustes")
+            .alert("Cerrar Sesión", isPresented: $showLogoutAlert) {
+                Button("Cancelar", role: .cancel) {}
+                Button("Cerrar Sesión") {
                     Task {
                         await authManager.logout()
                     }
                 }
             } message: {
-                Text("You'll need to enter your PIN to log back in.")
+                Text("Necesitarás ingresar tu PIN para volver a iniciar sesión.")
             }
-            .alert("Deactivate Device", isPresented: $showDeactivateAlert) {
-                Button("Cancel", role: .cancel) {}
-                Button("Deactivate", role: .destructive) {
+            .alert("Desactivar Dispositivo", isPresented: $showDeactivateAlert) {
+                Button("Cancelar", role: .cancel) {}
+                Button("Desactivar", role: .destructive) {
                     authManager.deactivateDevice()
                 }
             } message: {
-                Text("This will remove this device from Farmacia. All users will need to log in again after reactivation.")
+                Text("Esto eliminará este dispositivo de Farmacia. Todos los usuarios necesitarán iniciar sesión después de la reactivación.")
             }
         }
     }
     
     private var environmentName: String {
         switch AppConfiguration.current {
-        case .development: return "Development"
-        case .staging: return "Staging"
-        case .production: return "Production"
+        case .development: return "Desarrollo"
+        case .staging: return "Pruebas"
+        case .production: return "Producción"
         }
     }
     

@@ -49,10 +49,10 @@ struct DashboardView: View {
                         inventorySummarySection(report: report)
                         
                         // Receivings Summary
-                        receivingsSummarySection(report: report)
+                        recepcionesSummarySection(report: report)
                         
                         // Recent Adjustments
-                        adjustmentsSummarySection(report: report)
+                        ajustesSummarySection(report: report)
                         
                         // P&L Summary
                         if authManager.canViewReports {
@@ -69,7 +69,7 @@ struct DashboardView: View {
             .refreshable {
                 await viewModel.loadDashboard()
             }
-            .navigationTitle("Dashboard")
+            .navigationTitle("Inicio")
             .toolbar {
                 // Location switcher
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -125,7 +125,7 @@ struct DashboardView: View {
                     .foregroundColor(.orange)
                     .font(.title3)
                 
-                Text("Inventory Alerts")
+                Text("Alertas de Inventario")
                     .font(.headline)
                 
                 Spacer()
@@ -135,7 +135,7 @@ struct DashboardView: View {
                     // For now, link to a filtered products view
                     StockAlertProductsView(products: stockAlertViewModel.products)
                 } label: {
-                    Text("View Products")
+                    Text("Ver Productos")
                         .font(.caption)
                         .fontWeight(.medium)
                         .padding(.horizontal, 10)
@@ -152,7 +152,7 @@ struct DashboardView: View {
                 if stockAlertViewModel.outOfStockCount > 0 {
                     alertMetric(
                         value: "\(stockAlertViewModel.outOfStockCount)",
-                        label: "Out of Stock",
+                        label: "Sin Stock",
                         color: .red
                     )
                 }
@@ -160,7 +160,7 @@ struct DashboardView: View {
                 if stockAlertViewModel.lowStockCount > 0 {
                     alertMetric(
                         value: "\(stockAlertViewModel.lowStockCount)",
-                        label: "Low Stock",
+                        label: "Stock Bajo",
                         color: .orange
                     )
                 }
@@ -168,7 +168,7 @@ struct DashboardView: View {
                 if stockAlertViewModel.lowMarginCount > 0 {
                     alertMetric(
                         value: "\(stockAlertViewModel.lowMarginCount)",
-                        label: "Low Margin",
+                        label: "Margen Bajo",
                         color: .purple
                     )
                 }
@@ -184,9 +184,9 @@ struct DashboardView: View {
             } label: {
                 HStack {
                     Image(systemName: "list.clipboard")
-                    Text("Create Restock List")
+                    Text("Crear Lista de Reabasto")
                     Spacer()
-                    Text("\(stockAlertViewModel.outOfStockCount + stockAlertViewModel.lowStockCount) items")
+                    Text("\(stockAlertViewModel.outOfStockCount + stockAlertViewModel.lowStockCount) artículos")
                         .foregroundColor(.secondary)
                     Image(systemName: "chevron.right")
                         .font(.caption2)
@@ -206,10 +206,10 @@ struct DashboardView: View {
                         .stroke(Color.orange.opacity(0.3), lineWidth: 1)
                 )
         )
-        .alert("Shopping List Created", isPresented: $showShoppingListCreated) {
+        .alert("Lista de Compras Creada", isPresented: $showShoppingListCreated) {
             Button("OK") {}
         } message: {
-            Text("\"\(createdListName)\" has been created with items that need restocking. Open Shopping Lists from the Products tab to review.")
+            Text("\"\(createdListName)\" ha sido creada con artículos que necesitan reabasto. Abre Listas de Compras desde la pestaña de Productos para revisar.")
         }
     }
     
@@ -235,13 +235,13 @@ struct DashboardView: View {
                     .foregroundColor(.orange)
                     .font(.title3)
                 
-                Text("Expiring Products")
+                Text("Productos por Vencer")
                     .font(.headline)
                 
                 Spacer()
                 
                 if let summary = expiringViewModel.summary {
-                    Text("$\(String(format: "%.0f", summary.totalCashAtRisk)) at risk")
+                    Text("$\(String(format: "%.0f", summary.totalCashAtRisk)) en riesgo")
                         .font(.caption)
                         .fontWeight(.semibold)
                         .padding(.horizontal, 8)
@@ -259,27 +259,27 @@ struct DashboardView: View {
                     if summary.totalExpiredBatches > 0 {
                         alertMetric(
                             value: "\(summary.totalExpiredBatches)",
-                            label: "Expired",
+                            label: "Vencidos",
                             color: .red
                         )
                     }
                     if summary.criticalCount > 0 {
                         alertMetric(
                             value: "\(summary.criticalCount)",
-                            label: "Critical",
+                            label: "Crítico",
                             color: .red
                         )
                     }
                     if summary.highCount > 0 {
                         alertMetric(
                             value: "\(summary.highCount)",
-                            label: "Expiring Soon",
+                            label: "Por Vencer",
                             color: .orange
                         )
                     }
                     alertMetric(
                         value: "\(summary.totalProducts)",
-                        label: "Products",
+                        label: "Productos",
                         color: .secondary
                     )
                     Spacer()
@@ -300,15 +300,15 @@ struct DashboardView: View {
                             .fontWeight(.medium)
                             .lineLimit(1)
                         HStack(spacing: 4) {
-                            Text("\(product.totalUnits) units")
+                            Text("\(product.totalUnits) unidades")
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
                             if product.expiredCount > 0 {
-                                Text("\u{2022} \(product.expiredCount) expired")
+                                Text("\u{2022} \(product.expiredCount) vencidos")
                                     .font(.caption2)
                                     .foregroundColor(.red)
                             } else {
-                                Text("\u{2022} exp \(product.soonestExpiryDate.formatted(date: .abbreviated, time: .omitted))")
+                                Text("\u{2022} vence \(product.soonestExpiryDate.formatted(date: .abbreviated, time: .omitted))")
                                     .font(.caption2)
                                     .foregroundColor(.orange)
                             }
@@ -345,7 +345,7 @@ struct DashboardView: View {
         }
         
         let dateSuffix = Date().formatted(date: .abbreviated, time: .omitted)
-        let name = "Restock \(dateSuffix)"
+        let name = "Reabasto \(dateSuffix)"
         
         var list = ShoppingList(
             name: name,
@@ -389,11 +389,11 @@ struct DashboardView: View {
     
     private var welcomeHeader: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Welcome back,")
+            Text("Bienvenido,")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
             
-            Text(authManager.currentEmployee?.name ?? "User")
+            Text(authManager.currentEmployee?.name ?? "Usuario")
                 .font(.title)
                 .fontWeight(.bold)
             
@@ -415,11 +415,11 @@ struct DashboardView: View {
     
     private var dateRangeSelector: some View {
         HStack {
-            Text("Period:")
+            Text("Período:")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
             
-            Picker("Date Range", selection: $viewModel.selectedDateRange) {
+            Picker("Rango de Fechas", selection: $viewModel.selectedDateRange) {
                 ForEach(DashboardDateRange.allCases, id: \.self) { range in
                     Text(range.displayName).tag(range)
                 }
@@ -452,28 +452,28 @@ struct DashboardView: View {
             GridItem(.flexible())
         ], spacing: 16) {
             StatCard(
-                title: "Revenue",
+                title: "Ingresos",
                 value: formatCurrency(report.sales.totalRevenue),
                 icon: "dollarsign.circle.fill",
                 color: .green
             )
             
             StatCard(
-                title: "Gross Profit",
+                title: "Ganancia Bruta",
                 value: formatCurrency(report.sales.grossProfit),
                 icon: "chart.line.uptrend.xyaxis",
                 color: .blue
             )
             
             StatCard(
-                title: "Inventory Value",
+                title: "Valor de Inventario",
                 value: formatCurrency(report.inventory.totalValue),
                 icon: "shippingbox.fill",
                 color: .orange
             )
             
             StatCard(
-                title: "Net Profit",
+                title: "Ganancia Neta",
                 value: formatCurrency(report.netProfit.amount),
                 icon: "banknote.fill",
                 color: (Double(report.netProfit.amount) ?? 0) >= 0 ? .green : .red
@@ -485,19 +485,19 @@ struct DashboardView: View {
     
     private func salesSummarySection(report: DashboardReport) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeader(title: "Sales Summary", icon: "cart.fill")
+            sectionHeader(title: "Resumen de Ventas", icon: "cart.fill")
             
             VStack(spacing: 8) {
-                summaryRow(label: "Total Revenue", value: formatCurrency(report.sales.totalRevenue))
-                summaryRow(label: "Cost of Goods Sold", value: formatCurrency(report.sales.totalCOGS))
-                summaryRow(label: "Gross Profit", value: formatCurrency(report.sales.grossProfit), valueColor: .green)
-                summaryRow(label: "Gross Margin", value: "\(report.sales.grossMarginPercent)%")
+                summaryRow(label: "Ingresos Totales", value: formatCurrency(report.sales.totalRevenue))
+                summaryRow(label: "Costo de Ventas", value: formatCurrency(report.sales.totalCOGS))
+                summaryRow(label: "Ganancia Bruta", value: formatCurrency(report.sales.grossProfit), valueColor: .green)
+                summaryRow(label: "Margen Bruto", value: "\(report.sales.grossMarginPercent)%")
                 
                 Divider()
                 
                 HStack {
                     VStack(alignment: .leading) {
-                        Text("Units Sold")
+                        Text("Unidades Vendidas")
                             .font(.caption)
                             .foregroundColor(.secondary)
                         Text("\(report.sales.totalUnitsSold)")
@@ -507,7 +507,7 @@ struct DashboardView: View {
                     Spacer()
                     
                     VStack(alignment: .trailing) {
-                        Text("Total Sales")
+                        Text("Total Ventas")
                             .font(.caption)
                             .foregroundColor(.secondary)
                         Text("\(report.sales.totalSales)")
@@ -525,19 +525,19 @@ struct DashboardView: View {
     
     private func inventorySummarySection(report: DashboardReport) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeader(title: "Inventory", icon: "shippingbox")
+            sectionHeader(title: "Inventario", icon: "shippingbox")
             
             VStack(spacing: 8) {
-                summaryRow(label: "Total Units", value: "\(report.inventory.totalUnits)")
-                summaryRow(label: "Total Value", value: formatCurrency(report.inventory.totalValue))
-                summaryRow(label: "Products", value: "\(report.inventory.totalProducts)")
-                summaryRow(label: "Avg Cost/Unit", value: formatCurrency(report.inventory.averageCostPerUnit))
+                summaryRow(label: "Unidades Totales", value: "\(report.inventory.totalUnits)")
+                summaryRow(label: "Valor Total", value: formatCurrency(report.inventory.totalValue))
+                summaryRow(label: "Productos", value: "\(report.inventory.totalProducts)")
+                summaryRow(label: "Costo Prom/Unidad", value: formatCurrency(report.inventory.averageCostPerUnit))
                 
                 // Aging breakdown if available
                 if let aging = report.inventory.aging {
                     Divider()
                     
-                    Text("Inventory Age")
+                    Text("Antigüedad del Inventario")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     
@@ -557,14 +557,14 @@ struct DashboardView: View {
     
     // MARK: - Receivings Summary Section
     
-    private func receivingsSummarySection(report: DashboardReport) -> some View {
+    private func recepcionesSummarySection(report: DashboardReport) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeader(title: "Receivings", icon: "arrow.down.circle")
+            sectionHeader(title: "Recepciones", icon: "arrow.down.circle")
             
             VStack(spacing: 8) {
-                summaryRow(label: "Total Receivings", value: "\(report.receivings.totalReceivings)")
-                summaryRow(label: "Units Received", value: "\(report.receivings.totalQuantity)")
-                summaryRow(label: "Total Cost", value: formatCurrency(report.receivings.totalCost))
+                summaryRow(label: "Total Recepciones", value: "\(report.recepciones.totalReceivings)")
+                summaryRow(label: "Unidades Recibidas", value: "\(report.recepciones.totalQuantity)")
+                summaryRow(label: "Costo Total", value: formatCurrency(report.recepciones.totalCost))
             }
             .padding()
             .background(Color(.systemGray6))
@@ -574,24 +574,24 @@ struct DashboardView: View {
     
     // MARK: - Adjustments Summary Section
     
-    private func adjustmentsSummarySection(report: DashboardReport) -> some View {
+    private func ajustesSummarySection(report: DashboardReport) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeader(title: "Adjustments", icon: "arrow.up.arrow.down")
+            sectionHeader(title: "Ajustes", icon: "arrow.up.arrow.down")
             
             VStack(spacing: 8) {
-                summaryRow(label: "Total Adjustments", value: "\(report.adjustments.totalAdjustments)")
-                summaryRow(label: "Total Loss", value: formatCurrency(report.adjustments.totalLoss), valueColor: .red)
-                summaryRow(label: "Total Gain", value: formatCurrency(report.adjustments.totalGain), valueColor: .green)
+                summaryRow(label: "Total Ajustes", value: "\(report.ajustes.totalAdjustments)")
+                summaryRow(label: "Pérdida Total", value: formatCurrency(report.ajustes.totalLoss), valueColor: .red)
+                summaryRow(label: "Ganancia Total", value: formatCurrency(report.ajustes.totalGain), valueColor: .green)
                 
                 Divider()
                 
                 HStack {
-                    Text("Net Impact")
+                    Text("Impacto Neto")
                         .fontWeight(.medium)
                     Spacer()
-                    Text(formatCurrency(report.adjustments.netImpact))
+                    Text(formatCurrency(report.ajustes.netImpact))
                         .fontWeight(.bold)
-                        .foregroundColor((Double(report.adjustments.netImpact) ?? 0) >= 0 ? .green : .red)
+                        .foregroundColor((Double(report.ajustes.netImpact) ?? 0) >= 0 ? .green : .red)
                 }
             }
             .padding()
@@ -604,21 +604,21 @@ struct DashboardView: View {
     
     private func profitLossSummarySection(report: DashboardReport) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeader(title: "Profit & Loss", icon: "chart.pie.fill")
+            sectionHeader(title: "Pérdidas y Ganancias", icon: "chart.pie.fill")
             
             VStack(spacing: 8) {
-                summaryRow(label: "Revenue", value: formatCurrency(report.sales.totalRevenue), valueColor: .green)
-                summaryRow(label: "COGS", value: "(\(formatCurrency(report.sales.totalCOGS)))", valueColor: .red)
-                summaryRow(label: "Operating Expenses", value: "(\(formatCurrency(report.operatingExpenses.total)))", valueColor: .red)
-                summaryRow(label: "Shrinkage", value: "(\(formatCurrency(report.operatingExpenses.shrinkage)))", valueColor: .orange)
+                summaryRow(label: "Ingresos", value: formatCurrency(report.sales.totalRevenue), valueColor: .green)
+                summaryRow(label: "Costo de Ventas", value: "(\(formatCurrency(report.sales.totalCOGS)))", valueColor: .red)
+                summaryRow(label: "Gastos Operativos", value: "(\(formatCurrency(report.operatingExpenses.total)))", valueColor: .red)
+                summaryRow(label: "Merma", value: "(\(formatCurrency(report.operatingExpenses.shrinkage)))", valueColor: .orange)
                 
                 Divider()
                 
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Net Profit")
+                        Text("Ganancia Neta")
                             .fontWeight(.semibold)
-                        Text("\(report.netProfit.marginPercent)% margin")
+                        Text("\(report.netProfit.marginPercent)% margen")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -642,7 +642,7 @@ struct DashboardView: View {
             ProgressView()
                 .scaleEffect(1.5)
             
-            Text("Loading dashboard...")
+            Text("Cargando...")
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity)
@@ -657,15 +657,15 @@ struct DashboardView: View {
                 .font(.system(size: 50))
                 .foregroundColor(.orange)
             
-            Text("Failed to load dashboard")
+            Text("Error al cargar el panel")
                 .font(.headline)
             
-            Text(error.errorDescription ?? "Unknown error")
+            Text(error.errorDescription ?? "Error desconocido")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
             
-            Button("Retry") {
+            Button("Reintentar") {
                 Task {
                     await viewModel.loadDashboard()
                 }
@@ -688,7 +688,7 @@ struct DashboardView: View {
                     .foregroundColor(.blue)
                 
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(authManager.currentLocation?.name ?? "Location")
+                    Text(authManager.currentLocation?.name ?? "Ubicación")
                         .lineLimit(1)
                         .font(.subheadline)
                         .fontWeight(.medium)
@@ -715,7 +715,7 @@ struct DashboardView: View {
     private var userButton: some View {
         Menu {
             Section {
-                Label(authManager.currentEmployee?.name ?? "User", systemImage: "person")
+                Label(authManager.currentEmployee?.name ?? "Usuario", systemImage: "person")
                 Label(authManager.currentEmployee?.role.rawValue ?? "", systemImage: "briefcase")
             }
             
@@ -726,7 +726,7 @@ struct DashboardView: View {
                     await authManager.logout()
                 }
             } label: {
-                Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                Label("Cerrar Sesión", systemImage: "rectangle.portrait.and.arrow.right")
             }
         } label: {
             Text(String(authManager.currentEmployee?.name.prefix(2).uppercased() ?? "??"))
@@ -823,12 +823,12 @@ enum DashboardDateRange: CaseIterable {
     
     var displayName: String {
         switch self {
-        case .today: return "Today"
-        case .last7Days: return "Last 7 Days"
-        case .last30Days: return "Last 30 Days"
-        case .thisMonth: return "This Month"
-        case .lastMonth: return "Last Month"
-        case .thisYear: return "This Year"
+        case .today: return "Hoy"
+        case .last7Days: return "Últimos 7 Días"
+        case .last30Days: return "Últimos 30 Días"
+        case .thisMonth: return "Este Mes"
+        case .lastMonth: return "Mes Pasado"
+        case .thisYear: return "Este Año"
         }
     }
     
@@ -885,7 +885,7 @@ class DashboardViewModel: ObservableObject {
         do {
             // Get current location
             guard let locationId = AuthManager.shared.currentLocation?.id else {
-                error = NetworkError.serverError(message: "No location selected")
+                error = NetworkError.serverError(message: "No se ha seleccionado ubicación")
                 isLoading = false
                 return
             }
@@ -965,9 +965,9 @@ struct StockAlertProductsView: View {
     @State private var selectedFilter: AlertFilter = .outOfStock
     
     enum AlertFilter: String, CaseIterable {
-        case outOfStock = "Out of Stock"
-        case lowStock = "Low Stock"
-        case lowMargin = "Low Margin"
+        case outOfStock = "Sin Stock"
+        case lowStock = "Stock Bajo"
+        case lowMargin = "Margen Bajo"
     }
     
     private var filteredProducts: [Product] {
@@ -983,7 +983,7 @@ struct StockAlertProductsView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            Picker("Filter", selection: $selectedFilter) {
+            Picker("Filtrar", selection: $selectedFilter) {
                 ForEach(AlertFilter.allCases, id: \.self) { filter in
                     Text(filter.rawValue).tag(filter)
                 }
@@ -997,7 +997,7 @@ struct StockAlertProductsView: View {
                         Image(systemName: "checkmark.circle")
                             .font(.system(size: 40))
                             .foregroundColor(.green)
-                        Text("No products in this category")
+                        Text("No hay productos en esta categoría")
                             .foregroundColor(.secondary)
                     }
                     .frame(maxWidth: .infinity)
@@ -1015,7 +1015,7 @@ struct StockAlertProductsView: View {
             }
             .listStyle(.insetGrouped)
         }
-        .navigationTitle("Inventory Alerts")
+        .navigationTitle("Alertas de Inventario")
         .navigationBarTitleDisplayMode(.inline)
     }
 }
@@ -1030,7 +1030,7 @@ extension DashboardView {
                     .foregroundColor(.yellow)
                     .font(.title3)
                 
-                Text("Action Required")
+                Text("Acción Requerida")
                     .font(.headline)
                 
                 Spacer()
@@ -1039,7 +1039,7 @@ extension DashboardView {
                     NavigationLink {
                         AllSignalsView(signals: signalsViewModel.signals)
                     } label: {
-                        Text("View All (\(signalsViewModel.signals.count))")
+                        Text("Ver Todos (\(signalsViewModel.signals.count))")
                             .font(.caption)
                             .fontWeight(.medium)
                             .padding(.horizontal, 10)
@@ -1148,10 +1148,10 @@ struct AllSignalsView: View {
     @State private var selectedType: SignalTypeFilter = .all
     
     enum SignalTypeFilter: String, CaseIterable {
-        case all = "All"
-        case atRisk = "At Risk"
-        case slowMoving = "Slow Moving"
-        case overstocked = "Overstocked"
+        case all = "Todos"
+        case atRisk = "En Riesgo"
+        case slowMoving = "Lento Movimiento"
+        case overstocked = "Sobrestock"
     }
     
     private var filteredSignals: [ActionableSignal] {
@@ -1165,7 +1165,7 @@ struct AllSignalsView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            Picker("Type", selection: $selectedType) {
+            Picker("Tipo", selection: $selectedType) {
                 ForEach(SignalTypeFilter.allCases, id: \.self) { filter in
                     Text(filter.rawValue).tag(filter)
                 }
@@ -1179,7 +1179,7 @@ struct AllSignalsView: View {
                         Image(systemName: "checkmark.circle")
                             .font(.system(size: 40))
                             .foregroundColor(.green)
-                        Text("No signals in this category")
+                        Text("No hay señales en esta categoría")
                             .foregroundColor(.secondary)
                     }
                     .frame(maxWidth: .infinity)
@@ -1193,7 +1193,7 @@ struct AllSignalsView: View {
             }
             .listStyle(.insetGrouped)
         }
-        .navigationTitle("Action Signals")
+        .navigationTitle("Señales de Acción")
         .navigationBarTitleDisplayMode(.inline)
     }
 }
@@ -1241,7 +1241,7 @@ struct SignalDetailRow: View {
                             .font(.subheadline)
                             .fontWeight(.bold)
                             .foregroundColor(.red)
-                        Text("at risk")
+                        Text("en riesgo")
                             .font(.caption2)
                             .foregroundColor(.secondary)
                     }
@@ -1256,7 +1256,7 @@ struct SignalDetailRow: View {
             // Recommended actions
             if !signal.recommendedActions.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Recommended Actions")
+                    Text("Acciones Recomendadas")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .textCase(.uppercase)

@@ -21,34 +21,34 @@ enum NetworkError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidURL:
-            return "Invalid URL"
+            return "URL inválida"
         case .noData:
-            return "No data received from server"
+            return "No se recibieron datos del servidor"
         case .decodingError(let error):
-            return "Failed to decode response: \(error.localizedDescription)"
+            return "Error al decodificar respuesta: \(error.localizedDescription)"
         case .encodingError(let error):
-            return "Failed to encode request: \(error.localizedDescription)"
+            return "Error al codificar solicitud: \(error.localizedDescription)"
         case .httpError(let statusCode, let message):
-            return message ?? "HTTP Error: \(statusCode)"
+            return message ?? "Error HTTP: \(statusCode)"
         case .unauthorized:
-            return "Unauthorized access"
+            return "Acceso no autorizado"
         case .deviceNotActivated:
-            return "Device is not activated"
+            return "Dispositivo no activado"
         case .sessionExpired:
-            return "Session has expired. Please login again."
+            return "La sesión ha expirado. Por favor inicia sesión de nuevo."
         case .pinRequired:
-            return "PIN verification required"
+            return "Se requiere verificación de PIN"
         case .accountLocked(let until):
             if let until = until {
                 let formatter = DateFormatter()
                 formatter.timeStyle = .short
-                return "Account locked until \(formatter.string(from: until))"
+                return "Cuenta bloqueada hasta \(formatter.string(from: until))"
             }
-            return "Account is temporarily locked"
+            return "La cuenta está temporalmente bloqueada"
         case .networkUnavailable:
-            return "Network connection unavailable"
+            return "Conexión de red no disponible"
         case .timeout:
-            return "Request timed out"
+            return "La solicitud expiró"
         case .serverError(let message):
             return message
         case .unknown(let error):
@@ -91,6 +91,6 @@ struct APIErrorResponse: Decodable {
     let lockedUntil: String?
     
     var displayMessage: String {
-        message ?? error ?? "An unknown error occurred"
+        message ?? error ?? "Ocurrió un error desconocido"
     }
 }

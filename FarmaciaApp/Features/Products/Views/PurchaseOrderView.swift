@@ -29,14 +29,14 @@ struct PurchaseOrderView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     if viewModel.step == .selectSupplier {
-                        Button("Cancel") { dismiss() }
+                        Button("Cancelar") { dismiss() }
                     } else if viewModel.step != .submitting && viewModel.step != .complete {
                         Button {
                             withAnimation { viewModel.goBack() }
                         } label: {
                             HStack(spacing: 4) {
                                 Image(systemName: "chevron.left")
-                                Text("Back")
+                                Text("Atrás")
                             }
                         }
                     }
@@ -45,7 +45,7 @@ struct PurchaseOrderView: View {
             .alert("Error", isPresented: $viewModel.showError) {
                 Button("OK") {}
             } message: {
-                Text(viewModel.errorMessage ?? "An error occurred")
+                Text(viewModel.errorMessage ?? "Ocurrió un error")
             }
         }
     }
@@ -239,7 +239,7 @@ struct PurchaseOrderView: View {
                     Image(systemName: "tray")
                         .font(.system(size: 40))
                         .foregroundColor(.secondary)
-                    Text("No products found")
+                    Text("No se encontraron productos")
                         .foregroundColor(.secondary)
                 }
                 Spacer()
@@ -270,7 +270,7 @@ struct PurchaseOrderView: View {
                 Section {
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(viewModel.selectedSupplier?.name ?? "Supplier")
+                            Text(viewModel.selectedSupplier?.name ?? "Proveedor")
                                 .font(.headline)
                             Text("\(viewModel.orderItemCount) items")
                                 .font(.subheadline)
@@ -287,7 +287,7 @@ struct PurchaseOrderView: View {
                         }
                     }
                 } header: {
-                    Text("Order Summary")
+                    Text("Resumen de la Orden")
                 }
                 
                 // Invoice / notes
@@ -303,7 +303,7 @@ struct PurchaseOrderView: View {
                         TextField("Notes (optional)", text: $viewModel.orderNotes)
                     }
                 } header: {
-                    Text("Details")
+                    Text("Detalles")
                 }
                 
                 // Line items
@@ -456,7 +456,7 @@ struct PurchaseOrderView: View {
             Button {
                 dismiss()
             } label: {
-                Text("Done")
+                Text("Listo")
                     .font(.headline)
                     .frame(maxWidth: .infinity)
                     .padding()
@@ -476,9 +476,9 @@ enum CatalogFilter: CaseIterable {
     
     var title: String {
         switch self {
-        case .all: return "All"
+        case .all: return "Todos"
         case .needsRestock: return "Needs Restock"
-        case .outOfStock: return "Out of Stock"
+        case .outOfStock: return "Sin Stock"
         case .inOrder: return "In Order"
         }
     }
@@ -815,7 +815,7 @@ class PurchaseOrderViewModel: ObservableObject {
     
     var navigationTitle: String {
         switch step {
-        case .selectSupplier: return "Purchase Order"
+        case .selectSupplier: return "Orden de Compra"
         case .buildOrder: return "Product Catalog"
         case .review: return "Review Order"
         case .submitting: return "Receiving..."

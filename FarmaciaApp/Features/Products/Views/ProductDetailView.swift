@@ -8,6 +8,7 @@ struct ProductDetailView: View {
     @EnvironmentObject var authManager: AuthManager
     @Environment(\.dismiss) var dismiss
     let product: Product
+    var onProductUpdated: ((Product) -> Void)? = nil
     
     @State private var showEditPrice = false
     @State private var isRefreshing = false
@@ -53,22 +54,19 @@ struct ProductDetailView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                // Product Header
+                // Product Header (with stats row + action buttons)
                 productHeader
                 
                 // Price Card
                 priceCard
                 
-                // Inventory Card (with actions)
-                inventoryCard
+                // Cost & Supplier History
+                costSupplierHistorySection
                 
                 // FIFO Batch Breakdown
                 if authManager.isOwner || authManager.isManager {
                     fifoBatchSection
                 }
-                
-                // Cost & Supplier History
-                costSupplierHistorySection
                 
                 // Recent Activity (product-scoped)
                 recentActivitySection
@@ -81,7 +79,7 @@ struct ProductDetailView: View {
             }
             .padding()
         }
-        .navigationTitle("Product Details")
+        .navigationTitle("Detalle de Producto")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if authManager.isOwner || authManager.isManager {
@@ -90,7 +88,7 @@ struct ProductDetailView: View {
                         Button {
                             showEditPrice = true
                         } label: {
-                            Label("Edit Price", systemImage: "dollarsign.circle")
+                            Label("Editar Precio", systemImage: "dollarsign.circle")
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
@@ -143,6 +141,8 @@ struct ProductDetailView: View {
             }
         }
         .task {
+            // Eagerly fetch fresh product data so stock is up-to-date
+            await refreshProduct()
             // Load suppliers for receive form
             await inventoryViewModel.loadProducts()
             await inventoryViewModel.loadSuppliers()
@@ -162,17 +162,17 @@ struct ProductDetailView: View {
         .alert("Error", isPresented: $inventoryViewModel.showError) {
             Button("OK") {}
         } message: {
-            Text(inventoryViewModel.errorMessage ?? "An error occurred")
+            Text(inventoryViewModel.errorMessage ?? "Ocurrió un error")
         }
-        .alert("Success", isPresented: $inventoryViewModel.showSuccess) {
+        .alert("Éxito", isPresented: $inventoryViewModel.showSuccess) {
             Button("OK") {}
         } message: {
-            Text(inventoryViewModel.successMessage ?? "Operation completed")
+            Text(inventoryViewModel.successMessage ?? "Operación completada")
         }
-        .alert("Image Upload Failed", isPresented: $showImageUploadError) {
+        .alert("Error al Subir Imagen", isPresented: $showImageUploadError) {
             Button("OK") {}
         } message: {
-            Text("Could not upload the product image. Please try again.")
+            Text("No se pudo subir la imagen del producto. Intenta de nuevo.")
         }
     }
     
@@ -227,17 +227,17 @@ struct ProductDetailView: View {
                         .cornerRadius(16)
                 }
             }
-            .confirmationDialog("Change Product Image", isPresented: $showImageSourcePicker) {
-                Button("Take Photo") {
+            .confirmationDialog("Cambiar Imagen del Producto", isPresented: $showImageSourcePicker) {
+                Button("Tomar Foto") {
                     imagePickerSource = .camera
                     showImagePicker = true
                 }
                 if UIImagePickerController.isSourceTypeAvailable(.camera) {} // camera availability check
-                Button("Choose from Library") {
+                Button("Elegir de la Biblioteca") {
                     imagePickerSource = .photoLibrary
                     showImagePicker = true
                 }
-                Button("Cancel", role: .cancel) {}
+                Button("Cancelar", role: .cancel) {}
             }
             .sheet(isPresented: $showImagePicker) {
                 ImagePicker(sourceType: imagePickerSource) { image in
@@ -267,11 +267,128 @@ struct ProductDetailView: View {
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
+            
+            // Stats row: STOCK | PRICE | LATEST COST
+            HStack(spacing: 0) {
+                // Stock
+                VStack(spacing: 4) {
+                    Text("EXISTENCIA")
+                        .font(.caption2)
+                        .fontWeight(.medium)
+                        .foregroundColor(.secondary)
+                    Text("\(displayProduct.totalInventory ?? 0)")
+                        .font(.title3)
+                        .fontWeight(.bold)
+                }
+                .frame(maxWidth: .infinity)
+                
+                Divider()
+                    .frame(height: 36)
+                
+                // Price
+                VStack(spacing: 4) {
+                    Text("PRECIO")
+                        .font(.caption2)
+                        .fontWeight(.medium)
+                        .foregroundColor(.secondary)
+                    if let price = displayProduct.sellingPrice {
+                        Text(String(format: "$%.2f", price))
+                            .font(.title3)
+                            .fontWeight(.bold)
+                    } else {
+                        Text("—")
+                            .font(.title3)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                
+                Divider()
+                    .frame(height: 36)
+                
+                // Latest Cost (from preferred supplier or most recent cost)
+                VStack(spacing: 4) {
+                    Text("COSTO")
+                        .font(.caption2)
+                        .fontWeight(.medium)
+                        .foregroundColor(.secondary)
+                    if let latestCost = latestSupplierCost {
+                        Text(String(format: "$%.2f", latestCost))
+                            .font(.title3)
+                            .fontWeight(.bold)
+                    } else if let avgCost = displayProduct.averageCost {
+                        Text(String(format: "$%.2f", avgCost))
+                            .font(.title3)
+                            .fontWeight(.bold)
+                    } else {
+                        Text("—")
+                            .font(.title3)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .padding(.vertical, 8)
+            .background(Color(.systemGray5))
+            .cornerRadius(10)
+            
+            // Action buttons (Receive + Adjust Stock)
+            if authManager.canManageInventory {
+                HStack(spacing: 12) {
+                    Button {
+                        showReceiveSheet = true
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.subheadline)
+                            Text("Recibir Inventario")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
+                    }
+                    
+                    Menu {
+                        // Static buttons — avoids SwiftUI Menu+ForEach first-item bug (FB13164795)
+                        Button { selectAdjustment(.damage) } label: { Label("Daño", systemImage: "exclamationmark.triangle") }
+                        Button { selectAdjustment(.expired) } label: { Label("Vencido", systemImage: "calendar.badge.exclamationmark") }
+                        Button { selectAdjustment(.found) } label: { Label("Encontrado", systemImage: "magnifyingglass") }
+                        Button { selectAdjustment(.returnType) } label: { Label("Devolución", systemImage: "arrow.uturn.backward") }
+                        Button { selectAdjustment(.countCorrection) } label: { Label("Corrección de Conteo", systemImage: "number") }
+                        Button { selectAdjustment(.theft) } label: { Label("Robo", systemImage: "lock.slash") }
+                        Button { selectAdjustment(.writeOff) } label: { Label("Baja", systemImage: "xmark.circle") }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                                .font(.subheadline)
+                            Text("Ajustar Inventario")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(Color(.systemGray5))
+                        .foregroundColor(.primary)
+                        .cornerRadius(10)
+                    }
+                }
+            }
         }
         .frame(maxWidth: .infinity)
         .padding()
         .background(Color(.systemGray6))
         .cornerRadius(16)
+    }
+    
+    /// Latest cost from the preferred supplier, or first supplier if none preferred
+    private var latestSupplierCost: Double? {
+        let preferred = costSupplierViewModel.suppliers.first(where: { $0.isPreferred })
+        let fallback = costSupplierViewModel.suppliers.first
+        return (preferred ?? fallback)?.costDouble
     }
     
     private var productPlaceholder: some View {
@@ -293,13 +410,13 @@ struct ProductDetailView: View {
             HStack {
                 Image(systemName: "dollarsign.circle.fill")
                     .foregroundColor(.green)
-                Text("Pricing")
+                Text("Precios")
                     .font(.headline)
                 
                 Spacer()
                 
                 if authManager.isOwner || authManager.isManager {
-                    Button("Edit") {
+                    Button("Editar") {
                         showEditPrice = true
                     }
                     .font(.subheadline)
@@ -310,7 +427,7 @@ struct ProductDetailView: View {
             
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Selling Price")
+                    Text("Precio de Venta")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     
@@ -320,7 +437,7 @@ struct ProductDetailView: View {
                             .fontWeight(.bold)
                             .foregroundColor(.green)
                     } else {
-                        Text("Not set")
+                        Text("No definido")
                             .font(.title3)
                             .foregroundColor(.secondary)
                     }
@@ -329,7 +446,7 @@ struct ProductDetailView: View {
                 Spacer()
                 
                 VStack(alignment: .trailing, spacing: 4) {
-                    Text("Avg. Cost")
+                    Text("Costo Prom.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     
@@ -348,7 +465,7 @@ struct ProductDetailView: View {
             // Margin
             if let margin = displayProduct.profitMargin {
                 HStack {
-                    Text("Profit Margin")
+                    Text("Margen de Ganancia")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                     
@@ -366,142 +483,14 @@ struct ProductDetailView: View {
         .cornerRadius(16)
     }
     
-    // MARK: - Inventory Card (with Actions)
-    
-    private var inventoryCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Image(systemName: "shippingbox.fill")
-                    .foregroundColor(.blue)
-                Text("Inventory")
-                    .font(.headline)
-                
-                Spacer()
-                
-                // Aging risk badge (from aging service)
-                if let risk = batchViewModel.productAging?.riskLevel, risk != .low {
-                    agingRiskBadge(risk)
-                }
-                
-                stockStatusBadge
-            }
-            
-            Divider()
-            
-            // Stock display
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("In Stock")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
-                    Text("\(displayProduct.totalInventory ?? 0)")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundColor((displayProduct.totalInventory ?? 0) > 0 ? .primary : .red)
-                    
-                    Text("units")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                
-                Spacer()
-            }
-            
-            // Action buttons (permission gated)
-            if authManager.canManageInventory {
-                Divider()
-                
-                HStack(spacing: 12) {
-                    // Receive Stock button
-                    Button {
-                        showReceiveSheet = true
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.subheadline)
-                            Text("Receive Stock")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
-                    }
-                    
-                    // Adjust Stock button (menu for type selection)
-                    Menu {
-                        ForEach(quickAdjustmentTypes, id: \.self) { type in
-                            Button {
-                                selectedAdjustmentType = type
-                                showAdjustmentSheet = true
-                            } label: {
-                                Label(type.displayName, systemImage: type.icon)
-                            }
-                        }
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "arrow.triangle.2.circlepath")
-                                .font(.subheadline)
-                            Text("Adjust Stock")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(Color(.systemGray5))
-                        .foregroundColor(.primary)
-                        .cornerRadius(10)
-                    }
-                }
-            }
-        }
-        .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(16)
-    }
     
     private let quickAdjustmentTypes: [AdjustmentType] = [
         .damage, .expired, .found, .returnType, .countCorrection, .theft, .writeOff
     ]
     
-    private var stockStatusBadge: some View {
-        let stock = displayProduct.totalInventory ?? 0
-        let (text, color): (String, Color) = {
-            if stock == 0 {
-                return ("Out of Stock", .red)
-            } else if stock < 10 {
-                return ("Low Stock", .orange)
-            } else {
-                return ("In Stock", .green)
-            }
-        }()
-        
-        return Text(text)
-            .font(.caption)
-            .fontWeight(.semibold)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(color.opacity(0.15))
-            .foregroundColor(color)
-            .cornerRadius(8)
-    }
-    
-    private func agingRiskBadge(_ risk: InventoryRiskLevel) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: risk.icon)
-                .font(.caption2)
-            Text(risk.displayName)
-                .font(.caption)
-                .fontWeight(.semibold)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(risk.color.opacity(0.15))
-        .foregroundColor(risk.color)
-        .cornerRadius(8)
+    private func selectAdjustment(_ type: AdjustmentType) {
+        selectedAdjustmentType = type
+        showAdjustmentSheet = true
     }
     
     // MARK: - Recent Activity Section (Product-Scoped)
@@ -511,7 +500,7 @@ struct ProductDetailView: View {
             HStack {
                 Image(systemName: "clock.arrow.circlepath")
                     .foregroundColor(.indigo)
-                Text("Recent Activity")
+                Text("Actividad Reciente")
                     .font(.headline)
                 
                 Spacer()
@@ -529,7 +518,7 @@ struct ProductDetailView: View {
                     Image(systemName: "tray")
                         .font(.title2)
                         .foregroundColor(.secondary)
-                    Text("No activity yet")
+                    Text("Sin actividad aún")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -550,12 +539,12 @@ struct ProductDetailView: View {
                     NavigationLink {
                         ProductActivityFullView(
                             product: displayProduct,
-                            receivings: activityViewModel.receivings,
-                            adjustments: activityViewModel.adjustments
+                            recepciones: activityViewModel.recepciones,
+                            ajustes: activityViewModel.ajustes
                         )
                     } label: {
                         HStack {
-                            Text("View All Activity")
+                            Text("Ver Toda la Actividad")
                                 .font(.subheadline)
                             Spacer()
                             Text("\(activityViewModel.combinedActivity.count) total")
@@ -614,7 +603,7 @@ struct ProductDetailView: View {
             HStack {
                 Image(systemName: "info.circle.fill")
                     .foregroundColor(.purple)
-                Text("Details")
+                Text("Detalles")
                     .font(.headline)
             }
             
@@ -622,7 +611,7 @@ struct ProductDetailView: View {
             
             if let description = displayProduct.squareDescription, !description.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Description")
+                    Text("Descripción")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     
@@ -632,11 +621,11 @@ struct ProductDetailView: View {
             }
             
             if let category = displayProduct.category {
-                detailRow(title: "Category", value: category.name)
+                detailRow(title: "Categoría", value: category.name)
             }
             
             if let createdAt = displayProduct.createdAt {
-                detailRow(title: "Created", value: createdAt.formatted(date: .abbreviated, time: .omitted))
+                detailRow(title: "Creado", value: createdAt.formatted(date: .abbreviated, time: .omitted))
             }
         }
         .padding()
@@ -662,7 +651,7 @@ struct ProductDetailView: View {
             HStack {
                 Image(systemName: "arrow.triangle.2.circlepath")
                     .foregroundColor(.orange)
-                Text("Square Sync")
+                Text("Sincronización Square")
                     .font(.headline)
             }
             
@@ -673,9 +662,9 @@ struct ProductDetailView: View {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundColor(.green)
                     VStack(alignment: .leading) {
-                        Text("Synced to Square")
+                        Text("Sincronizado con Square")
                             .font(.subheadline)
-                        Text("Product is visible in Square POS")
+                        Text("El producto es visible en Square POS")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -683,9 +672,9 @@ struct ProductDetailView: View {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundColor(.orange)
                     VStack(alignment: .leading) {
-                        Text("Local Only")
+                        Text("Solo Local")
                             .font(.subheadline)
-                        Text("Product is not synced to Square POS")
+                        Text("El producto no está sincronizado con Square POS")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -693,7 +682,7 @@ struct ProductDetailView: View {
             }
             
             if let syncedAt = displayProduct.squareDataSyncedAt {
-                Text("Last synced: \(syncedAt.formatted())")
+                Text("Última sinc: \(syncedAt.formatted())")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -715,6 +704,7 @@ struct ProductDetailView: View {
                 queryParams: ["locationId": locationId]
             )
             currentProduct = response.data
+            onProductUpdated?(response.data)
         } catch {
             // Silent fail - keep showing current data
         }
@@ -767,7 +757,7 @@ struct ProductDetailView: View {
             HStack {
                 Image(systemName: "square.stack.3d.up.fill")
                     .foregroundColor(.teal)
-                Text("FIFO Batches")
+                Text("Lotes FIFO")
                     .font(.headline)
                 
                 Spacer()
@@ -789,7 +779,7 @@ struct ProductDetailView: View {
                     Image(systemName: "tray")
                         .font(.title2)
                         .foregroundColor(.secondary)
-                    Text("No inventory batches")
+                    Text("Sin lotes de inventario")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -840,8 +830,9 @@ struct ProductDetailView: View {
                     .padding(.horizontal, 4)
                 }
                 
-                // Individual batches (show first 3, expand for all)
-                let batchesToShow = showAllBatches ? batchViewModel.batches : Array(batchViewModel.batches.prefix(3))
+                // Individual batches (newest first, show first 3, expand for all)
+                let sortedBatches = batchViewModel.batches.sorted { $0.receivedAt > $1.receivedAt }
+                let batchesToShow = showAllBatches ? sortedBatches : Array(sortedBatches.prefix(3))
                 ForEach(batchesToShow) { batch in
                     Button {
                         selectedBatchId = batch.batchId
@@ -862,9 +853,7 @@ struct ProductDetailView: View {
                         }
                     } label: {
                         HStack {
-                            Text(showAllBatches ? "Show Less" : "Show All \(batchViewModel.batches.count) Batches")
-                                .font(.subheadline)
-                            Spacer()
+                            Text(showAllBatches ? "Ver Menos" : "Ver Todos")
                             Image(systemName: showAllBatches ? "chevron.up" : "chevron.down")
                                 .font(.caption)
                         }
@@ -1009,7 +998,7 @@ struct ProductDetailView: View {
                 
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 4) {
-                        Text("\(batch.quantity) units")
+                        Text("\(batch.quantity) uds")
                             .font(.subheadline)
                             .fontWeight(.medium)
                         Text("@ $\(batch.unitCost)/ea")
@@ -1093,11 +1082,11 @@ struct ProductDetailView: View {
         if let expiry = batch.expiryDate {
             let formatted = expiry.formatted(date: .abbreviated, time: .omitted)
             if batch.isExpired {
-                pills.append(BatchPill(icon: "xmark.circle", label: "Expired \(formatted)", color: .red))
+                pills.append(BatchPill(icon: "xmark.circle", label: "Vencido \(formatted)", color: .red))
             } else if batch.expiresWithin(days: 90) {
-                pills.append(BatchPill(icon: "clock", label: "Exp \(formatted)", color: .orange))
+                pills.append(BatchPill(icon: "clock", label: "Vence \(formatted)", color: .orange))
             } else {
-                pills.append(BatchPill(icon: "calendar", label: "Exp \(formatted)", color: .green))
+                pills.append(BatchPill(icon: "calendar", label: "Vence \(formatted)", color: .green))
             }
         }
         
@@ -1121,7 +1110,7 @@ struct ProductDetailView: View {
             HStack {
                 Image(systemName: "chart.line.uptrend.xyaxis")
                     .foregroundColor(.cyan)
-                Text("Cost & Supplier History")
+                Text("Historial de Costos y Proveedores")
                     .font(.headline)
                 
                 Spacer()
@@ -1137,7 +1126,7 @@ struct ProductDetailView: View {
             if costSupplierViewModel.isLoading && costSupplierViewModel.suppliers.isEmpty {
                 VStack(spacing: 8) {
                     ProgressView()
-                    Text("Loading supplier data...")
+                    Text("Cargando datos de proveedor...")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -1148,10 +1137,10 @@ struct ProductDetailView: View {
                     Image(systemName: "building.2")
                         .font(.title2)
                         .foregroundColor(.secondary)
-                    Text("No supplier data yet")
+                    Text("Sin datos de proveedor aún")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
-                    Text("Supplier costs will appear here when products are received from suppliers")
+                    Text("Los costos de proveedores aparecerán aquí cuando se reciban productos de proveedores")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -1161,7 +1150,7 @@ struct ProductDetailView: View {
             } else {
                 // Current Suppliers section (from SupplierProduct)
                 if !costSupplierViewModel.suppliers.isEmpty {
-                    Text("Current Suppliers")
+                    Text("Proveedores Actuales")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .textCase(.uppercase)
@@ -1184,7 +1173,7 @@ struct ProductDetailView: View {
                                         .font(.subheadline)
                                         .fontWeight(.medium)
                                     if supplier.isPreferred {
-                                        Text("Preferred")
+                                        Text("Preferido")
                                             .font(.caption2)
                                             .padding(.horizontal, 6)
                                             .padding(.vertical, 1)
@@ -1207,7 +1196,7 @@ struct ProductDetailView: View {
                                 Text(supplier.formattedCost)
                                     .font(.subheadline)
                                     .fontWeight(.semibold)
-                                Text("per unit")
+                                Text("per ud")
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
                             }
@@ -1222,7 +1211,7 @@ struct ProductDetailView: View {
                         Divider()
                     }
                     
-                    Text("Cost History by Supplier")
+                    Text("Historial de Costos por Proveedor")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .textCase(.uppercase)
@@ -1301,7 +1290,7 @@ struct ProductDetailView: View {
                                             .foregroundColor(.secondary)
                                         
                                         if entry.isCurrent {
-                                            Text("Current")
+                                            Text("Actual")
                                                 .font(.caption2)
                                                 .padding(.horizontal, 5)
                                                 .padding(.vertical, 1)
@@ -1369,8 +1358,8 @@ struct ProductActivityItem: Identifiable {
 
 @MainActor
 class ProductActivityViewModel: ObservableObject {
-    @Published var receivings: [InventoryReceiving] = []
-    @Published var adjustments: [InventoryAdjustment] = []
+    @Published var recepciones: [InventoryReceiving] = []
+    @Published var ajustes: [InventoryAdjustment] = []
     @Published var isLoading = false
     
     private let apiClient = APIClient.shared
@@ -1379,13 +1368,13 @@ class ProductActivityViewModel: ObservableObject {
     var combinedActivity: [ProductActivityItem] {
         var items: [ProductActivityItem] = []
         
-        // Convert receivings
-        for r in receivings {
+        // Convert recepciones
+        for r in recepciones {
             items.append(ProductActivityItem(
                 id: "recv-\(r.id)",
                 kind: .receiving,
-                title: "Received \(r.quantity) units",
-                subtitle: r.supplier?.name ?? r.invoiceNumber.map { "Invoice: \($0)" } ?? r.formattedDate,
+                title: "Recibido \(r.quantity) uds",
+                subtitle: r.supplier?.name ?? r.invoiceNumber.map { "Factura: \($0)" } ?? r.formattedDate,
                 date: r.receivedAt,
                 quantity: r.quantity,
                 icon: "arrow.down.circle.fill",
@@ -1393,8 +1382,8 @@ class ProductActivityViewModel: ObservableObject {
             ))
         }
         
-        // Convert adjustments
-        for a in adjustments {
+        // Convert ajustes
+        for a in ajustes {
             let displayQty = a.type.isNegative ? -abs(a.quantity) : a.quantity
             items.append(ProductActivityItem(
                 id: "adj-\(a.id)",
@@ -1419,10 +1408,10 @@ class ProductActivityViewModel: ObservableObject {
         guard !Task.isCancelled else { return }
         
         // Load both in parallel
-        async let receivingsResult: () = loadReceivings(productId: productId)
-        async let adjustmentsResult: () = loadAdjustments(productId: productId)
+        async let recepcionesResult: () = loadReceivings(productId: productId)
+        async let ajustesResult: () = loadAdjustments(productId: productId)
         
-        _ = await (receivingsResult, adjustmentsResult)
+        _ = await (recepcionesResult, ajustesResult)
     }
     
     private func loadReceivings(productId: String) async {
@@ -1430,22 +1419,22 @@ class ProductActivityViewModel: ObservableObject {
             let response: ReceivingListResponse = try await apiClient.request(
                 endpoint: .listReceivingsByProduct(productId: productId)
             )
-            receivings = response.data
+            recepciones = response.data
         } catch {
-            // Silent fail — receivings are supplementary
-            print("Failed to load product receivings: \(error)")
+            // Silent fail — recepciones are supplementary
+            print("Failed to load product recepciones: \(error)")
         }
     }
     
     private func loadAdjustments(productId: String) async {
         do {
             let response: AdjustmentListResponse = try await apiClient.request(
-                endpoint: .adjustmentsByProduct(productId: productId)
+                endpoint: .ajustesByProduct(productId: productId)
             )
-            adjustments = response.data
+            ajustes = response.data
         } catch {
-            // Silent fail — adjustments are supplementary
-            print("Failed to load product adjustments: \(error)")
+            // Silent fail — ajustes are supplementary
+            print("Failed to load product ajustes: \(error)")
         }
     }
 }
@@ -1454,20 +1443,20 @@ class ProductActivityViewModel: ObservableObject {
 
 struct ProductActivityFullView: View {
     let product: Product
-    let receivings: [InventoryReceiving]
-    let adjustments: [InventoryAdjustment]
+    let recepciones: [InventoryReceiving]
+    let ajustes: [InventoryAdjustment]
     
     @State private var selectedSegment: ActivitySegment = .all
     
     enum ActivitySegment: String, CaseIterable {
-        case all = "All"
-        case receivings = "Receivings"
-        case adjustments = "Adjustments"
+        case all = "Todos"
+        case recepciones = "Recepciones"
+        case ajustes = "Ajustes"
     }
     
     var body: some View {
         VStack(spacing: 0) {
-            Picker("Activity", selection: $selectedSegment) {
+            Picker("Actividad", selection: $selectedSegment) {
                 ForEach(ActivitySegment.allCases, id: \.self) { segment in
                     Text(segment.rawValue).tag(segment)
                 }
@@ -1480,27 +1469,27 @@ struct ProductActivityFullView: View {
                 case .all:
                     let allItems = combinedItems
                     if allItems.isEmpty {
-                        emptyState("No activity recorded")
+                        emptyState("Sin actividad registrada")
                     } else {
                         ForEach(allItems) { item in
                             ActivityFullRow(item: item)
                         }
                     }
                     
-                case .receivings:
-                    if receivings.isEmpty {
-                        emptyState("No receivings recorded")
+                case .recepciones:
+                    if recepciones.isEmpty {
+                        emptyState("Sin recepciones registradas")
                     } else {
-                        ForEach(receivings) { receiving in
+                        ForEach(recepciones) { receiving in
                             ReceivingRow(receiving: receiving)
                         }
                     }
                     
-                case .adjustments:
-                    if adjustments.isEmpty {
-                        emptyState("No adjustments recorded")
+                case .ajustes:
+                    if ajustes.isEmpty {
+                        emptyState("Sin ajustes registrados")
                     } else {
-                        ForEach(adjustments) { adjustment in
+                        ForEach(ajustes) { adjustment in
                             AdjustmentRow(adjustment: adjustment)
                         }
                     }
@@ -1515,12 +1504,12 @@ struct ProductActivityFullView: View {
     private var combinedItems: [ProductActivityItem] {
         var items: [ProductActivityItem] = []
         
-        for r in receivings {
+        for r in recepciones {
             items.append(ProductActivityItem(
                 id: "recv-\(r.id)",
                 kind: .receiving,
-                title: "Received \(r.quantity) units",
-                subtitle: r.supplier?.name ?? r.invoiceNumber.map { "Invoice: \($0)" } ?? r.formattedDate,
+                title: "Recibido \(r.quantity) uds",
+                subtitle: r.supplier?.name ?? r.invoiceNumber.map { "Factura: \($0)" } ?? r.formattedDate,
                 date: r.receivedAt,
                 quantity: r.quantity,
                 icon: "arrow.down.circle.fill",
@@ -1528,7 +1517,7 @@ struct ProductActivityFullView: View {
             ))
         }
         
-        for a in adjustments {
+        for a in ajustes {
             let displayQty = a.type.isNegative ? -abs(a.quantity) : a.quantity
             items.append(ProductActivityItem(
                 id: "adj-\(a.id)",
@@ -1730,40 +1719,40 @@ struct EditPriceView: View {
             Form {
                 Section {
                     HStack {
-                        Text("Current Price")
+                        Text("Precio Actual")
                         Spacer()
-                        Text(product.formattedPrice ?? "Not set")
+                        Text(product.formattedPrice ?? "No definido")
                             .foregroundColor(.secondary)
                     }
                     
                     HStack {
                         Text("$")
                             .foregroundColor(.secondary)
-                        TextField("New Price", text: $priceText)
+                        TextField("Nuevo Precio", text: $priceText)
                             .keyboardType(.decimalPad)
                         Text("MXN")
                             .foregroundColor(.secondary)
                     }
                 } header: {
-                    Text("Selling Price")
+                    Text("Precio de Venta")
                 }
                 
                 if product.hasSquareSync == true {
                     Section {
-                        Toggle("Update in Square", isOn: $syncToSquare)
+                        Toggle("Actualizar en Square", isOn: $syncToSquare)
                         
                         if syncToSquare {
-                            Toggle("Apply to all locations", isOn: $applyToAllLocations)
+                            Toggle("Aplicar a todas las ubicaciones", isOn: $applyToAllLocations)
                         }
                     } footer: {
                         if syncToSquare {
                             if applyToAllLocations {
-                                Text("Price will be updated in Square POS at ALL locations immediately.")
+                                Text("El precio se actualizará en Square POS en TODAS las ubicaciones inmediatamente.")
                             } else {
-                                Text("Price will be updated in Square POS for the current location only.")
+                                Text("El precio se actualizará en Square POS solo para la ubicación actual.")
                             }
                         } else {
-                            Text("Price will only be updated locally. Square POS will show the old price.")
+                            Text("El precio solo se actualizará localmente. Square POS mostrará el precio anterior.")
                         }
                     }
                 }
@@ -1772,7 +1761,7 @@ struct EditPriceView: View {
                 if let newPrice = newPrice, priceChanged {
                     Section {
                         HStack {
-                            Text("Price Change")
+                            Text("Cambio de Precio")
                             Spacer()
                             let change = newPrice - (product.sellingPrice ?? 0)
                             Text(change >= 0 ? "+\(formatCurrency(change))" : formatCurrency(change))
@@ -1782,28 +1771,28 @@ struct EditPriceView: View {
                         if let cost = product.averageCost {
                             let newMargin = ((newPrice - cost) / newPrice) * 100
                             HStack {
-                                Text("New Margin")
+                                Text("Nuevo Margen")
                                 Spacer()
                                 Text(String(format: "%.1f%%", newMargin))
                                     .foregroundColor(newMargin >= 20 ? .green : (newMargin >= 10 ? .orange : .red))
                             }
                         }
                     } header: {
-                        Text("Preview")
+                        Text("Vista Previa")
                     }
                 }
             }
-            .navigationTitle("Edit Price")
+            .navigationTitle("Editar Precio")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
+                    Button("Cancelar") {
                         dismiss()
                     }
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
+                    Button("Guardar") {
                         Task {
                             await updatePrice()
                         }

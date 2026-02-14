@@ -227,7 +227,7 @@ final class APIClient {
             if let errorResponse = try? decoder.decode(APIErrorResponse.self, from: data) {
                 throw NetworkError.serverError(message: errorResponse.displayMessage)
             }
-            throw NetworkError.serverError(message: "Internal server error")
+            throw NetworkError.serverError(message: "Error interno del servidor")
         default:
             throw NetworkError.httpError(statusCode: httpResponse.statusCode, message: nil)
         }
