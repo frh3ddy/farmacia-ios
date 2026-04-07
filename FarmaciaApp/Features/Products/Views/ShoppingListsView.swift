@@ -23,11 +23,11 @@ struct ShoppingListsView: View {
                     listContent
                 }
             }
-            .navigationTitle("Shopping Lists")
+            .navigationTitle("Listas de Compras")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Done") { dismiss() }
+                    Button("Listo") { dismiss() }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack(spacing: 12) {
@@ -57,7 +57,7 @@ struct ShoppingListsView: View {
                 }
             }
             .alert("Clear Completed Lists?", isPresented: $showDeleteCompletedAlert) {
-                Button("Cancel", role: .cancel) {}
+                Button("Cancelar", role: .cancel) {}
                 Button("Clear", role: .destructive) {
                     store.deleteCompleted()
                 }
@@ -80,7 +80,7 @@ struct ShoppingListsView: View {
                 .font(.system(size: 56))
                 .foregroundColor(.secondary.opacity(0.6))
             
-            Text("No Shopping Lists")
+            Text("Sin Listas de Compras")
                 .font(.title3)
                 .fontWeight(.semibold)
             
@@ -262,7 +262,7 @@ struct CreateShoppingListSheet: View {
                 Section {
                     TextField("e.g. Weekly restock, Levic run", text: $name)
                 } header: {
-                    Text("List Name")
+                    Text("Nombre de la Lista")
                 } footer: {
                     Text("Give your list a name you'll recognize later.")
                 }
@@ -362,14 +362,14 @@ struct CreateShoppingListSheet: View {
                     Text("Notes (Optional)")
                 }
             }
-            .navigationTitle("New Shopping List")
+            .navigationTitle("Nueva Lista de Compras")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancelar") { dismiss() }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Create") {
+                    Button("Crear") {
                         createList()
                     }
                     .fontWeight(.semibold)
@@ -551,7 +551,7 @@ struct PreviousListPickerSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancelar") { dismiss() }
                 }
             }
         }
@@ -634,7 +634,7 @@ struct SupplierPickerSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancelar") { dismiss() }
                 }
             }
         }

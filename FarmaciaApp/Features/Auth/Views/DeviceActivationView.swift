@@ -38,7 +38,7 @@ struct DeviceActivationView: View {
         VStack(spacing: 16) {
             ProgressView()
                 .scaleEffect(1.5)
-            Text("Checking setup status...")
+            Text("Verificando estado...")
                 .foregroundColor(.secondary)
         }
     }
@@ -68,9 +68,9 @@ struct DeviceActivationView: View {
                 }
                 .padding(24)
             }
-            .navigationTitle("Setup Device")
+            .navigationTitle("Configurar Dispositivo")
             .navigationBarTitleDisplayMode(.inline)
-            .alert("Activation Error", isPresented: $viewModel.showError) {
+            .alert("Error de Activación", isPresented: $viewModel.showError) {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(viewModel.errorMessage)
@@ -106,7 +106,7 @@ struct DeviceActivationView: View {
                 .font(.largeTitle)
                 .fontWeight(.bold)
             
-            Text("Activate this device to get started")
+            Text("Activa este dispositivo para comenzar")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -119,24 +119,24 @@ struct DeviceActivationView: View {
         VStack(spacing: 20) {
             // Device Name
             VStack(alignment: .leading, spacing: 8) {
-                Text("Device Name")
+                Text("Nombre del Dispositivo")
                     .font(.subheadline)
                     .fontWeight(.medium)
                 
-                TextField("e.g., Main Counter iPad", text: $viewModel.deviceName)
+                TextField("Ej: iPad Mostrador Principal", text: $viewModel.deviceName)
                     .textFieldStyle(.roundedBorder)
                     .autocorrectionDisabled()
             }
             
             Divider()
             
-            Text("Owner/Manager Credentials")
+            Text("Credenciales de Dueño/Gerente")
                 .font(.headline)
                 .frame(maxWidth: .infinity, alignment: .leading)
             
             // Email
             VStack(alignment: .leading, spacing: 8) {
-                Text("Email")
+                Text("Correo Electrónico")
                     .font(.subheadline)
                     .fontWeight(.medium)
                 
@@ -150,11 +150,11 @@ struct DeviceActivationView: View {
             
             // Password
             VStack(alignment: .leading, spacing: 8) {
-                Text("Password")
+                Text("Contraseña")
                     .font(.subheadline)
                     .fontWeight(.medium)
                 
-                SecureField("Enter password", text: $viewModel.password)
+                SecureField("Ingresa contraseña", text: $viewModel.password)
                     .textFieldStyle(.roundedBorder)
                     .textContentType(.password)
             }
@@ -178,7 +178,7 @@ struct DeviceActivationView: View {
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                 } else {
                     Image(systemName: "checkmark.shield.fill")
-                    Text("Activate Device")
+                    Text("Activar Dispositivo")
                 }
             }
             .frame(maxWidth: .infinity)
@@ -197,7 +197,7 @@ struct DeviceActivationView: View {
         VStack(spacing: 12) {
             Divider()
             
-            Text("First time using Farmacia?")
+            Text("¿Primera vez usando Farmacia?")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
             
@@ -206,7 +206,7 @@ struct DeviceActivationView: View {
             } label: {
                 HStack {
                     Image(systemName: "sparkles")
-                    Text("Set Up Your Pharmacy")
+                    Text("Configura Tu Farmacia")
                 }
                 .font(.headline)
                 .foregroundColor(.green)
@@ -219,13 +219,13 @@ struct DeviceActivationView: View {
     
     private var helpSection: some View {
         VStack(spacing: 12) {
-            Text("Device activation is a one-time setup")
+            Text("La activación del dispositivo es única")
                 .font(.caption)
                 .foregroundColor(.secondary)
             
             HStack(spacing: 4) {
                 Image(systemName: "lock.shield")
-                Text("Only owners and managers can activate devices")
+                Text("Solo dueños y gerentes pueden activar dispositivos")
             }
             .font(.caption)
             .foregroundColor(.secondary)
@@ -261,7 +261,7 @@ class DeviceActivationViewModel: ObservableObject {
                 deviceName: deviceName
             )
         } catch let error as NetworkError {
-            errorMessage = error.errorDescription ?? "Activation failed"
+            errorMessage = error.errorDescription ?? "Error de activación"
             showError = true
         } catch {
             errorMessage = error.localizedDescription

@@ -56,14 +56,14 @@ struct ReceiveFlowView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     if step == .review {
-                        Button("Cancel") { dismiss() }
+                        Button("Cancelar") { dismiss() }
                     }
                 }
             }
             .alert("Error", isPresented: $showError) {
                 Button("OK") {}
             } message: {
-                Text(errorMessage ?? "An error occurred")
+                Text(errorMessage ?? "Ocurrió un error")
             }
             .onAppear {
                 initializeStates()
@@ -81,7 +81,7 @@ struct ReceiveFlowView: View {
                     HStack {
                         Image(systemName: "building.2")
                             .foregroundColor(.blue)
-                        Text(list.supplierName ?? "Supplier")
+                        Text(list.supplierName ?? "Proveedor")
                             .fontWeight(.medium)
                         Spacer()
                         Text("\(selectedItems.count) of \(pendingItems.count) selected")
@@ -261,7 +261,7 @@ struct ReceiveFlowView: View {
             Button {
                 dismiss()
             } label: {
-                Text("Done")
+                Text("Listo")
                     .font(.headline)
                     .frame(maxWidth: .infinity)
                     .padding()

@@ -8,8 +8,8 @@ enum DeviceType: String, Codable {
     
     var displayName: String {
         switch self {
-        case .fixed: return "Fixed POS"
-        case .mobile: return "Mobile Device"
+        case .fixed: return "POS Fijo"
+        case .mobile: return "Dispositivo Móvil"
         }
     }
 }

@@ -26,22 +26,22 @@ struct InitialSetupView: View {
                 }
                 .padding(24)
             }
-            .navigationTitle("Welcome")
+            .navigationTitle("Bienvenido")
             .navigationBarTitleDisplayMode(.inline)
             .task {
                 await viewModel.loadAvailableLocations()
             }
-            .alert("Setup Error", isPresented: $viewModel.showError) {
+            .alert("Error de Configuración", isPresented: $viewModel.showError) {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(viewModel.errorMessage)
             }
-            .alert("Setup Complete!", isPresented: $viewModel.showSuccess) {
-                Button("Continue") {
+            .alert("¡Configuración Completa!", isPresented: $viewModel.showSuccess) {
+                Button("Continuar") {
                     onSetupComplete()
                 }
             } message: {
-                Text("Your account has been created. You can now log in.")
+                Text("Tu cuenta ha sido creada. Ya puedes iniciar sesión.")
             }
         }
     }
@@ -54,11 +54,11 @@ struct InitialSetupView: View {
                 .font(.system(size: 60))
                 .foregroundStyle(.green)
             
-            Text("Set Up Your Pharmacy")
+            Text("Configura Tu Farmacia")
                 .font(.title)
                 .fontWeight(.bold)
             
-            Text("Create your owner account and pharmacy location to get started")
+            Text("Crea tu cuenta de dueño y ubicación de farmacia para comenzar")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -71,32 +71,32 @@ struct InitialSetupView: View {
         VStack(spacing: 24) {
             // Owner Info Section
             VStack(alignment: .leading, spacing: 16) {
-                Label("Owner Account", systemImage: "person.fill")
+                Label("Cuenta de Dueño", systemImage: "person.fill")
                     .font(.headline)
                 
                 VStack(spacing: 12) {
-                    TextField("Your Name", text: $viewModel.ownerName)
+                    TextField("Tu Nombre", text: $viewModel.ownerName)
                         .textFieldStyle(.roundedBorder)
                         .autocorrectionDisabled()
                     
-                    TextField("Email", text: $viewModel.ownerEmail)
+                    TextField("Correo Electrónico", text: $viewModel.ownerEmail)
                         .textFieldStyle(.roundedBorder)
                         .textContentType(.emailAddress)
                         .keyboardType(.emailAddress)
                         .autocapitalization(.none)
                         .autocorrectionDisabled()
                     
-                    SecureField("Password (min 6 characters)", text: $viewModel.ownerPassword)
+                    SecureField("Contraseña (mín 6 caracteres)", text: $viewModel.ownerPassword)
                         .textFieldStyle(.roundedBorder)
                         .textContentType(.newPassword)
                     
-                    SecureField("Confirm Password", text: $viewModel.confirmPassword)
+                    SecureField("Confirmar Contraseña", text: $viewModel.confirmPassword)
                         .textFieldStyle(.roundedBorder)
                         .textContentType(.newPassword)
                     
                     HStack(spacing: 12) {
                         VStack(alignment: .leading) {
-                            Text("PIN (4-6 digits)")
+                            Text("PIN (4-6 dígitos)")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                             SecureField("PIN", text: $viewModel.ownerPin)
@@ -108,10 +108,10 @@ struct InitialSetupView: View {
                         }
                         
                         VStack(alignment: .leading) {
-                            Text("Confirm PIN")
+                            Text("Confirmar PIN")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
-                            SecureField("Confirm", text: $viewModel.confirmPin)
+                            SecureField("Confirmar", text: $viewModel.confirmPin)
                                 .textFieldStyle(.roundedBorder)
                                 .keyboardType(.numberPad)
                                 .onChange(of: viewModel.confirmPin) { _, newValue in
@@ -128,7 +128,7 @@ struct InitialSetupView: View {
             // Location Section
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
-                    Label("Pharmacy Location", systemImage: "building.2.fill")
+                    Label("Ubicación de Farmacia", systemImage: "building.2.fill")
                         .font(.headline)
                     
                     Spacer()
@@ -146,7 +146,7 @@ struct InitialSetupView: View {
                             } else {
                                 Image(systemName: "arrow.triangle.2.circlepath.icloud")
                             }
-                            Text("Sync Square")
+                            Text("Sincronizar Square")
                                 .font(.caption)
                         }
                     }
@@ -156,15 +156,15 @@ struct InitialSetupView: View {
                 
                 // Show location choice if locations exist
                 if !viewModel.availableLocations.isEmpty {
-                    Picker("Location Option", selection: $viewModel.useExistingLocation) {
-                        Text("Use existing location").tag(true)
-                        Text("Create new location").tag(false)
+                    Picker("Opción de Ubicación", selection: $viewModel.useExistingLocation) {
+                        Text("Usar ubicación existente").tag(true)
+                        Text("Crear nueva ubicación").tag(false)
                     }
                     .pickerStyle(.segmented)
                     
                     if viewModel.useExistingLocation {
                         // Location picker
-                        Picker("Select Location", selection: $viewModel.selectedLocationId) {
+                        Picker("Seleccionar Ubicación", selection: $viewModel.selectedLocationId) {
                             ForEach(viewModel.availableLocations, id: \.id) { location in
                                 HStack {
                                     Text(location.name)
@@ -179,20 +179,20 @@ struct InitialSetupView: View {
                         }
                         .pickerStyle(.menu)
                         
-                        Text("\(viewModel.availableLocations.count) location(s) available from Square sync")
+                        Text("\(viewModel.availableLocations.count) ubicación(es) disponibles de la sincronización con Square")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     } else {
-                        TextField("Pharmacy Name", text: $viewModel.locationName)
+                        TextField("Nombre de Farmacia", text: $viewModel.locationName)
                             .textFieldStyle(.roundedBorder)
                             .autocorrectionDisabled()
                     }
                 } else {
-                    Text("No locations found. Tap 'Sync Square' to import from Square, or enter a name below.")
+                    Text("No se encontraron ubicaciones. Toca 'Sincronizar Square' para importar de Square, o ingresa un nombre abajo.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     
-                    TextField("Pharmacy Name", text: $viewModel.locationName)
+                    TextField("Nombre de Farmacia", text: $viewModel.locationName)
                         .textFieldStyle(.roundedBorder)
                         .autocorrectionDisabled()
                 }
@@ -217,7 +217,7 @@ struct InitialSetupView: View {
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                 } else {
                     Image(systemName: "checkmark.circle.fill")
-                    Text("Complete Setup")
+                    Text("Completar Configuración")
                 }
             }
             .frame(maxWidth: .infinity)
@@ -236,7 +236,7 @@ struct InitialSetupView: View {
         Button {
             onSwitchToLogin()
         } label: {
-            Text("Already have an account? Log in")
+            Text("¿Ya tienes cuenta? Iniciar sesión")
                 .font(.subheadline)
                 .foregroundColor(.blue)
         }
@@ -323,7 +323,7 @@ class InitialSetupViewModel: ObservableObject {
                 selectedLocationId = locations.first?.id ?? ""
             }
         } catch let error as NetworkError {
-            errorMessage = error.errorDescription ?? "Failed to sync from Square"
+            errorMessage = error.errorDescription ?? "Error al sincronizar con Square"
             showError = true
         } catch {
             errorMessage = error.localizedDescription
@@ -356,7 +356,7 @@ class InitialSetupViewModel: ObservableObject {
             
             showSuccess = true
         } catch let error as NetworkError {
-            errorMessage = error.errorDescription ?? "Setup failed"
+            errorMessage = error.errorDescription ?? "Error de configuración"
             showError = true
         } catch {
             errorMessage = error.localizedDescription

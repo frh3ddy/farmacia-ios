@@ -52,16 +52,16 @@ struct LocationSwitchView: View {
                     locationsList
                 }
             }
-            .navigationTitle("Switch Location")
+            .navigationTitle("Cambiar Ubicación")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
+                    Button("Cancelar") {
                         dismiss()
                     }
                 }
             }
-            .alert("Switch Failed", isPresented: $showError) {
+            .alert("Error al Cambiar", isPresented: $showError) {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(errorMessage)
@@ -81,7 +81,7 @@ struct LocationSwitchView: View {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.secondary)
             
-            TextField("Search locations...", text: $searchText)
+            TextField("Buscar ubicaciones...", text: $searchText)
                 .textFieldStyle(.plain)
                 .autocorrectionDisabled()
             
@@ -146,7 +146,7 @@ struct LocationSwitchView: View {
                 Circle()
                     .fill(Color.green)
                     .frame(width: 8, height: 8)
-                Text("Currently Active")
+                Text("Actualmente Activa")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -188,12 +188,12 @@ struct LocationSwitchView: View {
                         .buttonStyle(.plain)
                         .disabled(isCurrent || switchingLocationId != nil)
                         .accessibilityLabel("\(location.name), \(location.role.displayName)")
-                        .accessibilityHint(isCurrent ? "Currently active location" : "Double tap to switch to this location")
+                        .accessibilityHint(isCurrent ? "Ubicación actualmente activa" : "Doble toque para cambiar a esta ubicación")
                     }
                 }
             } header: {
                 HStack {
-                    Text("Available Locations")
+                    Text("Ubicaciones Disponibles")
                     Spacer()
                     Text("\(authManager.availableLocations.count)")
                         .foregroundColor(.secondary)
@@ -201,8 +201,8 @@ struct LocationSwitchView: View {
                 }
             } footer: {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Select a location to switch your current working location.")
-                    Text("Your role and permissions may vary by location.")
+                    Text("Selecciona una ubicación para cambiar tu lugar de trabajo actual.")
+                    Text("Tu rol y permisos pueden variar según la ubicación.")
                         .foregroundColor(.orange)
                 }
                 .font(.caption)
@@ -219,11 +219,11 @@ struct LocationSwitchView: View {
                 .font(.title)
                 .foregroundColor(.secondary)
             
-            Text("No locations found")
+            Text("No se encontraron ubicaciones")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
             
-            Text("Try a different search term")
+            Text("Prueba con otro término de búsqueda")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
@@ -245,10 +245,10 @@ struct LocationSwitchView: View {
                     .foregroundColor(.secondary)
             }
             
-            Text("No Locations Available")
+            Text("Sin Ubicaciones Disponibles")
                 .font(.headline)
             
-            Text("You don't have access to any locations.\nContact your administrator for assistance.")
+            Text("No tienes acceso a ninguna ubicación.\nContacta a tu administrador para asistencia.")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -257,7 +257,7 @@ struct LocationSwitchView: View {
             Button {
                 dismiss()
             } label: {
-                Text("Dismiss")
+                Text("Cerrar")
                     .font(.headline)
                     .frame(maxWidth: .infinity)
             }
@@ -282,11 +282,11 @@ struct LocationSwitchView: View {
                     .foregroundColor(.green)
             }
             
-            Text("You're All Set!")
+            Text("¡Todo Listo!")
                 .font(.title3)
                 .fontWeight(.bold)
             
-            Text("You only have access to one location,\nwhich is already active.")
+            Text("Solo tienes acceso a una ubicación,\nla cual ya está activa.")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -294,7 +294,7 @@ struct LocationSwitchView: View {
             Button {
                 dismiss()
             } label: {
-                Text("Done")
+                Text("Listo")
                     .font(.headline)
                     .frame(maxWidth: .infinity)
             }
@@ -323,7 +323,7 @@ struct LocationSwitchView: View {
                         .foregroundColor(.green)
                 }
                 
-                Text("Switched to")
+                Text("Cambiado a")
                     .font(.headline)
                     .foregroundColor(.white)
                 
@@ -370,7 +370,7 @@ struct LocationSwitchView: View {
             let errorFeedback = UINotificationFeedbackGenerator()
             errorFeedback.notificationOccurred(.error)
             
-            errorMessage = error.errorDescription ?? "Failed to switch location"
+            errorMessage = error.errorDescription ?? "Error al cambiar ubicación"
             showError = true
         } catch {
             // Error haptic
@@ -455,7 +455,7 @@ struct LocationRow: View {
                         Circle()
                             .fill(Color.green)
                             .frame(width: 8, height: 8)
-                        Text("Active")
+                        Text("Activa")
                             .font(.caption)
                             .fontWeight(.semibold)
                     }

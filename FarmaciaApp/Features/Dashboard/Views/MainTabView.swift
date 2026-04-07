@@ -9,6 +9,9 @@ struct MainTabView: View {
     @EnvironmentObject var authManager: AuthManager
     @State private var selectedTab: Tab = .dashboard
     
+    /// Bumped every time a tab is selected; observed by child views to trigger a re-fetch.
+    @State private var refreshTrigger: UUID = UUID()
+    
     enum Tab: Hashable {
         case dashboard
         case products
@@ -23,14 +26,14 @@ struct MainTabView: View {
             // Dashboard
             DashboardView()
                 .tabItem {
-                    Label("Dashboard", systemImage: "chart.bar.xaxis")
+                    Label("Inicio", systemImage: "chart.bar.xaxis")
                 }
                 .tag(Tab.dashboard)
             
             // Products (unified: catalog + inventory operations)
-            ProductsView()
+            ProductsView(refreshTrigger: refreshTrigger)
                 .tabItem {
-                    Label("Products", systemImage: "shippingbox.fill")
+                    Label("Productos", systemImage: "shippingbox.fill")
                 }
                 .tag(Tab.products)
             
@@ -38,7 +41,7 @@ struct MainTabView: View {
             if authManager.canManageExpenses {
                 ExpensesView()
                     .tabItem {
-                        Label("Expenses", systemImage: "creditcard")
+                        Label("Gastos", systemImage: "creditcard")
                     }
                     .tag(Tab.expenses)
             }
@@ -47,7 +50,7 @@ struct MainTabView: View {
             if authManager.canViewReports {
                 ReportsView()
                     .tabItem {
-                        Label("Reports", systemImage: "doc.text.magnifyingglass")
+                        Label("Reportes", systemImage: "doc.text.magnifyingglass")
                     }
                     .tag(Tab.reports)
             }
@@ -56,7 +59,7 @@ struct MainTabView: View {
             if authManager.canManageEmployees {
                 EmployeesView()
                     .tabItem {
-                        Label("Employees", systemImage: "person.3")
+                        Label("Empleados", systemImage: "person.3")
                     }
                     .tag(Tab.employees)
             }
@@ -64,11 +67,15 @@ struct MainTabView: View {
             // Settings
             SettingsView()
                 .tabItem {
-                    Label("Settings", systemImage: "gearshape")
+                    Label("Ajustes", systemImage: "gearshape")
                 }
                 .tag(Tab.settings)
         }
         .accentColor(.blue)
+        .onChange(of: selectedTab) { _, _ in
+            // Bump trigger so the newly-selected tab re-fetches fresh data
+            refreshTrigger = UUID()
+        }
     }
 }
 

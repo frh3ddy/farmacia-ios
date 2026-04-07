@@ -51,6 +51,7 @@
 		DD00000100000006 /* ShoppingListStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000006 /* ShoppingListStore.swift */; };
 		EE00000100000001 /* ImagePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000001 /* ImagePicker.swift */; };
 		EE00000100000002 /* ProductImageViewer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000002 /* ProductImageViewer.swift */; };
+		FF00000100000001 /* CodeScanner in Frameworks */ = {isa = PBXBuildFile; productRef = FF00000200000001 /* CodeScanner */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -107,6 +108,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FF00000100000001 /* CodeScanner in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -372,6 +374,9 @@
 			dependencies = (
 			);
 			name = FarmaciaApp;
+			packageProductDependencies = (
+				FF00000200000001 /* CodeScanner */,
+			);
 			productName = FarmaciaApp;
 			productReference = F100000000000000 /* FarmaciaApp.app */;
 			productType = "com.apple.product-type.application";
@@ -403,6 +408,9 @@
 			productRefGroup = F300000000000099 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
+			packageReferences = (
+				FF00000300000001 /* XCRemoteSwiftPackageReference "CodeScanner" */,
+			);
 			targets = (
 				F400000000000001 /* FarmaciaApp */,
 			);
@@ -663,6 +671,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		FF00000300000001 /* XCRemoteSwiftPackageReference "CodeScanner" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/twostraws/CodeScanner.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		FF00000200000001 /* CodeScanner */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FF00000300000001 /* XCRemoteSwiftPackageReference "CodeScanner" */;
+			productName = CodeScanner;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = F700000000000001 /* Project object */;
 }

@@ -16,16 +16,16 @@ enum AdjustmentType: String, Codable, CaseIterable {
     
     var displayName: String {
         switch self {
-        case .damage: return "Damage"
-        case .theft: return "Theft"
-        case .expired: return "Expired"
-        case .countCorrection: return "Count Correction"
-        case .found: return "Found"
-        case .returnType: return "Return"
-        case .transferOut: return "Transfer Out"
-        case .transferIn: return "Transfer In"
-        case .writeOff: return "Write-off"
-        case .other: return "Other"
+        case .damage: return "Daño"
+        case .theft: return "Robo"
+        case .expired: return "Vencido"
+        case .countCorrection: return "Corrección de Conteo"
+        case .found: return "Encontrado"
+        case .returnType: return "Devolución"
+        case .transferOut: return "Transferencia Salida"
+        case .transferIn: return "Transferencia Entrada"
+        case .writeOff: return "Baja"
+        case .other: return "Otro"
         }
     }
     

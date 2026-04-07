@@ -1,14 +1,30 @@
 import SwiftUI
+import SwiftData
 
 @main
 struct FarmaciaApp: App {
     @StateObject private var authManager = AuthManager.shared
     @Environment(\.scenePhase) private var scenePhase
     
+    let modelContainer: ModelContainer
+    
+    init() {
+        do {
+            let schema = Schema([CachedProduct.self, SyncMetadata.self])
+            let config = ModelConfiguration(isStoredInMemoryOnly: false)
+            modelContainer = try ModelContainer(for: schema, configurations: config)
+            // Configure the shared cache manager
+            ProductCacheManager.shared.configure(container: modelContainer)
+        } catch {
+            fatalError("Failed to initialize SwiftData: \(error)")
+        }
+    }
+    
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environmentObject(authManager)
+                .modelContainer(modelContainer)
         }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
@@ -54,7 +70,7 @@ struct LoadingView: View {
             ProgressView()
                 .scaleEffect(1.5)
             
-            Text("Loading...")
+            Text("Cargando...")
                 .font(.headline)
                 .foregroundColor(.secondary)
         }

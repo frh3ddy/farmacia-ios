@@ -14,10 +14,10 @@ enum ShoppingListStatus: String, Codable, CaseIterable {
     
     var label: String {
         switch self {
-        case .draft: return "Draft"
-        case .ready: return "Ready"
-        case .partiallyReceived: return "Partially Received"
-        case .completed: return "Completed"
+        case .draft: return "Borrador"
+        case .ready: return "Lista"
+        case .partiallyReceived: return "Parcialmente Recibida"
+        case .completed: return "Completada"
         }
     }
     

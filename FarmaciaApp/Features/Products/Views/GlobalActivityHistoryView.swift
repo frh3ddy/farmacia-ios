@@ -10,15 +10,15 @@ struct GlobalActivityHistoryView: View {
     @State private var selectedSegment: ActivitySegment = .all
     
     enum ActivitySegment: String, CaseIterable {
-        case all = "All"
-        case receivings = "Receivings"
-        case adjustments = "Adjustments"
+        case all = "Todos"
+        case recepciones = "Recepciones"
+        case ajustes = "Ajustes"
     }
     
     var body: some View {
         VStack(spacing: 0) {
             // Segment picker
-            Picker("Activity", selection: $selectedSegment) {
+            Picker("Actividad", selection: $selectedSegment) {
                 ForEach(ActivitySegment.allCases, id: \.self) { segment in
                     Text(segment.rawValue).tag(segment)
                 }
@@ -31,10 +31,10 @@ struct GlobalActivityHistoryView: View {
                 switch selectedSegment {
                 case .all:
                     allActivitySection
-                case .receivings:
-                    receivingsSection
-                case .adjustments:
-                    adjustmentsSection
+                case .recepciones:
+                    recepcionesSection
+                case .ajustes:
+                    ajustesSection
                 }
             }
             .listStyle(.insetGrouped)
@@ -44,7 +44,7 @@ struct GlobalActivityHistoryView: View {
                 }
             }
         }
-        .navigationTitle("Activity History")
+        .navigationTitle("Historial de Actividad")
         .navigationBarTitleDisplayMode(.inline)
         .task {
             if let locationId = authManager.currentLocation?.id {
@@ -54,7 +54,7 @@ struct GlobalActivityHistoryView: View {
         .alert("Error", isPresented: $viewModel.showError) {
             Button("OK") {}
         } message: {
-            Text(viewModel.errorMessage ?? "An error occurred")
+            Text(viewModel.errorMessage ?? "Ocurrió un error")
         }
     }
     
@@ -66,7 +66,7 @@ struct GlobalActivityHistoryView: View {
             Section {
                 HStack {
                     Spacer()
-                    ProgressView("Loading activity...")
+                    ProgressView("Cargando actividad...")
                     Spacer()
                 }
                 .listRowBackground(Color.clear)
@@ -94,26 +94,26 @@ struct GlobalActivityHistoryView: View {
     // MARK: - Receivings Section
     
     @ViewBuilder
-    private var receivingsSection: some View {
-        if viewModel.isLoadingReceivings && viewModel.receivings.isEmpty {
+    private var recepcionesSection: some View {
+        if viewModel.isLoadingReceivings && viewModel.recepciones.isEmpty {
             Section {
                 HStack {
                     Spacer()
-                    ProgressView("Loading...")
+                    ProgressView("Cargando...")
                     Spacer()
                 }
                 .listRowBackground(Color.clear)
             }
-        } else if viewModel.receivings.isEmpty {
+        } else if viewModel.recepciones.isEmpty {
             Section {
                 emptyState(
                     icon: "shippingbox",
-                    message: "No receivings recorded"
+                    message: "Sin recepciones registradas"
                 )
             }
         } else {
-            Section("Recent Receivings (\(viewModel.receivings.count))") {
-                ForEach(viewModel.receivings) { receiving in
+            Section("Recent Receivings (\(viewModel.recepciones.count))") {
+                ForEach(viewModel.recepciones) { receiving in
                     ReceivingRow(receiving: receiving)
                 }
             }
@@ -123,26 +123,26 @@ struct GlobalActivityHistoryView: View {
     // MARK: - Adjustments Section
     
     @ViewBuilder
-    private var adjustmentsSection: some View {
-        if viewModel.isLoadingAdjustments && viewModel.adjustments.isEmpty {
+    private var ajustesSection: some View {
+        if viewModel.isLoadingAdjustments && viewModel.ajustes.isEmpty {
             Section {
                 HStack {
                     Spacer()
-                    ProgressView("Loading...")
+                    ProgressView("Cargando...")
                     Spacer()
                 }
                 .listRowBackground(Color.clear)
             }
-        } else if viewModel.adjustments.isEmpty {
+        } else if viewModel.ajustes.isEmpty {
             Section {
                 emptyState(
                     icon: "arrow.triangle.2.circlepath",
-                    message: "No adjustments recorded"
+                    message: "Sin ajustes registrados"
                 )
             }
         } else {
-            Section("Recent Adjustments (\(viewModel.adjustments.count))") {
-                ForEach(viewModel.adjustments) { adjustment in
+            Section("Recent Adjustments (\(viewModel.ajustes.count))") {
+                ForEach(viewModel.ajustes) { adjustment in
                     AdjustmentRow(adjustment: adjustment)
                 }
             }
@@ -271,8 +271,8 @@ struct GlobalActivityRow: View {
 
 @MainActor
 class GlobalActivityViewModel: ObservableObject {
-    @Published var receivings: [InventoryReceiving] = []
-    @Published var adjustments: [InventoryAdjustment] = []
+    @Published var recepciones: [InventoryReceiving] = []
+    @Published var ajustes: [InventoryAdjustment] = []
     @Published var isLoading = false
     @Published var isLoadingReceivings = false
     @Published var isLoadingAdjustments = false
@@ -284,11 +284,11 @@ class GlobalActivityViewModel: ObservableObject {
     var combinedActivity: [GlobalActivityItem] {
         var items: [GlobalActivityItem] = []
         
-        for r in receivings {
+        for r in recepciones {
             items.append(GlobalActivityItem(
                 id: "recv-\(r.id)",
                 productName: r.product?.displayName ?? "Unknown Product",
-                title: "Received \(r.quantity) units",
+                title: "Recibido \(r.quantity) uds",
                 subtitle: r.supplier?.name ?? r.invoiceNumber ?? "",
                 date: r.receivedAt,
                 quantity: r.quantity,
@@ -297,7 +297,7 @@ class GlobalActivityViewModel: ObservableObject {
             ))
         }
         
-        for a in adjustments {
+        for a in ajustes {
             let displayQty = a.type.isNegative ? -abs(a.quantity) : a.quantity
             items.append(GlobalActivityItem(
                 id: "adj-\(a.id)",
@@ -331,7 +331,7 @@ class GlobalActivityViewModel: ObservableObject {
             let response: ReceivingListResponse = try await apiClient.request(
                 endpoint: .listReceivingsByLocation(locationId: locationId)
             )
-            receivings = response.data
+            recepciones = response.data
         } catch is CancellationError {
             return
         } catch let error as NetworkError {
@@ -341,7 +341,7 @@ class GlobalActivityViewModel: ObservableObject {
             }
         } catch {
             if !error.localizedDescription.lowercased().contains("cancel") {
-                errorMessage = "Failed to load receivings"
+                errorMessage = "Failed to load recepciones"
                 showError = true
             }
         }
@@ -353,9 +353,9 @@ class GlobalActivityViewModel: ObservableObject {
         
         do {
             let response: AdjustmentListResponse = try await apiClient.request(
-                endpoint: .adjustmentsByLocation(locationId: locationId)
+                endpoint: .ajustesByLocation(locationId: locationId)
             )
-            adjustments = response.data
+            ajustes = response.data
         } catch is CancellationError {
             return
         } catch let error as NetworkError {
@@ -365,7 +365,7 @@ class GlobalActivityViewModel: ObservableObject {
             }
         } catch {
             if !error.localizedDescription.lowercased().contains("cancel") {
-                errorMessage = "Failed to load adjustments"
+                errorMessage = "Failed to load ajustes"
                 showError = true
             }
         }

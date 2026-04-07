@@ -1,4 +1,5 @@
 import SwiftUI
+import CodeScanner
 
 // MARK: - Products View
 // Unified product + inventory hub. Includes search, smart filters,
@@ -16,16 +17,25 @@ struct ProductsView: View {
     @State private var activeFilter: ProductFilter = .all
     @State private var sortOption: ProductSortOption = .name
     
+    // Barcode scanner state
+    @State private var showBarcodeScanner = false
+    @State private var scannedProduct: Product? = nil
+    @State private var navigateToScannedProduct = false
+    @State private var prefillSku: String? = nil
+    
+    /// Tab-switch refresh trigger (set by MainTabView)
+    var refreshTrigger: UUID = UUID()
+    
     // MARK: - Filter / Sort enums
     
     enum ProductFilter: String, CaseIterable {
-        case all = "All"
-        case lowStock = "Low Stock"
-        case outOfStock = "Out of Stock"
+        case all = "Todos"
+        case lowStock = "Stock Bajo"
+        case outOfStock = "Sin Stock"
         case inStock = "In Stock"
-        case atRisk = "At Risk"
-        case expiringSoon = "Expiring"
-        case lowMargin = "Low Margin"
+        case atRisk = "En Riesgo"
+        case expiringSoon = "Por Vencer"
+        case lowMargin = "Margen Bajo"
         
         var icon: String {
             switch self {
@@ -53,28 +63,25 @@ struct ProductsView: View {
     }
     
     enum ProductSortOption: String, CaseIterable {
-        case name = "Name"
+        case name = "Nombre"
         case stockAsc = "Stock (Low)"
         case stockDesc = "Stock (High)"
-        case margin = "Margin"
-        case priceAsc = "Price (Low)"
-        case priceDesc = "Price (High)"
+        case margin = "Margen"
+        case priceAsc = "Precio (Menor)"
+        case priceDesc = "Precio (Mayor)"
     }
     
+    // Debounced search — triggers server-side search after user stops typing
+    @State private var searchTask: Task<Void, Never>? = nil
+    
     // MARK: - Computed products
+    // Note: name/SKU filtering is handled server-side via the `search` query param.
+    // Only stock/risk/margin filters are applied client-side on the loaded page.
     
     private var filteredProducts: [Product] {
         var products = viewModel.products
         
-        // Apply text search
-        if !searchText.isEmpty {
-            products = products.filter { product in
-                product.displayName.localizedCaseInsensitiveContains(searchText) ||
-                (product.sku?.localizedCaseInsensitiveContains(searchText) ?? false)
-            }
-        }
-        
-        // Apply filter
+        // Apply client-side filter (stock, risk, margin — not name/sku)
         switch activeFilter {
         case .all:
             break
@@ -113,26 +120,20 @@ struct ProductsView: View {
         return products
     }
     
-    // Stock count helpers for attention banner
-    private var outOfStockCount: Int {
-        viewModel.products.filter { ($0.totalInventory ?? 0) == 0 }.count
-    }
-    
-    private var lowStockCount: Int {
-        viewModel.products.filter { ($0.totalInventory ?? 0) > 0 && ($0.totalInventory ?? 0) < 10 }.count
-    }
-    
-    private var lowMarginCount: Int {
-        viewModel.products.filter { ($0.profitMargin ?? 100) < 10 }.count
-    }
-    
-    private var atRiskCount: Int {
-        agingViewModel.atRiskProductIds.count
-    }
+    // Stock count helpers for attention banner (read from pre-computed counts)
+    private var outOfStockCount: Int { viewModel.counts.outOfStock }
+    private var lowStockCount: Int { viewModel.counts.lowStock }
+    private var lowMarginCount: Int { viewModel.counts.lowMargin }
+    private var atRiskCount: Int { agingViewModel.atRiskProductIds.count }
     
     private var needsAttention: Bool {
         outOfStockCount > 0 || lowStockCount > 0 || lowMarginCount > 0 || atRiskCount > 0
     }
+    
+    // Barcode scanner: multiple candidates from fuzzy server match
+    @State private var barcodeCandidates: [Product] = []
+    @State private var showBarcodeCandidates = false
+    @State private var lastScannedCode: String = ""
     
     var body: some View {
         NavigationStack {
@@ -145,7 +146,7 @@ struct ProductsView: View {
                     productsList
                 }
             }
-            .navigationTitle("Products")
+            .navigationTitle("Productos")
             .toolbar {
                 // Activity history (left)
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -160,18 +161,18 @@ struct ProductsView: View {
                 
                 // Sort + Purchase Order + Add (right)
                 ToolbarItemGroup(placement: .navigationBarTrailing) {
-                    // Sort menu
+                    // Barcode scanner
+                    Button {
+                        showBarcodeScanner = true
+                    } label: {
+                        Image(systemName: "barcode.viewfinder")
+                    }
+                    
+                    // Sort menu — uses Picker to avoid SwiftUI Menu+ForEach first-item bug
                     Menu {
-                        ForEach(ProductSortOption.allCases, id: \.self) { option in
-                            Button {
-                                sortOption = option
-                            } label: {
-                                HStack {
-                                    Text(option.rawValue)
-                                    if sortOption == option {
-                                        Image(systemName: "checkmark")
-                                    }
-                                }
+                        Picker("Ordenar por", selection: $sortOption) {
+                            ForEach(ProductSortOption.allCases, id: \.self) { option in
+                                Text(option.rawValue).tag(option)
                             }
                         }
                     } label: {
@@ -218,41 +219,76 @@ struct ProductsView: View {
                     }
                 }
             }
-            .searchable(text: $searchText, prompt: "Search products...")
+            .searchable(text: $searchText, prompt: "Buscar productos...")
+            .onChange(of: searchText) { _, newValue in
+                // Debounce: cancel previous search, wait 400ms, then search server-side
+                searchTask?.cancel()
+                searchTask = Task {
+                    try? await Task.sleep(nanoseconds: 400_000_000) // 400ms
+                    guard !Task.isCancelled else { return }
+                    await loadProducts()
+                }
+            }
             .refreshable {
                 await loadProducts()
             }
             .sheet(isPresented: $showCreateProduct) {
-                CreateProductView()
+                CreateProductView(prefillSku: prefillSku)
                     .onDisappear {
-                        Task {
-                            await loadProducts()
-                        }
+                        prefillSku = nil
                     }
             }
             .sheet(isPresented: $showPurchaseOrder) {
                 PurchaseOrderView()
-                    .onDisappear {
-                        Task {
-                            await loadProducts()
-                        }
-                    }
             }
             .fullScreenCover(isPresented: $showShoppingLists) {
                 ShoppingListsView(store: ShoppingListStore.shared)
-                    .onDisappear {
-                        Task {
-                            await loadProducts()
-                        }
+            }
+            .sheet(isPresented: $showBarcodeCandidates) {
+                BarcodeCandidatesSheet(
+                    code: lastScannedCode,
+                    candidates: barcodeCandidates,
+                    onSelect: { product in
+                        showBarcodeCandidates = false
+                        scannedProduct = product
+                        navigateToScannedProduct = true
+                    },
+                    onCreate: {
+                        showBarcodeCandidates = false
+                        prefillSku = lastScannedCode
+                        showCreateProduct = true
                     }
+                )
+            }
+            .sheet(isPresented: $showBarcodeScanner) {
+                BarcodeScannerSheet { scannedCode in
+                    showBarcodeScanner = false
+                    handleScannedBarcode(scannedCode)
+                }
+            }
+            .navigationDestination(isPresented: $navigateToScannedProduct) {
+                if let product = scannedProduct {
+                    ProductDetailView(
+                        product: product,
+                        onProductUpdated: { updatedProduct in
+                            viewModel.updateProduct(updatedProduct)
+                        }
+                    )
+                }
             }
             .task {
                 await loadProducts()
                 await loadAgingData()
             }
+            .onChange(of: refreshTrigger) { _, _ in
+                // Tab was selected — reload fresh data
+                Task {
+                    await loadProducts()
+                }
+            }
             .alert("Error", isPresented: $viewModel.showError) {
                 Button("OK", role: .cancel) {}
-                Button("Retry") {
+                Button("Reintentar") {
                     Task {
                         await loadProducts()
                     }
@@ -269,7 +305,7 @@ struct ProductsView: View {
         VStack(spacing: 16) {
             ProgressView()
                 .scaleEffect(1.5)
-            Text("Loading products...")
+            Text("Cargando productos...")
                 .foregroundColor(.secondary)
         }
     }
@@ -282,7 +318,7 @@ struct ProductsView: View {
                 .font(.system(size: 60))
                 .foregroundColor(.secondary)
             
-            Text("No Products")
+            Text("Sin Productos")
                 .font(.title2)
                 .fontWeight(.bold)
             
@@ -296,7 +332,7 @@ struct ProductsView: View {
                 Button {
                     showCreateProduct = true
                 } label: {
-                    Label("Create Product", systemImage: "plus")
+                    Label("Crear Producto", systemImage: "plus")
                         .font(.headline)
                 }
                 .buttonStyle(.borderedProminent)
@@ -329,7 +365,7 @@ struct ProductsView: View {
                 HStack {
                     summaryItem(
                         title: "Total",
-                        value: "\(viewModel.products.count)",
+                        value: "\(viewModel.totalCount)",
                         icon: "shippingbox.fill",
                         color: .blue
                     )
@@ -337,7 +373,7 @@ struct ProductsView: View {
                     Divider()
                     
                     summaryItem(
-                        title: "Synced",
+                        title: "Sincronizado",
                         value: "\(viewModel.products.filter { $0.hasSquareSync == true }.count)",
                         icon: "checkmark.circle.fill",
                         color: .green
@@ -359,12 +395,35 @@ struct ProductsView: View {
             Section {
                 ForEach(filteredProducts) { product in
                     NavigationLink {
-                        ProductDetailView(product: product)
+                        ProductDetailView(
+                            product: product,
+                            onProductUpdated: { updatedProduct in
+                                viewModel.updateProduct(updatedProduct)
+                            }
+                        )
                     } label: {
                         ProductRow(
                             product: product,
                             riskLevel: agingViewModel.productRiskLevels[product.id]
                         )
+                    }
+                    .onAppear {
+                        // Infinite scroll: trigger load-more when near the end
+                        if product.id == filteredProducts.last?.id && viewModel.hasMore {
+                            Task {
+                                await loadMoreProducts()
+                            }
+                        }
+                    }
+                }
+                
+                // Loading indicator at bottom while fetching next page
+                if viewModel.isLoadingMore {
+                    HStack {
+                        Spacer()
+                        ProgressView()
+                            .padding(.vertical, 8)
+                        Spacer()
                     }
                 }
             } header: {
@@ -372,16 +431,22 @@ struct ProductsView: View {
                     if activeFilter != .all {
                         Text("\(filteredProducts.count) \(activeFilter.rawValue)")
                     } else if !searchText.isEmpty {
-                        Text("\(filteredProducts.count) results")
+                        Text("\(filteredProducts.count) resultados")
                     }
                     
                     Spacer()
                     
                     if sortOption != .name {
-                        Text("Sorted by: \(sortOption.rawValue)")
+                        Text("Ordenado por: \(sortOption.rawValue)")
                             .font(.caption2)
                             .foregroundColor(.secondary)
                     }
+                }
+            } footer: {
+                if viewModel.totalCount > 0 {
+                    Text("Mostrando \(viewModel.products.count) de \(viewModel.totalCount) productos")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
                 }
             }
         }
@@ -398,7 +463,7 @@ struct ProductsView: View {
                     .font(.title3)
                 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Attention Required")
+                    Text("Atención Requerida")
                         .font(.subheadline)
                         .fontWeight(.semibold)
                     
@@ -575,13 +640,13 @@ struct ProductsView: View {
     
     private func filterCount(for filter: ProductFilter) -> Int {
         switch filter {
-        case .all: return viewModel.products.count
-        case .lowStock: return lowStockCount
-        case .outOfStock: return outOfStockCount
-        case .inStock: return viewModel.products.filter { ($0.totalInventory ?? 0) >= 10 }.count
+        case .all: return viewModel.counts.total
+        case .lowStock: return viewModel.counts.lowStock
+        case .outOfStock: return viewModel.counts.outOfStock
+        case .inStock: return viewModel.counts.inStock
         case .atRisk: return atRiskCount
         case .expiringSoon: return expiringViewModel.expiringProductIds.count
-        case .lowMargin: return lowMarginCount
+        case .lowMargin: return viewModel.counts.lowMargin
         }
     }
     
@@ -607,13 +672,201 @@ struct ProductsView: View {
     
     private func loadProducts() async {
         guard let locationId = authManager.currentLocation?.id else { return }
-        await viewModel.loadProducts(locationId: locationId)
+        let search = searchText.isEmpty ? nil : searchText
+        await viewModel.loadProducts(locationId: locationId, search: search)
+    }
+    
+    private func loadMoreProducts() async {
+        guard let locationId = authManager.currentLocation?.id else { return }
+        await viewModel.loadMoreProducts(locationId: locationId)
     }
     
     private func loadAgingData() async {
         guard let locationId = authManager.currentLocation?.id else { return }
         await agingViewModel.loadAtRiskProducts(locationId: locationId)
         await expiringViewModel.loadExpiringProducts(locationId: locationId)
+    }
+    
+    private func handleScannedBarcode(_ code: String) {
+        lastScannedCode = code
+        let cache = ProductCacheManager.shared
+        
+        // LEVEL 1a: Check loaded products in memory (instant)
+        if let match = viewModel.products.first(where: { $0.sku?.lowercased() == code.lowercased() }) {
+            scannedProduct = match
+            navigateToScannedProduct = true
+            return
+        }
+        
+        // LEVEL 1b: Check SwiftData cache (all 3000+ products, indexed)
+        if let cached = cache.findBySku(code) {
+            scannedProduct = cached
+            navigateToScannedProduct = true
+            return
+        }
+        
+        // LEVEL 2 + 3: Server search with exact=true (does NOT touch the product list)
+        Task {
+            guard let locationId = authManager.currentLocation?.id else { return }
+            
+            do {
+                let response = try await viewModel.searchExact(locationId: locationId, code: code)
+                
+                if response.exactMatch == true, let match = response.data.first {
+                    // Exact SKU match — go straight to detail
+                    scannedProduct = match
+                    navigateToScannedProduct = true
+                } else if response.data.count == 1 {
+                    // Single fuzzy result — go straight to detail
+                    scannedProduct = response.data.first
+                    navigateToScannedProduct = true
+                } else if response.data.count > 1 {
+                    // Multiple fuzzy results — show candidates sheet
+                    barcodeCandidates = response.data
+                    showBarcodeCandidates = true
+                } else {
+                    // Not found — offer to create product
+                    prefillSku = code
+                    showCreateProduct = true
+                }
+            } catch {
+                // Network error — offer to create anyway
+                prefillSku = code
+                showCreateProduct = true
+            }
+        }
+    }
+}
+
+// MARK: - Barcode Scanner Sheet
+
+private struct BarcodeScannerSheet: View {
+    let onCodeScanned: (String) -> Void
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        NavigationStack {
+            CodeScannerView(
+                codeTypes: [.ean13, .ean8, .upce, .code128, .code39, .code93, .itf14, .qr],
+                scanMode: .once,
+                showViewfinder: true,
+                shouldVibrateOnSuccess: true,
+                completion: handleScan
+            )
+            .navigationTitle("Escanear Código")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancelar") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+    
+    private func handleScan(result: Result<ScanResult, ScanError>) {
+        switch result {
+        case .success(let scanResult):
+            onCodeScanned(scanResult.string)
+        case .failure(let error):
+            print("Barcode scan failed: \(error.localizedDescription)")
+            dismiss()
+        }
+    }
+}
+
+// MARK: - Barcode Candidates Sheet (fuzzy match results)
+
+private struct BarcodeCandidatesSheet: View {
+    let code: String
+    let candidates: [Product]
+    let onSelect: (Product) -> Void
+    let onCreate: () -> Void
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    ForEach(candidates) { product in
+                        Button {
+                            onSelect(product)
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "shippingbox.fill")
+                                    .foregroundColor(.blue)
+                                    .frame(width: 32)
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(product.displayName)
+                                        .font(.headline)
+                                        .foregroundColor(.primary)
+                                    
+                                    if let sku = product.sku {
+                                        Text("SKU: \(sku)")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                                
+                                Spacer()
+                                
+                                VStack(alignment: .trailing, spacing: 4) {
+                                    if let price = product.formattedPrice {
+                                        Text(price)
+                                            .font(.subheadline)
+                                            .fontWeight(.semibold)
+                                    }
+                                    if let stock = product.totalInventory {
+                                        Text("\(stock) uds")
+                                            .font(.caption)
+                                            .foregroundColor(stock > 0 ? .secondary : .red)
+                                    }
+                                }
+                            }
+                            .padding(.vertical, 4)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                } header: {
+                    Text("Resultados para \"\(code)\"")
+                }
+                
+                Section {
+                    Button {
+                        onCreate()
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "plus.circle.fill")
+                                .foregroundColor(.green)
+                                .frame(width: 32)
+                            
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Crear Producto Nuevo")
+                                    .font(.headline)
+                                    .foregroundColor(.primary)
+                                Text("SKU: \(code)")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .listStyle(.insetGrouped)
+            .navigationTitle("Seleccionar Producto")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancelar") {
+                        dismiss()
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -703,7 +956,7 @@ struct ProductRow: View {
                 }
                 
                 if let stock = product.totalInventory {
-                    Text("\(stock) units")
+                    Text("\(stock) uds")
                         .font(.caption)
                         .foregroundColor(stock > 0 ? .secondary : .red)
                 }
@@ -753,35 +1006,191 @@ struct ProductRow: View {
     }
 }
 
-// MARK: - Products View Model
+// MARK: - Products View Model (paginated, infinite scroll)
+
+// MARK: - Pre-computed filter counts (avoids 6× O(n) per SwiftUI render)
+struct ProductCounts: Equatable {
+    var total = 0
+    var outOfStock = 0
+    var lowStock = 0
+    var inStock = 0
+    var lowMargin = 0
+}
 
 @MainActor
 class ProductsViewModel: ObservableObject {
     @Published var products: [Product] = []
     @Published var isLoading = false
+    @Published var isLoadingMore = false
     @Published var showError = false
     @Published var errorMessage = ""
     
-    private let apiClient = APIClient.shared
+    // Pre-computed counts — recalculated once when products array changes
+    @Published var counts = ProductCounts()
     
-    func loadProducts(locationId: String) async {
+    // Pagination state
+    private(set) var currentPage = 1
+    private(set) var hasMore = true
+    private(set) var totalCount = 0
+    private let pageSize = 50
+    
+    // Search state (server-side)
+    private var currentSearchQuery: String?
+    
+    private let apiClient = APIClient.shared
+    private let cache = ProductCacheManager.shared
+    
+    /// Load first page: cache first → spinner → API → update cache.
+    /// Called on appear, pull-to-refresh, and tab switch.
+    func loadProducts(locationId: String, search: String? = nil) async {
+        currentPage = 1
+        hasMore = true
+        currentSearchQuery = search
+        
+        // STEP 1: If no search and cache has data, show it immediately
+        if (search == nil || search?.isEmpty == true) && !cache.isEmpty {
+            let cached = cache.loadAll()
+            if !cached.isEmpty {
+                products = cached
+                totalCount = cached.count
+                recalculateCounts()
+            }
+        }
+        
+        // STEP 2: Show loading indicator and fetch fresh data from server
         isLoading = true
         
         do {
+            var params: [String: String] = [
+                "locationId": locationId,
+                "page": "1",
+                "limit": "\(pageSize)"
+            ]
+            if let search = search, !search.isEmpty {
+                params["search"] = search
+            }
+            
             let response: ProductListResponse = try await apiClient.request(
                 endpoint: .listProducts,
-                queryParams: ["locationId": locationId]
+                queryParams: params
             )
             products = response.data
+            totalCount = response.totalCount ?? response.count
+            hasMore = response.hasMore ?? false
+            currentPage = 1
+            recalculateCounts()
+            
+            // STEP 3: Update cache with fresh data (skip search results)
+            if search == nil || search?.isEmpty == true {
+                cache.saveProducts(response.data)
+                cache.markFresh()
+            }
         } catch let error as NetworkError {
-            errorMessage = error.errorDescription ?? "Failed to load products"
-            showError = true
+            // If we already have cached data, don't show error — just use cache
+            if products.isEmpty {
+                errorMessage = error.errorDescription ?? "Error al cargar productos"
+                showError = true
+            }
         } catch {
-            errorMessage = error.localizedDescription
-            showError = true
+            if products.isEmpty {
+                errorMessage = error.localizedDescription
+                showError = true
+            }
         }
         
         isLoading = false
+    }
+    
+    /// Load next page (appends to existing products). Called by infinite scroll.
+    func loadMoreProducts(locationId: String) async {
+        guard hasMore, !isLoadingMore, !isLoading else { return }
+        
+        isLoadingMore = true
+        let nextPage = currentPage + 1
+        
+        do {
+            var params: [String: String] = [
+                "locationId": locationId,
+                "page": "\(nextPage)",
+                "limit": "\(pageSize)"
+            ]
+            if let search = currentSearchQuery, !search.isEmpty {
+                params["search"] = search
+            }
+            
+            let response: ProductListResponse = try await apiClient.request(
+                endpoint: .listProducts,
+                queryParams: params
+            )
+            
+            // Append new products, avoiding duplicates
+            let existingIds = Set(products.map { $0.id })
+            let newProducts = response.data.filter { !existingIds.contains($0.id) }
+            products.append(contentsOf: newProducts)
+            
+            totalCount = response.totalCount ?? totalCount
+            hasMore = response.hasMore ?? false
+            currentPage = nextPage
+            recalculateCounts()
+            
+            // Update cache with new page
+            cache.saveProducts(response.data)
+        } catch {
+            // Silent fail for load-more — user can scroll again to retry
+            print("Failed to load more products: \(error)")
+        }
+        
+        isLoadingMore = false
+    }
+    
+    /// Search products on server with exact=true for barcode scanner.
+    /// Does NOT modify the main products list — returns results separately.
+    func searchExact(locationId: String, code: String) async throws -> ProductListResponse {
+        let params: [String: String] = [
+            "locationId": locationId,
+            "search": code,
+            "exact": "true",
+            "limit": "20"
+        ]
+        return try await apiClient.request(
+            endpoint: .listProducts,
+            queryParams: params
+        )
+    }
+    
+    /// Update a single product in the list (e.g. after detail view refresh).
+    /// Write-through: updates both in-memory array AND SwiftData cache.
+    func updateProduct(_ product: Product) {
+        if let index = products.firstIndex(where: { $0.id == product.id }) {
+            products[index] = product
+            recalculateCounts()
+        }
+        // Write-through to cache
+        cache.saveProduct(product)
+    }
+    
+    /// Insert a newly created product at the top of the list.
+    /// Write-through: updates both in-memory array AND SwiftData cache.
+    func insertProduct(_ product: Product) {
+        products.insert(product, at: 0)
+        totalCount += 1
+        recalculateCounts()
+        // Write-through to cache
+        cache.saveProduct(product)
+    }
+    
+    /// Single-pass count calculation — called once when products change
+    private func recalculateCounts() {
+        var c = ProductCounts()
+        c.total = products.count
+        for product in products {
+            let stock = product.totalInventory ?? 0
+            if stock == 0 { c.outOfStock += 1 }
+            else if stock < 10 { c.lowStock += 1 }
+            else { c.inStock += 1 }
+            if (product.profitMargin ?? 100) < 10 { c.lowMargin += 1 }
+        }
+        counts = c
     }
 }
 
