@@ -276,22 +276,6 @@ struct ProductsView: View {
                     )
                 }
             }
-            .sheet(isPresented: $showBarcodeScanner) {
-                BarcodeScannerSheet { scannedCode in
-                    showBarcodeScanner = false
-                    handleScannedBarcode(scannedCode)
-                }
-            }
-            .navigationDestination(isPresented: $navigateToScannedProduct) {
-                if let product = scannedProduct {
-                    ProductDetailView(
-                        product: product,
-                        onProductUpdated: { updatedProduct in
-                            viewModel.updateProduct(updatedProduct)
-                        }
-                    )
-                }
-            }
             .task {
                 await loadProducts()
                 await loadAgingData()

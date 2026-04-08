@@ -157,11 +157,8 @@ struct ProductDetailView: View {
             // Load suppliers for receive form
             await inventoryViewModel.loadProducts()
             await inventoryViewModel.loadSuppliers()
-            // Load product-scoped activity, batch, and cost/supplier data in parallel
-            async let activityLoad: () = loadActivity()
-            async let batchLoad: () = loadBatchData()
-            async let costSupplierLoad: () = loadCostSupplierData()
-            _ = await (productRefresh, costSupplierLoad)
+            // Load cost/supplier data (needed for detail view)
+            await loadCostSupplierData()
         }
         .task(id: "fifo-batches") {
             // Lazy: load FIFO batches only for owners/managers
@@ -726,6 +723,8 @@ struct ProductDetailView: View {
             )
             currentProduct = response.data
             onProductUpdated?(response.data)
+            // Write-through: update cache with fresh product data
+            ProductCacheManager.shared.saveProduct(response.data)
         } catch {
             // Silent fail - keep showing current data
         }
