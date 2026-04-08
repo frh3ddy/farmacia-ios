@@ -165,8 +165,11 @@ struct ProductListResponse: Decodable {
     let totalCount: Int?
     let totalPages: Int?
     let hasMore: Bool?
+<<<<<<< HEAD
     // Barcode scanner hint: true if exact SKU matched, false if fell back to contains
     let exactMatch: Bool?
+=======
+>>>>>>> 0e6bc57 (feat: Spanish UI + dashboard fix + infinite scroll + tab refresh + menu bug fix)
 }
 
 // MARK: - Supplier List Response

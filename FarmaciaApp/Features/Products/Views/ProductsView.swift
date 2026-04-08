@@ -236,6 +236,12 @@ struct ProductsView: View {
                 CreateProductView(prefillSku: prefillSku)
                     .onDisappear {
                         prefillSku = nil
+<<<<<<< HEAD
+=======
+                        Task {
+                            await loadProducts()
+                        }
+>>>>>>> 0e6bc57 (feat: Spanish UI + dashboard fix + infinite scroll + tab refresh + menu bug fix)
                     }
             }
             .sheet(isPresented: $showPurchaseOrder) {
@@ -259,6 +265,22 @@ struct ProductsView: View {
                         showCreateProduct = true
                     }
                 )
+            }
+            .sheet(isPresented: $showBarcodeScanner) {
+                BarcodeScannerSheet { scannedCode in
+                    showBarcodeScanner = false
+                    handleScannedBarcode(scannedCode)
+                }
+            }
+            .navigationDestination(isPresented: $navigateToScannedProduct) {
+                if let product = scannedProduct {
+                    ProductDetailView(
+                        product: product,
+                        onProductUpdated: { updatedProduct in
+                            viewModel.updateProduct(updatedProduct)
+                        }
+                    )
+                }
             }
             .sheet(isPresented: $showBarcodeScanner) {
                 BarcodeScannerSheet { scannedCode in
@@ -688,6 +710,7 @@ struct ProductsView: View {
     }
     
     private func handleScannedBarcode(_ code: String) {
+<<<<<<< HEAD
         lastScannedCode = code
         let cache = ProductCacheManager.shared
         
@@ -733,6 +756,31 @@ struct ProductsView: View {
                 // Network error — offer to create anyway
                 prefillSku = code
                 showCreateProduct = true
+=======
+        // First check loaded products by SKU
+        if let match = viewModel.products.first(where: { $0.sku?.lowercased() == code.lowercased() }) {
+            // Found in current page — navigate to product detail
+            scannedProduct = match
+            navigateToScannedProduct = true
+        } else {
+            // Not in current page — try server-side search
+            Task {
+                guard let locationId = authManager.currentLocation?.id else { return }
+                await viewModel.loadProducts(locationId: locationId, search: code)
+                
+                if let match = viewModel.products.first(where: { $0.sku?.lowercased() == code.lowercased() }) {
+                    scannedProduct = match
+                    navigateToScannedProduct = true
+                    // Restore full list after navigating
+                    await viewModel.loadProducts(locationId: locationId)
+                } else {
+                    // Not found — open create product with SKU prefilled
+                    prefillSku = code
+                    showCreateProduct = true
+                    // Restore full list
+                    await viewModel.loadProducts(locationId: locationId)
+                }
+>>>>>>> 0e6bc57 (feat: Spanish UI + dashboard fix + infinite scroll + tab refresh + menu bug fix)
             }
         }
     }
@@ -774,6 +822,7 @@ private struct BarcodeScannerSheet: View {
             dismiss()
         }
     }
+<<<<<<< HEAD
 }
 
 // MARK: - Barcode Candidates Sheet (fuzzy match results)
@@ -868,6 +917,8 @@ private struct BarcodeCandidatesSheet: View {
             }
         }
     }
+=======
+>>>>>>> 0e6bc57 (feat: Spanish UI + dashboard fix + infinite scroll + tab refresh + menu bug fix)
 }
 
 // MARK: - Product Row (Enhanced with stock badges and margin)
@@ -1007,6 +1058,7 @@ struct ProductRow: View {
 }
 
 // MARK: - Products View Model (paginated, infinite scroll)
+<<<<<<< HEAD
 
 // MARK: - Pre-computed filter counts (avoids 6× O(n) per SwiftUI render)
 struct ProductCounts: Equatable {
@@ -1016,6 +1068,8 @@ struct ProductCounts: Equatable {
     var inStock = 0
     var lowMargin = 0
 }
+=======
+>>>>>>> 0e6bc57 (feat: Spanish UI + dashboard fix + infinite scroll + tab refresh + menu bug fix)
 
 @MainActor
 class ProductsViewModel: ObservableObject {
@@ -1025,6 +1079,7 @@ class ProductsViewModel: ObservableObject {
     @Published var showError = false
     @Published var errorMessage = ""
     
+<<<<<<< HEAD
     // Pre-computed counts — recalculated once when products array changes
     @Published var counts = ProductCounts()
     
@@ -1058,7 +1113,25 @@ class ProductsViewModel: ObservableObject {
         }
         
         // STEP 2: Show loading indicator and fetch fresh data from server
+=======
+    // Pagination state
+    private(set) var currentPage = 1
+    private(set) var hasMore = true
+    private(set) var totalCount = 0
+    private let pageSize = 50
+    
+    // Search state (server-side)
+    private var currentSearchQuery: String?
+    
+    private let apiClient = APIClient.shared
+    
+    /// Load first page (resets pagination). Called on appear, pull-to-refresh, and tab switch.
+    func loadProducts(locationId: String, search: String? = nil) async {
+>>>>>>> 0e6bc57 (feat: Spanish UI + dashboard fix + infinite scroll + tab refresh + menu bug fix)
         isLoading = true
+        currentPage = 1
+        hasMore = true
+        currentSearchQuery = search
         
         do {
             var params: [String: String] = [
@@ -1078,6 +1151,7 @@ class ProductsViewModel: ObservableObject {
             totalCount = response.totalCount ?? response.count
             hasMore = response.hasMore ?? false
             currentPage = 1
+<<<<<<< HEAD
             recalculateCounts()
             
             // STEP 3: Update cache with fresh data (skip search results)
@@ -1091,6 +1165,11 @@ class ProductsViewModel: ObservableObject {
                 errorMessage = error.errorDescription ?? "Error al cargar productos"
                 showError = true
             }
+=======
+        } catch let error as NetworkError {
+            errorMessage = error.errorDescription ?? "Error al cargar productos"
+            showError = true
+>>>>>>> 0e6bc57 (feat: Spanish UI + dashboard fix + infinite scroll + tab refresh + menu bug fix)
         } catch {
             if products.isEmpty {
                 errorMessage = error.localizedDescription
@@ -1131,10 +1210,13 @@ class ProductsViewModel: ObservableObject {
             totalCount = response.totalCount ?? totalCount
             hasMore = response.hasMore ?? false
             currentPage = nextPage
+<<<<<<< HEAD
             recalculateCounts()
             
             // Update cache with new page
             cache.saveProducts(response.data)
+=======
+>>>>>>> 0e6bc57 (feat: Spanish UI + dashboard fix + infinite scroll + tab refresh + menu bug fix)
         } catch {
             // Silent fail for load-more — user can scroll again to retry
             print("Failed to load more products: \(error)")
@@ -1143,6 +1225,7 @@ class ProductsViewModel: ObservableObject {
         isLoadingMore = false
     }
     
+<<<<<<< HEAD
     /// Search products on server with exact=true for barcode scanner.
     /// Does NOT modify the main products list — returns results separately.
     func searchExact(locationId: String, code: String) async throws -> ProductListResponse {
@@ -1191,6 +1274,13 @@ class ProductsViewModel: ObservableObject {
             if (product.profitMargin ?? 100) < 10 { c.lowMargin += 1 }
         }
         counts = c
+=======
+    /// Update a single product in the list (e.g. after detail view refresh)
+    func updateProduct(_ product: Product) {
+        if let index = products.firstIndex(where: { $0.id == product.id }) {
+            products[index] = product
+        }
+>>>>>>> 0e6bc57 (feat: Spanish UI + dashboard fix + infinite scroll + tab refresh + menu bug fix)
     }
 }
 

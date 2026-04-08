@@ -152,11 +152,14 @@ struct ProductDetailView: View {
             }
         }
         .task {
-            // Load the 3 essential data sources in parallel:
-            // 1. Fresh product (price, stock)
-            // 2. Suppliers (current costs)
-            // 3. Cost history (trend data)
-            async let productRefresh: () = refreshProduct()
+            // Eagerly fetch fresh product data so stock is up-to-date
+            await refreshProduct()
+            // Load suppliers for receive form
+            await inventoryViewModel.loadProducts()
+            await inventoryViewModel.loadSuppliers()
+            // Load product-scoped activity, batch, and cost/supplier data in parallel
+            async let activityLoad: () = loadActivity()
+            async let batchLoad: () = loadBatchData()
             async let costSupplierLoad: () = loadCostSupplierData()
             _ = await (productRefresh, costSupplierLoad)
         }
@@ -723,8 +726,6 @@ struct ProductDetailView: View {
             )
             currentProduct = response.data
             onProductUpdated?(response.data)
-            // Write-through: update cache with fresh product data
-            ProductCacheManager.shared.saveProduct(response.data)
         } catch {
             // Silent fail - keep showing current data
         }
