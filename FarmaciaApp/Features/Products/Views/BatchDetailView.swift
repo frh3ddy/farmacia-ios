@@ -66,7 +66,7 @@ struct BatchDetailView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") { dismiss() }
+                    Button("Listo") { dismiss() }
                 }
             }
         }
@@ -116,8 +116,8 @@ struct BatchDetailView: View {
                 GridItem(.flexible()),
                 GridItem(.flexible()),
             ], spacing: 12) {
-                metricBox(value: "\(detail.quantity)", label: "Remaining", color: detail.quantity > 0 ? .green : .red)
-                metricBox(value: detail.formattedUnitCost, label: "Unit Cost", color: .blue)
+                metricBox(value: "\(detail.quantity)", label: "Restante", color: detail.quantity > 0 ? .green : .red)
+                metricBox(value: detail.formattedUnitCost, label: "Costo Unitario", color: .blue)
                 metricBox(value: "\(detail.ageDays)d", label: "Age", color: detail.ageDays > 90 ? .red : detail.ageDays > 30 ? .orange : .green)
             }
             
@@ -152,7 +152,7 @@ struct BatchDetailView: View {
             
             VStack(spacing: 8) {
                 if let supplier = receiving.supplierName {
-                    infoRow(icon: "building.2", label: "Supplier", value: supplier, color: .blue)
+                    infoRow(icon: "building.2", label: "Proveedor", value: supplier, color: .blue)
                 }
                 if let lot = receiving.batchNumber, !lot.isEmpty {
                     infoRow(icon: "number", label: "Lot / Batch #", value: lot, color: .purple)
@@ -172,9 +172,9 @@ struct BatchDetailView: View {
                 if let invoice = receiving.invoiceNumber, !invoice.isEmpty {
                     infoRow(icon: "doc.text", label: "Invoice", value: invoice, color: .gray)
                 }
-                infoRow(icon: "clock", label: "Received", value: receiving.receivedAt.formatted(date: .abbreviated, time: .shortened), color: .secondary)
+                infoRow(icon: "clock", label: "Recibido", value: receiving.receivedAt.formatted(date: .abbreviated, time: .shortened), color: .secondary)
                 if let notes = receiving.notes, !notes.isEmpty {
-                    infoRow(icon: "note.text", label: "Notes", value: notes, color: .secondary)
+                    infoRow(icon: "note.text", label: "Notas", value: notes, color: .secondary)
                 }
             }
         }
@@ -197,7 +197,7 @@ struct BatchDetailView: View {
             Divider()
             
             VStack(spacing: 8) {
-                infoRow(icon: "tag", label: "Type", value: adjustment.type, color: .orange)
+                infoRow(icon: "tag", label: "Tipo", value: adjustment.type, color: .orange)
                 if let reason = adjustment.reason {
                     infoRow(icon: "text.quote", label: "Reason", value: reason, color: .secondary)
                 }
@@ -225,7 +225,7 @@ struct BatchDetailView: View {
             // Progress bar showing remaining vs consumed
             VStack(spacing: 8) {
                 HStack {
-                    Text("Original: \(detail.originalQuantity) units")
+                    Text("Original: \(detail.originalQuantity) uds")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     Spacer()
@@ -291,7 +291,7 @@ struct BatchDetailView: View {
                     Text("No consumption records yet")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
-                    Text("This batch hasn't been consumed by any sales or adjustments")
+                    Text("This batch hasn't been consumed by any sales or ajustes")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -326,7 +326,7 @@ struct BatchDetailView: View {
                         Spacer()
                         
                         VStack(alignment: .trailing, spacing: 2) {
-                            Text("-\(consumption.quantity) units")
+                            Text("-\(consumption.quantity) uds")
                                 .font(.caption)
                                 .fontWeight(.semibold)
                                 .foregroundColor(.red)

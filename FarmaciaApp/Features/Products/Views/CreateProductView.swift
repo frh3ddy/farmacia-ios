@@ -7,6 +7,9 @@ struct CreateProductView: View {
     @Environment(\.dismiss) var dismiss
     @StateObject private var viewModel = CreateProductViewModel()
     
+    // Optional prefilled SKU (e.g. from barcode scanner)
+    var prefillSku: String? = nil
+    
     // Image picker state
     @State private var selectedImage: UIImage?
     @State private var showImagePicker = false
@@ -36,7 +39,7 @@ struct CreateProductView: View {
                                         Image(systemName: "camera.fill")
                                             .font(.title2)
                                             .foregroundColor(.secondary)
-                                        Text("Add Photo")
+                                        Text("Agregar Foto")
                                             .font(.caption2)
                                             .foregroundColor(.secondary)
                                     }
@@ -56,23 +59,23 @@ struct CreateProductView: View {
                     }
                     .listRowBackground(Color.clear)
                 } header: {
-                    Text("Product Image (Optional)")
+                    Text("Imagen del Producto (Opcional)")
                 }
-                .confirmationDialog("Add Product Image", isPresented: $showImageSourcePicker) {
-                    Button("Take Photo") {
+                .confirmationDialog("Agregar Imagen del Producto", isPresented: $showImageSourcePicker) {
+                    Button("Tomar Foto") {
                         imagePickerSource = .camera
                         showImagePicker = true
                     }
-                    Button("Choose from Library") {
+                    Button("Elegir de la Biblioteca") {
                         imagePickerSource = .photoLibrary
                         showImagePicker = true
                     }
                     if selectedImage != nil {
-                        Button("Remove Photo", role: .destructive) {
+                        Button("Eliminar Foto", role: .destructive) {
                             selectedImage = nil
                         }
                     }
-                    Button("Cancel", role: .cancel) {}
+                    Button("Cancelar", role: .cancel) {}
                 }
                 .sheet(isPresented: $showImagePicker) {
                     ImagePicker(sourceType: imagePickerSource) { image in
@@ -82,17 +85,17 @@ struct CreateProductView: View {
                 
                 // Product Info Section
                 Section {
-                    TextField("Product Name", text: $viewModel.name)
+                    TextField("Nombre del Producto", text: $viewModel.name)
                         .textInputAutocapitalization(.words)
                     
                     TextField("SKU (Optional)", text: $viewModel.sku)
                         .textInputAutocapitalization(.characters)
                         .autocorrectionDisabled()
                     
-                    TextField("Description (Optional)", text: $viewModel.description, axis: .vertical)
+                    TextField("Descripción (Opcional)", text: $viewModel.description, axis: .vertical)
                         .lineLimit(2...4)
                 } header: {
-                    Text("Product Information")
+                    Text("Información del Producto")
                 } footer: {
                     Text("SKU helps identify products quickly. Leave empty to auto-generate.")
                 }
@@ -108,9 +111,9 @@ struct CreateProductView: View {
                             .foregroundColor(.secondary)
                     }
                 } header: {
-                    Text("Selling Price")
+                    Text("Precio de Venta")
                 } footer: {
-                    Text("The price customers will pay at the register.")
+                    Text("El precio que los clientes pagarán en caja.")
                 }
                 
                 // Initial Inventory Section (Optional)
@@ -119,18 +122,18 @@ struct CreateProductView: View {
                     
                     if viewModel.hasInitialStock {
                         HStack {
-                            Text("Quantity")
+                            Text("Cantidad")
                             Spacer()
                             TextField("0", text: $viewModel.initialStockText)
                                 .keyboardType(.numberPad)
                                 .multilineTextAlignment(.trailing)
                                 .frame(width: 100)
-                            Text("units")
+                            Text("unidades")
                                 .foregroundColor(.secondary)
                         }
                         
                         HStack {
-                            Text("Cost per Unit")
+                            Text("Costo por Unidad")
                             Spacer()
                             Text("$")
                                 .foregroundColor(.secondary)
@@ -143,12 +146,12 @@ struct CreateProductView: View {
                         }
                     }
                 } header: {
-                    Text("Initial Inventory (Optional)")
+                    Text("Inventario Inicial (Opcional)")
                 } footer: {
                     if viewModel.hasInitialStock {
-                        Text("This will create opening balance inventory at the current location.")
+                        Text("Esto creará inventario de saldo inicial en la ubicación actual.")
                     } else {
-                        Text("You can receive inventory later from the Inventory tab.")
+                        Text("Puedes recibir inventario después desde la pestaña de Inventario.")
                     }
                 }
                 
@@ -157,7 +160,7 @@ struct CreateProductView: View {
                     Section {
                         marginPreviewRow
                     } header: {
-                        Text("Margin Preview")
+                        Text("Vista Previa del Margen")
                     }
                 }
                 
@@ -174,17 +177,22 @@ struct CreateProductView: View {
                     }
                 }
             }
-            .navigationTitle("New Product")
+            .navigationTitle("Nuevo Producto")
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                if let sku = prefillSku, !sku.isEmpty {
+                    viewModel.sku = sku
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
+                    Button("Cancelar") {
                         dismiss()
                     }
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Create") {
+                    Button("Crear") {
                         Task {
                             await createProduct()
                         }
@@ -203,7 +211,7 @@ struct CreateProductView: View {
             } message: {
                 Text(viewModel.errorMessage)
             }
-            .alert("Product Created", isPresented: $viewModel.showSuccess) {
+            .alert("Producto Creado", isPresented: $viewModel.showSuccess) {
                 Button("OK") {
                     dismiss()
                 }
@@ -218,7 +226,7 @@ struct CreateProductView: View {
     private var marginPreviewRow: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Profit per Unit")
+                Text("Ganancia por Unidad")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                 
@@ -232,7 +240,7 @@ struct CreateProductView: View {
             Spacer()
             
             VStack(alignment: .trailing, spacing: 4) {
-                Text("Margin")
+                Text("Margen")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                 
@@ -256,11 +264,11 @@ struct CreateProductView: View {
                 ProgressView()
                     .scaleEffect(1.5)
                 
-                Text("Creating product...")
+                Text("Creando producto...")
                     .font(.headline)
                 
                 if selectedImage != nil {
-                    Text("Will upload image after creation...")
+                    Text("Se subirá la imagen después de crear...")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 } else if viewModel.syncToSquare {
@@ -388,7 +396,7 @@ class CreateProductViewModel: ObservableObject {
             )
             
             if let data = response.data {
-                var message = "Product \"\(name)\" created successfully!"
+                var message = "Producto \"\(name)\" creado exitosamente!"
                 if data.squareSynced {
                     message += "\n✓ Synced to Square POS"
                 }
@@ -415,7 +423,7 @@ class CreateProductViewModel: ObservableObject {
                 showSuccess = true
             }
         } catch let error as NetworkError {
-            errorMessage = error.errorDescription ?? "Failed to create product"
+            errorMessage = error.errorDescription ?? "Error al crear producto"
             showError = true
         } catch {
             errorMessage = error.localizedDescription

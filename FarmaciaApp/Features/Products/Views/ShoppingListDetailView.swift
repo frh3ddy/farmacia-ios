@@ -96,7 +96,7 @@ struct ShoppingListDetailView: View {
                         Button(role: .destructive) {
                             showDeleteAlert = true
                         } label: {
-                            Label("Delete List", systemImage: "trash")
+                            Label("Eliminar Lista", systemImage: "trash")
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
@@ -147,8 +147,8 @@ struct ShoppingListDetailView: View {
         }
         .alert("Rename List", isPresented: $showEditName) {
             TextField("List name", text: $editedName)
-            Button("Cancel", role: .cancel) {}
-            Button("Save") {
+            Button("Cancelar", role: .cancel) {}
+            Button("Guardar") {
                 if var updated = list {
                     updated.name = editedName.trimmingCharacters(in: .whitespaces)
                     store.update(updated)
@@ -156,7 +156,7 @@ struct ShoppingListDetailView: View {
             }
         }
         .alert("Duplicate List?", isPresented: $showDuplicateAlert) {
-            Button("Cancel", role: .cancel) {}
+            Button("Cancelar", role: .cancel) {}
             Button("Duplicate") {
                 if let list = list {
                     store.duplicate(listId, newName: "\(list.name) (copy)")
@@ -166,8 +166,8 @@ struct ShoppingListDetailView: View {
             Text("Creates a new draft with the same items and quantities.")
         }
         .alert("Delete List?", isPresented: $showDeleteAlert) {
-            Button("Cancel", role: .cancel) {}
-            Button("Delete", role: .destructive) {
+            Button("Cancelar", role: .cancel) {}
+            Button("Eliminar", role: .destructive) {
                 store.delete(listId)
                 dismiss()
             }
@@ -175,7 +175,7 @@ struct ShoppingListDetailView: View {
             Text("This will permanently delete this shopping list.")
         }
         .alert("Update Costs?", isPresented: $showCostRefreshAlert) {
-            Button("Cancel", role: .cancel) {}
+            Button("Cancelar", role: .cancel) {}
             Button("Update Costs") {
                 Task { await refreshCostsFromSupplier() }
             }
@@ -296,7 +296,7 @@ struct ShoppingListDetailView: View {
                 summaryPill(
                     icon: "number",
                     value: "\(list.itemCount)",
-                    label: "items"
+                    label: "artículos"
                 )
                 
                 Spacer()
@@ -448,7 +448,7 @@ struct ShoppingListDetailView: View {
                     } label: {
                         HStack(spacing: 2) {
                             Image(systemName: "plus")
-                            Text("Add")
+                            Text("Agregar")
                         }
                         .font(.caption)
                         .fontWeight(.medium)
@@ -475,7 +475,7 @@ struct ShoppingListDetailView: View {
             } label: {
                 HStack {
                     Image(systemName: "plus.circle.fill")
-                    Text("Add Items")
+                    Text("Agregar Artículos")
                 }
                 .font(.subheadline)
                 .fontWeight(.medium)
@@ -508,7 +508,7 @@ struct ShoppingListDetailView: View {
                 HStack {
                     Image(systemName: "note.text")
                         .foregroundColor(.secondary)
-                    TextField("Notes", text: Binding(
+                    TextField("Notas", text: Binding(
                         get: { list.notes ?? "" },
                         set: { newValue in
                             if var updated = self.list {
@@ -532,7 +532,7 @@ struct ShoppingListDetailView: View {
                 }
                 if let notes = list.notes, !notes.isEmpty {
                     HStack {
-                        Text("Notes")
+                        Text("Notas")
                             .font(.caption)
                             .foregroundColor(.secondary)
                         Spacer()
@@ -543,7 +543,7 @@ struct ShoppingListDetailView: View {
                 }
             }
         } header: {
-            Text("Details")
+            Text("Detalles")
         }
     }
     
@@ -560,7 +560,7 @@ struct ShoppingListDetailView: View {
                     } label: {
                         HStack {
                             Image(systemName: "plus.circle")
-                            Text("Add Items")
+                            Text("Agregar Artículos")
                         }
                         .font(.subheadline)
                         .fontWeight(.medium)
@@ -890,7 +890,7 @@ struct EditItemSheet: View {
                     // Quantity with stepper
                     Stepper(value: $quantity, in: 1...9999) {
                         HStack {
-                            Text("Quantity")
+                            Text("Cantidad")
                             Spacer()
                             Text("\(quantity)")
                                 .fontWeight(.semibold)
@@ -901,7 +901,7 @@ struct EditItemSheet: View {
                     
                     // Unit cost
                     HStack {
-                        Text("Unit Cost")
+                        Text("Costo Unitario")
                         Spacer()
                         Text("$")
                             .foregroundColor(.secondary)
@@ -958,17 +958,17 @@ struct EditItemSheet: View {
                     TextField("Item notes (optional)", text: $notes, axis: .vertical)
                         .lineLimit(2...4)
                 } header: {
-                    Text("Notes")
+                    Text("Notas")
                 }
             }
             .navigationTitle("Edit Item")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancelar") { dismiss() }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
+                    Button("Guardar") {
                         save()
                     }
                     .fontWeight(.semibold)

@@ -31,8 +31,8 @@ struct ExpenseFormView: View {
         NavigationStack {
             Form {
                 // Type Selection
-                Section("Expense Type") {
-                    Picker("Type", selection: $selectedType) {
+                Section("Tipo de Gasto") {
+                    Picker("Tipo", selection: $selectedType) {
                         ForEach(ExpenseType.allCases, id: \.self) { type in
                             Label(type.displayName, systemImage: type.icon)
                                 .tag(type)
@@ -42,9 +42,9 @@ struct ExpenseFormView: View {
                 }
                 
                 // Amount & Date
-                Section("Amount & Date") {
+                Section("Monto y Fecha") {
                     HStack {
-                        Text("Amount")
+                        Text("Monto")
                         Spacer()
                         Text("$")
                         TextField("0.00", text: $amount)
@@ -53,33 +53,33 @@ struct ExpenseFormView: View {
                             .frame(width: 100)
                     }
                     
-                    DatePicker("Date", selection: $date, displayedComponents: .date)
+                    DatePicker("Fecha", selection: $date, displayedComponents: .date)
                 }
                 
                 // Description & Vendor
-                Section("Details") {
-                    TextField("Description", text: $description)
-                    TextField("Vendor/Payee", text: $vendor)
-                    TextField("Reference/Invoice #", text: $reference)
+                Section("Detalles") {
+                    TextField("Descripción", text: $description)
+                    TextField("Proveedor/Beneficiario", text: $vendor)
+                    TextField("Referencia/Factura #", text: $reference)
                 }
                 
                 // Payment Status
-                Section("Payment Status") {
-                    Toggle("Paid", isOn: $isPaid)
+                Section("Estado de Pago") {
+                    Toggle("Pagado", isOn: $isPaid)
                     
                     if isPaid {
-                        DatePicker("Paid Date", selection: $paidAt, displayedComponents: .date)
+                        DatePicker("Fecha de Pago", selection: $paidAt, displayedComponents: .date)
                     }
                 }
                 
                 // Notes
-                Section("Notes (Optional)") {
+                Section("Notas (Opcional)") {
                     TextEditor(text: $notes)
                         .frame(minHeight: 60)
                 }
                 
                 // Quick Amount Buttons
-                Section("Quick Amounts") {
+                Section("Montos Rápidos") {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
                             ForEach([50, 100, 250, 500, 1000, 2500], id: \.self) { value in
@@ -92,17 +92,17 @@ struct ExpenseFormView: View {
                     }
                 }
             }
-            .navigationTitle(isEditing ? "Edit Expense" : "Add Expense")
+            .navigationTitle(isEditing ? "Editar Gasto" : "Agregar Gasto")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
+                    Button("Cancelar") {
                         dismiss()
                     }
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
+                    Button("Guardar") {
                         Task { await save() }
                     }
                     .disabled(!isValid || viewModel.isSubmitting)
