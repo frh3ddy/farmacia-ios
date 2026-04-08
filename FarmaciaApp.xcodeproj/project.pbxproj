@@ -52,6 +52,8 @@
 		EE00000100000001 /* ImagePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000001 /* ImagePicker.swift */; };
 		EE00000100000002 /* ProductImageViewer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000002 /* ProductImageViewer.swift */; };
 		FF00000100000001 /* CodeScanner in Frameworks */ = {isa = PBXBuildFile; productRef = FF00000200000001 /* CodeScanner */; };
+		CA00000100000001 /* CachedProduct.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA00000200000001 /* CachedProduct.swift */; };
+		CA00000100000002 /* ProductCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA00000200000002 /* ProductCacheManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -101,6 +103,8 @@
 		DD00000200000006 /* ShoppingListStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingListStore.swift; sourceTree = "<group>"; };
 		EE00000200000001 /* ImagePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImagePicker.swift; sourceTree = "<group>"; };
 		EE00000200000002 /* ProductImageViewer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductImageViewer.swift; sourceTree = "<group>"; };
+		CA00000200000001 /* CachedProduct.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CachedProduct.swift; sourceTree = "<group>"; };
+		CA00000200000002 /* ProductCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductCacheManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -202,6 +206,7 @@
 				EE00000300000001 /* Components */,
 				F300000000000007 /* Network */,
 				F300000000000008 /* Auth */,
+				CA00000300000001 /* Storage */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -264,6 +269,15 @@
 				F100000100000007 /* KeychainManager.swift */,
 			);
 			path = Auth;
+			sourceTree = "<group>";
+		};
+		CA00000300000001 /* Storage */ = {
+			isa = PBXGroup;
+			children = (
+				CA00000200000001 /* CachedProduct.swift */,
+				CA00000200000002 /* ProductCacheManager.swift */,
+			);
+			path = Storage;
 			sourceTree = "<group>";
 		};
 		F300000000000009 /* Auth */ = {
@@ -466,6 +480,8 @@
 				DD00000100000006 /* ShoppingListStore.swift in Sources */,
 				EE00000100000001 /* ImagePicker.swift in Sources */,
 				EE00000100000002 /* ProductImageViewer.swift in Sources */,
+				CA00000100000001 /* CachedProduct.swift in Sources */,
+				CA00000100000002 /* ProductCacheManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
