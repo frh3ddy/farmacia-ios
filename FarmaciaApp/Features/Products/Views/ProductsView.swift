@@ -135,6 +135,11 @@ struct ProductsView: View {
     @State private var showBarcodeCandidates = false
     @State private var lastScannedCode: String = ""
     
+    // Square bulk sync
+    @State private var isSyncingToSquare = false
+    @State private var syncResultMessage: String?
+    @State private var showSyncResult = false
+    
     var body: some View {
         NavigationStack {
             Group {
@@ -381,14 +386,47 @@ struct ProductsView: View {
                     
                     Divider()
                     
-                    summaryItem(
-                        title: "Local",
-                        value: "\(viewModel.products.filter { $0.hasSquareSync != true }.count)",
-                        icon: "iphone",
-                        color: .orange
-                    )
+                    let localCount = viewModel.products.filter { $0.hasSquareSync != true }.count
+                    
+                    if localCount > 0 {
+                        Button {
+                            Task { await syncLocalProductsToSquare() }
+                        } label: {
+                            VStack(spacing: 4) {
+                                if isSyncingToSquare {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                } else {
+                                    Image(systemName: "arrow.triangle.2.circlepath")
+                                        .font(.title3)
+                                        .foregroundColor(.orange)
+                                }
+                                Text("\(localCount) Local")
+                                    .font(.caption2)
+                                    .foregroundColor(.orange)
+                                Text("Sincronizar")
+                                    .font(.caption2)
+                                    .bold()
+                                    .foregroundColor(.orange)
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                        .disabled(isSyncingToSquare)
+                    } else {
+                        summaryItem(
+                            title: "Local",
+                            value: "0",
+                            icon: "iphone",
+                            color: .green
+                        )
+                    }
                 }
                 .padding(.vertical, 8)
+            }
+            .alert("Sincronización Square", isPresented: $showSyncResult) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(syncResultMessage ?? "")
             }
             
             // Products Section
@@ -685,6 +723,27 @@ struct ProductsView: View {
         guard let locationId = authManager.currentLocation?.id else { return }
         await agingViewModel.loadAtRiskProducts(locationId: locationId)
         await expiringViewModel.loadExpiringProducts(locationId: locationId)
+    }
+    
+    private func syncLocalProductsToSquare() async {
+        guard let locationId = authManager.currentLocation?.id else { return }
+        isSyncingToSquare = true
+        
+        do {
+            let response: SyncToSquareResponse = try await APIClient.shared.request(
+                endpoint: .syncProductsToSquare,
+                body: ["locationId": locationId]
+            )
+            syncResultMessage = response.message ?? "Sincronización completada: \(response.data?.synced ?? 0) productos sincronizados"
+            showSyncResult = true
+            // Reload products to reflect updated sync status
+            await loadProducts()
+        } catch {
+            syncResultMessage = "Error al sincronizar: \(error.localizedDescription)"
+            showSyncResult = true
+        }
+        
+        isSyncingToSquare = false
     }
     
     private func handleScannedBarcode(_ code: String) {

@@ -169,6 +169,20 @@ struct ProductListResponse: Decodable {
     let exactMatch: Bool?
 }
 
+// MARK: - Sync to Square Response
+
+struct SyncToSquareResponse: Decodable {
+    let success: Bool
+    let message: String?
+    let data: SyncToSquareData?
+}
+
+struct SyncToSquareData: Decodable {
+    let total: Int
+    let synced: Int
+    let failed: Int
+}
+
 // MARK: - Supplier List Response
 
 struct SupplierListResponse: Decodable {
