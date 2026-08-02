@@ -404,8 +404,8 @@ class CreateProductViewModel: ObservableObject {
                     message += "\n✓ Initial inventory added"
                 }
                 
-                // Upload image if one was selected
-                if let image = image, let imageData = image.jpegData(compressionQuality: 0.8) {
+                // Upload image if one was selected (resized to 1600px ceiling first)
+                if let image = image, let imageData = image.jpegDataForUpload() {
                     do {
                         let _: ImageUploadResponse = try await apiClient.uploadImage(
                             endpoint: .uploadProductImage(id: data.product.id),

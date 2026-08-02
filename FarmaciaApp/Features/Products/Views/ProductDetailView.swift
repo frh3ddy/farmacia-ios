@@ -210,20 +210,12 @@ struct ProductDetailView: View {
         VStack(spacing: 12) {
             // Product Image or Placeholder
             ZStack(alignment: .bottomTrailing) {
-                // Image area — tapping opens full-screen viewer
+                // Image area — tapping opens full-screen viewer (cached + downsampled)
                 Group {
-                    if let imageUrl = uploadedImageUrl ?? displayProduct.squareImageUrl, let url = URL(string: imageUrl) {
-                        AsyncImage(url: url) { phase in
-                            switch phase {
-                            case .success(let image):
-                                image
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                            case .failure, .empty:
-                                productPlaceholder
-                            @unknown default:
-                                productPlaceholder
-                            }
+                    let displayUrl = uploadedImageUrl ?? displayProduct.squareImageUrl
+                    if displayUrl != nil {
+                        CachedProductImage(url: displayUrl, targetSize: CGSize(width: 100, height: 100)) {
+                            productPlaceholder
                         }
                         .frame(width: 100, height: 100)
                         .cornerRadius(16)
@@ -759,8 +751,9 @@ struct ProductDetailView: View {
     }
     
     private func uploadProductImage(_ image: UIImage) async {
-        // Compress image to JPEG
-        guard let imageData = image.jpegData(compressionQuality: 0.8) else { return }
+        // Resize to upload ceiling (1600px longest edge) + compress to JPEG.
+        // Camera photos are 12+ MP — uploading them raw produces multi-MB payloads.
+        guard let imageData = image.jpegDataForUpload() else { return }
         
         isUploadingImage = true
         defer { isUploadingImage = false }
@@ -772,6 +765,15 @@ struct ProductDetailView: View {
                 filename: "product_\(displayProduct.id).jpg"
             )
             if let url = response.imageUrl {
+                // Invalidate caches so the fresh image is fetched even if
+                // the backend reused the same URL
+                if let oldUrl = URL(string: uploadedImageUrl ?? displayProduct.squareImageUrl ?? "") {
+                    URLCache.shared.removeCachedResponse(for: URLRequest(url: oldUrl))
+                }
+                if let newUrl = URL(string: url) {
+                    URLCache.shared.removeCachedResponse(for: URLRequest(url: newUrl))
+                }
+                ProductImageCache.shared.invalidate(url: url)
                 uploadedImageUrl = url
             }
         } catch {

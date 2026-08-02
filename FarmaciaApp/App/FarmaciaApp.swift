@@ -9,6 +9,14 @@ struct FarmaciaApp: App {
     let modelContainer: ModelContainer
     
     init() {
+        // Shared URL cache for product image bytes (raw network data).
+        // Default URLCache is small; product photos benefit from a larger
+        // disk budget so scrolling back never re-downloads.
+        URLCache.shared = URLCache(
+            memoryCapacity: 32 * 1024 * 1024,   // 32 MB in-memory
+            diskCapacity: 256 * 1024 * 1024     // 256 MB on disk
+        )
+
         do {
             let schema = Schema([CachedProduct.self, SyncMetadata.self])
             let config = ModelConfiguration(isStoredInMemoryOnly: false)

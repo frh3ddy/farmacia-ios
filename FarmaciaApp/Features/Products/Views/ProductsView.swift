@@ -929,19 +929,10 @@ struct ProductRow: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            // Product Image or Placeholder
-            if let imageUrl = product.squareImageUrl, let url = URL(string: imageUrl) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    case .failure, .empty:
-                        productPlaceholder
-                    @unknown default:
-                        productPlaceholder
-                    }
+            // Product Image or Placeholder (cached + downsampled to display size)
+            if product.squareImageUrl != nil {
+                CachedProductImage(url: product.squareImageUrl, targetSize: CGSize(width: 50, height: 50)) {
+                    productPlaceholder
                 }
                 .frame(width: 50, height: 50)
                 .cornerRadius(8)
