@@ -93,10 +93,12 @@ struct DashboardView: View {
                 }
             }
             .task {
-                await viewModel.loadDashboard()
-                await loadStockAlerts()
-                await loadSignals()
-                await loadExpiringData()
+                // Fire all dashboard loads in parallel — they are independent
+                async let dashboardLoad: () = viewModel.loadDashboard()
+                async let alertsLoad: () = loadStockAlerts()
+                async let signalsLoad: () = loadSignals()
+                async let expiringLoad: () = loadExpiringData()
+                _ = await (dashboardLoad, alertsLoad, signalsLoad, expiringLoad)
             }
         }
     }
@@ -918,23 +920,37 @@ class DashboardViewModel: ObservableObject {
 
 // MARK: - Stock Alert ViewModel
 
+/// Server-computed catalog counts (GET /products/counts).
+/// Covers ALL products at the location — unlike a paginated list fetch.
+struct ProductCountsResponse: Decodable {
+    let total: Int
+    let outOfStock: Int
+    let lowStock: Int
+    let lowMargin: Int
+    let synced: Int
+    let local: Int
+}
+
 @MainActor
 class StockAlertViewModel: ObservableObject {
     @Published var products: [Product] = []
     @Published var isLoading = false
     
+    /// Server-side counts; nil until the counts request succeeds.
+    @Published var serverCounts: ProductCountsResponse?
+    
     private let apiClient = APIClient.shared
     
     var outOfStockCount: Int {
-        products.filter { ($0.totalInventory ?? 0) == 0 }.count
+        serverCounts?.outOfStock ?? products.filter { ($0.totalInventory ?? 0) == 0 }.count
     }
     
     var lowStockCount: Int {
-        products.filter { ($0.totalInventory ?? 0) > 0 && ($0.totalInventory ?? 0) < 10 }.count
+        serverCounts?.lowStock ?? products.filter { ($0.totalInventory ?? 0) > 0 && ($0.totalInventory ?? 0) < 10 }.count
     }
     
     var lowMarginCount: Int {
-        products.filter { ($0.profitMargin ?? 100) < 10 }.count
+        serverCounts?.lowMargin ?? products.filter { ($0.profitMargin ?? 100) < 10 }.count
     }
     
     var needsAttention: Bool {
@@ -945,15 +961,28 @@ class StockAlertViewModel: ObservableObject {
         isLoading = true
         defer { isLoading = false }
         
-        do {
-            let response: ProductListResponse = try await apiClient.request(
-                endpoint: .listProducts,
-                queryParams: ["locationId": locationId]
-            )
-            products = response.data
-        } catch {
+        // Counts come from the server aggregate (correct for the whole catalog).
+        // The product list is bounded to 200 — only used by the alert list view
+        // and the restock shopping list, which need concrete Product rows.
+        async let countsFetch: ProductCountsResponse? = try? apiClient.request(
+            endpoint: .productCounts,
+            queryParams: ["locationId": locationId]
+        )
+        async let listFetch: ProductListResponse? = try? apiClient.request(
+            endpoint: .listProducts,
+            queryParams: ["locationId": locationId, "limit": "200"]
+        )
+        
+        let (counts, list) = await (countsFetch, listFetch)
+        
+        if let counts {
+            serverCounts = counts
+        }
+        if let list {
+            products = list.data
+        } else {
             // Silent fail — alerts are supplementary
-            print("Failed to load products for stock alerts: \(error)")
+            print("Failed to load products for stock alerts")
         }
     }
 }

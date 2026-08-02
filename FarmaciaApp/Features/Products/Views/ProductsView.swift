@@ -711,8 +711,10 @@ struct ProductsView: View {
     
     private func loadAgingData() async {
         guard let locationId = authManager.currentLocation?.id else { return }
-        await agingViewModel.loadAtRiskProducts(locationId: locationId)
-        await expiringViewModel.loadExpiringProducts(locationId: locationId)
+        // Independent loads — fire in parallel
+        async let atRiskLoad: () = agingViewModel.loadAtRiskProducts(locationId: locationId)
+        async let expiringLoad: () = expiringViewModel.loadExpiringProducts(locationId: locationId)
+        _ = await (atRiskLoad, expiringLoad)
     }
     
     private func syncLocalProductsToSquare() async {

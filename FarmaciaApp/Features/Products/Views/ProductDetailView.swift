@@ -117,9 +117,14 @@ struct ProductDetailView: View {
                 }
             )
             .task {
-                // Load form data (products list + suppliers) only when sheet opens
-                await inventoryViewModel.loadProducts()
-                await inventoryViewModel.loadSuppliers()
+                // Load form data only when sheet opens — and only if the
+                // parent's initial load didn't already populate it
+                if inventoryViewModel.products.isEmpty {
+                    await inventoryViewModel.loadProducts()
+                }
+                if inventoryViewModel.suppliers.isEmpty {
+                    await inventoryViewModel.loadSuppliers()
+                }
             }
         }
         .sheet(isPresented: $showAdjustmentSheet) {
@@ -138,9 +143,13 @@ struct ProductDetailView: View {
                 }
             )
             .task {
-                // Load form data only when sheet opens
-                await inventoryViewModel.loadProducts()
-                await inventoryViewModel.loadSuppliers()
+                // Load form data only when sheet opens — skip if already loaded
+                if inventoryViewModel.products.isEmpty {
+                    await inventoryViewModel.loadProducts()
+                }
+                if inventoryViewModel.suppliers.isEmpty {
+                    await inventoryViewModel.loadSuppliers()
+                }
             }
         }
         .sheet(isPresented: Binding(
@@ -152,13 +161,14 @@ struct ProductDetailView: View {
             }
         }
         .task {
-            // Eagerly fetch fresh product data so stock is up-to-date
-            await refreshProduct()
-            // Load suppliers for receive form
-            await inventoryViewModel.loadProducts()
-            await inventoryViewModel.loadSuppliers()
-            // Load cost/supplier data (needed for detail view)
-            await loadCostSupplierData()
+            // All four loads are independent — fire in parallel.
+            // The form data (products list + suppliers) is fetched here so the
+            // receive/adjustment sheets don't need to re-fetch when they open.
+            async let productRefresh: () = refreshProduct()
+            async let productsLoad: () = inventoryViewModel.loadProducts()
+            async let suppliersLoad: () = inventoryViewModel.loadSuppliers()
+            async let costSupplierLoad: () = loadCostSupplierData()
+            _ = await (productRefresh, productsLoad, suppliersLoad, costSupplierLoad)
         }
         .task(id: "fifo-batches") {
             // Lazy: load FIFO batches only for owners/managers
