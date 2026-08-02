@@ -232,6 +232,10 @@ final class AuthManager: ObservableObject {
             // Update state with new location
             currentLocation = SessionLocation(from: response.currentLocation)
             
+            // Clear product cache — cached totalInventory values belong to the
+            // previous location. The next Products load repopulates via warm-up.
+            ProductCacheManager.shared.clearAll()
+            
             // Update employee role if it changed for this location
             if let employee = currentEmployee {
                 currentEmployee = SessionEmployee(
@@ -288,6 +292,8 @@ final class AuthManager: ObservableObject {
         availableLocations = []
         sessionExpiresAt = nil
         authState = .needsPIN
+        // Clear product cache on session end (logout / deactivation / expiry)
+        ProductCacheManager.shared.clearAll()
     }
     
     private func startSessionRefreshTimer() {

@@ -8,6 +8,8 @@ final class CachedProduct {
     @Attribute(.unique) var id: String
     var name: String
     var sku: String?
+    /// Lowercased SKU for indexed barcode lookup (SwiftData predicates don't support lowercased())
+    var normalizedSku: String?
     var categoryId: String?
     var categoryName: String?
     
@@ -38,6 +40,7 @@ final class CachedProduct {
         self.id = product.id
         self.name = product.name
         self.sku = product.sku
+        self.normalizedSku = product.sku?.lowercased()
         self.categoryId = product.categoryId
         self.categoryName = product.category?.name
         self.squareProductName = product.squareProductName
@@ -59,6 +62,7 @@ final class CachedProduct {
     func update(from product: Product) {
         name = product.name
         sku = product.sku
+        normalizedSku = product.sku?.lowercased()
         categoryId = product.categoryId
         categoryName = product.category?.name
         squareProductName = product.squareProductName

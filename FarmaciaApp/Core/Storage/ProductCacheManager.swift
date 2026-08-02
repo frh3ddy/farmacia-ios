@@ -19,32 +19,38 @@ final class ProductCacheManager {
     func configure(container: ModelContainer) {
         self.modelContainer = container
         self.modelContext = ModelContext(container)
-        self.modelContext?.autosaveEnabled = true
+        // Autosave off: we save explicitly after batch writes (avoids double writes)
+        self.modelContext?.autosaveEnabled = false
     }
     
     // MARK: - Read Operations
     
-    /// Load all cached products (for list display on cold start)
-    func loadAll() -> [Product] {
+    /// Load cached products for list display on cold start.
+    /// Capped: the server page (50 items) replaces this immediately, so mapping
+    /// thousands of rows on MainActor would be wasted work.
+    func loadAll(limit: Int = 50) -> [Product] {
         guard let context = modelContext else { return [] }
-        let descriptor = FetchDescriptor<CachedProduct>(
+        var descriptor = FetchDescriptor<CachedProduct>(
             sortBy: [SortDescriptor(\.name)]
         )
+        descriptor.fetchLimit = limit
         return (try? context.fetch(descriptor))?.map { $0.toProduct() } ?? []
     }
     
-    /// Find a product by exact SKU match (for barcode scanner)
+    /// Find a product by exact SKU match (for barcode scanner).
+    /// Indexed lookup on normalizedSku — no full-table scan, no in-memory filtering.
+    /// NOTE: rows cached before normalizedSku existed have nil and are missed;
+    /// the server exact-search (level 2) covers them, and warm-up repopulates.
     func findBySku(_ sku: String) -> Product? {
         guard let context = modelContext else { return nil }
         let lowered = sku.lowercased()
-        let descriptor = FetchDescriptor<CachedProduct>(
+        var descriptor = FetchDescriptor<CachedProduct>(
             predicate: #Predicate<CachedProduct> { cached in
-                cached.sku != nil
+                cached.normalizedSku == lowered
             }
         )
-        // SwiftData predicate doesn't support .lowercased() so we filter in Swift
-        guard let results = try? context.fetch(descriptor) else { return nil }
-        return results.first(where: { $0.sku?.lowercased() == lowered })?.toProduct()
+        descriptor.fetchLimit = 1
+        return try? context.fetch(descriptor).first?.toProduct()
     }
     
     /// Check if cache has any data
@@ -53,29 +59,29 @@ final class ProductCacheManager {
         return (try? context.fetchCount(FetchDescriptor<CachedProduct>())) == 0
     }
     
-    /// Check if cache was refreshed within the given interval
-    func isFresh(within seconds: TimeInterval = 300) -> Bool {
-        guard let context = modelContext else { return false }
-        let descriptor = FetchDescriptor<SyncMetadata>(
-            predicate: #Predicate<SyncMetadata> { $0.key == "products_last_sync" }
-        )
-        guard let meta = try? context.fetch(descriptor).first else { return false }
-        return meta.updatedAt.timeIntervalSinceNow > -seconds
+    /// Total number of cached products (for warm-up progress display)
+    var cachedCount: Int {
+        guard let context = modelContext else { return 0 }
+        return (try? context.fetchCount(FetchDescriptor<CachedProduct>())) ?? 0
     }
     
     // MARK: - Write Operations
     
-    /// Save/update an array of products from an API response
+    /// Save/update an array of products from an API response.
+    /// Single batch fetch for existing rows (no N+1), then update or insert.
     func saveProducts(_ products: [Product]) {
-        guard let context = modelContext else { return }
+        guard let context = modelContext, !products.isEmpty else { return }
+        
+        let ids = products.map { $0.id }
+        let descriptor = FetchDescriptor<CachedProduct>(
+            predicate: #Predicate<CachedProduct> { ids.contains($0.id) }
+        )
+        let existingById = Dictionary(
+            uniqueKeysWithValues: ((try? context.fetch(descriptor)) ?? []).map { ($0.id, $0) }
+        )
         
         for product in products {
-            let productId = product.id
-            let descriptor = FetchDescriptor<CachedProduct>(
-                predicate: #Predicate<CachedProduct> { $0.id == productId }
-            )
-            
-            if let existing = try? context.fetch(descriptor).first {
+            if let existing = existingById[product.id] {
                 existing.update(from: product)
             } else {
                 context.insert(CachedProduct(from: product))
