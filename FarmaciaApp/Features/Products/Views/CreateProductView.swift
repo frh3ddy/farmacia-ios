@@ -15,6 +15,9 @@ struct CreateProductView: View {
     @State private var showImagePicker = false
     @State private var showImageSourcePicker = false
     @State private var imagePickerSource: UIImagePickerController.SourceType = .photoLibrary
+    // Set when the dialog picks a source — the picker sheet is presented
+    // only AFTER the dialog has fully dismissed (UIKit presentation race)
+    @State private var pendingImagePicker = false
     
     var body: some View {
         NavigationStack {
@@ -64,11 +67,11 @@ struct CreateProductView: View {
                 .confirmationDialog("Agregar Imagen del Producto", isPresented: $showImageSourcePicker) {
                     Button("Tomar Foto") {
                         imagePickerSource = .camera
-                        showImagePicker = true
+                        pendingImagePicker = true
                     }
                     Button("Elegir de la Biblioteca") {
                         imagePickerSource = .photoLibrary
-                        showImagePicker = true
+                        pendingImagePicker = true
                     }
                     if selectedImage != nil {
                         Button("Eliminar Foto", role: .destructive) {
@@ -80,6 +83,19 @@ struct CreateProductView: View {
                 .sheet(isPresented: $showImagePicker) {
                     ImagePicker(sourceType: imagePickerSource) { image in
                         selectedImage = image
+                    }
+                }
+                .onChange(of: showImageSourcePicker) { _, isShowing in
+                    // Presenting the picker sheet WHILE the confirmation
+                    // dialog is still dismissing makes UIKit cancel the new
+                    // presentation — the camera opened and closed instantly
+                    // on the first attempt. Wait for the dialog dismissal
+                    // and defer one runloop before showing the picker.
+                    if !isShowing && pendingImagePicker {
+                        pendingImagePicker = false
+                        DispatchQueue.main.async {
+                            showImagePicker = true
+                        }
                     }
                 }
                 

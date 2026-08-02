@@ -42,6 +42,9 @@ struct ProductDetailView: View {
     @State private var showImagePicker = false
     @State private var showImageSourcePicker = false
     @State private var imagePickerSource: UIImagePickerController.SourceType = .photoLibrary
+    // Set when the dialog picks a source — the picker sheet is presented
+    // only AFTER the dialog has fully dismissed (UIKit presentation race)
+    @State private var pendingImagePicker = false
     @State private var isUploadingImage = false
     @State private var uploadedImageUrl: String? = nil
     @State private var showImageUploadError = false
@@ -257,12 +260,11 @@ struct ProductDetailView: View {
             .confirmationDialog("Cambiar Imagen del Producto", isPresented: $showImageSourcePicker) {
                 Button("Tomar Foto") {
                     imagePickerSource = .camera
-                    showImagePicker = true
+                    pendingImagePicker = true
                 }
-                if UIImagePickerController.isSourceTypeAvailable(.camera) {} // camera availability check
                 Button("Elegir de la Biblioteca") {
                     imagePickerSource = .photoLibrary
-                    showImagePicker = true
+                    pendingImagePicker = true
                 }
                 Button("Cancelar", role: .cancel) {}
             }
@@ -270,6 +272,17 @@ struct ProductDetailView: View {
                 ImagePicker(sourceType: imagePickerSource) { image in
                     Task {
                         await uploadProductImage(image)
+                    }
+                }
+            }
+            .onChange(of: showImageSourcePicker) { _, isShowing in
+                // Presenting the picker sheet WHILE the confirmation dialog
+                // is still dismissing makes UIKit cancel the new presentation
+                // — the camera opened and closed instantly on first attempt.
+                if !isShowing && pendingImagePicker {
+                    pendingImagePicker = false
+                    DispatchQueue.main.async {
+                        showImagePicker = true
                     }
                 }
             }
