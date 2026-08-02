@@ -110,6 +110,7 @@ enum APIEndpoint {
     case productCostHistory(productId: String)
     case supplierCatalog(supplierId: String)
     case syncProductsToSquare
+    case productCounts
     
     // MARK: - Supplier Endpoints
     case listSuppliers
@@ -208,6 +209,7 @@ enum APIEndpoint {
         case .productCostHistory(let productId): return "/products/\(productId)/cost-history"
         case .supplierCatalog(let supplierId): return "/products/supplier-catalog/\(supplierId)"
         case .syncProductsToSquare: return "/products/sync-to-square"
+        case .productCounts: return "/products/counts"
             
         // Suppliers
         case .listSuppliers: return "/admin/inventory/cutover/suppliers"
@@ -283,7 +285,8 @@ enum APIEndpoint {
             return .get
             
         // Products
-        case .listProducts, .getProduct, .productSuppliers, .productCostHistory, .supplierCatalog:
+        case .listProducts, .getProduct, .productSuppliers, .productCostHistory, .supplierCatalog,
+             .productCounts:
             return .get
         case .createProduct, .syncProductsToSquare:
             return .post
