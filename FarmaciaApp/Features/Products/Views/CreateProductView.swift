@@ -12,12 +12,7 @@ struct CreateProductView: View {
     
     // Image picker state
     @State private var selectedImage: UIImage?
-    @State private var showImagePicker = false
     @State private var showImageSourcePicker = false
-    @State private var imagePickerSource: UIImagePickerController.SourceType = .photoLibrary
-    // Set when the dialog picks a source — the picker sheet is presented
-    // only AFTER the dialog has fully dismissed (UIKit presentation race)
-    @State private var pendingImagePicker = false
     
     var body: some View {
         NavigationStack {
@@ -66,12 +61,14 @@ struct CreateProductView: View {
                 }
                 .confirmationDialog("Agregar Imagen del Producto", isPresented: $showImageSourcePicker) {
                     Button("Tomar Foto") {
-                        imagePickerSource = .camera
-                        pendingImagePicker = true
+                        ImagePickerPresenter.present(sourceType: .camera) { image in
+                            selectedImage = image
+                        }
                     }
                     Button("Elegir de la Biblioteca") {
-                        imagePickerSource = .photoLibrary
-                        pendingImagePicker = true
+                        ImagePickerPresenter.present(sourceType: .photoLibrary) { image in
+                            selectedImage = image
+                        }
                     }
                     if selectedImage != nil {
                         Button("Eliminar Foto", role: .destructive) {
@@ -79,24 +76,6 @@ struct CreateProductView: View {
                         }
                     }
                     Button("Cancelar", role: .cancel) {}
-                }
-                .sheet(isPresented: $showImagePicker) {
-                    ImagePicker(sourceType: imagePickerSource) { image in
-                        selectedImage = image
-                    }
-                }
-                .onChange(of: showImageSourcePicker) { _, isShowing in
-                    // Presenting the picker sheet WHILE the confirmation
-                    // dialog is still dismissing makes UIKit cancel the new
-                    // presentation — the camera opened and closed instantly
-                    // on the first attempt. Wait for the dialog dismissal
-                    // and defer one runloop before showing the picker.
-                    if !isShowing && pendingImagePicker {
-                        pendingImagePicker = false
-                        DispatchQueue.main.async {
-                            showImagePicker = true
-                        }
-                    }
                 }
                 
                 // Product Info Section

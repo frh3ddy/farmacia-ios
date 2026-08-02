@@ -39,12 +39,7 @@ struct ProductDetailView: View {
     @StateObject private var inventoryViewModel = InventoryViewModel()
     
     // Image upload state
-    @State private var showImagePicker = false
     @State private var showImageSourcePicker = false
-    @State private var imagePickerSource: UIImagePickerController.SourceType = .photoLibrary
-    // Set when the dialog picks a source — the picker sheet is presented
-    // only AFTER the dialog has fully dismissed (UIKit presentation race)
-    @State private var pendingImagePicker = false
     @State private var isUploadingImage = false
     @State private var uploadedImageUrl: String? = nil
     @State private var showImageUploadError = false
@@ -259,32 +254,20 @@ struct ProductDetailView: View {
             }
             .confirmationDialog("Cambiar Imagen del Producto", isPresented: $showImageSourcePicker) {
                 Button("Tomar Foto") {
-                    imagePickerSource = .camera
-                    pendingImagePicker = true
+                    ImagePickerPresenter.present(sourceType: .camera) { image in
+                        Task {
+                            await uploadProductImage(image)
+                        }
+                    }
                 }
                 Button("Elegir de la Biblioteca") {
-                    imagePickerSource = .photoLibrary
-                    pendingImagePicker = true
+                    ImagePickerPresenter.present(sourceType: .photoLibrary) { image in
+                        Task {
+                            await uploadProductImage(image)
+                        }
+                    }
                 }
                 Button("Cancelar", role: .cancel) {}
-            }
-            .sheet(isPresented: $showImagePicker) {
-                ImagePicker(sourceType: imagePickerSource) { image in
-                    Task {
-                        await uploadProductImage(image)
-                    }
-                }
-            }
-            .onChange(of: showImageSourcePicker) { _, isShowing in
-                // Presenting the picker sheet WHILE the confirmation dialog
-                // is still dismissing makes UIKit cancel the new presentation
-                // — the camera opened and closed instantly on first attempt.
-                if !isShowing && pendingImagePicker {
-                    pendingImagePicker = false
-                    DispatchQueue.main.async {
-                        showImagePicker = true
-                    }
-                }
             }
             .fullScreenCover(isPresented: $showImageViewer) {
                 if let imageUrl = uploadedImageUrl ?? displayProduct.squareImageUrl {
