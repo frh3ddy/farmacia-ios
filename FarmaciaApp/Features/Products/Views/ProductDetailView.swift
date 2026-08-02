@@ -16,8 +16,12 @@ struct ProductDetailView: View {
     
     // Inventory action sheets
     @State private var showReceiveSheet = false
-    @State private var showAdjustmentSheet = false
-    @State private var selectedAdjustmentType: AdjustmentType = .damage
+    // Item-driven sheet presentation: with .sheet(isPresented:) the content
+    // closure is built BEFORE the state update from the Menu action
+    // propagates, so the first presentation always showed the default type
+    // (.damage) regardless of the tapped item. .sheet(item:) evaluates the
+    // content after the item is set — the selected type is always correct.
+    @State private var adjustmentSheetType: AdjustmentType?
     
     // Product-level activity data
     @StateObject private var activityViewModel = ProductActivityViewModel()
@@ -132,9 +136,9 @@ struct ProductDetailView: View {
                 }
             }
         }
-        .sheet(isPresented: $showAdjustmentSheet) {
+        .sheet(item: $adjustmentSheetType) { type in
             AdjustmentFormView(
-                adjustmentType: selectedAdjustmentType,
+                adjustmentType: type,
                 viewModel: inventoryViewModel,
                 preSelectedProduct: displayProduct,
                 onComplete: {
@@ -507,13 +511,8 @@ struct ProductDetailView: View {
     }
     
     
-    private let quickAdjustmentTypes: [AdjustmentType] = [
-        .damage, .expired, .found, .returnType, .countCorrection, .theft, .writeOff
-    ]
-    
     private func selectAdjustment(_ type: AdjustmentType) {
-        selectedAdjustmentType = type
-        showAdjustmentSheet = true
+        adjustmentSheetType = type
     }
     
     // MARK: - Recent Activity Section (Product-Scoped)
