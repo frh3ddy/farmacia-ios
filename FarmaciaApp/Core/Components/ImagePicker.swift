@@ -1,67 +1,79 @@
-import SwiftUI
-import PhotosUI
+import UIKit
 
-// MARK: - Image Picker (Camera + Photo Library)
+// MARK: - Direct UIKit Image Picker Presentation
+//
+// SwiftUI's .sheet machinery has a presentation race when chained after a
+// confirmationDialog: the dialog's binding flips to false when the dismiss
+// animation STARTS, and any sheet presented while UIKit is still animating
+// gets cancelled (camera opened and closed instantly on first attempt).
+// Presenting the picker directly on the topmost view controller bypasses
+// SwiftUI's presentation machinery entirely and is reliable every time.
+// Camera is presented full-screen per Apple's HIG; the photo library uses
+// a page sheet with grabber for familiar dismissal.
 
-struct ImagePicker: UIViewControllerRepresentable {
-    let sourceType: UIImagePickerController.SourceType
-    let onImagePicked: (UIImage) -> Void
-    @Environment(\.dismiss) var dismiss
-    
-    func makeUIViewController(context: Context) -> UIImagePickerController {
-        let picker = UIImagePickerController()
-        picker.sourceType = sourceType
-        picker.delegate = context.coordinator
-        picker.allowsEditing = true
-        return picker
-    }
-    
-    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
-    
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
-    
-    class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
-        let parent: ImagePicker
-        
-        init(_ parent: ImagePicker) {
-            self.parent = parent
+enum ImagePickerPresenter {
+    static func present(
+        sourceType: UIImagePickerController.SourceType,
+        onImagePicked: @escaping (UIImage) -> Void
+    ) {
+        guard UIImagePickerController.isSourceTypeAvailable(sourceType) else { return }
+
+        // Defer one runloop so any in-flight dismiss animation (e.g. the
+        // confirmation dialog that triggered this) finishes first.
+        DispatchQueue.main.async {
+            guard let top = topViewController() else { return }
+
+            let picker = UIImagePickerController()
+            picker.sourceType = sourceType
+            picker.allowsEditing = true
+
+            let delegate = Delegate(onImagePicked: onImagePicked)
+            picker.delegate = delegate
+            // Keep the delegate alive for the picker's lifetime
+            objc_setAssociatedObject(picker, &delegateKey, delegate, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+
+            if sourceType == .camera {
+                picker.modalPresentationStyle = .fullScreen
+            }
+
+            top.present(picker, animated: true)
         }
-        
-        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+    }
+
+    private static var delegateKey: UInt8 = 0
+
+    private static func topViewController() -> UIViewController? {
+        guard let scene = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .first(where: { $0.activationState == .foregroundActive }),
+              var top = scene.windows.first(where: { $0.isKeyWindow })?.rootViewController
+        else { return nil }
+
+        // Walk up any in-progress presentation chain (dialog, sheets, nav)
+        while let presented = top.presentedViewController {
+            top = presented
+        }
+        return top
+    }
+
+    private final class Delegate: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let onImagePicked: (UIImage) -> Void
+
+        init(onImagePicked: @escaping (UIImage) -> Void) {
+            self.onImagePicked = onImagePicked
+        }
+
+        func imagePickerController(_ picker: UIImagePickerController,
+                                   didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
             // Prefer edited image (cropped), fall back to original
             if let image = info[.editedImage] as? UIImage ?? info[.originalImage] as? UIImage {
-                parent.onImagePicked(image)
+                onImagePicked(image)
             }
-            parent.dismiss()
+            picker.dismiss(animated: true)
         }
-        
+
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-            parent.dismiss()
-        }
-    }
-}
-
-// MARK: - Photos Picker (iOS 16+ native)
-
-struct PhotosPickerImage: View {
-    let onImagePicked: (UIImage) -> Void
-    
-    @State private var selectedItem: PhotosPickerItem?
-    
-    var body: some View {
-        PhotosPicker(selection: $selectedItem, matching: .images) {
-            Label("Biblioteca de Fotos", systemImage: "photo.on.rectangle")
-        }
-        .onChange(of: selectedItem) { _, newItem in
-            guard let newItem else { return }
-            Task {
-                if let data = try? await newItem.loadTransferable(type: Data.self),
-                   let image = UIImage(data: data) {
-                    onImagePicked(image)
-                }
-            }
+            picker.dismiss(animated: true)
         }
     }
 }

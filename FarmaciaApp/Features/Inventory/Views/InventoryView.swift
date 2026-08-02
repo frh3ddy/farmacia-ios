@@ -815,6 +815,7 @@ struct ReceiveInventoryFormView: View {
             }
             .navigationTitle("Recibir Inventario")
             .navigationBarTitleDisplayMode(.inline)
+            .keyboardTopSpacing(24)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancelar") {
@@ -1403,6 +1404,7 @@ struct AdjustmentFormView: View {
             }
             .navigationTitle(adjustmentType.displayName)
             .navigationBarTitleDisplayMode(.inline)
+            .keyboardTopSpacing(24)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancelar") {

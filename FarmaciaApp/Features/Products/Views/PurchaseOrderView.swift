@@ -500,11 +500,9 @@ struct CatalogItemRow: View {
         VStack(alignment: .leading, spacing: 8) {
             // Main row
             HStack(spacing: 12) {
-                // Product image or placeholder
-                if let imageUrl = item.imageUrl, let url = URL(string: imageUrl) {
-                    AsyncImage(url: url) { image in
-                        image.resizable().scaledToFill()
-                    } placeholder: {
+                // Product image or placeholder (cached + downsampled)
+                if item.imageUrl != nil {
+                    CachedProductImage(url: item.imageUrl, targetSize: CGSize(width: 44, height: 44)) {
                         productPlaceholder
                     }
                     .frame(width: 44, height: 44)

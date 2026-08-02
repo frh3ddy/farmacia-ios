@@ -39,9 +39,7 @@ struct ProductDetailView: View {
     @StateObject private var inventoryViewModel = InventoryViewModel()
     
     // Image upload state
-    @State private var showImagePicker = false
     @State private var showImageSourcePicker = false
-    @State private var imagePickerSource: UIImagePickerController.SourceType = .photoLibrary
     @State private var isUploadingImage = false
     @State private var uploadedImageUrl: String? = nil
     @State private var showImageUploadError = false
@@ -99,6 +97,13 @@ struct ProductDetailView: View {
         .sheet(isPresented: $showEditPrice) {
             EditPriceView(product: displayProduct) { updatedProduct in
                 currentProduct = updatedProduct
+                // Propagate the new price to the products list + SwiftData cache
+                onProductUpdated?(updatedProduct)
+                // Follow with a fresh GET — the server is the source of truth
+                // and the PATCH response may not carry every derived field
+                Task {
+                    await refreshProduct()
+                }
             }
         }
         .sheet(isPresented: $showReceiveSheet) {
@@ -210,20 +215,12 @@ struct ProductDetailView: View {
         VStack(spacing: 12) {
             // Product Image or Placeholder
             ZStack(alignment: .bottomTrailing) {
-                // Image area — tapping opens full-screen viewer
+                // Image area — tapping opens full-screen viewer (cached + downsampled)
                 Group {
-                    if let imageUrl = uploadedImageUrl ?? displayProduct.squareImageUrl, let url = URL(string: imageUrl) {
-                        AsyncImage(url: url) { phase in
-                            switch phase {
-                            case .success(let image):
-                                image
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                            case .failure, .empty:
-                                productPlaceholder
-                            @unknown default:
-                                productPlaceholder
-                            }
+                    let displayUrl = uploadedImageUrl ?? displayProduct.squareImageUrl
+                    if displayUrl != nil {
+                        CachedProductImage(url: displayUrl, targetSize: CGSize(width: 100, height: 100)) {
+                            productPlaceholder
                         }
                         .frame(width: 100, height: 100)
                         .cornerRadius(16)
@@ -257,22 +254,20 @@ struct ProductDetailView: View {
             }
             .confirmationDialog("Cambiar Imagen del Producto", isPresented: $showImageSourcePicker) {
                 Button("Tomar Foto") {
-                    imagePickerSource = .camera
-                    showImagePicker = true
-                }
-                if UIImagePickerController.isSourceTypeAvailable(.camera) {} // camera availability check
-                Button("Elegir de la Biblioteca") {
-                    imagePickerSource = .photoLibrary
-                    showImagePicker = true
-                }
-                Button("Cancelar", role: .cancel) {}
-            }
-            .sheet(isPresented: $showImagePicker) {
-                ImagePicker(sourceType: imagePickerSource) { image in
-                    Task {
-                        await uploadProductImage(image)
+                    ImagePickerPresenter.present(sourceType: .camera) { image in
+                        Task {
+                            await uploadProductImage(image)
+                        }
                     }
                 }
+                Button("Elegir de la Biblioteca") {
+                    ImagePickerPresenter.present(sourceType: .photoLibrary) { image in
+                        Task {
+                            await uploadProductImage(image)
+                        }
+                    }
+                }
+                Button("Cancelar", role: .cancel) {}
             }
             .fullScreenCover(isPresented: $showImageViewer) {
                 if let imageUrl = uploadedImageUrl ?? displayProduct.squareImageUrl {
@@ -759,8 +754,9 @@ struct ProductDetailView: View {
     }
     
     private func uploadProductImage(_ image: UIImage) async {
-        // Compress image to JPEG
-        guard let imageData = image.jpegData(compressionQuality: 0.8) else { return }
+        // Resize to upload ceiling (1600px longest edge) + compress to JPEG.
+        // Camera photos are 12+ MP — uploading them raw produces multi-MB payloads.
+        guard let imageData = image.jpegDataForUpload() else { return }
         
         isUploadingImage = true
         defer { isUploadingImage = false }
@@ -772,7 +768,20 @@ struct ProductDetailView: View {
                 filename: "product_\(displayProduct.id).jpg"
             )
             if let url = response.imageUrl {
+                // Invalidate caches so the fresh image is fetched even if
+                // the backend reused the same URL
+                if let oldUrl = URL(string: uploadedImageUrl ?? displayProduct.squareImageUrl ?? "") {
+                    URLCache.shared.removeCachedResponse(for: URLRequest(url: oldUrl))
+                }
+                if let newUrl = URL(string: url) {
+                    URLCache.shared.removeCachedResponse(for: URLRequest(url: newUrl))
+                }
+                ProductImageCache.shared.invalidate(url: url)
                 uploadedImageUrl = url
+                // Pull the fresh product (with the new image URL) and
+                // propagate it to the products list + SwiftData cache
+                // via onProductUpdated inside refreshProduct()
+                await refreshProduct()
             }
         } catch {
             print("Failed to upload product image: \(error)")
@@ -1814,6 +1823,7 @@ struct EditPriceView: View {
             }
             .navigationTitle("Editar Precio")
             .navigationBarTitleDisplayMode(.inline)
+            .keyboardTopSpacing(24)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancelar") {

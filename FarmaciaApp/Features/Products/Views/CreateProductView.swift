@@ -12,9 +12,7 @@ struct CreateProductView: View {
     
     // Image picker state
     @State private var selectedImage: UIImage?
-    @State private var showImagePicker = false
     @State private var showImageSourcePicker = false
-    @State private var imagePickerSource: UIImagePickerController.SourceType = .photoLibrary
     
     var body: some View {
         NavigationStack {
@@ -63,12 +61,14 @@ struct CreateProductView: View {
                 }
                 .confirmationDialog("Agregar Imagen del Producto", isPresented: $showImageSourcePicker) {
                     Button("Tomar Foto") {
-                        imagePickerSource = .camera
-                        showImagePicker = true
+                        ImagePickerPresenter.present(sourceType: .camera) { image in
+                            selectedImage = image
+                        }
                     }
                     Button("Elegir de la Biblioteca") {
-                        imagePickerSource = .photoLibrary
-                        showImagePicker = true
+                        ImagePickerPresenter.present(sourceType: .photoLibrary) { image in
+                            selectedImage = image
+                        }
                     }
                     if selectedImage != nil {
                         Button("Eliminar Foto", role: .destructive) {
@@ -76,11 +76,6 @@ struct CreateProductView: View {
                         }
                     }
                     Button("Cancelar", role: .cancel) {}
-                }
-                .sheet(isPresented: $showImagePicker) {
-                    ImagePicker(sourceType: imagePickerSource) { image in
-                        selectedImage = image
-                    }
                 }
                 
                 // Product Info Section
@@ -179,6 +174,14 @@ struct CreateProductView: View {
             }
             .navigationTitle("Nuevo Producto")
             .navigationBarTitleDisplayMode(.inline)
+            // Breathing room between the keyboard's top edge and bottom
+            // fields while editing
+            .keyboardTopSpacing(24)
+            // Scrolling dismisses the keyboard and removes field focus —
+            // otherwise the first tap on the photo area is consumed by the
+            // scroll view scrolling back to the focused (off-screen) field
+            // instead of opening the image source picker
+            .scrollDismissesKeyboard(.immediately)
             .onAppear {
                 if let sku = prefillSku, !sku.isEmpty {
                     viewModel.sku = sku
@@ -404,8 +407,8 @@ class CreateProductViewModel: ObservableObject {
                     message += "\n✓ Initial inventory added"
                 }
                 
-                // Upload image if one was selected
-                if let image = image, let imageData = image.jpegData(compressionQuality: 0.8) {
+                // Upload image if one was selected (resized to 1600px ceiling first)
+                if let image = image, let imageData = image.jpegDataForUpload() {
                     do {
                         let _: ImageUploadResponse = try await apiClient.uploadImage(
                             endpoint: .uploadProductImage(id: data.product.id),

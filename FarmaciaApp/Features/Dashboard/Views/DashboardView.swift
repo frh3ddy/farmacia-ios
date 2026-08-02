@@ -15,7 +15,12 @@ struct DashboardView: View {
     
     var body: some View {
         NavigationStack {
-            ScrollView {
+            // Vertical axis locked explicitly; containerRelativeFrame clamps
+            // the content width to the viewport so long dynamic values
+            // (e.g. large currency amounts in summary/P&L rows) can wrap or
+            // compress instead of stretching the content and enabling
+            // horizontal panning — matches the List behavior in ProductsView
+            ScrollView(.vertical) {
                 VStack(spacing: 20) {
                     // Welcome Header
                     welcomeHeader
@@ -65,6 +70,7 @@ struct DashboardView: View {
                     }
                 }
                 .padding()
+                .containerRelativeFrame(.horizontal)
             }
             .refreshable {
                 await viewModel.loadDashboard()
