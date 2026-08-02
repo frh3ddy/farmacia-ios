@@ -174,6 +174,9 @@ struct CreateProductView: View {
             }
             .navigationTitle("Nuevo Producto")
             .navigationBarTitleDisplayMode(.inline)
+            // Breathing room between the keyboard's top edge and bottom
+            // fields while editing
+            .keyboardTopSpacing(24)
             // Scrolling dismisses the keyboard and removes field focus —
             // otherwise the first tap on the photo area is consumed by the
             // scroll view scrolling back to the focused (off-screen) field

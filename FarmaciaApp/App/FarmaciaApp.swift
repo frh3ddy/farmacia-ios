@@ -67,6 +67,11 @@ struct RootView: View {
             }
         }
         .animation(.easeInOut, value: authManager.authState)
+        .onAppear {
+            // WhatsApp-style: tapping anywhere outside a text input
+            // dismisses the keyboard and resigns field focus globally.
+            KeyboardDismissInstaller.install()
+        }
     }
 }
 

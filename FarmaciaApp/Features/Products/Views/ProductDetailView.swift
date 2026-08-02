@@ -1823,6 +1823,7 @@ struct EditPriceView: View {
             }
             .navigationTitle("Editar Precio")
             .navigationBarTitleDisplayMode(.inline)
+            .keyboardTopSpacing(24)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancelar") {

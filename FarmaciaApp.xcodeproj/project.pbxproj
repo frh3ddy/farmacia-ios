@@ -30,6 +30,7 @@
 		EE00000100000002 /* ProductImageViewer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000002 /* ProductImageViewer.swift */; };
 		EE00000100000003 /* CachedProductImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000003 /* CachedProductImage.swift */; };
 		EE00000100000004 /* UIImage+Resize.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000004 /* UIImage+Resize.swift */; };
+		EE00000100000005 /* KeyboardHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000005 /* KeyboardHelpers.swift */; };
 		F000000100000001 /* FarmaciaApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000001 /* FarmaciaApp.swift */; };
 		F000000100000002 /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000002 /* AppConfiguration.swift */; };
 		F000000100000003 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000003 /* APIClient.swift */; };
@@ -82,6 +83,7 @@
 		EE00000200000002 /* ProductImageViewer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductImageViewer.swift; sourceTree = "<group>"; };
 		EE00000200000003 /* CachedProductImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CachedProductImage.swift; sourceTree = "<group>"; };
 		EE00000200000004 /* UIImage+Resize.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIImage+Resize.swift"; sourceTree = "<group>"; };
+		EE00000200000005 /* KeyboardHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardHelpers.swift; sourceTree = "<group>"; };
 		F100000000000000 /* FarmaciaApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FarmaciaApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F100000100000001 /* FarmaciaApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FarmaciaApp.swift; sourceTree = "<group>"; };
 		F100000100000002 /* AppConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfiguration.swift; sourceTree = "<group>"; };
@@ -182,6 +184,7 @@
 				EE00000200000002 /* ProductImageViewer.swift */,
 				EE00000200000003 /* CachedProductImage.swift */,
 				EE00000200000004 /* UIImage+Resize.swift */,
+				EE00000200000005 /* KeyboardHelpers.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -488,6 +491,7 @@
 				EE00000100000002 /* ProductImageViewer.swift in Sources */,
 				EE00000100000003 /* CachedProductImage.swift in Sources */,
 				EE00000100000004 /* UIImage+Resize.swift in Sources */,
+				EE00000100000005 /* KeyboardHelpers.swift in Sources */,
 				CA00000100000001 /* CachedProduct.swift in Sources */,
 				CA00000100000002 /* ProductCacheManager.swift in Sources */,
 			);
