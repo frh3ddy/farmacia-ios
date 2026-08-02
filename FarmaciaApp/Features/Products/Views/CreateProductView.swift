@@ -179,6 +179,11 @@ struct CreateProductView: View {
             }
             .navigationTitle("Nuevo Producto")
             .navigationBarTitleDisplayMode(.inline)
+            // Scrolling dismisses the keyboard and removes field focus —
+            // otherwise the first tap on the photo area is consumed by the
+            // scroll view scrolling back to the focused (off-screen) field
+            // instead of opening the image source picker
+            .scrollDismissesKeyboard(.immediately)
             .onAppear {
                 if let sku = prefillSku, !sku.isEmpty {
                     viewModel.sku = sku
