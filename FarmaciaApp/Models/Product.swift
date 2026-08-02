@@ -45,24 +45,33 @@ struct Product: Codable, Identifiable, Equatable, Hashable {
         squareDescription
     }
     
+    /// Shared currency formatter — NumberFormatter is expensive to allocate,
+    /// so we create it once per currency code instead of per row render.
+    private static var currencyFormatters: [String: NumberFormatter] = [:]
+    private static let formatterLock = NSLock()
+    
+    static func currencyFormatter(for code: String) -> NumberFormatter {
+        formatterLock.lock()
+        defer { formatterLock.unlock() }
+        if let cached = currencyFormatters[code] { return cached }
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = code
+        formatter.locale = Locale(identifier: "es_MX")
+        currencyFormatters[code] = formatter
+        return formatter
+    }
+    
     /// Precio de venta formateado en MXN
     var formattedPrice: String? {
         guard let price = sellingPrice else { return nil }
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = currency ?? "MXN"
-        formatter.locale = Locale(identifier: "es_MX")
-        return formatter.string(from: NSNumber(value: price))
+        return Product.currencyFormatter(for: currency ?? "MXN").string(from: NSNumber(value: price))
     }
     
     /// Costo promedio formateado en MXN
     var formattedCost: String? {
         guard let cost = averageCost else { return nil }
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = currency ?? "MXN"
-        formatter.locale = Locale(identifier: "es_MX")
-        return formatter.string(from: NSNumber(value: cost))
+        return Product.currencyFormatter(for: currency ?? "MXN").string(from: NSNumber(value: cost))
     }
     
     /// Profit margin percentage

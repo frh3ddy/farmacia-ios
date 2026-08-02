@@ -1,6 +1,51 @@
 import SwiftUI
 import CodeScanner
 
+// MARK: - Filter / Sort enums (file scope — used by both the view and the view model)
+
+enum ProductFilter: String, CaseIterable {
+    case all = "Todos"
+    case lowStock = "Stock Bajo"
+    case outOfStock = "Sin Stock"
+    case inStock = "In Stock"
+    case atRisk = "En Riesgo"
+    case expiringSoon = "Por Vencer"
+    case lowMargin = "Margen Bajo"
+    
+    var icon: String {
+        switch self {
+        case .all: return "square.grid.2x2"
+        case .lowStock: return "exclamationmark.triangle"
+        case .outOfStock: return "xmark.circle"
+        case .inStock: return "checkmark.circle"
+        case .atRisk: return "exclamationmark.octagon"
+        case .expiringSoon: return "clock.badge.exclamationmark"
+        case .lowMargin: return "percent"
+        }
+    }
+    
+    var color: Color {
+        switch self {
+        case .all: return .blue
+        case .lowStock: return .orange
+        case .outOfStock: return .red
+        case .inStock: return .green
+        case .atRisk: return .red
+        case .expiringSoon: return .orange
+        case .lowMargin: return .purple
+        }
+    }
+}
+
+enum ProductSortOption: String, CaseIterable {
+    case name = "Nombre"
+    case stockAsc = "Stock (Low)"
+    case stockDesc = "Stock (High)"
+    case margin = "Margen"
+    case priceAsc = "Precio (Menor)"
+    case priceDesc = "Precio (Mayor)"
+}
+
 // MARK: - Products View
 // Unified product + inventory hub. Includes search, smart filters,
 // attention banner, sort options, and a toolbar link to global activity history.
@@ -26,99 +71,13 @@ struct ProductsView: View {
     /// Tab-switch refresh trigger (set by MainTabView)
     var refreshTrigger: UUID = UUID()
     
-    // MARK: - Filter / Sort enums
-    
-    enum ProductFilter: String, CaseIterable {
-        case all = "Todos"
-        case lowStock = "Stock Bajo"
-        case outOfStock = "Sin Stock"
-        case inStock = "In Stock"
-        case atRisk = "En Riesgo"
-        case expiringSoon = "Por Vencer"
-        case lowMargin = "Margen Bajo"
-        
-        var icon: String {
-            switch self {
-            case .all: return "square.grid.2x2"
-            case .lowStock: return "exclamationmark.triangle"
-            case .outOfStock: return "xmark.circle"
-            case .inStock: return "checkmark.circle"
-            case .atRisk: return "exclamationmark.octagon"
-            case .expiringSoon: return "clock.badge.exclamationmark"
-            case .lowMargin: return "percent"
-            }
-        }
-        
-        var color: Color {
-            switch self {
-            case .all: return .blue
-            case .lowStock: return .orange
-            case .outOfStock: return .red
-            case .inStock: return .green
-            case .atRisk: return .red
-            case .expiringSoon: return .orange
-            case .lowMargin: return .purple
-            }
-        }
-    }
-    
-    enum ProductSortOption: String, CaseIterable {
-        case name = "Nombre"
-        case stockAsc = "Stock (Low)"
-        case stockDesc = "Stock (High)"
-        case margin = "Margen"
-        case priceAsc = "Precio (Menor)"
-        case priceDesc = "Precio (Mayor)"
-    }
-    
     // Debounced search — triggers server-side search after user stops typing
     @State private var searchTask: Task<Void, Never>? = nil
     
     // MARK: - Computed products
     // Note: name/SKU filtering is handled server-side via the `search` query param.
-    // Only stock/risk/margin filters are applied client-side on the loaded page.
-    
-    private var filteredProducts: [Product] {
-        var products = viewModel.products
-        
-        // Apply client-side filter (stock, risk, margin — not name/sku)
-        switch activeFilter {
-        case .all:
-            break
-        case .lowStock:
-            products = products.filter { ($0.totalInventory ?? 0) > 0 && ($0.totalInventory ?? 0) < 10 }
-        case .outOfStock:
-            products = products.filter { ($0.totalInventory ?? 0) == 0 }
-        case .inStock:
-            products = products.filter { ($0.totalInventory ?? 0) >= 10 }
-        case .atRisk:
-            let atRiskIds = agingViewModel.atRiskProductIds
-            products = products.filter { atRiskIds.contains($0.id) }
-        case .expiringSoon:
-            let expiringIds = expiringViewModel.expiringProductIds
-            products = products.filter { expiringIds.contains($0.id) }
-        case .lowMargin:
-            products = products.filter { ($0.profitMargin ?? 100) < 10 }
-        }
-        
-        // Apply sort
-        switch sortOption {
-        case .name:
-            products.sort { $0.displayName.localizedCompare($1.displayName) == .orderedAscending }
-        case .stockAsc:
-            products.sort { ($0.totalInventory ?? 0) < ($1.totalInventory ?? 0) }
-        case .stockDesc:
-            products.sort { ($0.totalInventory ?? 0) > ($1.totalInventory ?? 0) }
-        case .margin:
-            products.sort { ($0.profitMargin ?? 0) > ($1.profitMargin ?? 0) }
-        case .priceAsc:
-            products.sort { ($0.sellingPrice ?? 0) < ($1.sellingPrice ?? 0) }
-        case .priceDesc:
-            products.sort { ($0.sellingPrice ?? 0) > ($1.sellingPrice ?? 0) }
-        }
-        
-        return products
-    }
+    // Stock/risk/margin filtering + sorting live in ProductsViewModel — recomputed
+    // only when inputs change, NOT on every SwiftUI render. Read viewModel.filteredProducts.
     
     // Stock count helpers for attention banner (read from pre-computed counts)
     private var outOfStockCount: Int { viewModel.counts.outOfStock }
@@ -232,6 +191,23 @@ struct ProductsView: View {
                     try? await Task.sleep(nanoseconds: 400_000_000) // 400ms
                     guard !Task.isCancelled else { return }
                     await loadProducts()
+                }
+            }
+            .onChange(of: activeFilter) { _, newFilter in
+                viewModel.setFilter(newFilter, atRiskIds: agingViewModel.atRiskProductIds, expiringIds: expiringViewModel.expiringProductIds)
+            }
+            .onChange(of: sortOption) { _, newSort in
+                viewModel.setSort(newSort)
+            }
+            .onChange(of: agingViewModel.atRiskProductIds) { _, newIds in
+                // Re-apply filter when aging data arrives (atRisk filter depends on it)
+                if activeFilter == .atRisk {
+                    viewModel.setFilter(.atRisk, atRiskIds: newIds, expiringIds: expiringViewModel.expiringProductIds)
+                }
+            }
+            .onChange(of: expiringViewModel.expiringProductIds) { _, newIds in
+                if activeFilter == .expiringSoon {
+                    viewModel.setFilter(.expiringSoon, atRiskIds: agingViewModel.atRiskProductIds, expiringIds: newIds)
                 }
             }
             .refreshable {
@@ -379,14 +355,14 @@ struct ProductsView: View {
                     
                     summaryItem(
                         title: "Sincronizado",
-                        value: "\(viewModel.products.filter { $0.hasSquareSync == true }.count)",
+                        value: "\(viewModel.counts.synced)",
                         icon: "checkmark.circle.fill",
                         color: .green
                     )
                     
                     Divider()
                     
-                    let localCount = viewModel.products.filter { $0.hasSquareSync != true }.count
+                    let localCount = viewModel.counts.local
                     
                     if localCount > 0 {
                         Button {
@@ -422,6 +398,20 @@ struct ProductsView: View {
                     }
                 }
                 .padding(.vertical, 8)
+                
+                // Background catalog warm-up indicator (non-blocking).
+                // The scanner's level-2 server exact search covers products
+                // not yet cached, so the user can keep working normally.
+                if viewModel.isWarmingCache {
+                    HStack(spacing: 6) {
+                        ProgressView()
+                            .scaleEffect(0.7)
+                        Text("Sincronizando catálogo... (\(viewModel.warmUpProgress) de \(viewModel.totalCount))")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    }
+                }
             }
             .alert("Sincronización Square", isPresented: $showSyncResult) {
                 Button("OK", role: .cancel) {}
@@ -431,7 +421,7 @@ struct ProductsView: View {
             
             // Products Section
             Section {
-                ForEach(filteredProducts) { product in
+                ForEach(viewModel.filteredProducts) { product in
                     NavigationLink {
                         ProductDetailView(
                             product: product,
@@ -447,7 +437,7 @@ struct ProductsView: View {
                     }
                     .onAppear {
                         // Infinite scroll: trigger load-more when near the end
-                        if product.id == filteredProducts.last?.id && viewModel.hasMore {
+                        if product.id == viewModel.filteredProducts.last?.id && viewModel.hasMore {
                             Task {
                                 await loadMoreProducts()
                             }
@@ -467,9 +457,9 @@ struct ProductsView: View {
             } header: {
                 HStack {
                     if activeFilter != .all {
-                        Text("\(filteredProducts.count) \(activeFilter.rawValue)")
+                        Text("\(viewModel.filteredProducts.count) \(activeFilter.rawValue)")
                     } else if !searchText.isEmpty {
-                        Text("\(filteredProducts.count) resultados")
+                        Text("\(viewModel.filteredProducts.count) resultados")
                     }
                     
                     Spacer()
@@ -1067,18 +1057,21 @@ struct ProductRow: View {
 
 // MARK: - Products View Model (paginated, infinite scroll)
 
-// MARK: - Pre-computed filter counts (avoids 6× O(n) per SwiftUI render)
+// MARK: - Pre-computed filter counts (avoids O(n) passes per SwiftUI render)
 struct ProductCounts: Equatable {
     var total = 0
     var outOfStock = 0
     var lowStock = 0
     var inStock = 0
     var lowMargin = 0
+    var synced = 0
+    var local = 0
 }
 
 @MainActor
 class ProductsViewModel: ObservableObject {
     @Published var products: [Product] = []
+    @Published var filteredProducts: [Product] = []
     @Published var isLoading = false
     @Published var isLoadingMore = false
     @Published var showError = false
@@ -1086,6 +1079,10 @@ class ProductsViewModel: ObservableObject {
     
     // Pre-computed counts — recalculated once when products array changes
     @Published var counts = ProductCounts()
+    
+    // Background catalog warm-up state (for non-blocking progress indicator)
+    @Published var isWarmingCache = false
+    @Published var warmUpProgress: Int = 0
     
     // Pagination state
     private(set) var currentPage = 1
@@ -1096,8 +1093,71 @@ class ProductsViewModel: ObservableObject {
     // Search state (server-side)
     private var currentSearchQuery: String?
     
+    // Filter/sort inputs — recompute filteredProducts only when these change
+    private var activeFilter: ProductFilter = .all
+    private var activeSort: ProductSortOption = .name
+    private var atRiskIds: Set<String> = []
+    private var expiringIds: Set<String> = []
+    
+    // Background warm-up task (cancelled on refresh/search)
+    private var warmUpTask: Task<Void, Never>?
+    
     private let apiClient = APIClient.shared
     private let cache = ProductCacheManager.shared
+    
+    // MARK: - Filter / Sort (recomputed only on input change, NOT per render)
+    
+    func setFilter(_ filter: ProductFilter, atRiskIds: Set<String>, expiringIds: Set<String>) {
+        activeFilter = filter
+        self.atRiskIds = atRiskIds
+        self.expiringIds = expiringIds
+        recomputeFilteredProducts()
+    }
+    
+    func setSort(_ sort: ProductSortOption) {
+        activeSort = sort
+        recomputeFilteredProducts()
+    }
+    
+    private func recomputeFilteredProducts() {
+        var result = products
+        
+        switch activeFilter {
+        case .all:
+            break
+        case .lowStock:
+            result = result.filter { ($0.totalInventory ?? 0) > 0 && ($0.totalInventory ?? 0) < 10 }
+        case .outOfStock:
+            result = result.filter { ($0.totalInventory ?? 0) == 0 }
+        case .inStock:
+            result = result.filter { ($0.totalInventory ?? 0) >= 10 }
+        case .atRisk:
+            let ids = atRiskIds
+            result = result.filter { ids.contains($0.id) }
+        case .expiringSoon:
+            let ids = expiringIds
+            result = result.filter { ids.contains($0.id) }
+        case .lowMargin:
+            result = result.filter { ($0.profitMargin ?? 100) < 10 }
+        }
+        
+        switch activeSort {
+        case .name:
+            result.sort { $0.displayName.localizedCompare($1.displayName) == .orderedAscending }
+        case .stockAsc:
+            result.sort { ($0.totalInventory ?? 0) < ($1.totalInventory ?? 0) }
+        case .stockDesc:
+            result.sort { ($0.totalInventory ?? 0) > ($1.totalInventory ?? 0) }
+        case .margin:
+            result.sort { ($0.profitMargin ?? 0) > ($1.profitMargin ?? 0) }
+        case .priceAsc:
+            result.sort { ($0.sellingPrice ?? 0) < ($1.sellingPrice ?? 0) }
+        case .priceDesc:
+            result.sort { ($0.sellingPrice ?? 0) > ($1.sellingPrice ?? 0) }
+        }
+        
+        filteredProducts = result
+    }
     
     /// Load first page: cache first → spinner → API → update cache.
     /// Called on appear, pull-to-refresh, and tab switch.
@@ -1113,6 +1173,7 @@ class ProductsViewModel: ObservableObject {
                 products = cached
                 totalCount = cached.count
                 recalculateCounts()
+                recomputeFilteredProducts()
             }
         }
         
@@ -1121,6 +1182,9 @@ class ProductsViewModel: ObservableObject {
         currentPage = 1
         hasMore = true
         currentSearchQuery = search
+        // Any explicit refresh invalidates the previous warm-up
+        warmUpTask?.cancel()
+        isWarmingCache = false
         
         do {
             var params: [String: String] = [
@@ -1141,11 +1205,15 @@ class ProductsViewModel: ObservableObject {
             hasMore = response.hasMore ?? false
             currentPage = 1
             recalculateCounts()
+            recomputeFilteredProducts()
             
             // STEP 3: Update cache with fresh data (skip search results)
             if search == nil || search?.isEmpty == true {
                 cache.saveProducts(response.data)
                 cache.markFresh()
+                // STEP 4: Warm up the full catalog in the background so the
+                // barcode scanner's level-1 cache lookup covers all products.
+                startWarmUp(locationId: locationId)
             }
         } catch let error as NetworkError {
             // If we already have cached data, don't show error — just use cache
@@ -1194,6 +1262,7 @@ class ProductsViewModel: ObservableObject {
             hasMore = response.hasMore ?? false
             currentPage = nextPage
             recalculateCounts()
+            recomputeFilteredProducts()
             
             // Update cache with new page
             cache.saveProducts(response.data)
@@ -1203,6 +1272,43 @@ class ProductsViewModel: ObservableObject {
         }
         
         isLoadingMore = false
+    }
+    
+    /// Background full-catalog warm-up: paginates pages 2..N silently and writes
+    /// ONLY to the SwiftData cache (never touches `products` or the UI).
+    /// Purpose: make barcode level-1 (indexed cache lookup) cover the whole catalog.
+    /// Server remains source of truth — this does not replace any GET.
+    private func startWarmUp(locationId: String) {
+        warmUpTask?.cancel()
+        let startPage = currentPage + 1
+        warmUpTask = Task(priority: .utility) { [weak self] in
+            guard let self else { return }
+            await MainActor.run { self.isWarmingCache = true }
+            var page = startPage
+            var keepGoing = true
+            while keepGoing {
+                if Task.isCancelled { break }
+                do {
+                    let params: [String: String] = [
+                        "locationId": locationId,
+                        "page": "\(page)",
+                        "limit": "\(self.pageSize)"
+                    ]
+                    let response: ProductListResponse = try await self.apiClient.request(
+                        endpoint: .listProducts,
+                        queryParams: params
+                    )
+                    self.cache.saveProducts(response.data)
+                    await MainActor.run { self.warmUpProgress = self.cache.cachedCount }
+                    keepGoing = response.hasMore ?? false
+                    page += 1
+                } catch {
+                    // Silent fail — warm-up is best-effort; level-2 server search covers gaps
+                    keepGoing = false
+                }
+            }
+            await MainActor.run { self.isWarmingCache = false }
+        }
     }
     
     /// Search products on server with exact=true for barcode scanner.
@@ -1226,6 +1332,7 @@ class ProductsViewModel: ObservableObject {
         if let index = products.firstIndex(where: { $0.id == product.id }) {
             products[index] = product
             recalculateCounts()
+            recomputeFilteredProducts()
         }
         // Write-through to cache
         cache.saveProduct(product)
@@ -1237,6 +1344,7 @@ class ProductsViewModel: ObservableObject {
         products.insert(product, at: 0)
         totalCount += 1
         recalculateCounts()
+        recomputeFilteredProducts()
         // Write-through to cache
         cache.saveProduct(product)
     }
@@ -1251,6 +1359,7 @@ class ProductsViewModel: ObservableObject {
             else if stock < 10 { c.lowStock += 1 }
             else { c.inStock += 1 }
             if (product.profitMargin ?? 100) < 10 { c.lowMargin += 1 }
+            if product.hasSquareSync == true { c.synced += 1 } else { c.local += 1 }
         }
         counts = c
     }
