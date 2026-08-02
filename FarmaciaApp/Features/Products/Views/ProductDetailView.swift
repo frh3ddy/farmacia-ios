@@ -99,6 +99,13 @@ struct ProductDetailView: View {
         .sheet(isPresented: $showEditPrice) {
             EditPriceView(product: displayProduct) { updatedProduct in
                 currentProduct = updatedProduct
+                // Propagate the new price to the products list + SwiftData cache
+                onProductUpdated?(updatedProduct)
+                // Follow with a fresh GET — the server is the source of truth
+                // and the PATCH response may not carry every derived field
+                Task {
+                    await refreshProduct()
+                }
             }
         }
         .sheet(isPresented: $showReceiveSheet) {
@@ -775,6 +782,10 @@ struct ProductDetailView: View {
                 }
                 ProductImageCache.shared.invalidate(url: url)
                 uploadedImageUrl = url
+                // Pull the fresh product (with the new image URL) and
+                // propagate it to the products list + SwiftData cache
+                // via onProductUpdated inside refreshProduct()
+                await refreshProduct()
             }
         } catch {
             print("Failed to upload product image: \(error)")

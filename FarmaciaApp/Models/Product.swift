@@ -80,10 +80,11 @@ struct Product: Codable, Identifiable, Equatable, Hashable {
         return ((price - cost) / price) * 100
     }
     
-    static func == (lhs: Product, rhs: Product) -> Bool {
-        lhs.id == rhs.id
-    }
-    
+    // NOTE: deliberately NO custom `==` — the synthesized memberwise equality
+    // is required so SwiftUI invalidates list rows when price, stock, or the
+    // image URL change. An id-only `==` made updated rows compare "equal"
+    // and SwiftUI skipped re-rendering them (stale price/stock/image).
+
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
