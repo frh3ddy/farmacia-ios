@@ -12,7 +12,9 @@ import ImageIO
 //   3. ImageIO   — thumbnail decode happens at the target size, so a 12 MP
 //                  photo never gets fully decoded into memory for a 50 pt row
 
-final class ProductImageCache {
+/// @unchecked Sendable: NSCache is thread-safe per Apple docs, so sharing
+/// the singleton across actors is safe without additional synchronization.
+final class ProductImageCache: @unchecked Sendable {
     static let shared = ProductImageCache()
 
     /// Key format: "url#WxH" (pixel size) -> downsampled UIImage
@@ -72,34 +74,47 @@ final class ProductImageLoader: ObservableObject {
         }
 
         isLoading = true
-        task = Task.detached(priority: .userInitiated) { [weak self] in
-            defer { Task { @MainActor in self?.isLoading = false } }
-
-            do {
-                // URLSession uses URLCache.shared (configured at app launch)
-                let (data, response) = try await URLSession.shared.data(from: url)
-                guard !Task.isCancelled else { return }
-
-                if let http = response as? HTTPURLResponse, http.statusCode != 200 {
-                    return
-                }
-
-                guard let downsampled = Self.downsample(data: data, to: pixelSize),
-                      !Task.isCancelled else { return }
-
-                let pixelCost = Int(pixelSize.width * pixelSize.height * 4)
-                ProductImageCache.shared.insert(downsampled, for: key, pixelCost: pixelCost)
-
-                await MainActor.run { self?.image = downsampled }
-            } catch {
-                // Silent fail — views show the placeholder
+        // Task inherits the MainActor context from load(). The heavy work
+        // (network + decode) is offloaded to a nonisolated static function,
+        // so no actor-isolated state is captured in concurrently-executing
+        // code (Swift 6 safe).
+        task = Task { [weak self] in
+            let result = await Self.fetchAndDownsample(url: url, pixelSize: pixelSize, key: key)
+            guard !Task.isCancelled else {
+                self?.isLoading = false
+                return
             }
+            self?.image = result
+            self?.isLoading = false
         }
     }
 
     func cancel() {
         task?.cancel()
         task = nil
+    }
+
+    // MARK: - Off-Actor Fetch + Decode
+
+    /// Downloads `url` and downsamples OFF the MainActor. Returns nil on any
+    /// failure — views keep showing the placeholder.
+    nonisolated private static func fetchAndDownsample(url: URL, pixelSize: CGSize, key: String) async -> UIImage? {
+        do {
+            // URLSession uses URLCache.shared (configured at app launch)
+            let (data, response) = try await URLSession.shared.data(from: url)
+            if let http = response as? HTTPURLResponse, http.statusCode != 200 {
+                return nil
+            }
+
+            guard !Task.isCancelled,
+                  let downsampled = downsample(data: data, to: pixelSize) else { return nil }
+
+            let pixelCost = Int(pixelSize.width * pixelSize.height * 4)
+            ProductImageCache.shared.insert(downsampled, for: key, pixelCost: pixelCost)
+            return downsampled
+        } catch {
+            return nil
+        }
     }
 
     // MARK: - ImageIO Downsampling
