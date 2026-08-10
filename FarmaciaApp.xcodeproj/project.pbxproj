@@ -31,6 +31,9 @@
 		EE00000100000003 /* CachedProductImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000003 /* CachedProductImage.swift */; };
 		EE00000100000004 /* UIImage+Resize.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000004 /* UIImage+Resize.swift */; };
 		EE00000100000005 /* KeyboardHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000005 /* KeyboardHelpers.swift */; };
+		GG00000100000001 /* Payroll.swift in Sources */ = {isa = PBXBuildFile; fileRef = GG00000200000001 /* Payroll.swift */; };
+		GG00000100000002 /* PayrollView.swift in Sources */ = {isa = PBXBuildFile; fileRef = GG00000200000002 /* PayrollView.swift */; };
+		GG00000100000003 /* PayrollViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = GG00000200000003 /* PayrollViewModel.swift */; };
 		F000000100000001 /* FarmaciaApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000001 /* FarmaciaApp.swift */; };
 		F000000100000002 /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000002 /* AppConfiguration.swift */; };
 		F000000100000003 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000003 /* APIClient.swift */; };
@@ -84,6 +87,9 @@
 		EE00000200000003 /* CachedProductImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CachedProductImage.swift; sourceTree = "<group>"; };
 		EE00000200000004 /* UIImage+Resize.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIImage+Resize.swift"; sourceTree = "<group>"; };
 		EE00000200000005 /* KeyboardHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardHelpers.swift; sourceTree = "<group>"; };
+		GG00000200000001 /* Payroll.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Payroll.swift; sourceTree = "<group>"; };
+		GG00000200000002 /* PayrollView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PayrollView.swift; sourceTree = "<group>"; };
+		GG00000200000003 /* PayrollViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PayrollViewModel.swift; sourceTree = "<group>"; };
 		F100000000000000 /* FarmaciaApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FarmaciaApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F100000100000001 /* FarmaciaApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FarmaciaApp.swift; sourceTree = "<group>"; };
 		F100000100000002 /* AppConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfiguration.swift; sourceTree = "<group>"; };
@@ -131,6 +137,8 @@
 				37E6972F2F32AC3200F6CB5D /* ExpenseDetailView.swift */,
 				37E697302F32AC3200F6CB5D /* ExpenseFormView.swift */,
 				37E697312F32AC3200F6CB5D /* ExpensesView.swift */,
+				GG00000200000002 /* PayrollView.swift */,
+				GG00000200000003 /* PayrollViewModel.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -258,6 +266,7 @@
 				DD00000200000005 /* ShoppingList.swift */,
 				DD00000200000006 /* ShoppingListStore.swift */,
 				37E697412F3408EF00F6CB5D /* Setup.swift */,
+				GG00000200000001 /* Payroll.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -492,6 +501,9 @@
 				EE00000100000003 /* CachedProductImage.swift in Sources */,
 				EE00000100000004 /* UIImage+Resize.swift in Sources */,
 				EE00000100000005 /* KeyboardHelpers.swift in Sources */,
+				GG00000100000001 /* Payroll.swift in Sources */,
+				GG00000100000002 /* PayrollView.swift in Sources */,
+				GG00000100000003 /* PayrollViewModel.swift in Sources */,
 				CA00000100000001 /* CachedProduct.swift in Sources */,
 				CA00000100000002 /* ProductCacheManager.swift in Sources */,
 			);

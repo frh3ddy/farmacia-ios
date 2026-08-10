@@ -79,6 +79,11 @@ enum APIEndpoint {
     case expenseSummary
     case expenseTypes
     
+    // MARK: - Labor / Payroll Endpoints (Square Team + Labor API)
+    case laborTeamMembers
+    case laborPayrollSummary
+    case laborUpdateShift(id: String)
+    
     // MARK: - Inventory Aging Endpoints
     case agingSummary
     case agingProducts
@@ -178,6 +183,11 @@ enum APIEndpoint {
         case .expenseSummary: return "/expenses/summary/report"
         case .expenseTypes: return "/expenses/types/list"
             
+        // Labor / Payroll
+        case .laborTeamMembers: return "/labor/team-members"
+        case .laborPayrollSummary: return "/labor/payroll-summary"
+        case .laborUpdateShift(let id): return "/labor/shifts/\(id)"
+            
         // Inventory Aging
         case .agingSummary: return "/inventory/aging/summary"
         case .agingProducts: return "/inventory/aging/products"
@@ -274,6 +284,12 @@ enum APIEndpoint {
             return .put
         case .deleteExpense:
             return .delete
+            
+        // Labor / Payroll
+        case .laborTeamMembers, .laborPayrollSummary:
+            return .get
+        case .laborUpdateShift:
+            return .put
             
         // Reconciliation
         case .reconcileProduct, .reconcileLocation, .consumptionSummary,
