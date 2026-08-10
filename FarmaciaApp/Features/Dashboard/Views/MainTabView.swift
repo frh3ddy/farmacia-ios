@@ -16,6 +16,7 @@ struct MainTabView: View {
         case dashboard
         case products
         case expenses
+        case payroll
         case reports
         case employees
         case settings
@@ -44,6 +45,15 @@ struct MainTabView: View {
                         Label("Gastos", systemImage: "creditcard")
                     }
                     .tag(Tab.expenses)
+            }
+            
+            // Payroll / Nómina (same permission as expenses)
+            if authManager.canManageExpenses {
+                PayrollView()
+                    .tabItem {
+                        Label("Nómina", systemImage: "person.2.badge.clock")
+                    }
+                    .tag(Tab.payroll)
             }
             
             // Reports (if has permission)

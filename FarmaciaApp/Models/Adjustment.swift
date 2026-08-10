@@ -2,7 +2,9 @@ import Foundation
 
 // MARK: - Adjustment Type
 
-enum AdjustmentType: String, Codable, CaseIterable {
+enum AdjustmentType: String, Codable, CaseIterable, Identifiable {
+    var id: String { rawValue }
+    
     case damage = "DAMAGE"
     case theft = "THEFT"
     case expired = "EXPIRED"
