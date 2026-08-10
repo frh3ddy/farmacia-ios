@@ -6,6 +6,7 @@ struct ExpenseFormView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var authManager: AuthManager
     @ObservedObject var viewModel: ExpensesViewModel
+    @StateObject private var payrollViewModel = PayrollViewModel()
     
     let expense: Expense?
     
@@ -19,9 +20,27 @@ struct ExpenseFormView: View {
     @State private var paidAt = Date()
     @State private var notes = ""
     
+    // Payroll (nómina) autofill state
+    @State private var selectedTeamMember: TeamMember?
+    @State private var payrollUseCustomRange = false
+    @State private var payrollStart = Calendar.current.date(byAdding: .day, value: -6, to: Date()) ?? Date()
+    @State private var payrollEnd = Date()
+    @State private var payrollAutofilled = false
+    
     private var isEditing: Bool {
         expense != nil
     }
+    
+    private var isPayrollType: Bool {
+        selectedType == .payroll
+    }
+    
+    private static let dateOnlyFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.timeZone = TimeZone.current
+        return f
+    }()
     
     private var isValid: Bool {
         !amount.isEmpty && Double(amount) ?? 0 > 0
@@ -39,6 +58,11 @@ struct ExpenseFormView: View {
                         }
                     }
                     .pickerStyle(.navigationLink)
+                }
+                
+                // Payroll: employee picker + period
+                if isPayrollType && !isEditing {
+                    payrollSection
                 }
                 
                 // Amount & Date
@@ -114,6 +138,102 @@ struct ExpenseFormView: View {
                 }
             }
         }
+    }
+    
+    // MARK: - Payroll Section
+    
+    private var payrollSection: some View {
+        Section("Nómina (desde Square)") {
+            if payrollViewModel.isLoadingMembers {
+                HStack {
+                    ProgressView()
+                    Text("Cargando empleados...")
+                        .foregroundColor(.secondary)
+                }
+            } else if payrollViewModel.teamMembers.isEmpty {
+                Button("Cargar empleados de Square") {
+                    Task { await payrollViewModel.loadTeamMembers() }
+                }
+            } else {
+                Picker("Empleado", selection: $selectedTeamMember) {
+                    Text("Seleccionar...").tag(TeamMember?.none)
+                    ForEach(payrollViewModel.teamMembers) { member in
+                        Text(member.displayName).tag(TeamMember?.some(member))
+                    }
+                }
+                
+                if selectedTeamMember != nil {
+                    Toggle("Rango personalizado", isOn: $payrollUseCustomRange)
+                    
+                    if payrollUseCustomRange {
+                        DatePicker("Desde", selection: $payrollStart, displayedComponents: .date)
+                        DatePicker("Hasta", selection: $payrollEnd, displayedComponents: .date)
+                    } else {
+                        HStack {
+                            Text("Periodo")
+                            Spacer()
+                            Text("Semana actual (Lun - Dom)")
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    
+                    Button {
+                        Task { await autofillFromPayroll() }
+                    } label: {
+                        HStack {
+                            if payrollViewModel.isLoadingSummary {
+                                ProgressView()
+                            } else {
+                                Image(systemName: "arrow.down.doc")
+                            }
+                            Text("Calcular y autocompletar")
+                        }
+                    }
+                    .disabled(payrollViewModel.isLoadingSummary)
+                    
+                    if payrollAutofilled, let summary = payrollViewModel.summary {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Label("\(summary.workedDays) días trabajados", systemImage: "calendar")
+                            Label("\(summary.formattedTotalTime) horas", systemImage: "clock")
+                            Label("$\(String(format: "%.2f", summary.hourlyRate))/hora", systemImage: "dollarsign.circle")
+                        }
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    }
+                }
+            }
+        }
+        .onAppear {
+            if isPayrollType && payrollViewModel.teamMembers.isEmpty {
+                Task { await payrollViewModel.loadTeamMembers() }
+            }
+        }
+    }
+    
+    // MARK: - Payroll Autofill
+    
+    private func autofillFromPayroll() async {
+        guard let member = selectedTeamMember else { return }
+        
+        payrollViewModel.selectedMember = member
+        payrollViewModel.useCustomRange = payrollUseCustomRange
+        payrollViewModel.customStart = payrollStart
+        payrollViewModel.customEnd = payrollEnd
+        await payrollViewModel.loadSummary()
+        
+        guard let summary = payrollViewModel.summary else { return }
+        
+        // Autofill amount, date, vendor and notes
+        amount = String(format: "%.2f", summary.totalCost)
+        // Date = end of the period (pay day), parsed as a local date to
+        // avoid any timezone day-shift
+        if let endDate = Self.dateOnlyFormatter.date(from: summary.period.endDate) {
+            date = endDate
+        }
+        vendor = member.displayName
+        description = "Nómina \(member.displayName)"
+        notes = summary.expenseDetails
+        payrollAutofilled = true
     }
     
     // MARK: - Populate Form
