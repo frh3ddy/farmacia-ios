@@ -113,7 +113,7 @@ struct PayrollView: View {
                     
                     Spacer()
                     if let period = viewModel.summary?.period {
-                        Text("\(period.startDate)  –  \(period.endDate)")
+                        Text(PayrollDateFormatting.periodLabel(start: period.startDate, end: period.endDate))
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     } else {
@@ -213,7 +213,7 @@ private struct ShiftRow: View {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
-                        Text(shift.date)
+                        Text(PayrollDateFormatting.shiftLabel(from: shift.date))
                             .font(.subheadline)
                             .bold()
                         if shift.isOpen {
@@ -283,7 +283,7 @@ private struct ShiftEditorSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Turno del \(shift.date)") {
+                Section("Turno del \(PayrollDateFormatting.fullLabel(from: shift.date))") {
                     DatePicker("Entrada", selection: $startDate, displayedComponents: [.date, .hourAndMinute])
                     Toggle("Tiene salida", isOn: $hasEnd)
                     if hasEnd {
@@ -327,6 +327,82 @@ private struct ShiftEditorSheet: View {
         let end = hasEnd ? endDate : Date()
         let minutes = max(0, Int(end.timeIntervalSince(startDate) / 60))
         return String(format: "%d:%02d", minutes / 60, minutes % 60)
+    }
+}
+
+// MARK: - Date Formatting Helpers
+
+/// The backend returns business-local dates as `YYYY-MM-DD` strings (already
+/// computed in the business timezone). We parse them as plain local dates with
+/// no time component, so the device timezone can never shift the displayed day.
+private enum PayrollDateFormatting {
+    static let input: DateFormatter = {
+        let f = DateFormatter()
+        f.calendar = Calendar(identifier: .gregorian)
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy-MM-dd"
+        f.timeZone = TimeZone.current
+        return f
+    }()
+    
+    static let dayName: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "es_MX")
+        f.dateFormat = "EEEE"
+        f.timeZone = TimeZone.current
+        return f
+    }()
+    
+    static let dayMonth: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "es_MX")
+        f.dateFormat = "dd/MM"
+        f.timeZone = TimeZone.current
+        return f
+    }()
+    
+    static let dayMonthYear: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "es_MX")
+        f.dateFormat = "dd/MM/yyyy"
+        f.timeZone = TimeZone.current
+        return f
+    }()
+    
+    /// "Lunes 10/08" — Spanish day name + DD/MM, no year
+    static func shiftLabel(from dateString: String) -> String {
+        guard let date = input.date(from: dateString) else { return dateString }
+        let name = dayName.string(from: date)
+        return "\(name.prefix(1).uppercased())\(name.dropFirst()) \(dayMonth.string(from: date))"
+    }
+    
+    /// "10/08 – 16/08"; adds the year only when the range falls (fully or
+    /// partially) outside the current year, e.g. "28/12/2025 – 03/01/2026"
+    static func periodLabel(start: String, end: String) -> String {
+        guard let startDate = input.date(from: start),
+              let endDate = input.date(from: end) else {
+            return "\(start) – \(end)"
+        }
+        let calendar = Calendar.current
+        let currentYear = calendar.component(.year, from: Date())
+        let withinCurrentYear =
+            calendar.component(.year, from: startDate) == currentYear &&
+            calendar.component(.year, from: endDate) == currentYear
+        if withinCurrentYear {
+            return "\(dayMonth.string(from: startDate)) – \(dayMonth.string(from: endDate))"
+        }
+        return "\(dayMonthYear.string(from: startDate)) – \(dayMonthYear.string(from: endDate))"
+    }
+    
+    /// "Lunes, 10 de agosto de 2026" — used in the shift editor for full context
+    static func fullLabel(from dateString: String) -> String {
+        guard let date = input.date(from: dateString) else { return dateString }
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "es_MX")
+        f.dateStyle = .full
+        f.timeZone = TimeZone.current
+        let text = f.string(from: date)
+        return text.prefix(1).uppercased() + text.dropFirst()
     }
 }
 
