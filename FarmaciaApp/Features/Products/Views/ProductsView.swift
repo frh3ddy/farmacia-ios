@@ -89,6 +89,12 @@ struct ProductsView: View {
         outOfStockCount > 0 || lowStockCount > 0 || lowMarginCount > 0 || atRiskCount > 0
     }
     
+    /// True while the user is typing a search — hides the attention banner,
+    /// filter chips and summary section so results get priority on screen.
+    private var isSearching: Bool {
+        !searchText.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+    
     // Barcode scanner: multiple candidates from fuzzy server match
     @State private var barcodeCandidates: [Product] = []
     @State private var showBarcodeCandidates = false
@@ -325,8 +331,8 @@ struct ProductsView: View {
     
     private var productsList: some View {
         List {
-            // Attention Banner
-            if needsAttention {
+            // Attention Banner (hidden while searching so results get priority)
+            if needsAttention && !isSearching {
                 Section {
                     attentionBanner
                 }
@@ -334,14 +340,17 @@ struct ProductsView: View {
                 .listRowBackground(Color.clear)
             }
             
-            // Filter Chips
-            Section {
-                filterChips
+            // Filter Chips (hidden while searching)
+            if !isSearching {
+                Section {
+                    filterChips
+                }
+                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                .listRowBackground(Color.clear)
             }
-            .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
-            .listRowBackground(Color.clear)
             
-            // Summary Section
+            // Summary Section (hidden while searching)
+            if !isSearching {
             Section {
                 HStack {
                     summaryItem(
@@ -417,6 +426,7 @@ struct ProductsView: View {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(syncResultMessage ?? "")
+            }
             }
             
             // Products Section
