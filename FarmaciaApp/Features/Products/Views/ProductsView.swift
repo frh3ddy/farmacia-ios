@@ -46,6 +46,20 @@ enum ProductSortOption: String, CaseIterable {
     case priceDesc = "Precio (Mayor)"
 }
 
+// MARK: - Create Product Request
+// Single source of truth for presenting CreateProductView, replacing a
+// separate Bool + optional-SKU pair. Two independent @State mutations
+// aren't guaranteed to land in the same SwiftUI transaction, so driving
+// the sheet off a Bool while the SKU rode along on a second variable let
+// the sheet present before the SKU propagated — and since @StateObject only
+// honors its wrappedValue on first construction, no later update could fix
+// the already-presented view. `sheet(item:)` makes this atomic: a new item
+// (fresh id) always means a freshly-constructed CreateProductView.
+private struct CreateProductSheetRequest: Identifiable {
+    let id = UUID()
+    var prefillSku: String? = nil
+}
+
 // MARK: - Products View
 // Unified product + inventory hub. Includes search, smart filters,
 // attention banner, sort options, and a toolbar link to global activity history.
@@ -55,18 +69,18 @@ struct ProductsView: View {
     @StateObject private var viewModel = ProductsViewModel()
     @StateObject private var agingViewModel = ProductsAgingViewModel()
     @StateObject private var expiringViewModel = ExpiringProductsViewModel()
-    @State private var showCreateProduct = false
+    @State private var createProductRequest: CreateProductSheetRequest?
     @State private var showPurchaseOrder = false
     @State private var showShoppingLists = false
     @State private var searchText = ""
     @State private var activeFilter: ProductFilter = .all
     @State private var sortOption: ProductSortOption = .name
-    
+
     // Barcode scanner state
     @State private var showBarcodeScanner = false
     @State private var scannedProduct: Product? = nil
     @State private var navigateToScannedProduct = false
-    @State private var prefillSku: String? = nil
+    @State private var pendingScannedCode: String? = nil
     
     /// Tab-switch refresh trigger (set by MainTabView)
     var refreshTrigger: UUID = UUID()
@@ -185,7 +199,7 @@ struct ProductsView: View {
                     // Add product
                     if authManager.isOwner || authManager.isManager {
                         Button {
-                            showCreateProduct = true
+                            createProductRequest = CreateProductSheetRequest()
                         } label: {
                             Image(systemName: "plus")
                         }
@@ -235,11 +249,8 @@ struct ProductsView: View {
             .refreshable {
                 await loadProducts()
             }
-            .sheet(isPresented: $showCreateProduct) {
-                CreateProductView(prefillSku: prefillSku)
-                    .onDisappear {
-                        prefillSku = nil
-                    }
+            .sheet(item: $createProductRequest) { request in
+                CreateProductView(prefillSku: request.prefillSku)
             }
             .sheet(isPresented: $showPurchaseOrder) {
                 PurchaseOrderView()
@@ -258,15 +269,23 @@ struct ProductsView: View {
                     },
                     onCreate: {
                         showBarcodeCandidates = false
-                        prefillSku = lastScannedCode
-                        showCreateProduct = true
+                        createProductRequest = CreateProductSheetRequest(prefillSku: lastScannedCode)
                     }
                 )
             }
-            .sheet(isPresented: $showBarcodeScanner) {
+            .sheet(isPresented: $showBarcodeScanner, onDismiss: {
+                // Deferred until the scanner sheet has fully dismissed —
+                // presenting a new sheet (e.g. create product) while this one
+                // is still animating away causes SwiftUI to lose the prefill
+                // state on the first attempt.
+                if let code = pendingScannedCode {
+                    pendingScannedCode = nil
+                    handleScannedBarcode(code)
+                }
+            }) {
                 BarcodeScannerSheet { scannedCode in
+                    pendingScannedCode = scannedCode
                     showBarcodeScanner = false
-                    handleScannedBarcode(scannedCode)
                 }
             }
             .navigationDestination(isPresented: $navigateToScannedProduct) {
@@ -333,7 +352,7 @@ struct ProductsView: View {
             
             if authManager.isOwner || authManager.isManager {
                 Button {
-                    showCreateProduct = true
+                    createProductRequest = CreateProductSheetRequest()
                 } label: {
                     Label("Crear Producto", systemImage: "plus")
                         .font(.headline)
@@ -691,13 +710,11 @@ struct ProductsView: View {
                     showBarcodeCandidates = true
                 } else {
                     // Not found — offer to create product
-                    prefillSku = code
-                    showCreateProduct = true
+                    createProductRequest = CreateProductSheetRequest(prefillSku: code)
                 }
             } catch {
                 // Network error — offer to create anyway
-                prefillSku = code
-                showCreateProduct = true
+                createProductRequest = CreateProductSheetRequest(prefillSku: code)
             }
         }
     }

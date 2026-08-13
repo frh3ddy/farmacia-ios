@@ -35,13 +35,6 @@ struct ExpenseFormView: View {
         selectedType == .payroll
     }
     
-    private static let dateOnlyFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd"
-        f.timeZone = TimeZone.current
-        return f
-    }()
-    
     private var isValid: Bool {
         (amount ?? 0) > 0
     }
@@ -233,13 +226,8 @@ struct ExpenseFormView: View {
         
         guard let summary = payrollViewModel.summary else { return }
         
-        // Autofill amount, date, vendor and notes
+        // Autofill amount, vendor and notes
         amount = summary.totalCost
-        // Date = end of the period (pay day), parsed as a local date to
-        // avoid any timezone day-shift
-        if let endDate = Self.dateOnlyFormatter.date(from: summary.period.endDate) {
-            date = endDate
-        }
         vendor = member.displayName
         description = "Nómina \(member.displayName)"
         notes = summary.expenseDetails

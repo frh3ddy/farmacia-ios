@@ -5,15 +5,21 @@ import SwiftUI
 struct CreateProductView: View {
     @EnvironmentObject var authManager: AuthManager
     @Environment(\.dismiss) var dismiss
-    @StateObject private var viewModel = CreateProductViewModel()
-    
-    // Optional prefilled SKU (e.g. from barcode scanner)
-    var prefillSku: String? = nil
-    
+    @StateObject private var viewModel: CreateProductViewModel
+
     // Image picker state
     @State private var selectedImage: UIImage?
     @State private var showImageSourcePicker = false
-    
+
+    // Optional prefilled SKU (e.g. from barcode scanner) — seeded directly
+    // into the StateObject at construction time rather than via .onAppear,
+    // since .onAppear on a Form inside a freshly-presented sheet doesn't
+    // reliably fire in time on the very first presentation, leaving the
+    // SKU field blank on the first scan.
+    init(prefillSku: String? = nil) {
+        _viewModel = StateObject(wrappedValue: CreateProductViewModel(prefillSku: prefillSku))
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -182,11 +188,6 @@ struct CreateProductView: View {
             // scroll view scrolling back to the focused (off-screen) field
             // instead of opening the image source picker
             .scrollDismissesKeyboard(.immediately)
-            .onAppear {
-                if let sku = prefillSku, !sku.isEmpty {
-                    viewModel.sku = sku
-                }
-            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancelar") {
@@ -331,7 +332,13 @@ class CreateProductViewModel: ObservableObject {
     @Published var successMessage = ""
     
     private let apiClient = APIClient.shared
-    
+
+    init(prefillSku: String? = nil) {
+        if let prefillSku, !prefillSku.isEmpty {
+            sku = prefillSku
+        }
+    }
+
     // MARK: - Computed Properties
 
     var isValid: Bool {
