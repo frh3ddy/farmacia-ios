@@ -79,18 +79,11 @@ struct ProductsView: View {
     // Stock/risk/margin filtering + sorting live in ProductsViewModel — recomputed
     // only when inputs change, NOT on every SwiftUI render. Read viewModel.filteredProducts.
     
-    // Stock count helpers for attention banner (read from pre-computed counts)
-    private var outOfStockCount: Int { viewModel.counts.outOfStock }
-    private var lowStockCount: Int { viewModel.counts.lowStock }
-    private var lowMarginCount: Int { viewModel.counts.lowMargin }
+    // Used by the atRisk filter chip's count badge.
     private var atRiskCount: Int { agingViewModel.atRiskProductIds.count }
-    
-    private var needsAttention: Bool {
-        outOfStockCount > 0 || lowStockCount > 0 || lowMarginCount > 0 || atRiskCount > 0
-    }
-    
-    /// True while the user is typing a search — hides the attention banner,
-    /// filter chips and summary section so results get priority on screen.
+
+    /// True while the user is typing a search — hides the filter chips
+    /// and summary section so results get priority on screen.
     private var isSearching: Bool {
         !searchText.trimmingCharacters(in: .whitespaces).isEmpty
     }
@@ -354,90 +347,30 @@ struct ProductsView: View {
     
     private var productsList: some View {
         List {
-            // Attention Banner (hidden while searching so results get priority)
-            if needsAttention && !isSearching {
-                Section {
-                    attentionBanner
-                }
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
-            }
-            
-            // Filter Chips (hidden while searching)
+            // Chips, stats and (optional) local sync row share a single Section —
+            // insetGrouped List style adds its own gap *between* Sections, so
+            // splitting these into separate Sections was stacking that gap
+            // three times over. One Section + manual VStack spacing instead.
             if !isSearching {
                 Section {
-                    filterChips
+                    VStack(alignment: .leading, spacing: 0) {
+                        filterChips
+                            .padding(.bottom, 14)
+
+                        if viewModel.totalCount > 0 {
+                            statsRow
+                        }
+
+                        if viewModel.counts.local > 0 {
+                            localSyncRow
+                                .padding(.top, 6)
+                        }
+                    }
                 }
                 .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
                 .listRowBackground(Color.clear)
             }
-            
-            // Summary Section (hidden while searching)
-            if !isSearching {
-            Section {
-                HStack {
-                    summaryItem(
-                        title: "Total",
-                        value: "\(viewModel.totalCount)",
-                        icon: "shippingbox.fill",
-                        color: .blue
-                    )
-                    
-                    Divider()
-                    
-                    summaryItem(
-                        title: "Sincronizado",
-                        value: "\(viewModel.counts.synced)",
-                        icon: "checkmark.circle.fill",
-                        color: .green
-                    )
-                    
-                    Divider()
-                    
-                    let localCount = viewModel.counts.local
-                    
-                    if localCount > 0 {
-                        Button {
-                            Task { await syncLocalProductsToSquare() }
-                        } label: {
-                            VStack(spacing: 4) {
-                                if isSyncingToSquare {
-                                    ProgressView()
-                                        .scaleEffect(0.8)
-                                } else {
-                                    Image(systemName: "arrow.triangle.2.circlepath")
-                                        .font(.title3)
-                                        .foregroundStyle(.orange)
-                                }
-                                Text("\(localCount) Local")
-                                    .font(.caption2)
-                                    .foregroundStyle(.orange)
-                                Text("Sincronizar")
-                                    .font(.caption2)
-                                    .bold()
-                                    .foregroundStyle(.orange)
-                            }
-                            .frame(maxWidth: .infinity)
-                        }
-                        .disabled(isSyncingToSquare)
-                    } else {
-                        summaryItem(
-                            title: "Local",
-                            value: "0",
-                            icon: "iphone",
-                            color: .green
-                        )
-                    }
-                }
-                .padding(.vertical, 8)
-            }
-            .alert("Sincronización Square", isPresented: $showSyncResult) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(syncResultMessage ?? "")
-            }
-            }
-            
+
             // Products Section
             Section {
                 if viewModel.filteredProducts.isEmpty {
@@ -488,19 +421,25 @@ struct ProductsView: View {
                     }
                 }
             } header: {
-                HStack {
-                    if activeFilter != .all {
-                        Text("\(viewModel.filteredProducts.count) \(activeFilter.rawValue)")
-                    } else if !searchText.isEmpty {
-                        Text("\(viewModel.filteredProducts.count) resultados")
-                    }
-                    
-                    Spacer()
-                    
-                    if sortOption != .name {
-                        Text("Ordenado por: \(sortOption.rawValue)")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
+                // Renders nothing (no reserved header row) unless there's
+                // actually a filter/search/sort indicator to show — an empty
+                // HStack here was reserving header height even with no text,
+                // which read as extra dead space above the product cards.
+                if activeFilter != .all || !searchText.isEmpty || sortOption != .name {
+                    HStack {
+                        if activeFilter != .all {
+                            Text("\(viewModel.filteredProducts.count) \(activeFilter.rawValue)")
+                        } else if !searchText.isEmpty {
+                            Text("\(viewModel.filteredProducts.count) resultados")
+                        }
+
+                        Spacer()
+
+                        if sortOption != .name {
+                            Text("Ordenado por: \(sortOption.rawValue)")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
             } footer: {
@@ -512,6 +451,10 @@ struct ProductsView: View {
             }
         }
         .listStyle(.insetGrouped)
+        // insetGrouped adds its own gap between Sections on top of row insets —
+        // that's what was creating the large empty band above the product
+        // cards. Compact it so the info block sits close to the list.
+        .listSectionSpacing(.compact)
         // Docked outside the List's own content (rather than as a Section row)
         // so it never inserts/removes a row — which was reflowing every row
         // below it and producing a visible jump each time cache warm-up
@@ -523,6 +466,11 @@ struct ProductsView: View {
             }
         }
         .animation(.easeInOut(duration: 0.25), value: showSyncBanner)
+        .alert("Sincronización Square", isPresented: $showSyncResult) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(syncResultMessage ?? "")
+        }
     }
 
     // MARK: - Catalog Warm-Up Banner
@@ -544,191 +492,58 @@ struct ProductsView: View {
         .background(.bar)
     }
 
-    // MARK: - Attention Banner
-    
-    private var attentionBanner: some View {
-        VStack(spacing: 8) {
-            HStack(spacing: 12) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange)
-                    .font(.title3)
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Atención Requerida")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                    
-                    Text(attentionMessage)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                
-                Spacer()
-            }
-            
-            // Quick filter buttons in the banner
-            HStack(spacing: 8) {
-                if outOfStockCount > 0 {
-                    Button {
-                        activeFilter = .outOfStock
-                    } label: {
-                        HStack(spacing: 4) {
-                            Circle()
-                                .fill(Color.red)
-                                .frame(width: 8, height: 8)
-                            Text("\(outOfStockCount) Out of Stock")
-                                .font(.caption)
-                                .fontWeight(.medium)
-                        }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(Color.red.opacity(0.1))
-                        .foregroundStyle(.red)
-                        .clipShape(.rect(cornerRadius: 8))
-                    }
-                    .buttonStyle(.plain)
-                }
-                
-                if lowStockCount > 0 {
-                    Button {
-                        activeFilter = .lowStock
-                    } label: {
-                        HStack(spacing: 4) {
-                            Circle()
-                                .fill(Color.orange)
-                                .frame(width: 8, height: 8)
-                            Text("\(lowStockCount) Low Stock")
-                                .font(.caption)
-                                .fontWeight(.medium)
-                        }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(Color.orange.opacity(0.1))
-                        .foregroundStyle(.orange)
-                        .clipShape(.rect(cornerRadius: 8))
-                    }
-                    .buttonStyle(.plain)
-                }
-                
-                if lowMarginCount > 0 {
-                    Button {
-                        activeFilter = .lowMargin
-                    } label: {
-                        HStack(spacing: 4) {
-                            Circle()
-                                .fill(Color.purple)
-                                .frame(width: 8, height: 8)
-                            Text("\(lowMarginCount) Low Margin")
-                                .font(.caption)
-                                .fontWeight(.medium)
-                        }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(Color.purple.opacity(0.1))
-                        .foregroundStyle(.purple)
-                        .clipShape(.rect(cornerRadius: 8))
-                    }
-                    .buttonStyle(.plain)
-                }
-                
-                if atRiskCount > 0 {
-                    Button {
-                        activeFilter = .atRisk
-                    } label: {
-                        HStack(spacing: 4) {
-                            Circle()
-                                .fill(Color.red)
-                                .frame(width: 8, height: 8)
-                            Text("\(atRiskCount) At Risk")
-                                .font(.caption)
-                                .fontWeight(.medium)
-                        }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(Color.red.opacity(0.1))
-                        .foregroundStyle(.red)
-                        .clipShape(.rect(cornerRadius: 8))
-                    }
-                    .buttonStyle(.plain)
-                }
-                
-                Spacer()
-            }
-        }
-        .padding()
-        .background(Color(.systemGray6))
-        .clipShape(.rect(cornerRadius: 12))
-        .padding(.horizontal)
-        .padding(.top, 4)
-    }
-    
-    private var attentionMessage: String {
-        var parts: [String] = []
-        if outOfStockCount > 0 {
-            parts.append("\(outOfStockCount) product\(outOfStockCount == 1 ? "" : "s") out of stock")
-        }
-        if lowStockCount > 0 {
-            parts.append("\(lowStockCount) product\(lowStockCount == 1 ? "" : "s") running low")
-        }
-        if atRiskCount > 0 {
-            parts.append("\(atRiskCount) at risk (aging)")
-        }
-        if lowMarginCount > 0 {
-            parts.append("\(lowMarginCount) with low margin")
-        }
-        return parts.joined(separator: " \u{2022} ")
-    }
-    
     // MARK: - Filter Chips
-    
+    // Compact single-row chips — this is the only "attention" surface left in
+    // the list body (each chip's badge count/color mirrors what a separate
+    // attention banner used to spell out). Dashboard owns cross-tab alerting.
+
     private var filterChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 ForEach(ProductFilter.allCases, id: \.self) { filter in
                     filterChip(filter)
                 }
             }
-            .padding(.vertical, 4)
+            .padding(.vertical, 2)
         }
     }
-    
+
     private func filterChip(_ filter: ProductFilter) -> some View {
         let isActive = activeFilter == filter
         let count = filterCount(for: filter)
-        
+
         return Button {
             withAnimation(.easeInOut(duration: 0.2)) {
                 activeFilter = filter
             }
         } label: {
-            HStack(spacing: 4) {
+            HStack(spacing: 3) {
                 Image(systemName: filter.icon)
-                    .font(.caption2)
+                    .font(.system(size: 10))
                 Text(filter.rawValue)
-                    .font(.caption)
+                    .font(.caption2)
                     .fontWeight(.medium)
-                
+
                 if filter != .all {
                     Text("\(count)")
-                        .font(.caption2)
-                        .fontWeight(.bold)
-                        .padding(.horizontal, 5)
+                        .font(.system(size: 9, weight: .bold))
+                        .padding(.horizontal, 4)
                         .padding(.vertical, 1)
                         .background(
                             isActive ? Color.white.opacity(0.3) : filter.color.opacity(0.15)
                         )
-                        .clipShape(.rect(cornerRadius: 4))
+                        .clipShape(.rect(cornerRadius: 3))
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
             .background(isActive ? filter.color : Color(.systemGray6))
             .foregroundStyle(isActive ? Color.white : Color.primary)
-            .clipShape(.rect(cornerRadius: 20))
+            .clipShape(.rect(cornerRadius: 14))
         }
         .buttonStyle(.plain)
     }
-    
+
     private func filterCount(for filter: ProductFilter) -> Int {
         switch filter {
         case .all: return viewModel.counts.total
@@ -740,25 +555,61 @@ struct ProductsView: View {
         case .lowMargin: return viewModel.counts.lowMargin
         }
     }
-    
-    // MARK: - Summary Item
-    
-    private func summaryItem(title: String, value: String, icon: String, color: Color) -> some View {
-        VStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.title2)
-                .foregroundStyle(color)
-            
-            Text(value)
-                .font(.headline)
-            
-            Text(title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+
+    // MARK: - Stats Row
+    // Replaces the old 3-column summary card. Sits right below the filter
+    // chips (not the footer) so it's visible without scrolling past the
+    // whole product list.
+
+    private var statsRow: some View {
+        HStack(spacing: 6) {
+            Text("\(viewModel.totalCount) productos")
+            Text("\u{2022}")
+                .foregroundStyle(.tertiary)
+            Text("\(viewModel.counts.synced) sincronizados")
         }
-        .frame(maxWidth: .infinity)
+        .font(.caption)
+        .foregroundStyle(.secondary)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
-    
+
+    // MARK: - Local Sync Row
+    // Only appears when there's actually something unsynced to act on.
+
+    private var localSyncRow: some View {
+        Button {
+            Task { await syncLocalProductsToSquare() }
+        } label: {
+            HStack(spacing: 8) {
+                if isSyncingToSquare {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                } else {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .foregroundStyle(.orange)
+                }
+
+                let localCount = viewModel.counts.local
+                Text("\(localCount) producto\(localCount == 1 ? "" : "s") local\(localCount == 1 ? "" : "es") sin sincronizar")
+                    .font(.caption)
+                    .foregroundStyle(.primary)
+
+                Spacer()
+
+                Text("Sincronizar")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.orange)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(Color.orange.opacity(0.1))
+            .clipShape(.rect(cornerRadius: 10))
+        }
+        .buttonStyle(.plain)
+        .disabled(isSyncingToSquare)
+    }
+
     // MARK: - Actions
     
     private func loadProducts() async {
