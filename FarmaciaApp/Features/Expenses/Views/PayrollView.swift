@@ -55,28 +55,50 @@ struct PayrollView: View {
     
     @ViewBuilder
     private var content: some View {
-        List {
-            // Employee picker
-            Section("Empleado") {
-                Picker("Empleado", selection: Binding(
-                    get: { viewModel.selectedMember },
-                    set: { member in
-                        if let member {
-                            Task { await viewModel.selectMember(member) }
-                        }
-                    }
-                )) {
-                    Text("Seleccionar...").tag(TeamMember?.none)
-                    ForEach(viewModel.teamMembers) { member in
-                        Text(member.displayName).tag(TeamMember?.some(member))
-                    }
-                }
-            }
-            
-            if viewModel.selectedMember != nil {
+        if viewModel.selectedMember == nil {
+            memberList
+        } else {
+            List {
+                selectedMemberSection
                 periodSection
                 totalsSection
                 shiftsSection
+            }
+        }
+    }
+
+    // MARK: - Member Selection
+
+    /// No member selected yet: list everyone right away instead of making the
+    /// user open a Picker menu first — one tap to pick, matching how few team
+    /// members a typical location has.
+    private var memberList: some View {
+        List(viewModel.teamMembers) { member in
+            Button {
+                Task { await viewModel.selectMember(member) }
+            } label: {
+                HStack {
+                    Text(member.displayName)
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private var selectedMemberSection: some View {
+        Section {
+            HStack {
+                Text(viewModel.selectedMember?.displayName ?? "")
+                    .font(.headline)
+                Spacer()
+                Button("Cambiar") {
+                    viewModel.selectedMember = nil
+                }
+                .font(.subheadline)
             }
         }
     }
