@@ -104,7 +104,12 @@ struct ProductsView: View {
     @State private var isSyncingToSquare = false
     @State private var syncResultMessage: String?
     @State private var showSyncResult = false
-    
+
+    // Catalog warm-up banner — delayed so a warm-up that finishes almost
+    // instantly (already-cached catalog) never flashes the indicator.
+    @State private var showSyncBanner = false
+    @State private var syncBannerDelayTask: Task<Void, Never>? = nil
+
     var body: some View {
         NavigationStack {
             Group {
@@ -220,6 +225,18 @@ struct ProductsView: View {
             .onChange(of: expiringViewModel.expiringProductIds) { _, newIds in
                 if activeFilter == .expiringSoon {
                     viewModel.setFilter(.expiringSoon, atRiskIds: agingViewModel.atRiskProductIds, expiringIds: newIds)
+                }
+            }
+            .onChange(of: viewModel.isWarmingCache) { _, isWarming in
+                syncBannerDelayTask?.cancel()
+                if isWarming {
+                    syncBannerDelayTask = Task {
+                        try? await Task.sleep(nanoseconds: 1_000_000_000) // 1s
+                        guard !Task.isCancelled else { return }
+                        showSyncBanner = true
+                    }
+                } else {
+                    showSyncBanner = false
                 }
             }
             .refreshable {
@@ -413,20 +430,6 @@ struct ProductsView: View {
                     }
                 }
                 .padding(.vertical, 8)
-                
-                // Background catalog warm-up indicator (non-blocking).
-                // The scanner's level-2 server exact search covers products
-                // not yet cached, so the user can keep working normally.
-                if viewModel.isWarmingCache {
-                    HStack(spacing: 6) {
-                        ProgressView()
-                            .scaleEffect(0.7)
-                        Text("Sincronizando catálogo... (\(viewModel.warmUpProgress) de \(viewModel.totalCount))")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                    }
-                }
             }
             .alert("Sincronización Square", isPresented: $showSyncResult) {
                 Button("OK", role: .cancel) {}
@@ -509,8 +512,38 @@ struct ProductsView: View {
             }
         }
         .listStyle(.insetGrouped)
+        // Docked outside the List's own content (rather than as a Section row)
+        // so it never inserts/removes a row — which was reflowing every row
+        // below it and producing a visible jump each time cache warm-up
+        // toggled on/off, e.g. right after popping back from ProductDetailView.
+        .safeAreaInset(edge: .bottom) {
+            if showSyncBanner {
+                syncBanner
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.easeInOut(duration: 0.25), value: showSyncBanner)
     }
-    
+
+    // MARK: - Catalog Warm-Up Banner
+
+    /// Non-blocking background sync indicator. The scanner's level-2 server
+    /// exact search covers products not yet cached, so the user can keep
+    /// working normally while this runs.
+    private var syncBanner: some View {
+        HStack(spacing: 6) {
+            ProgressView()
+                .scaleEffect(0.7)
+            Text("Sincronizando catálogo... (\(viewModel.warmUpProgress) de \(viewModel.totalCount))")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            Spacer()
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+        .background(.bar)
+    }
+
     // MARK: - Attention Banner
     
     private var attentionBanner: some View {
