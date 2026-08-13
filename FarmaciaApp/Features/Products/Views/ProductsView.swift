@@ -150,37 +150,37 @@ struct ProductsView: View {
                     }
                     .accessibilityLabel("Ordenar")
 
-                    // Shopping Lists (primary path)
-                    if authManager.canManageInventory {
-                        Button {
-                            showShoppingLists = true
-                        } label: {
-                            let activeCount = ShoppingListStore.shared.activeLists.count
-                            Image(systemName: "list.clipboard")
-                                .overlay(alignment: .topTrailing) {
-                                    if activeCount > 0 {
-                                        Text("\(activeCount)")
-                                            .font(.system(size: 9, weight: .bold))
-                                            .foregroundStyle(.white)
-                                            .frame(minWidth: 14, minHeight: 14)
-                                            .background(Color.red)
-                                            .clipShape(Circle())
-                                            .offset(x: 6, y: -6)
-                                    }
-                                }
-                        }
-                        .accessibilityLabel("Listas de Compras, \(ShoppingListStore.shared.activeLists.count) activas")
-                    }
+                    // Shopping Lists (primary path) — disabled for now, not fully ready.
+                    // if authManager.canManageInventory {
+                    //     Button {
+                    //         showShoppingLists = true
+                    //     } label: {
+                    //         let activeCount = ShoppingListStore.shared.activeLists.count
+                    //         Image(systemName: "list.clipboard")
+                    //             .overlay(alignment: .topTrailing) {
+                    //                 if activeCount > 0 {
+                    //                     Text("\(activeCount)")
+                    //                         .font(.system(size: 9, weight: .bold))
+                    //                         .foregroundStyle(.white)
+                    //                         .frame(minWidth: 14, minHeight: 14)
+                    //                         .background(Color.red)
+                    //                         .clipShape(Circle())
+                    //                         .offset(x: 6, y: -6)
+                    //                 }
+                    //             }
+                    //     }
+                    //     .accessibilityLabel("Listas de Compras, \(ShoppingListStore.shared.activeLists.count) activas")
+                    // }
 
-                    // Quick Receive (legacy fast path)
-                    if authManager.canManageInventory {
-                        Button {
-                            showPurchaseOrder = true
-                        } label: {
-                            Image(systemName: "cart.badge.plus")
-                        }
-                        .accessibilityLabel("Recepción Rápida")
-                    }
+                    // Quick Receive (legacy fast path) — disabled for now, not fully ready.
+                    // if authManager.canManageInventory {
+                    //     Button {
+                    //         showPurchaseOrder = true
+                    //     } label: {
+                    //         Image(systemName: "cart.badge.plus")
+                    //     }
+                    //     .accessibilityLabel("Recepción Rápida")
+                    // }
 
                     // Add product
                     if authManager.isOwner || authManager.isManager {

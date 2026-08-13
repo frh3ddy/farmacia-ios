@@ -64,6 +64,7 @@
 		F000000100000052 /* AllSignalsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000052 /* AllSignalsView.swift */; };
 		F000000100000053 /* ActionableSignalsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000053 /* ActionableSignalsViewModel.swift */; };
 		F000000100000054 /* DashboardExpiringViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000054 /* DashboardExpiringViewModel.swift */; };
+		F000000100000055 /* AlertsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000055 /* AlertsView.swift */; };
 		F000000100000013 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000013 /* SettingsView.swift */; };
 		F000000100000014 /* InventoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000014 /* InventoryView.swift */; };
 		F000000100000040 /* InventoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000040 /* InventoryViewModel.swift */; };
@@ -156,6 +157,7 @@
 		F100000100000052 /* AllSignalsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AllSignalsView.swift; sourceTree = "<group>"; };
 		F100000100000053 /* ActionableSignalsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionableSignalsViewModel.swift; sourceTree = "<group>"; };
 		F100000100000054 /* DashboardExpiringViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardExpiringViewModel.swift; sourceTree = "<group>"; };
+		F100000100000055 /* AlertsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertsView.swift; sourceTree = "<group>"; };
 		F100000100000013 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		F100000100000014 /* InventoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryView.swift; sourceTree = "<group>"; };
 		F100000100000040 /* InventoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryViewModel.swift; sourceTree = "<group>"; };
@@ -328,6 +330,7 @@
 				F300000000000012 /* Reports */,
 				F300000000000013 /* Employees */,
 				37E6973B2F32F2A400F6CB5D /* Products */,
+				F300000000000019 /* Alerts */,
 			);
 			path = Features;
 			sourceTree = "<group>";
@@ -419,6 +422,27 @@
 			path = Employees;
 			sourceTree = "<group>";
 		};
+		F300000000000019 /* Alerts */ = {
+			isa = PBXGroup;
+			children = (
+				F30000000000001A /* Views */,
+			);
+			path = Alerts;
+			sourceTree = "<group>";
+		};
+		F30000000000001A /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				F100000100000055 /* AlertsView.swift */,
+				F100000100000050 /* StockAlertViewModel.swift */,
+				F100000100000051 /* StockAlertProductsView.swift */,
+				F100000100000052 /* AllSignalsView.swift */,
+				F100000100000053 /* ActionableSignalsViewModel.swift */,
+				F100000100000054 /* DashboardExpiringViewModel.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
 		F300000000000014 /* Views */ = {
 			isa = PBXGroup;
 			children = (
@@ -437,11 +461,6 @@
 				F100000100000012 /* DashboardView.swift */,
 				F100000100000048 /* StatCard.swift */,
 				F100000100000049 /* DashboardViewModel.swift */,
-				F100000100000050 /* StockAlertViewModel.swift */,
-				F100000100000051 /* StockAlertProductsView.swift */,
-				F100000100000052 /* AllSignalsView.swift */,
-				F100000100000053 /* ActionableSignalsViewModel.swift */,
-				F100000100000054 /* DashboardExpiringViewModel.swift */,
 				F100000100000013 /* SettingsView.swift */,
 			);
 			path = Views;
@@ -590,6 +609,7 @@
 				F000000100000052 /* AllSignalsView.swift in Sources */,
 				F000000100000053 /* ActionableSignalsViewModel.swift in Sources */,
 				F000000100000054 /* DashboardExpiringViewModel.swift in Sources */,
+				F000000100000055 /* AlertsView.swift in Sources */,
 				F000000100000013 /* SettingsView.swift in Sources */,
 				F000000100000014 /* InventoryView.swift in Sources */,
 				F000000100000040 /* InventoryViewModel.swift in Sources */,

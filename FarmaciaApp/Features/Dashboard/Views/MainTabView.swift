@@ -14,6 +14,7 @@ struct MainTabView: View {
     
     enum Tab: Hashable {
         case dashboard
+        case alerts
         case products
         case expenses
         case payroll
@@ -21,7 +22,7 @@ struct MainTabView: View {
         case employees
         case settings
     }
-    
+
     var body: some View {
         TabView(selection: $selectedTab) {
             // Dashboard
@@ -30,7 +31,7 @@ struct MainTabView: View {
                     Label("Inicio", systemImage: "chart.bar.xaxis")
                 }
                 .tag(Tab.dashboard)
-            
+
             // Products (unified: catalog + inventory operations)
             ProductsView(refreshTrigger: refreshTrigger)
                 .tabItem {
@@ -38,6 +39,13 @@ struct MainTabView: View {
                 }
                 .tag(Tab.products)
             
+            // Alerts (stock warnings, expiring products, actionable signals)
+            AlertsView()
+                .tabItem {
+                    Label("Alertas", systemImage: "exclamationmark.triangle.fill")
+                }
+                .tag(Tab.alerts)
+
             // Expenses (if has permission)
             if authManager.canManageExpenses {
                 ExpensesView()
@@ -46,7 +54,7 @@ struct MainTabView: View {
                     }
                     .tag(Tab.expenses)
             }
-            
+
             // Payroll / Nómina (same permission as expenses)
             if authManager.canManageExpenses {
                 PayrollView()
@@ -55,7 +63,7 @@ struct MainTabView: View {
                     }
                     .tag(Tab.payroll)
             }
-            
+
             // Reports (if has permission)
             if authManager.canViewReports {
                 ReportsView()
@@ -64,7 +72,7 @@ struct MainTabView: View {
                     }
                     .tag(Tab.reports)
             }
-            
+
             // Employees (if has permission)
             if authManager.canManageEmployees {
                 EmployeesView()
@@ -73,7 +81,7 @@ struct MainTabView: View {
                     }
                     .tag(Tab.employees)
             }
-            
+
             // Settings
             SettingsView()
                 .tabItem {
