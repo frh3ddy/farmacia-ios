@@ -23,8 +23,7 @@ extension UIImage {
             return sourceImage
         }
 
-        guard let cgImage = sourceImage.cgImage,
-              let data = sourceImage.jpegData(compressionQuality: 1.0) else {
+        guard let data = sourceImage.jpegData(compressionQuality: 1.0) else {
             return nil
         }
 

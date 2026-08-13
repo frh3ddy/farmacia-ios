@@ -8,6 +8,7 @@ import UIKit
 // the end of its normal execution window and the loop just stops silently —
 // no error, and no record of which items made it through.
 
+@MainActor
 func withBackgroundTask<T>(
     name: String,
     _ body: () async -> T

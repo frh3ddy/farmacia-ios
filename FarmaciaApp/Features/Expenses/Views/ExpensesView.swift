@@ -32,7 +32,7 @@ struct ExpensesView: View {
                 Divider()
                 
                 // Expense List
-                if viewModel.isLoading {
+                if viewModel.isLoading && viewModel.expenses.isEmpty {
                     ProgressView("Cargando gastos...")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if filteredExpenses.isEmpty {
