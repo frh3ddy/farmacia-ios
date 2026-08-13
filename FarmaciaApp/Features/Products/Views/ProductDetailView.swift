@@ -85,7 +85,7 @@ struct ProductDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if authManager.isOwner || authManager.isManager {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Button {
                             showEditPrice = true
@@ -95,6 +95,7 @@ struct ProductDetailView: View {
                     } label: {
                         Image(systemName: "ellipsis.circle")
                     }
+                    .accessibilityLabel("Más opciones")
                 }
             }
         }
@@ -227,7 +228,7 @@ struct ProductDetailView: View {
                             productPlaceholder
                         }
                         .frame(width: 100, height: 100)
-                        .cornerRadius(16)
+                        .clipShape(.rect(cornerRadius: 16))
                         .onTapGesture {
                             showImageViewer = true
                         }
@@ -243,17 +244,18 @@ struct ProductDetailView: View {
                     } label: {
                         Image(systemName: "camera.circle.fill")
                             .font(.title3)
-                            .foregroundColor(.white)
+                            .foregroundStyle(.white)
                             .background(Circle().fill(Color.blue).frame(width: 28, height: 28))
                     }
                     .offset(x: 4, y: 4)
+                    .accessibilityLabel("Cambiar foto")
                 }
-                
+
                 if isUploadingImage {
                     ProgressView()
                         .frame(width: 100, height: 100)
                         .background(Color.black.opacity(0.3))
-                        .cornerRadius(16)
+                        .clipShape(.rect(cornerRadius: 16))
                 }
             }
             .confirmationDialog("Cambiar Imagen del Producto", isPresented: $showImageSourcePicker) {
@@ -292,7 +294,7 @@ struct ProductDetailView: View {
             if let sku = displayProduct.sku {
                 Text("SKU: \(sku)")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
             
             // Stats row: STOCK | PRICE | LATEST COST
@@ -302,7 +304,7 @@ struct ProductDetailView: View {
                     Text("EXISTENCIA")
                         .font(.caption2)
                         .fontWeight(.medium)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Text("\(displayProduct.totalInventory ?? 0)")
                         .font(.title3)
                         .fontWeight(.bold)
@@ -317,7 +319,7 @@ struct ProductDetailView: View {
                     Text("PRECIO")
                         .font(.caption2)
                         .fontWeight(.medium)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     if let price = displayProduct.sellingPrice {
                         Text(String(format: "$%.2f", price))
                             .font(.title3)
@@ -325,7 +327,7 @@ struct ProductDetailView: View {
                     } else {
                         Text("—")
                             .font(.title3)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                 }
                 .frame(maxWidth: .infinity)
@@ -338,7 +340,7 @@ struct ProductDetailView: View {
                     Text("COSTO")
                         .font(.caption2)
                         .fontWeight(.medium)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     if let latestCost = latestSupplierCost {
                         Text(String(format: "$%.2f", latestCost))
                             .font(.title3)
@@ -350,14 +352,14 @@ struct ProductDetailView: View {
                     } else {
                         Text("—")
                             .font(.title3)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                 }
                 .frame(maxWidth: .infinity)
             }
             .padding(.vertical, 8)
             .background(Color(.systemGray5))
-            .cornerRadius(10)
+            .clipShape(.rect(cornerRadius: 10))
             
             // Action buttons (Receive + Adjust Stock)
             if authManager.canManageInventory {
@@ -375,8 +377,8 @@ struct ProductDetailView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
                         .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
+                        .foregroundStyle(.white)
+                        .clipShape(.rect(cornerRadius: 10))
                     }
                     
                     Menu {
@@ -399,8 +401,8 @@ struct ProductDetailView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
                         .background(Color(.systemGray5))
-                        .foregroundColor(.primary)
-                        .cornerRadius(10)
+                        .foregroundStyle(.primary)
+                        .clipShape(.rect(cornerRadius: 10))
                     }
                 }
             }
@@ -408,7 +410,7 @@ struct ProductDetailView: View {
         .frame(maxWidth: .infinity)
         .padding()
         .background(Color(.systemGray6))
-        .cornerRadius(16)
+        .clipShape(.rect(cornerRadius: 16))
     }
     
     /// Latest cost from the preferred supplier, or first supplier if none preferred
@@ -426,7 +428,7 @@ struct ProductDetailView: View {
             
             Image(systemName: "shippingbox.fill")
                 .font(.system(size: 40))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
         }
     }
     
@@ -436,7 +438,7 @@ struct ProductDetailView: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Image(systemName: "dollarsign.circle.fill")
-                    .foregroundColor(.green)
+                    .foregroundStyle(.green)
                 Text("Precios")
                     .font(.headline)
                 
@@ -456,17 +458,17 @@ struct ProductDetailView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Precio de Venta")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     
                     if let price = displayProduct.formattedPrice {
                         Text(price)
                             .font(.title)
                             .fontWeight(.bold)
-                            .foregroundColor(.green)
+                            .foregroundStyle(.green)
                     } else {
                         Text("No definido")
                             .font(.title3)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                 }
                 
@@ -475,7 +477,7 @@ struct ProductDetailView: View {
                 VStack(alignment: .trailing, spacing: 4) {
                     Text("Costo Prom.")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     
                     if let cost = displayProduct.formattedCost {
                         Text(cost)
@@ -484,7 +486,7 @@ struct ProductDetailView: View {
                     } else {
                         Text("N/A")
                             .font(.title3)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
@@ -494,20 +496,20 @@ struct ProductDetailView: View {
                 HStack {
                     Text("Margen de Ganancia")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     
                     Spacer()
                     
                     Text(String(format: "%.1f%%", margin))
                         .font(.headline)
-                        .foregroundColor(margin >= 20 ? .green : (margin >= 10 ? .orange : .red))
+                        .foregroundStyle(margin >= 20 ? .green : (margin >= 10 ? .orange : .red))
                 }
                 .padding(.top, 8)
             }
         }
         .padding()
         .background(Color(.systemGray6))
-        .cornerRadius(16)
+        .clipShape(.rect(cornerRadius: 16))
     }
     
     
@@ -521,7 +523,7 @@ struct ProductDetailView: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Image(systemName: "clock.arrow.circlepath")
-                    .foregroundColor(.indigo)
+                    .foregroundStyle(.indigo)
                 Text("Actividad Reciente")
                     .font(.headline)
                 
@@ -539,10 +541,10 @@ struct ProductDetailView: View {
                 VStack(spacing: 8) {
                     Image(systemName: "tray")
                         .font(.title2)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Text("Sin actividad aún")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
@@ -571,10 +573,10 @@ struct ProductDetailView: View {
                             Spacer()
                             Text("\(activityViewModel.combinedActivity.count) total")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                             Image(systemName: "chevron.right")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                     }
                 }
@@ -582,7 +584,7 @@ struct ProductDetailView: View {
         }
         .padding()
         .background(Color(.systemGray6))
-        .cornerRadius(16)
+        .clipShape(.rect(cornerRadius: 16))
     }
     
     @ViewBuilder
@@ -591,10 +593,10 @@ struct ProductDetailView: View {
             // Icon
             Image(systemName: item.icon)
                 .font(.subheadline)
-                .foregroundColor(item.iconColor)
+                .foregroundStyle(item.iconColor)
                 .frame(width: 28, height: 28)
                 .background(item.iconColor.opacity(0.12))
-                .cornerRadius(6)
+                .clipShape(.rect(cornerRadius: 6))
             
             // Description
             VStack(alignment: .leading, spacing: 2) {
@@ -604,7 +606,7 @@ struct ProductDetailView: View {
                 
                 Text(item.subtitle)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
             
             Spacer()
@@ -613,7 +615,7 @@ struct ProductDetailView: View {
             Text(item.quantityDisplay)
                 .font(.subheadline)
                 .fontWeight(.semibold)
-                .foregroundColor(item.quantityColor)
+                .foregroundStyle(item.quantityColor)
         }
         .padding(.vertical, 2)
     }
@@ -624,7 +626,7 @@ struct ProductDetailView: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Image(systemName: "info.circle.fill")
-                    .foregroundColor(.purple)
+                    .foregroundStyle(.purple)
                 Text("Detalles")
                     .font(.headline)
             }
@@ -635,7 +637,7 @@ struct ProductDetailView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Descripción")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     
                     Text(description)
                         .font(.subheadline)
@@ -652,14 +654,14 @@ struct ProductDetailView: View {
         }
         .padding()
         .background(Color(.systemGray6))
-        .cornerRadius(16)
+        .clipShape(.rect(cornerRadius: 16))
     }
     
     private func detailRow(title: String, value: String) -> some View {
         HStack {
             Text(title)
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             Spacer()
             Text(value)
                 .font(.subheadline)
@@ -672,7 +674,7 @@ struct ProductDetailView: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Image(systemName: "arrow.triangle.2.circlepath")
-                    .foregroundColor(.orange)
+                    .foregroundStyle(.orange)
                 Text("Sincronización Square")
                     .font(.headline)
             }
@@ -682,23 +684,23 @@ struct ProductDetailView: View {
             HStack {
                 if displayProduct.hasSquareSync == true {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
+                        .foregroundStyle(.green)
                     VStack(alignment: .leading) {
                         Text("Sincronizado con Square")
                             .font(.subheadline)
                         Text("El producto es visible en Square POS")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                 } else {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.orange)
+                        .foregroundStyle(.orange)
                     VStack(alignment: .leading) {
                         Text("Solo Local")
                             .font(.subheadline)
                         Text("El producto no está sincronizado con Square POS")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
@@ -706,12 +708,12 @@ struct ProductDetailView: View {
             if let syncedAt = displayProduct.squareDataSyncedAt {
                 Text("Última sinc: \(syncedAt.formatted())")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
         }
         .padding()
         .background(Color(.systemGray6))
-        .cornerRadius(16)
+        .clipShape(.rect(cornerRadius: 16))
     }
     
     // MARK: - Actions
@@ -794,7 +796,7 @@ struct ProductDetailView: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Image(systemName: "square.stack.3d.up.fill")
-                    .foregroundColor(.teal)
+                    .foregroundStyle(.teal)
                 Text("Lotes FIFO")
                     .font(.headline)
                 
@@ -806,7 +808,7 @@ struct ProductDetailView: View {
                 } else if !batchViewModel.batches.isEmpty {
                     Text("\(batchViewModel.batches.count) batch\(batchViewModel.batches.count == 1 ? "" : "es")")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
             
@@ -816,10 +818,10 @@ struct ProductDetailView: View {
                 VStack(spacing: 8) {
                     Image(systemName: "tray")
                         .font(.title2)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Text("Sin lotes de inventario")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
@@ -851,7 +853,7 @@ struct ProductDetailView: View {
                                     .font(.caption)
                                     .fontWeight(.medium)
                             }
-                            .foregroundColor(.red)
+                            .foregroundStyle(.red)
                         }
                         if expiringSoonCount > 0 {
                             HStack(spacing: 4) {
@@ -861,7 +863,7 @@ struct ProductDetailView: View {
                                     .font(.caption)
                                     .fontWeight(.medium)
                             }
-                            .foregroundColor(.orange)
+                            .foregroundStyle(.orange)
                         }
                         Spacer()
                     }
@@ -895,14 +897,14 @@ struct ProductDetailView: View {
                             Image(systemName: showAllBatches ? "chevron.up" : "chevron.down")
                                 .font(.caption)
                         }
-                        .foregroundColor(.blue)
+                        .foregroundStyle(.blue)
                     }
                 }
             }
         }
         .padding()
         .background(Color(.systemGray6))
-        .cornerRadius(16)
+        .clipShape(.rect(cornerRadius: 16))
     }
     
     @ViewBuilder
@@ -917,7 +919,7 @@ struct ProductDetailView: View {
                         .font(.caption)
                         .fontWeight(.semibold)
                 }
-                .foregroundColor(aging.riskLevel.color)
+                .foregroundStyle(aging.riskLevel.color)
                 
                 Spacer()
                 
@@ -927,7 +929,7 @@ struct ProductDetailView: View {
                         .fontWeight(.bold)
                     Text("tied up")
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
             
@@ -942,7 +944,7 @@ struct ProductDetailView: View {
                                 .frame(width: width, height: 6)
                         }
                     }
-                    .cornerRadius(3)
+                    .clipShape(.rect(cornerRadius: 3))
                 }
                 .frame(height: 6)
                 
@@ -958,7 +960,7 @@ struct ProductDetailView: View {
                             Text("\(bucket.unitCount)")
                                 .font(.system(size: 9, weight: .bold))
                         }
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     }
                     Spacer()
                 }
@@ -970,21 +972,21 @@ struct ProductDetailView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.caption2)
-                        .foregroundColor(.red)
+                        .foregroundStyle(.red)
                     Text(String(format: "$%.2f at risk (>90 days)", atRiskCash))
                         .font(.caption)
-                        .foregroundColor(.red)
+                        .foregroundStyle(.red)
                         .fontWeight(.medium)
                 }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
                 .background(Color.red.opacity(0.08))
-                .cornerRadius(6)
+                .clipShape(.rect(cornerRadius: 6))
             }
         }
         .padding(10)
         .background(aging.riskLevel.color.opacity(0.06))
-        .cornerRadius(10)
+        .clipShape(.rect(cornerRadius: 10))
         .overlay(
             RoundedRectangle(cornerRadius: 10)
                 .stroke(aging.riskLevel.color.opacity(0.2), lineWidth: 1)
@@ -1012,7 +1014,7 @@ struct ProductDetailView: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .background(color.opacity(0.1))
-        .cornerRadius(8)
+        .clipShape(.rect(cornerRadius: 8))
     }
     
     private func batchRow(_ batch: BatchValuation) -> some View {
@@ -1023,11 +1025,11 @@ struct ProductDetailView: View {
                 if batch.isExpired {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.caption2)
-                        .foregroundColor(.red)
+                        .foregroundStyle(.red)
                 } else if batch.expiresWithin(days: 90) {
                     Image(systemName: "clock.badge.exclamationmark")
                         .font(.caption2)
-                        .foregroundColor(.orange)
+                        .foregroundStyle(.orange)
                 } else {
                     Circle()
                         .fill(batchAgeColor(batch.age))
@@ -1041,27 +1043,27 @@ struct ProductDetailView: View {
                             .fontWeight(.medium)
                         Text("@ $\(batch.unitCost)/ea")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                     
                     // Row 2: Age + received date + source
                     HStack(spacing: 4) {
                         Text("\(batch.age)d old")
                             .font(.caption2)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         Text("\u{2022}")
                             .font(.caption2)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         Text(batch.receivedAt.formatted(date: .abbreviated, time: .omitted))
                             .font(.caption2)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         if batch.source != nil {
                             Text("\u{2022}")
                                 .font(.caption2)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                             Text(batch.sourceLabel)
                                 .font(.caption2)
-                                .foregroundColor(.blue)
+                                .foregroundStyle(.blue)
                         }
                     }
                 }
@@ -1072,7 +1074,7 @@ struct ProductDetailView: View {
                 Text("$\(batch.value)")
                     .font(.caption)
                     .fontWeight(.semibold)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
             
             // Row 3: Batch metadata pills (lot#, supplier, expiry)
@@ -1090,7 +1092,7 @@ struct ProductDetailView: View {
                             .padding(.horizontal, 7)
                             .padding(.vertical, 3)
                             .background(pill.color.opacity(0.12))
-                            .foregroundColor(pill.color)
+                            .foregroundStyle(pill.color)
                             .clipShape(Capsule())
                         }
                     }
@@ -1147,7 +1149,7 @@ struct ProductDetailView: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Image(systemName: "chart.line.uptrend.xyaxis")
-                    .foregroundColor(.cyan)
+                    .foregroundStyle(.cyan)
                 Text("Historial de Costos y Proveedores")
                     .font(.headline)
                 
@@ -1166,7 +1168,7 @@ struct ProductDetailView: View {
                     ProgressView()
                     Text("Cargando datos de proveedor...")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
@@ -1174,13 +1176,13 @@ struct ProductDetailView: View {
                 VStack(spacing: 8) {
                     Image(systemName: "building.2")
                         .font(.title2)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Text("Sin datos de proveedor aún")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Text("Los costos de proveedores aparecerán aquí cuando se reciban productos de proveedores")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                 }
                 .frame(maxWidth: .infinity)
@@ -1190,7 +1192,7 @@ struct ProductDetailView: View {
                 if !costSupplierViewModel.suppliers.isEmpty {
                     Text("Proveedores Actuales")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .textCase(.uppercase)
                     
                     ForEach(costSupplierViewModel.suppliers) { supplier in
@@ -1202,7 +1204,7 @@ struct ProductDetailView: View {
                                     .frame(width: 36, height: 36)
                                 Image(systemName: supplier.isPreferred ? "star.fill" : "building.2")
                                     .font(.caption)
-                                    .foregroundColor(supplier.isPreferred ? .blue : .secondary)
+                                    .foregroundStyle(supplier.isPreferred ? Color.blue : Color.secondary)
                             }
                             
                             VStack(alignment: .leading, spacing: 2) {
@@ -1216,14 +1218,14 @@ struct ProductDetailView: View {
                                             .padding(.horizontal, 6)
                                             .padding(.vertical, 1)
                                             .background(Color.blue.opacity(0.15))
-                                            .foregroundColor(.blue)
-                                            .cornerRadius(4)
+                                            .foregroundStyle(.blue)
+                                            .clipShape(.rect(cornerRadius: 4))
                                     }
                                 }
                                 if let notes = supplier.notes, !notes.isEmpty {
                                     Text(notes)
                                         .font(.caption)
-                                        .foregroundColor(.secondary)
+                                        .foregroundStyle(.secondary)
                                         .lineLimit(1)
                                 }
                             }
@@ -1236,7 +1238,7 @@ struct ProductDetailView: View {
                                     .fontWeight(.semibold)
                                 Text("per ud")
                                     .font(.caption2)
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                             }
                         }
                         .padding(.vertical, 4)
@@ -1251,7 +1253,7 @@ struct ProductDetailView: View {
                     
                     Text("Historial de Costos por Proveedor")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .textCase(.uppercase)
                     
                     ForEach(costSupplierViewModel.costHistory) { group in
@@ -1270,13 +1272,13 @@ struct ProductDetailView: View {
                                     Text(group.supplierName)
                                         .font(.subheadline)
                                         .fontWeight(.medium)
-                                        .foregroundColor(.primary)
+                                        .foregroundStyle(.primary)
                                     
                                     if let current = group.currentCost {
                                         Text(current.formattedCost)
                                             .font(.caption)
                                             .fontWeight(.semibold)
-                                            .foregroundColor(.primary)
+                                            .foregroundStyle(.primary)
                                     }
                                     
                                     // Cost trend indicator
@@ -1287,18 +1289,18 @@ struct ProductDetailView: View {
                                             Text(String(format: "%.1f%%", abs(trend.percent)))
                                                 .font(.caption2)
                                         }
-                                        .foregroundColor(trend.change > 0 ? .red : .green)
+                                        .foregroundStyle(trend.change > 0 ? .red : .green)
                                     }
                                     
                                     Spacer()
                                     
                                     Text("\(group.costHistory.count) entries")
                                         .font(.caption2)
-                                        .foregroundColor(.secondary)
+                                        .foregroundStyle(.secondary)
                                     
                                     Image(systemName: expandedSupplierHistory == group.supplierId ? "chevron.up" : "chevron.down")
                                         .font(.caption2)
-                                        .foregroundColor(.secondary)
+                                        .foregroundStyle(.secondary)
                                 }
                             }
                             .buttonStyle(.plain)
@@ -1314,7 +1316,7 @@ struct ProductDetailView: View {
                                         
                                         Text(entry.effectiveAt.formatted(date: .abbreviated, time: .omitted))
                                             .font(.caption)
-                                            .foregroundColor(.secondary)
+                                            .foregroundStyle(.secondary)
                                             .frame(width: 80, alignment: .leading)
                                         
                                         Text(entry.formattedCost)
@@ -1325,7 +1327,7 @@ struct ProductDetailView: View {
                                         
                                         Text(entry.sourceLabel)
                                             .font(.caption2)
-                                            .foregroundColor(.secondary)
+                                            .foregroundStyle(.secondary)
                                         
                                         if entry.isCurrent {
                                             Text("Actual")
@@ -1333,8 +1335,8 @@ struct ProductDetailView: View {
                                                 .padding(.horizontal, 5)
                                                 .padding(.vertical, 1)
                                                 .background(Color.blue.opacity(0.15))
-                                                .foregroundColor(.blue)
-                                                .cornerRadius(3)
+                                                .foregroundStyle(.blue)
+                                                .clipShape(.rect(cornerRadius: 3))
                                         }
                                     }
                                     .padding(.leading, 16)
@@ -1343,7 +1345,7 @@ struct ProductDetailView: View {
                                 if group.costHistory.count > 10 {
                                     Text("+ \(group.costHistory.count - 10) more entries")
                                         .font(.caption2)
-                                        .foregroundColor(.secondary)
+                                        .foregroundStyle(.secondary)
                                         .padding(.leading, 16)
                                 }
                             }
@@ -1359,360 +1361,7 @@ struct ProductDetailView: View {
         }
         .padding()
         .background(Color(.systemGray6))
-        .cornerRadius(16)
-    }
-}
-
-// MARK: - Product Activity Item (unified timeline model)
-
-struct ProductActivityItem: Identifiable {
-    enum ActivityKind {
-        case receiving
-        case adjustment(AdjustmentType)
-    }
-    
-    let id: String
-    let kind: ActivityKind
-    let title: String
-    let subtitle: String
-    let date: Date
-    let quantity: Int
-    let icon: String
-    let iconColor: Color
-    
-    var quantityDisplay: String {
-        if quantity > 0 {
-            return "+\(quantity)"
-        }
-        return "\(quantity)"
-    }
-    
-    var quantityColor: Color {
-        quantity > 0 ? .green : .red
-    }
-}
-
-// MARK: - Product Activity ViewModel
-
-@MainActor
-class ProductActivityViewModel: ObservableObject {
-    @Published var recepciones: [InventoryReceiving] = []
-    @Published var ajustes: [InventoryAdjustment] = []
-    @Published var isLoading = false
-    
-    private let apiClient = APIClient.shared
-    
-    /// Combined and chronologically sorted activity for the product
-    var combinedActivity: [ProductActivityItem] {
-        var items: [ProductActivityItem] = []
-        
-        // Convert recepciones
-        for r in recepciones {
-            items.append(ProductActivityItem(
-                id: "recv-\(r.id)",
-                kind: .receiving,
-                title: "Recibido \(r.quantity) uds",
-                subtitle: r.supplier?.name ?? r.invoiceNumber.map { "Factura: \($0)" } ?? r.formattedDate,
-                date: r.receivedAt,
-                quantity: r.quantity,
-                icon: "arrow.down.circle.fill",
-                iconColor: .blue
-            ))
-        }
-        
-        // Convert ajustes
-        for a in ajustes {
-            let displayQty = a.type.isNegative ? -abs(a.quantity) : a.quantity
-            items.append(ProductActivityItem(
-                id: "adj-\(a.id)",
-                kind: .adjustment(a.type),
-                title: "\(a.type.displayName)",
-                subtitle: a.reason ?? a.notes ?? a.adjustedAt.formatted(date: .abbreviated, time: .shortened),
-                date: a.adjustedAt,
-                quantity: displayQty,
-                icon: a.type.icon,
-                iconColor: a.type.isPositive ? .green : (a.type.isNegative ? .red : .orange)
-            ))
-        }
-        
-        // Sort by date, newest first
-        return items.sorted { $0.date > $1.date }
-    }
-    
-    func loadActivity(productId: String) async {
-        isLoading = true
-        defer { isLoading = false }
-        
-        guard !Task.isCancelled else { return }
-        
-        // Load both in parallel
-        async let recepcionesResult: () = loadReceivings(productId: productId)
-        async let ajustesResult: () = loadAdjustments(productId: productId)
-        
-        _ = await (recepcionesResult, ajustesResult)
-    }
-    
-    private func loadReceivings(productId: String) async {
-        do {
-            let response: ReceivingListResponse = try await apiClient.request(
-                endpoint: .listReceivingsByProduct(productId: productId)
-            )
-            recepciones = response.data
-        } catch {
-            // Silent fail — recepciones are supplementary
-            print("Failed to load product recepciones: \(error)")
-        }
-    }
-    
-    private func loadAdjustments(productId: String) async {
-        do {
-            let response: AdjustmentListResponse = try await apiClient.request(
-                endpoint: .ajustesByProduct(productId: productId)
-            )
-            ajustes = response.data
-        } catch {
-            // Silent fail — ajustes are supplementary
-            print("Failed to load product ajustes: \(error)")
-        }
-    }
-}
-
-// MARK: - Product Activity Full View (all history for a product)
-
-struct ProductActivityFullView: View {
-    let product: Product
-    let recepciones: [InventoryReceiving]
-    let ajustes: [InventoryAdjustment]
-    
-    @State private var selectedSegment: ActivitySegment = .all
-    
-    enum ActivitySegment: String, CaseIterable {
-        case all = "Todos"
-        case recepciones = "Recepciones"
-        case ajustes = "Ajustes"
-    }
-    
-    var body: some View {
-        VStack(spacing: 0) {
-            Picker("Actividad", selection: $selectedSegment) {
-                ForEach(ActivitySegment.allCases, id: \.self) { segment in
-                    Text(segment.rawValue).tag(segment)
-                }
-            }
-            .pickerStyle(.segmented)
-            .padding()
-            
-            List {
-                switch selectedSegment {
-                case .all:
-                    let allItems = combinedItems
-                    if allItems.isEmpty {
-                        emptyState("Sin actividad registrada")
-                    } else {
-                        ForEach(allItems) { item in
-                            ActivityFullRow(item: item)
-                        }
-                    }
-                    
-                case .recepciones:
-                    if recepciones.isEmpty {
-                        emptyState("Sin recepciones registradas")
-                    } else {
-                        ForEach(recepciones) { receiving in
-                            ReceivingRow(receiving: receiving)
-                        }
-                    }
-                    
-                case .ajustes:
-                    if ajustes.isEmpty {
-                        emptyState("Sin ajustes registrados")
-                    } else {
-                        ForEach(ajustes) { adjustment in
-                            AdjustmentRow(adjustment: adjustment)
-                        }
-                    }
-                }
-            }
-            .listStyle(.insetGrouped)
-        }
-        .navigationTitle("\(product.displayName) Activity")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-    
-    private var combinedItems: [ProductActivityItem] {
-        var items: [ProductActivityItem] = []
-        
-        for r in recepciones {
-            items.append(ProductActivityItem(
-                id: "recv-\(r.id)",
-                kind: .receiving,
-                title: "Recibido \(r.quantity) uds",
-                subtitle: r.supplier?.name ?? r.invoiceNumber.map { "Factura: \($0)" } ?? r.formattedDate,
-                date: r.receivedAt,
-                quantity: r.quantity,
-                icon: "arrow.down.circle.fill",
-                iconColor: .blue
-            ))
-        }
-        
-        for a in ajustes {
-            let displayQty = a.type.isNegative ? -abs(a.quantity) : a.quantity
-            items.append(ProductActivityItem(
-                id: "adj-\(a.id)",
-                kind: .adjustment(a.type),
-                title: "\(a.type.displayName)",
-                subtitle: a.reason ?? a.notes ?? a.adjustedAt.formatted(date: .abbreviated, time: .shortened),
-                date: a.adjustedAt,
-                quantity: displayQty,
-                icon: a.type.icon,
-                iconColor: a.type.isPositive ? .green : (a.type.isNegative ? .red : .orange)
-            ))
-        }
-        
-        return items.sorted { $0.date > $1.date }
-    }
-    
-    @ViewBuilder
-    private func emptyState(_ message: String) -> some View {
-        VStack(spacing: 12) {
-            Image(systemName: "tray")
-                .font(.system(size: 40))
-                .foregroundColor(.secondary)
-            Text(message)
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 40)
-        .listRowBackground(Color.clear)
-    }
-}
-
-// MARK: - Activity Full Row (used in the full activity list)
-
-struct ActivityFullRow: View {
-    let item: ProductActivityItem
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: item.icon)
-                .font(.subheadline)
-                .foregroundColor(item.iconColor)
-                .frame(width: 32, height: 32)
-                .background(item.iconColor.opacity(0.12))
-                .cornerRadius(8)
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(item.title)
-                    .font(.headline)
-                
-                Text(item.subtitle)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-                
-                Text(item.date.formatted(date: .abbreviated, time: .shortened))
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-            }
-            
-            Spacer()
-            
-            Text(item.quantityDisplay)
-                .font(.headline)
-                .foregroundColor(item.quantityColor)
-        }
-        .padding(.vertical, 4)
-    }
-}
-
-// MARK: - Product Batch ViewModel (FIFO valuation + aging risk data)
-
-@MainActor
-class ProductBatchViewModel: ObservableObject {
-    @Published var batches: [BatchValuation] = []
-    @Published var productAging: ProductAgingAnalysis?
-    @Published var isLoading = false
-    
-    struct AgingInfo {
-        let fresh: Int   // < 30 days
-        let moderate: Int // 30-90 days
-        let old: Int     // > 90 days
-    }
-    
-    var agingSummary: AgingInfo? {
-        guard !batches.isEmpty else { return nil }
-        let fresh = batches.filter { $0.age < 30 }.count
-        let moderate = batches.filter { $0.age >= 30 && $0.age < 90 }.count
-        let old = batches.filter { $0.age >= 90 }.count
-        return AgingInfo(fresh: fresh, moderate: moderate, old: old)
-    }
-    
-    /// Cash at risk: value of batches > 90 days old
-    var cashAtRisk: Double {
-        guard let aging = productAging else { return 0 }
-        return aging.bucketDistribution
-            .filter { ($0.bucket.min) >= 91 }
-            .reduce(0) { $0 + $1.cashValue }
-    }
-    
-    private let apiClient = APIClient.shared
-    
-    func loadBatches(productId: String, locationId: String) async {
-        isLoading = true
-        defer { isLoading = false }
-        
-        // Guard against task cancellation to preserve existing data
-        guard !Task.isCancelled else { return }
-        
-        // Load valuation and aging data in parallel
-        async let valuationResult: () = loadValuation(productId: productId, locationId: locationId)
-        async let agingResult: () = loadAgingAnalysis(productId: productId, locationId: locationId)
-        _ = await (valuationResult, agingResult)
-    }
-    
-    private func loadValuation(productId: String, locationId: String) async {
-        do {
-            let response: ValuationReportResponse = try await apiClient.request(
-                endpoint: .valuationReport,
-                queryParams: [
-                    "locationId": locationId,
-                    "productId": productId
-                ]
-            )
-            // Extract batches from the product valuation
-            if let productValuation = response.data.byProduct.first {
-                batches = productValuation.batches ?? []
-            } else {
-                batches = []
-            }
-        } catch is CancellationError {
-            // Request was cancelled (e.g. pull-to-refresh ended) — keep existing data
-            return
-        } catch {
-            print("Failed to load batch valuation: \(error)")
-            // Only clear if this is a fresh load (no existing data)
-            // On refresh, keep stale data visible rather than showing empty state
-        }
-    }
-    
-    private func loadAgingAnalysis(productId: String, locationId: String) async {
-        do {
-            let response: ProductAgingResponse = try await apiClient.request(
-                endpoint: .agingProducts,
-                queryParams: [
-                    "locationId": locationId,
-                    "limit": "500"
-                ]
-            )
-            // Find this product in the aging analysis
-            productAging = response.products.first { $0.productId == productId }
-        } catch is CancellationError {
-            // Request was cancelled — keep existing data
-            return
-        } catch {
-            // Silent fail — aging data is supplementary, keep existing data on refresh
-            print("Failed to load aging analysis: \(error)")
-        }
+        .clipShape(.rect(cornerRadius: 16))
     }
 }
 
@@ -1723,243 +1372,6 @@ struct ProductDetailResponse: Decodable {
     let data: Product
 }
 
-// MARK: - Edit Price View
-
-struct EditPriceView: View {
-    @EnvironmentObject var authManager: AuthManager
-    @Environment(\.dismiss) var dismiss
-    let product: Product
-    var onUpdate: ((Product) -> Void)?
-    
-    @State private var priceText: String = ""
-    @State private var syncToSquare = true
-    @State private var applyToAllLocations = false
-    @State private var isSubmitting = false
-    @State private var showError = false
-    @State private var errorMessage = ""
-    
-    private var newPrice: Double? {
-        Double(priceText.replacingOccurrences(of: ",", with: "."))
-    }
-    
-    private var isValid: Bool {
-        guard let price = newPrice, price > 0 else { return false }
-        return true
-    }
-    
-    private var priceChanged: Bool {
-        guard let newPrice = newPrice else { return false }
-        return newPrice != product.sellingPrice
-    }
-    
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    HStack {
-                        Text("Precio Actual")
-                        Spacer()
-                        Text(product.formattedPrice ?? "No definido")
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    HStack {
-                        Text("$")
-                            .foregroundColor(.secondary)
-                        TextField("Nuevo Precio", text: $priceText)
-                            .keyboardType(.decimalPad)
-                        Text("MXN")
-                            .foregroundColor(.secondary)
-                    }
-                } header: {
-                    Text("Precio de Venta")
-                }
-                
-                if product.hasSquareSync == true {
-                    Section {
-                        Toggle("Actualizar en Square", isOn: $syncToSquare)
-                        
-                        if syncToSquare {
-                            Toggle("Aplicar a todas las ubicaciones", isOn: $applyToAllLocations)
-                        }
-                    } footer: {
-                        if syncToSquare {
-                            if applyToAllLocations {
-                                Text("El precio se actualizará en Square POS en TODAS las ubicaciones inmediatamente.")
-                            } else {
-                                Text("El precio se actualizará en Square POS solo para la ubicación actual.")
-                            }
-                        } else {
-                            Text("El precio solo se actualizará localmente. Square POS mostrará el precio anterior.")
-                        }
-                    }
-                }
-                
-                // Preview
-                if let newPrice = newPrice, priceChanged {
-                    Section {
-                        HStack {
-                            Text("Cambio de Precio")
-                            Spacer()
-                            let change = newPrice - (product.sellingPrice ?? 0)
-                            Text(change >= 0 ? "+\(formatCurrency(change))" : formatCurrency(change))
-                                .foregroundColor(change >= 0 ? .green : .red)
-                        }
-                        
-                        if let cost = product.averageCost {
-                            let newMargin = ((newPrice - cost) / newPrice) * 100
-                            HStack {
-                                Text("Nuevo Margen")
-                                Spacer()
-                                Text(String(format: "%.1f%%", newMargin))
-                                    .foregroundColor(newMargin >= 20 ? .green : (newMargin >= 10 ? .orange : .red))
-                            }
-                        }
-                    } header: {
-                        Text("Vista Previa")
-                    }
-                }
-            }
-            .navigationTitle("Editar Precio")
-            .navigationBarTitleDisplayMode(.inline)
-            .keyboardTopSpacing(24)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancelar") {
-                        dismiss()
-                    }
-                }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Guardar") {
-                        Task {
-                            await updatePrice()
-                        }
-                    }
-                    .fontWeight(.semibold)
-                    .disabled(!isValid || !priceChanged || isSubmitting)
-                }
-            }
-            .onAppear {
-                if let price = product.sellingPrice {
-                    priceText = String(format: "%.2f", price)
-                }
-            }
-            .overlay {
-                if isSubmitting {
-                    ProgressView()
-                        .scaleEffect(1.5)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(Color.black.opacity(0.2))
-                }
-            }
-            .alert("Error", isPresented: $showError) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(errorMessage)
-            }
-        }
-    }
-    
-    private func updatePrice() async {
-        guard let price = newPrice,
-              let locationId = authManager.currentLocation?.id else { return }
-        
-        isSubmitting = true
-        
-        do {
-            let request = UpdatePriceRequest(
-                sellingPrice: price,
-                locationId: locationId,
-                syncToSquare: syncToSquare,
-                applyToAllLocations: syncToSquare ? applyToAllLocations : nil
-            )
-            
-            let response: APIResponse<UpdatePriceResponse> = try await APIClient.shared.request(
-                endpoint: .updateProductPrice(id: product.id),
-                body: request
-            )
-            
-            if let data = response.data {
-                onUpdate?(data.product)
-                // Write-through: update cache with new price
-                ProductCacheManager.shared.saveProduct(data.product)
-            }
-            
-            dismiss()
-        } catch let error as NetworkError {
-            errorMessage = error.errorDescription ?? "Failed to update price"
-            showError = true
-        } catch {
-            errorMessage = error.localizedDescription
-            showError = true
-        }
-        
-        isSubmitting = false
-    }
-    
-    private func formatCurrency(_ value: Double) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "MXN"
-        formatter.locale = Locale(identifier: "es_MX")
-        return formatter.string(from: NSNumber(value: value)) ?? "$\(value)"
-    }
-}
-
-// MARK: - Cost & Supplier ViewModel
-
-@MainActor
-class CostSupplierViewModel: ObservableObject {
-    @Published var suppliers: [ProductSupplier] = []
-    @Published var costHistory: [SupplierCostHistoryGroup] = []
-    @Published var isLoading = false
-    
-    private let apiClient = APIClient.shared
-    
-    func loadData(productId: String) async {
-        isLoading = true
-        defer { isLoading = false }
-        
-        // Guard against task cancellation to preserve existing data
-        guard !Task.isCancelled else { return }
-        
-        // Load both in parallel
-        async let suppliersResult: () = loadSuppliers(productId: productId)
-        async let costHistoryResult: () = loadCostHistory(productId: productId)
-        _ = await (suppliersResult, costHistoryResult)
-    }
-    
-    private func loadSuppliers(productId: String) async {
-        do {
-            let response: ProductSuppliersResponse = try await apiClient.request(
-                endpoint: .productSuppliers(productId: productId)
-            )
-            suppliers = response.suppliers
-        } catch is CancellationError {
-            // Request was cancelled (e.g. pull-to-refresh ended) — keep existing data
-            return
-        } catch {
-            print("Failed to load product suppliers: \(error)")
-            // Keep existing data on refresh errors rather than clearing
-        }
-    }
-    
-    private func loadCostHistory(productId: String) async {
-        do {
-            let response: ProductCostHistoryResponse = try await apiClient.request(
-                endpoint: .productCostHistory(productId: productId)
-            )
-            costHistory = response.suppliers
-        } catch is CancellationError {
-            // Request was cancelled — keep existing data
-            return
-        } catch {
-            print("Failed to load product cost history: \(error)")
-            // Keep existing data on refresh errors rather than clearing
-        }
-    }
-}
 
 // MARK: - Preview
 

@@ -119,25 +119,27 @@ struct ProductsView: View {
             .navigationTitle("Productos")
             .toolbar {
                 // Activity history (left)
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     if authManager.canManageInventory {
                         NavigationLink {
                             GlobalActivityHistoryView()
                         } label: {
                             Image(systemName: "clock.arrow.circlepath")
                         }
+                        .accessibilityLabel("Historial de Actividad")
                     }
                 }
-                
+
                 // Sort + Purchase Order + Add (right)
-                ToolbarItemGroup(placement: .navigationBarTrailing) {
+                ToolbarItemGroup(placement: .topBarTrailing) {
                     // Barcode scanner
                     Button {
                         showBarcodeScanner = true
                     } label: {
                         Image(systemName: "barcode.viewfinder")
                     }
-                    
+                    .accessibilityLabel("Escanear Código de Barras")
+
                     // Sort menu — uses Picker to avoid SwiftUI Menu+ForEach first-item bug
                     Menu {
                         Picker("Ordenar por", selection: $sortOption) {
@@ -148,7 +150,8 @@ struct ProductsView: View {
                     } label: {
                         Image(systemName: "arrow.up.arrow.down.circle")
                     }
-                    
+                    .accessibilityLabel("Ordenar")
+
                     // Shopping Lists (primary path)
                     if authManager.canManageInventory {
                         Button {
@@ -160,7 +163,7 @@ struct ProductsView: View {
                                     if activeCount > 0 {
                                         Text("\(activeCount)")
                                             .font(.system(size: 9, weight: .bold))
-                                            .foregroundColor(.white)
+                                            .foregroundStyle(.white)
                                             .frame(minWidth: 14, minHeight: 14)
                                             .background(Color.red)
                                             .clipShape(Circle())
@@ -168,8 +171,9 @@ struct ProductsView: View {
                                     }
                                 }
                         }
+                        .accessibilityLabel("Listas de Compras, \(ShoppingListStore.shared.activeLists.count) activas")
                     }
-                    
+
                     // Quick Receive (legacy fast path)
                     if authManager.canManageInventory {
                         Button {
@@ -177,8 +181,9 @@ struct ProductsView: View {
                         } label: {
                             Image(systemName: "cart.badge.plus")
                         }
+                        .accessibilityLabel("Recepción Rápida")
                     }
-                    
+
                     // Add product
                     if authManager.isOwner || authManager.isManager {
                         Button {
@@ -186,6 +191,7 @@ struct ProductsView: View {
                         } label: {
                             Image(systemName: "plus")
                         }
+                        .accessibilityLabel("Agregar Producto")
                     }
                 }
             }
@@ -293,7 +299,7 @@ struct ProductsView: View {
             ProgressView()
                 .scaleEffect(1.5)
             Text("Cargando productos...")
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
         }
     }
     
@@ -303,7 +309,7 @@ struct ProductsView: View {
         VStack(spacing: 20) {
             Image(systemName: "shippingbox")
                 .font(.system(size: 60))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             
             Text("Sin Productos")
                 .font(.title2)
@@ -311,7 +317,7 @@ struct ProductsView: View {
             
             Text("Products synced from Square will appear here.\nYou can also create products manually.")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
             
@@ -384,15 +390,15 @@ struct ProductsView: View {
                                 } else {
                                     Image(systemName: "arrow.triangle.2.circlepath")
                                         .font(.title3)
-                                        .foregroundColor(.orange)
+                                        .foregroundStyle(.orange)
                                 }
                                 Text("\(localCount) Local")
                                     .font(.caption2)
-                                    .foregroundColor(.orange)
+                                    .foregroundStyle(.orange)
                                 Text("Sincronizar")
                                     .font(.caption2)
                                     .bold()
-                                    .foregroundColor(.orange)
+                                    .foregroundStyle(.orange)
                             }
                             .frame(maxWidth: .infinity)
                         }
@@ -417,7 +423,7 @@ struct ProductsView: View {
                             .scaleEffect(0.7)
                         Text("Sincronizando catálogo... (\(viewModel.warmUpProgress) de \(viewModel.totalCount))")
                             .font(.caption2)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         Spacer()
                     }
                 }
@@ -431,37 +437,51 @@ struct ProductsView: View {
             
             // Products Section
             Section {
-                ForEach(viewModel.filteredProducts) { product in
-                    NavigationLink {
-                        ProductDetailView(
-                            product: product,
-                            onProductUpdated: { updatedProduct in
-                                viewModel.updateProduct(updatedProduct)
-                            }
-                        )
-                    } label: {
-                        ProductRow(
-                            product: product,
-                            riskLevel: agingViewModel.productRiskLevels[product.id]
-                        )
-                    }
-                    .onAppear {
-                        // Infinite scroll: trigger load-more when near the end
-                        if product.id == viewModel.filteredProducts.last?.id && viewModel.hasMore {
-                            Task {
-                                await loadMoreProducts()
+                if viewModel.filteredProducts.isEmpty {
+                    // Distinct from the catalog-wide empty state above this
+                    // Group's other branch — this is "no results for the
+                    // current search/filter", not "no products at all".
+                    AppEmptyStateView(
+                        title: "Sin Resultados",
+                        systemImage: "magnifyingglass",
+                        message: "Ningún producto coincide con tu búsqueda o filtro."
+                    )
+                    .frame(minHeight: 240)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                } else {
+                    ForEach(viewModel.filteredProducts) { product in
+                        NavigationLink {
+                            ProductDetailView(
+                                product: product,
+                                onProductUpdated: { updatedProduct in
+                                    viewModel.updateProduct(updatedProduct)
+                                }
+                            )
+                        } label: {
+                            ProductRow(
+                                product: product,
+                                riskLevel: agingViewModel.productRiskLevels[product.id]
+                            )
+                        }
+                        .onAppear {
+                            // Infinite scroll: trigger load-more when near the end
+                            if product.id == viewModel.filteredProducts.last?.id && viewModel.hasMore {
+                                Task {
+                                    await loadMoreProducts()
+                                }
                             }
                         }
                     }
-                }
-                
-                // Loading indicator at bottom while fetching next page
-                if viewModel.isLoadingMore {
-                    HStack {
-                        Spacer()
-                        ProgressView()
-                            .padding(.vertical, 8)
-                        Spacer()
+
+                    // Loading indicator at bottom while fetching next page
+                    if viewModel.isLoadingMore {
+                        HStack {
+                            Spacer()
+                            ProgressView()
+                                .padding(.vertical, 8)
+                            Spacer()
+                        }
                     }
                 }
             } header: {
@@ -477,14 +497,14 @@ struct ProductsView: View {
                     if sortOption != .name {
                         Text("Ordenado por: \(sortOption.rawValue)")
                             .font(.caption2)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                 }
             } footer: {
                 if viewModel.totalCount > 0 {
                     Text("Mostrando \(viewModel.products.count) de \(viewModel.totalCount) productos")
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
         }
@@ -497,7 +517,7 @@ struct ProductsView: View {
         VStack(spacing: 8) {
             HStack(spacing: 12) {
                 Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundColor(.orange)
+                    .foregroundStyle(.orange)
                     .font(.title3)
                 
                 VStack(alignment: .leading, spacing: 2) {
@@ -507,7 +527,7 @@ struct ProductsView: View {
                     
                     Text(attentionMessage)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
                 
                 Spacer()
@@ -530,8 +550,8 @@ struct ProductsView: View {
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
                         .background(Color.red.opacity(0.1))
-                        .foregroundColor(.red)
-                        .cornerRadius(8)
+                        .foregroundStyle(.red)
+                        .clipShape(.rect(cornerRadius: 8))
                     }
                     .buttonStyle(.plain)
                 }
@@ -551,8 +571,8 @@ struct ProductsView: View {
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
                         .background(Color.orange.opacity(0.1))
-                        .foregroundColor(.orange)
-                        .cornerRadius(8)
+                        .foregroundStyle(.orange)
+                        .clipShape(.rect(cornerRadius: 8))
                     }
                     .buttonStyle(.plain)
                 }
@@ -572,8 +592,8 @@ struct ProductsView: View {
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
                         .background(Color.purple.opacity(0.1))
-                        .foregroundColor(.purple)
-                        .cornerRadius(8)
+                        .foregroundStyle(.purple)
+                        .clipShape(.rect(cornerRadius: 8))
                     }
                     .buttonStyle(.plain)
                 }
@@ -593,8 +613,8 @@ struct ProductsView: View {
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
                         .background(Color.red.opacity(0.1))
-                        .foregroundColor(.red)
-                        .cornerRadius(8)
+                        .foregroundStyle(.red)
+                        .clipShape(.rect(cornerRadius: 8))
                     }
                     .buttonStyle(.plain)
                 }
@@ -604,7 +624,7 @@ struct ProductsView: View {
         }
         .padding()
         .background(Color(.systemGray6))
-        .cornerRadius(12)
+        .clipShape(.rect(cornerRadius: 12))
         .padding(.horizontal)
         .padding(.top, 4)
     }
@@ -664,14 +684,14 @@ struct ProductsView: View {
                         .background(
                             isActive ? Color.white.opacity(0.3) : filter.color.opacity(0.15)
                         )
-                        .cornerRadius(4)
+                        .clipShape(.rect(cornerRadius: 4))
                 }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .background(isActive ? filter.color : Color(.systemGray6))
-            .foregroundColor(isActive ? .white : .primary)
-            .cornerRadius(20)
+            .foregroundStyle(isActive ? Color.white : Color.primary)
+            .clipShape(.rect(cornerRadius: 20))
         }
         .buttonStyle(.plain)
     }
@@ -694,14 +714,14 @@ struct ProductsView: View {
         VStack(spacing: 4) {
             Image(systemName: icon)
                 .font(.title2)
-                .foregroundColor(color)
+                .foregroundStyle(color)
             
             Text(value)
                 .font(.headline)
             
             Text(title)
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
     }
@@ -856,18 +876,18 @@ private struct BarcodeCandidatesSheet: View {
                         } label: {
                             HStack(spacing: 12) {
                                 Image(systemName: "shippingbox.fill")
-                                    .foregroundColor(.blue)
+                                    .foregroundStyle(.blue)
                                     .frame(width: 32)
                                 
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(product.displayName)
                                         .font(.headline)
-                                        .foregroundColor(.primary)
+                                        .foregroundStyle(.primary)
                                     
                                     if let sku = product.sku {
                                         Text("SKU: \(sku)")
                                             .font(.caption)
-                                            .foregroundColor(.secondary)
+                                            .foregroundStyle(.secondary)
                                     }
                                 }
                                 
@@ -882,7 +902,7 @@ private struct BarcodeCandidatesSheet: View {
                                     if let stock = product.totalInventory {
                                         Text("\(stock) uds")
                                             .font(.caption)
-                                            .foregroundColor(stock > 0 ? .secondary : .red)
+                                            .foregroundStyle(stock > 0 ? Color.secondary : Color.red)
                                     }
                                 }
                             }
@@ -900,16 +920,16 @@ private struct BarcodeCandidatesSheet: View {
                     } label: {
                         HStack(spacing: 12) {
                             Image(systemName: "plus.circle.fill")
-                                .foregroundColor(.green)
+                                .foregroundStyle(.green)
                                 .frame(width: 32)
                             
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Crear Producto Nuevo")
                                     .font(.headline)
-                                    .foregroundColor(.primary)
+                                    .foregroundStyle(.primary)
                                 Text("SKU: \(code)")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                             }
                         }
                         .padding(.vertical, 4)
@@ -931,526 +951,6 @@ private struct BarcodeCandidatesSheet: View {
     }
 }
 
-// MARK: - Product Row (Enhanced with stock badges and margin)
-
-struct ProductRow: View {
-    let product: Product
-    var riskLevel: InventoryRiskLevel? = nil
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            // Product Image or Placeholder (cached + downsampled to display size)
-            if product.squareImageUrl != nil {
-                CachedProductImage(url: product.squareImageUrl, targetSize: CGSize(width: 50, height: 50)) {
-                    productPlaceholder
-                }
-                .frame(width: 50, height: 50)
-                .cornerRadius(8)
-            } else {
-                productPlaceholder
-            }
-            
-            // Product Info
-            VStack(alignment: .leading, spacing: 4) {
-                Text(product.displayName)
-                    .font(.headline)
-                    .lineLimit(1)
-                
-                HStack(spacing: 6) {
-                    if let sku = product.sku {
-                        Text(sku)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    if product.hasSquareSync == true {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.caption2)
-                            .foregroundColor(.green)
-                    }
-                    
-                    // Stock badge
-                    stockBadge
-                    
-                    // Risk badge (from aging service)
-                    if let risk = riskLevel, risk == .high || risk == .critical {
-                        Text(risk == .critical ? "CRIT" : "RISK")
-                            .font(.system(size: 9, weight: .bold))
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 1)
-                            .background(risk.color.opacity(0.15))
-                            .foregroundColor(risk.color)
-                            .cornerRadius(3)
-                    }
-                }
-            }
-            
-            Spacer()
-            
-            // Price, Margin, and Stock
-            VStack(alignment: .trailing, spacing: 4) {
-                if let price = product.formattedPrice {
-                    Text(price)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                }
-                
-                // Margin indicator
-                if let margin = product.profitMargin {
-                    Text(String(format: "%.0f%%", margin))
-                        .font(.caption2)
-                        .fontWeight(.semibold)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 1)
-                        .background(marginColor(margin).opacity(0.15))
-                        .foregroundColor(marginColor(margin))
-                        .cornerRadius(4)
-                }
-                
-                if let stock = product.totalInventory {
-                    Text("\(stock) uds")
-                        .font(.caption)
-                        .foregroundColor(stock > 0 ? .secondary : .red)
-                }
-            }
-        }
-        .padding(.vertical, 4)
-    }
-    
-    private var stockBadge: some View {
-        Group {
-            let stock = product.totalInventory ?? 0
-            if stock == 0 {
-                Text("OUT")
-                    .font(.system(size: 9, weight: .bold))
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 1)
-                    .background(Color.red.opacity(0.15))
-                    .foregroundColor(.red)
-                    .cornerRadius(3)
-            } else if stock < 10 {
-                Text("LOW")
-                    .font(.system(size: 9, weight: .bold))
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 1)
-                    .background(Color.orange.opacity(0.15))
-                    .foregroundColor(.orange)
-                    .cornerRadius(3)
-            }
-        }
-    }
-    
-    private func marginColor(_ margin: Double) -> Color {
-        if margin >= 20 { return .green }
-        if margin >= 10 { return .orange }
-        return .red
-    }
-    
-    private var productPlaceholder: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color(.systemGray5))
-                .frame(width: 50, height: 50)
-            
-            Image(systemName: "shippingbox")
-                .foregroundColor(.secondary)
-        }
-    }
-}
-
-// MARK: - Products View Model (paginated, infinite scroll)
-
-// MARK: - Pre-computed filter counts (avoids O(n) passes per SwiftUI render)
-struct ProductCounts: Equatable {
-    var total = 0
-    var outOfStock = 0
-    var lowStock = 0
-    var inStock = 0
-    var lowMargin = 0
-    var synced = 0
-    var local = 0
-}
-
-@MainActor
-class ProductsViewModel: ObservableObject {
-    @Published var products: [Product] = []
-    @Published var filteredProducts: [Product] = []
-    @Published var isLoading = false
-    @Published var isLoadingMore = false
-    @Published var showError = false
-    @Published var errorMessage = ""
-    
-    // Pre-computed counts — recalculated once when products array changes
-    @Published var counts = ProductCounts()
-    
-    // Background catalog warm-up state (for non-blocking progress indicator)
-    @Published var isWarmingCache = false
-    @Published var warmUpProgress: Int = 0
-    
-    // Pagination state
-    private(set) var currentPage = 1
-    private(set) var hasMore = true
-    private(set) var totalCount = 0
-    private let pageSize = 50
-    
-    // Search state (server-side)
-    private var currentSearchQuery: String?
-    
-    // Filter/sort inputs — recompute filteredProducts only when these change
-    private var activeFilter: ProductFilter = .all
-    private var activeSort: ProductSortOption = .name
-    private var atRiskIds: Set<String> = []
-    private var expiringIds: Set<String> = []
-    
-    // Background warm-up task (cancelled on refresh/search)
-    private var warmUpTask: Task<Void, Never>?
-    
-    private let apiClient = APIClient.shared
-    private let cache = ProductCacheManager.shared
-    
-    // MARK: - Filter / Sort (recomputed only on input change, NOT per render)
-    
-    func setFilter(_ filter: ProductFilter, atRiskIds: Set<String>, expiringIds: Set<String>) {
-        activeFilter = filter
-        self.atRiskIds = atRiskIds
-        self.expiringIds = expiringIds
-        recomputeFilteredProducts()
-    }
-    
-    func setSort(_ sort: ProductSortOption) {
-        activeSort = sort
-        recomputeFilteredProducts()
-    }
-    
-    private func recomputeFilteredProducts() {
-        var result = products
-        
-        switch activeFilter {
-        case .all:
-            break
-        case .lowStock:
-            result = result.filter { ($0.totalInventory ?? 0) > 0 && ($0.totalInventory ?? 0) < 10 }
-        case .outOfStock:
-            result = result.filter { ($0.totalInventory ?? 0) == 0 }
-        case .inStock:
-            result = result.filter { ($0.totalInventory ?? 0) >= 10 }
-        case .atRisk:
-            let ids = atRiskIds
-            result = result.filter { ids.contains($0.id) }
-        case .expiringSoon:
-            let ids = expiringIds
-            result = result.filter { ids.contains($0.id) }
-        case .lowMargin:
-            result = result.filter { ($0.profitMargin ?? 100) < 10 }
-        }
-        
-        switch activeSort {
-        case .name:
-            result.sort { $0.displayName.localizedCompare($1.displayName) == .orderedAscending }
-        case .stockAsc:
-            result.sort { ($0.totalInventory ?? 0) < ($1.totalInventory ?? 0) }
-        case .stockDesc:
-            result.sort { ($0.totalInventory ?? 0) > ($1.totalInventory ?? 0) }
-        case .margin:
-            result.sort { ($0.profitMargin ?? 0) > ($1.profitMargin ?? 0) }
-        case .priceAsc:
-            result.sort { ($0.sellingPrice ?? 0) < ($1.sellingPrice ?? 0) }
-        case .priceDesc:
-            result.sort { ($0.sellingPrice ?? 0) > ($1.sellingPrice ?? 0) }
-        }
-        
-        filteredProducts = result
-    }
-    
-    /// Load first page: cache first → spinner → API → update cache.
-    /// Called on appear, pull-to-refresh, and tab switch.
-    func loadProducts(locationId: String, search: String? = nil) async {
-        currentPage = 1
-        hasMore = true
-        currentSearchQuery = search
-        
-        // STEP 1: If no search and cache has data, show it immediately
-        if (search == nil || search?.isEmpty == true) && !cache.isEmpty {
-            let cached = cache.loadAll()
-            if !cached.isEmpty {
-                products = cached
-                totalCount = cached.count
-                recalculateCounts()
-                recomputeFilteredProducts()
-            }
-        }
-        
-        // STEP 2: Show loading indicator and fetch fresh data from server
-        isLoading = true
-        currentPage = 1
-        hasMore = true
-        currentSearchQuery = search
-        // Any explicit refresh invalidates the previous warm-up
-        warmUpTask?.cancel()
-        isWarmingCache = false
-        
-        do {
-            var params: [String: String] = [
-                "locationId": locationId,
-                "page": "1",
-                "limit": "\(pageSize)"
-            ]
-            if let search = search, !search.isEmpty {
-                params["search"] = search
-            }
-            
-            let response: ProductListResponse = try await apiClient.request(
-                endpoint: .listProducts,
-                queryParams: params
-            )
-            products = response.data
-            totalCount = response.totalCount ?? response.count
-            hasMore = response.hasMore ?? false
-            currentPage = 1
-            recalculateCounts()
-            recomputeFilteredProducts()
-            
-            // STEP 3: Update cache with fresh data (skip search results)
-            if search == nil || search?.isEmpty == true {
-                cache.saveProducts(response.data)
-                cache.markFresh()
-                // STEP 4: Warm up the full catalog in the background so the
-                // barcode scanner's level-1 cache lookup covers all products.
-                startWarmUp(locationId: locationId)
-            }
-        } catch let error as NetworkError {
-            // If we already have cached data, don't show error — just use cache
-            if products.isEmpty {
-                errorMessage = error.errorDescription ?? "Error al cargar productos"
-                showError = true
-            }
-        } catch {
-            if products.isEmpty {
-                errorMessage = error.localizedDescription
-                showError = true
-            }
-        }
-        
-        isLoading = false
-    }
-    
-    /// Load next page (appends to existing products). Called by infinite scroll.
-    func loadMoreProducts(locationId: String) async {
-        guard hasMore, !isLoadingMore, !isLoading else { return }
-        
-        isLoadingMore = true
-        let nextPage = currentPage + 1
-        
-        do {
-            var params: [String: String] = [
-                "locationId": locationId,
-                "page": "\(nextPage)",
-                "limit": "\(pageSize)"
-            ]
-            if let search = currentSearchQuery, !search.isEmpty {
-                params["search"] = search
-            }
-            
-            let response: ProductListResponse = try await apiClient.request(
-                endpoint: .listProducts,
-                queryParams: params
-            )
-            
-            // Append new products, avoiding duplicates
-            let existingIds = Set(products.map { $0.id })
-            let newProducts = response.data.filter { !existingIds.contains($0.id) }
-            products.append(contentsOf: newProducts)
-            
-            totalCount = response.totalCount ?? totalCount
-            hasMore = response.hasMore ?? false
-            currentPage = nextPage
-            recalculateCounts()
-            recomputeFilteredProducts()
-            
-            // Update cache with new page
-            cache.saveProducts(response.data)
-        } catch {
-            // Silent fail for load-more — user can scroll again to retry
-            print("Failed to load more products: \(error)")
-        }
-        
-        isLoadingMore = false
-    }
-    
-    /// Background full-catalog warm-up: paginates pages 2..N silently and writes
-    /// ONLY to the SwiftData cache (never touches `products` or the UI).
-    /// Purpose: make barcode level-1 (indexed cache lookup) cover the whole catalog.
-    /// Server remains source of truth — this does not replace any GET.
-    private func startWarmUp(locationId: String) {
-        warmUpTask?.cancel()
-        let startPage = currentPage + 1
-        warmUpTask = Task(priority: .utility) { [weak self] in
-            guard let self else { return }
-            await MainActor.run { self.isWarmingCache = true }
-            var page = startPage
-            var keepGoing = true
-            while keepGoing {
-                if Task.isCancelled { break }
-                do {
-                    let params: [String: String] = [
-                        "locationId": locationId,
-                        "page": "\(page)",
-                        "limit": "\(self.pageSize)"
-                    ]
-                    let response: ProductListResponse = try await self.apiClient.request(
-                        endpoint: .listProducts,
-                        queryParams: params
-                    )
-                    self.cache.saveProducts(response.data)
-                    await MainActor.run { self.warmUpProgress = self.cache.cachedCount }
-                    keepGoing = response.hasMore ?? false
-                    page += 1
-                } catch {
-                    // Silent fail — warm-up is best-effort; level-2 server search covers gaps
-                    keepGoing = false
-                }
-            }
-            await MainActor.run { self.isWarmingCache = false }
-        }
-    }
-    
-    /// Search products on server with exact=true for barcode scanner.
-    /// Does NOT modify the main products list — returns results separately.
-    func searchExact(locationId: String, code: String) async throws -> ProductListResponse {
-        let params: [String: String] = [
-            "locationId": locationId,
-            "search": code,
-            "exact": "true",
-            "limit": "20"
-        ]
-        return try await apiClient.request(
-            endpoint: .listProducts,
-            queryParams: params
-        )
-    }
-    
-    /// Update a single product in the list (e.g. after detail view refresh).
-    /// Write-through: updates both in-memory array AND SwiftData cache.
-    func updateProduct(_ product: Product) {
-        if let index = products.firstIndex(where: { $0.id == product.id }) {
-            products[index] = product
-            recalculateCounts()
-            recomputeFilteredProducts()
-        }
-        // Write-through to cache
-        cache.saveProduct(product)
-    }
-    
-    /// Insert a newly created product at the top of the list.
-    /// Write-through: updates both in-memory array AND SwiftData cache.
-    func insertProduct(_ product: Product) {
-        products.insert(product, at: 0)
-        totalCount += 1
-        recalculateCounts()
-        recomputeFilteredProducts()
-        // Write-through to cache
-        cache.saveProduct(product)
-    }
-    
-    /// Single-pass count calculation — called once when products change
-    private func recalculateCounts() {
-        var c = ProductCounts()
-        c.total = products.count
-        for product in products {
-            let stock = product.totalInventory ?? 0
-            if stock == 0 { c.outOfStock += 1 }
-            else if stock < 10 { c.lowStock += 1 }
-            else { c.inStock += 1 }
-            if (product.profitMargin ?? 100) < 10 { c.lowMargin += 1 }
-            if product.hasSquareSync == true { c.synced += 1 } else { c.local += 1 }
-        }
-        counts = c
-    }
-}
-
-// MARK: - Products Aging ViewModel (loads at-risk product IDs from aging service)
-
-@MainActor
-class ProductsAgingViewModel: ObservableObject {
-    @Published var atRiskProductIds: Set<String> = []
-    @Published var productRiskLevels: [String: InventoryRiskLevel] = [:]
-    @Published var isLoading = false
-    
-    private let apiClient = APIClient.shared
-    
-    /// Load products with HIGH or CRITICAL risk from the aging service
-    func loadAtRiskProducts(locationId: String) async {
-        isLoading = true
-        defer { isLoading = false }
-        
-        do {
-            let response: ProductAgingResponse = try await apiClient.request(
-                endpoint: .agingProducts,
-                queryParams: [
-                    "locationId": locationId,
-                    "limit": "500"
-                ]
-            )
-            
-            var riskIds = Set<String>()
-            var riskMap: [String: InventoryRiskLevel] = [:]
-            
-            for product in response.products {
-                riskMap[product.productId] = product.riskLevel
-                if product.riskLevel == .high || product.riskLevel == .critical {
-                    riskIds.insert(product.productId)
-                }
-            }
-            
-            atRiskProductIds = riskIds
-            productRiskLevels = riskMap
-        } catch {
-            // Silent fail — aging data is supplementary
-            print("Failed to load aging data for products: \(error)")
-            atRiskProductIds = []
-            productRiskLevels = [:]
-        }
-    }
-}
-
-// MARK: - Expiring Products ViewModel (loads expiring product IDs from aging service)
-
-@MainActor
-class ExpiringProductsViewModel: ObservableObject {
-    @Published var expiringProductIds: Set<String> = []
-    @Published var expiringProducts: [ExpiringProduct] = []
-    @Published var summary: ExpiringProductsSummary?
-    @Published var isLoading = false
-    
-    private let apiClient = APIClient.shared
-    
-    /// Load products with batches expiring within 90 days (or already expired)
-    func loadExpiringProducts(locationId: String) async {
-        isLoading = true
-        defer { isLoading = false }
-        
-        do {
-            let response: ExpiringProductsResponse = try await apiClient.request(
-                endpoint: .agingExpiring,
-                queryParams: [
-                    "locationId": locationId,
-                    "withinDays": "90",
-                    "includeExpired": "true"
-                ]
-            )
-            
-            expiringProducts = response.products
-            summary = response.summary
-            expiringProductIds = Set(response.products.map { $0.productId })
-        } catch {
-            // Silent fail — expiry data is supplementary
-            print("Failed to load expiring products: \(error)")
-            expiringProducts = []
-            summary = nil
-            expiringProductIds = []
-        }
-    }
-}
 
 // MARK: - Preview
 

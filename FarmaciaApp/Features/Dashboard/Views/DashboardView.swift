@@ -78,12 +78,12 @@ struct DashboardView: View {
             .navigationTitle("Inicio")
             .toolbar {
                 // Location switcher
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     locationButton
                 }
                 
                 // User info
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     userButton
                 }
             }
@@ -130,7 +130,7 @@ struct DashboardView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundColor(.orange)
+                    .foregroundStyle(.orange)
                     .font(.title3)
                 
                 Text("Alertas de Inventario")
@@ -149,8 +149,8 @@ struct DashboardView: View {
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
                         .background(Color.blue.opacity(0.1))
-                        .foregroundColor(.blue)
-                        .cornerRadius(8)
+                        .foregroundStyle(.blue)
+                        .clipShape(.rect(cornerRadius: 8))
                 }
             }
             
@@ -195,14 +195,14 @@ struct DashboardView: View {
                     Text("Crear Lista de Reabasto")
                     Spacer()
                     Text("\(stockAlertViewModel.outOfStockCount + stockAlertViewModel.lowStockCount) artículos")
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Image(systemName: "chevron.right")
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
                 .font(.caption)
                 .fontWeight(.medium)
-                .foregroundColor(.blue)
+                .foregroundStyle(.blue)
             }
         }
         .padding()
@@ -226,10 +226,10 @@ struct DashboardView: View {
             Text(value)
                 .font(.title2)
                 .fontWeight(.bold)
-                .foregroundColor(color)
+                .foregroundStyle(color)
             Text(label)
                 .font(.caption2)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
         }
         .frame(minWidth: 60)
     }
@@ -240,7 +240,7 @@ struct DashboardView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "clock.badge.exclamationmark")
-                    .foregroundColor(.orange)
+                    .foregroundStyle(.orange)
                     .font(.title3)
                 
                 Text("Productos por Vencer")
@@ -255,8 +255,8 @@ struct DashboardView: View {
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
                         .background(Color.red.opacity(0.1))
-                        .foregroundColor(.red)
-                        .cornerRadius(6)
+                        .foregroundStyle(.red)
+                        .clipShape(.rect(cornerRadius: 6))
                 }
             }
             
@@ -299,7 +299,7 @@ struct DashboardView: View {
                 HStack(spacing: 8) {
                     Image(systemName: product.severityIcon)
                         .font(.caption)
-                        .foregroundColor(product.severityColor)
+                        .foregroundStyle(product.severityColor)
                         .frame(width: 16)
                     
                     VStack(alignment: .leading, spacing: 1) {
@@ -310,15 +310,15 @@ struct DashboardView: View {
                         HStack(spacing: 4) {
                             Text("\(product.totalUnits) unidades")
                                 .font(.caption2)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                             if product.expiredCount > 0 {
                                 Text("\u{2022} \(product.expiredCount) vencidos")
                                     .font(.caption2)
-                                    .foregroundColor(.red)
+                                    .foregroundStyle(.red)
                             } else {
                                 Text("\u{2022} vence \(product.soonestExpiryDate.formatted(date: .abbreviated, time: .omitted))")
                                     .font(.caption2)
-                                    .foregroundColor(.orange)
+                                    .foregroundStyle(.orange)
                             }
                         }
                     }
@@ -328,7 +328,7 @@ struct DashboardView: View {
                     Text(product.formattedCashAtRisk)
                         .font(.caption)
                         .fontWeight(.semibold)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
         }
@@ -399,7 +399,7 @@ struct DashboardView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Bienvenido,")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             
             Text(authManager.currentEmployee?.name ?? "Usuario")
                 .font(.title)
@@ -407,16 +407,16 @@ struct DashboardView: View {
             
             HStack {
                 Image(systemName: "building.2")
-                    .foregroundColor(.blue)
+                    .foregroundStyle(.blue)
                 Text(authManager.currentLocation?.name ?? "")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
         .background(Color(.systemGray6))
-        .cornerRadius(16)
+        .clipShape(.rect(cornerRadius: 16))
     }
     
     // MARK: - Date Range Selector
@@ -425,7 +425,7 @@ struct DashboardView: View {
         HStack {
             Text("Período:")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             
             Picker("Rango de Fechas", selection: $viewModel.selectedDateRange) {
                 ForEach(DashboardDateRange.allCases, id: \.self) { range in
@@ -448,6 +448,7 @@ struct DashboardView: View {
             } label: {
                 Image(systemName: "arrow.clockwise")
             }
+            .accessibilityLabel("Actualizar")
         }
         .padding(.horizontal)
     }
@@ -507,7 +508,7 @@ struct DashboardView: View {
                     VStack(alignment: .leading) {
                         Text("Unidades Vendidas")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         Text("\(report.sales.totalUnitsSold)")
                             .font(.headline)
                     }
@@ -517,7 +518,7 @@ struct DashboardView: View {
                     VStack(alignment: .trailing) {
                         Text("Total Ventas")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         Text("\(report.sales.totalSales)")
                             .font(.headline)
                     }
@@ -525,7 +526,7 @@ struct DashboardView: View {
             }
             .padding()
             .background(Color(.systemGray6))
-            .cornerRadius(12)
+            .clipShape(.rect(cornerRadius: 12))
         }
     }
     
@@ -547,7 +548,7 @@ struct DashboardView: View {
                     
                     Text("Antigüedad del Inventario")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     
                     HStack(spacing: 8) {
                         agingBadge(label: "<30d", count: aging.under30Days.units, color: .green)
@@ -559,7 +560,7 @@ struct DashboardView: View {
             }
             .padding()
             .background(Color(.systemGray6))
-            .cornerRadius(12)
+            .clipShape(.rect(cornerRadius: 12))
         }
     }
     
@@ -576,7 +577,7 @@ struct DashboardView: View {
             }
             .padding()
             .background(Color(.systemGray6))
-            .cornerRadius(12)
+            .clipShape(.rect(cornerRadius: 12))
         }
     }
     
@@ -599,12 +600,12 @@ struct DashboardView: View {
                     Spacer()
                     Text(formatCurrency(report.ajustes.netImpact))
                         .fontWeight(.bold)
-                        .foregroundColor((Double(report.ajustes.netImpact) ?? 0) >= 0 ? .green : .red)
+                        .foregroundStyle((Double(report.ajustes.netImpact) ?? 0) >= 0 ? .green : .red)
                 }
             }
             .padding()
             .background(Color(.systemGray6))
-            .cornerRadius(12)
+            .clipShape(.rect(cornerRadius: 12))
         }
     }
     
@@ -628,18 +629,18 @@ struct DashboardView: View {
                             .fontWeight(.semibold)
                         Text("\(report.netProfit.marginPercent)% margen")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                     Spacer()
                     Text(formatCurrency(report.netProfit.amount))
                         .font(.title3)
                         .fontWeight(.bold)
-                        .foregroundColor((Double(report.netProfit.amount) ?? 0) >= 0 ? .green : .red)
+                        .foregroundStyle((Double(report.netProfit.amount) ?? 0) >= 0 ? .green : .red)
                 }
             }
             .padding()
             .background(Color(.systemGray6))
-            .cornerRadius(12)
+            .clipShape(.rect(cornerRadius: 12))
         }
     }
     
@@ -651,7 +652,7 @@ struct DashboardView: View {
                 .scaleEffect(1.5)
             
             Text("Cargando...")
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
         .padding(60)
@@ -663,14 +664,14 @@ struct DashboardView: View {
         VStack(spacing: 16) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 50))
-                .foregroundColor(.orange)
+                .foregroundStyle(.orange)
             
             Text("Error al cargar el panel")
                 .font(.headline)
             
             Text(error.errorDescription ?? "Error desconocido")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
             
             Button("Reintentar") {
@@ -693,7 +694,7 @@ struct DashboardView: View {
             HStack(spacing: 6) {
                 // Location icon with subtle pulse when loading
                 Image(systemName: "building.2.fill")
-                    .foregroundColor(.blue)
+                    .foregroundStyle(.blue)
                 
                 VStack(alignment: .leading, spacing: 1) {
                     Text(authManager.currentLocation?.name ?? "Ubicación")
@@ -704,18 +705,18 @@ struct DashboardView: View {
                     if let role = authManager.currentLocation?.role {
                         Text(role.displayName)
                             .font(.caption2)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                 }
                 
                 Image(systemName: "chevron.down")
                     .font(.caption2)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
             .background(Color(.systemGray6))
-            .cornerRadius(8)
+            .clipShape(.rect(cornerRadius: 8))
         }
         .buttonStyle(.plain)
     }
@@ -742,7 +743,7 @@ struct DashboardView: View {
                 .fontWeight(.bold)
                 .frame(width: 32, height: 32)
                 .background(Color.blue)
-                .foregroundColor(.white)
+                .foregroundStyle(.white)
                 .clipShape(Circle())
         }
     }
@@ -752,7 +753,7 @@ struct DashboardView: View {
     private func sectionHeader(title: String, icon: String) -> some View {
         HStack {
             Image(systemName: icon)
-                .foregroundColor(.blue)
+                .foregroundStyle(.blue)
             Text(title)
                 .font(.headline)
         }
@@ -761,11 +762,11 @@ struct DashboardView: View {
     private func summaryRow(label: String, value: String, valueColor: Color = .primary) -> some View {
         HStack {
             Text(label)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             Spacer()
             Text(value)
                 .fontWeight(.medium)
-                .foregroundColor(valueColor)
+                .foregroundStyle(valueColor)
         }
         .font(.subheadline)
     }
@@ -781,309 +782,8 @@ struct DashboardView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 6)
         .background(color.opacity(0.2))
-        .foregroundColor(color)
-        .cornerRadius(8)
-    }
-}
-
-// MARK: - Stat Card
-
-struct StatCard: View {
-    let title: String
-    let value: String
-    let icon: String
-    let color: Color
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: icon)
-                    .font(.title2)
-                    .foregroundColor(color)
-                Spacer()
-            }
-            
-            Text(value)
-                .font(.title3)
-                .fontWeight(.bold)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-            
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
-        .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
-    }
-}
-
-// MARK: - Date Range Enum
-
-enum DashboardDateRange: CaseIterable {
-    case today
-    case last7Days
-    case last30Days
-    case thisMonth
-    case lastMonth
-    case thisYear
-    
-    var displayName: String {
-        switch self {
-        case .today: return "Hoy"
-        case .last7Days: return "Últimos 7 Días"
-        case .last30Days: return "Últimos 30 Días"
-        case .thisMonth: return "Este Mes"
-        case .lastMonth: return "Mes Pasado"
-        case .thisYear: return "Este Año"
-        }
-    }
-    
-    var dateRange: (start: Date, end: Date) {
-        let calendar = Calendar.current
-        let now = Date()
-        
-        switch self {
-        case .today:
-            let start = calendar.startOfDay(for: now)
-            return (start, now)
-            
-        case .last7Days:
-            let start = calendar.date(byAdding: .day, value: -7, to: now)!
-            return (start, now)
-            
-        case .last30Days:
-            let start = calendar.date(byAdding: .day, value: -30, to: now)!
-            return (start, now)
-            
-        case .thisMonth:
-            let start = calendar.date(from: calendar.dateComponents([.year, .month], from: now))!
-            return (start, now)
-            
-        case .lastMonth:
-            let thisMonthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: now))!
-            let lastMonthStart = calendar.date(byAdding: .month, value: -1, to: thisMonthStart)!
-            let lastMonthEnd = calendar.date(byAdding: .day, value: -1, to: thisMonthStart)!
-            return (lastMonthStart, lastMonthEnd)
-            
-        case .thisYear:
-            let start = calendar.date(from: calendar.dateComponents([.year], from: now))!
-            return (start, now)
-        }
-    }
-}
-
-// MARK: - Dashboard View Model
-
-@MainActor
-class DashboardViewModel: ObservableObject {
-    @Published var dashboardReport: DashboardReport?
-    @Published var isLoading = false
-    @Published var error: NetworkError?
-    @Published var showLocationSwitcher = false
-    @Published var selectedDateRange: DashboardDateRange = .last30Days
-    
-    private let apiClient = APIClient.shared
-    
-    func loadDashboard() async {
-        isLoading = true
-        error = nil
-        
-        do {
-            // Get current location
-            guard let locationId = AuthManager.shared.currentLocation?.id else {
-                error = NetworkError.serverError(message: "No se ha seleccionado ubicación")
-                isLoading = false
-                return
-            }
-            
-            // Get date range
-            let (startDate, endDate) = selectedDateRange.dateRange
-            
-            let dateFormatter = ISO8601DateFormatter()
-            dateFormatter.formatOptions = [.withFullDate]
-            
-            let queryParams = [
-                "locationId": locationId,
-                "startDate": dateFormatter.string(from: startDate),
-                "endDate": dateFormatter.string(from: endDate)
-            ]
-            
-            dashboardReport = try await apiClient.request(
-                endpoint: .dashboardReport,
-                queryParams: queryParams
-            )
-        } catch let networkError as NetworkError {
-            error = networkError
-        } catch {
-            self.error = NetworkError.unknown(error)
-        }
-        
-        isLoading = false
-    }
-}
-
-// MARK: - Stock Alert ViewModel
-
-/// Server-computed catalog counts (GET /products/counts).
-/// Covers ALL products at the location — unlike a paginated list fetch.
-struct ProductCountsResponse: Decodable {
-    let total: Int
-    let outOfStock: Int
-    let lowStock: Int
-    let lowMargin: Int
-    let synced: Int
-    let local: Int
-}
-
-/// Pre-computed fallback counts (avoids re-filtering `products` on every
-/// access — see `StockAlertViewModel`).
-private struct StockAlertCounts {
-    var outOfStock = 0
-    var lowStock = 0
-    var lowMargin = 0
-}
-
-@MainActor
-class StockAlertViewModel: ObservableObject {
-    @Published var products: [Product] = []
-    @Published var isLoading = false
-
-    /// Server-side counts; nil until the counts request succeeds.
-    @Published private(set) var serverCounts: ProductCountsResponse?
-
-    private let apiClient = APIClient.shared
-
-    // Computed once when `products` changes, NOT on every SwiftUI render.
-    // Only used as a fallback when serverCounts hasn't arrived yet — the
-    // count properties below are each read several times per render pass
-    // (needsAttention, the alert card, the restock action).
-    private var fallbackCounts = StockAlertCounts()
-
-    var outOfStockCount: Int {
-        serverCounts?.outOfStock ?? fallbackCounts.outOfStock
-    }
-
-    var lowStockCount: Int {
-        serverCounts?.lowStock ?? fallbackCounts.lowStock
-    }
-
-    var lowMarginCount: Int {
-        serverCounts?.lowMargin ?? fallbackCounts.lowMargin
-    }
-
-    var needsAttention: Bool {
-        outOfStockCount > 0 || lowStockCount > 0 || lowMarginCount > 0
-    }
-
-    func loadProducts(locationId: String) async {
-        isLoading = true
-        defer { isLoading = false }
-
-        // Counts come from the server aggregate (correct for the whole catalog).
-        // The product list is bounded to 200 — only used by the alert list view
-        // and the restock shopping list, which need concrete Product rows.
-        async let countsFetch: ProductCountsResponse? = try? apiClient.request(
-            endpoint: .productCounts,
-            queryParams: ["locationId": locationId]
-        )
-        async let listFetch: ProductListResponse? = try? apiClient.request(
-            endpoint: .listProducts,
-            queryParams: ["locationId": locationId, "limit": "200"]
-        )
-
-        let (counts, list) = await (countsFetch, listFetch)
-
-        if let counts {
-            serverCounts = counts
-        }
-        if let list {
-            products = list.data
-            recalculateFallbackCounts()
-        } else {
-            // Silent fail — alerts are supplementary
-            print("Failed to load products for stock alerts")
-        }
-    }
-
-    /// Single-pass count calculation — called once when products change.
-    private func recalculateFallbackCounts() {
-        var c = StockAlertCounts()
-        for product in products {
-            let stock = product.totalInventory ?? 0
-            if stock == 0 {
-                c.outOfStock += 1
-            } else if stock < 10 {
-                c.lowStock += 1
-            }
-            if (product.profitMargin ?? 100) < 10 {
-                c.lowMargin += 1
-            }
-        }
-        fallbackCounts = c
-    }
-}
-
-// MARK: - Stock Alert Products View (linked from Dashboard)
-
-struct StockAlertProductsView: View {
-    let products: [Product]
-    @State private var selectedFilter: AlertFilter = .outOfStock
-    
-    enum AlertFilter: String, CaseIterable {
-        case outOfStock = "Sin Stock"
-        case lowStock = "Stock Bajo"
-        case lowMargin = "Margen Bajo"
-    }
-    
-    private var filteredProducts: [Product] {
-        switch selectedFilter {
-        case .outOfStock:
-            return products.filter { ($0.totalInventory ?? 0) == 0 }
-        case .lowStock:
-            return products.filter { ($0.totalInventory ?? 0) > 0 && ($0.totalInventory ?? 0) < 10 }
-        case .lowMargin:
-            return products.filter { ($0.profitMargin ?? 100) < 10 }
-        }
-    }
-    
-    var body: some View {
-        VStack(spacing: 0) {
-            Picker("Filtrar", selection: $selectedFilter) {
-                ForEach(AlertFilter.allCases, id: \.self) { filter in
-                    Text(filter.rawValue).tag(filter)
-                }
-            }
-            .pickerStyle(.segmented)
-            .padding()
-            
-            List {
-                if filteredProducts.isEmpty {
-                    VStack(spacing: 12) {
-                        Image(systemName: "checkmark.circle")
-                            .font(.system(size: 40))
-                            .foregroundColor(.green)
-                        Text("No hay productos en esta categoría")
-                            .foregroundColor(.secondary)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 40)
-                    .listRowBackground(Color.clear)
-                } else {
-                    ForEach(filteredProducts) { product in
-                        NavigationLink {
-                            ProductDetailView(product: product)
-                        } label: {
-                            ProductRow(product: product)
-                        }
-                    }
-                }
-            }
-            .listStyle(.insetGrouped)
-        }
-        .navigationTitle("Alertas de Inventario")
-        .navigationBarTitleDisplayMode(.inline)
+        .foregroundStyle(color)
+        .clipShape(.rect(cornerRadius: 8))
     }
 }
 
@@ -1094,7 +794,7 @@ extension DashboardView {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "lightbulb.fill")
-                    .foregroundColor(.yellow)
+                    .foregroundStyle(.yellow)
                     .font(.title3)
                 
                 Text("Acción Requerida")
@@ -1112,8 +812,8 @@ extension DashboardView {
                             .padding(.horizontal, 10)
                             .padding(.vertical, 4)
                             .background(Color.blue.opacity(0.1))
-                            .foregroundColor(.blue)
-                            .cornerRadius(8)
+                            .foregroundStyle(.blue)
+                            .clipShape(.rect(cornerRadius: 8))
                     }
                 }
             }
@@ -1146,10 +846,10 @@ extension DashboardView {
                 // Signal type icon
                 Image(systemName: signal.type.icon)
                     .font(.subheadline)
-                    .foregroundColor(signal.severity.color)
+                    .foregroundStyle(signal.severity.color)
                     .frame(width: 28, height: 28)
                     .background(signal.severity.color.opacity(0.12))
-                    .cornerRadius(6)
+                    .clipShape(.rect(cornerRadius: 6))
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(signal.entityName)
@@ -1159,7 +859,7 @@ extension DashboardView {
                     
                     Text(signal.message)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .lineLimit(2)
                 }
                 
@@ -1172,13 +872,13 @@ extension DashboardView {
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(signal.severity.color.opacity(0.15))
-                        .foregroundColor(signal.severity.color)
-                        .cornerRadius(4)
+                        .foregroundStyle(signal.severity.color)
+                        .clipShape(.rect(cornerRadius: 4))
                     
                     if let cash = signal.formattedCashAtRisk {
                         Text(cash)
                             .font(.caption2)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
@@ -1192,14 +892,14 @@ extension DashboardView {
                             .padding(.horizontal, 6)
                             .padding(.vertical, 3)
                             .background(Color(.systemGray5))
-                            .foregroundColor(.secondary)
-                            .cornerRadius(4)
+                            .foregroundStyle(.secondary)
+                            .clipShape(.rect(cornerRadius: 4))
                     }
                     
                     if signal.recommendedActions.count > 2 {
                         Text("+\(signal.recommendedActions.count - 2)")
                             .font(.system(size: 9))
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
@@ -1208,212 +908,6 @@ extension DashboardView {
     }
 }
 
-// MARK: - All Signals View (full list)
-
-struct AllSignalsView: View {
-    let signals: [ActionableSignal]
-    @State private var selectedType: SignalTypeFilter = .all
-    
-    enum SignalTypeFilter: String, CaseIterable {
-        case all = "Todos"
-        case atRisk = "En Riesgo"
-        case slowMoving = "Lento Movimiento"
-        case overstocked = "Sobrestock"
-    }
-    
-    private var filteredSignals: [ActionableSignal] {
-        switch selectedType {
-        case .all: return signals
-        case .atRisk: return signals.filter { $0.type == .atRisk }
-        case .slowMoving: return signals.filter { $0.type == .slowMovingExpensive }
-        case .overstocked: return signals.filter { $0.type == .overstockedCategory }
-        }
-    }
-    
-    var body: some View {
-        VStack(spacing: 0) {
-            Picker("Tipo", selection: $selectedType) {
-                ForEach(SignalTypeFilter.allCases, id: \.self) { filter in
-                    Text(filter.rawValue).tag(filter)
-                }
-            }
-            .pickerStyle(.segmented)
-            .padding()
-            
-            List {
-                if filteredSignals.isEmpty {
-                    VStack(spacing: 12) {
-                        Image(systemName: "checkmark.circle")
-                            .font(.system(size: 40))
-                            .foregroundColor(.green)
-                        Text("No hay señales en esta categoría")
-                            .foregroundColor(.secondary)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 40)
-                    .listRowBackground(Color.clear)
-                } else {
-                    ForEach(filteredSignals) { signal in
-                        SignalDetailRow(signal: signal)
-                    }
-                }
-            }
-            .listStyle(.insetGrouped)
-        }
-        .navigationTitle("Señales de Acción")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-}
-
-struct SignalDetailRow: View {
-    let signal: ActionableSignal
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            // Header
-            HStack(spacing: 8) {
-                Image(systemName: signal.type.icon)
-                    .font(.subheadline)
-                    .foregroundColor(signal.severity.color)
-                    .frame(width: 32, height: 32)
-                    .background(signal.severity.color.opacity(0.12))
-                    .cornerRadius(8)
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(signal.entityName)
-                        .font(.headline)
-                        .lineLimit(1)
-                    
-                    HStack(spacing: 6) {
-                        Text(signal.type.displayName)
-                            .font(.caption)
-                            .foregroundColor(signal.type.color)
-                        
-                        Text("\u{2022}")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        
-                        Text(signal.severity.displayName)
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundColor(signal.severity.color)
-                    }
-                }
-                
-                Spacer()
-                
-                if let cash = signal.formattedCashAtRisk {
-                    VStack(alignment: .trailing, spacing: 1) {
-                        Text(cash)
-                            .font(.subheadline)
-                            .fontWeight(.bold)
-                            .foregroundColor(.red)
-                        Text("en riesgo")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                }
-            }
-            
-            // Message
-            Text(signal.message)
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-            
-            // Recommended actions
-            if !signal.recommendedActions.isEmpty {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Acciones Recomendadas")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .textCase(.uppercase)
-                    
-                    ForEach(signal.recommendedActions, id: \.self) { action in
-                        HStack(spacing: 6) {
-                            Image(systemName: "arrow.right.circle.fill")
-                                .font(.caption2)
-                                .foregroundColor(.blue)
-                            Text(action)
-                                .font(.caption)
-                        }
-                    }
-                }
-                .padding(8)
-                .background(Color(.systemGray6))
-                .cornerRadius(8)
-            }
-        }
-        .padding(.vertical, 4)
-    }
-}
-
-// MARK: - Actionable Signals ViewModel
-
-@MainActor
-class ActionableSignalsViewModel: ObservableObject {
-    @Published var signals: [ActionableSignal] = []
-    @Published var isLoading = false
-    
-    private let apiClient = APIClient.shared
-    
-    func loadSignals(locationId: String) async {
-        isLoading = true
-        defer { isLoading = false }
-        
-        do {
-            let response: ActionableSignalsResponse = try await apiClient.request(
-                endpoint: .agingSignals,
-                queryParams: [
-                    "locationId": locationId,
-                    "limit": "20"
-                ]
-            )
-            signals = response.signals
-        } catch {
-            // Silent fail — signals are supplementary
-            print("Failed to load actionable signals: \(error)")
-            signals = []
-        }
-    }
-}
-
-// MARK: - Dashboard Expiring Products ViewModel
-
-@MainActor
-class DashboardExpiringViewModel: ObservableObject {
-    @Published var products: [ExpiringProduct] = []
-    @Published var summary: ExpiringProductsSummary?
-    @Published var isLoading = false
-    
-    private let apiClient = APIClient.shared
-    
-    var hasExpiringProducts: Bool {
-        !products.isEmpty
-    }
-    
-    func loadExpiring(locationId: String) async {
-        isLoading = true
-        defer { isLoading = false }
-        
-        do {
-            let response: ExpiringProductsResponse = try await apiClient.request(
-                endpoint: .agingExpiring,
-                queryParams: [
-                    "locationId": locationId,
-                    "withinDays": "90",
-                    "includeExpired": "true"
-                ]
-            )
-            products = response.products
-            summary = response.summary
-        } catch {
-            // Silent fail — expiry alerts are supplementary
-            print("Failed to load expiring products: \(error)")
-            products = []
-            summary = nil
-        }
-    }
-}
 
 // MARK: - Preview
 
