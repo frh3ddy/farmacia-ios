@@ -1,4 +1,4 @@
-import Foundation
+import SwiftUI
 
 // MARK: - Employee Role
 
@@ -7,7 +7,7 @@ enum EmployeeRole: String, Codable, CaseIterable {
     case manager = "MANAGER"
     case cashier = "CASHIER"
     case accountant = "ACCOUNTANT"
-    
+
     var displayName: String {
         switch self {
         case .owner: return "Dueño"
@@ -16,7 +16,30 @@ enum EmployeeRole: String, Codable, CaseIterable {
         case .accountant: return "Contador"
         }
     }
-    
+
+    /// Single source of truth for role badge color — previously duplicated
+    /// (and inconsistently) across EmployeesView, LocationSwitchView, and
+    /// SettingsView, which let cashier/accountant colors drift out of sync
+    /// between screens.
+    var color: Color {
+        switch self {
+        case .owner: return .purple
+        case .manager: return .blue
+        case .accountant: return .green
+        case .cashier: return .orange
+        }
+    }
+
+    /// Single source of truth for role badge icon — see `color` above.
+    var icon: String {
+        switch self {
+        case .owner: return "crown.fill"
+        case .manager: return "person.badge.key.fill"
+        case .accountant: return "dollarsign.circle.fill"
+        case .cashier: return "cart.fill"
+        }
+    }
+
     var permissions: Set<Permission> {
         switch self {
         case .owner:

@@ -20,7 +20,7 @@ struct BatchDetailView: View {
                             .scaleEffect(1.2)
                         Text("Loading batch history...")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if let detail = viewModel.batchDetail {
@@ -51,12 +51,12 @@ struct BatchDetailView: View {
                     VStack(spacing: 12) {
                         Image(systemName: "exclamationmark.triangle")
                             .font(.title)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         Text("Failed to load batch")
                             .font(.headline)
                         Text(error)
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
                     }
                     .padding()
@@ -65,7 +65,7 @@ struct BatchDetailView: View {
             .navigationTitle("Batch Detail")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Listo") { dismiss() }
                 }
             }
@@ -81,7 +81,7 @@ struct BatchDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "square.stack.3d.up.fill")
-                    .foregroundColor(.teal)
+                    .foregroundStyle(.teal)
                 Text("Batch Overview")
                     .font(.headline)
                 Spacer()
@@ -91,8 +91,8 @@ struct BatchDetailView: View {
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
                     .background(Color.blue.opacity(0.1))
-                    .foregroundColor(.blue)
-                    .cornerRadius(6)
+                    .foregroundStyle(.blue)
+                    .clipShape(.rect(cornerRadius: 6))
             }
             
             Divider()
@@ -106,7 +106,7 @@ struct BatchDetailView: View {
                 if let sku = detail.productSku {
                     Text(sku)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
             
@@ -125,7 +125,7 @@ struct BatchDetailView: View {
             HStack {
                 Label(detail.locationName, systemImage: "building.2")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                 Spacer()
                 Text("Value: \(detail.formattedCurrentValue)")
                     .font(.caption)
@@ -134,7 +134,7 @@ struct BatchDetailView: View {
         }
         .padding()
         .background(Color(.systemGray6))
-        .cornerRadius(16)
+        .clipShape(.rect(cornerRadius: 16))
     }
     
     // MARK: - Receiving Card
@@ -143,7 +143,7 @@ struct BatchDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "arrow.down.doc.fill")
-                    .foregroundColor(.green)
+                    .foregroundStyle(.green)
                 Text("Receiving Details")
                     .font(.headline)
             }
@@ -180,7 +180,7 @@ struct BatchDetailView: View {
         }
         .padding()
         .background(Color(.systemGray6))
-        .cornerRadius(16)
+        .clipShape(.rect(cornerRadius: 16))
     }
     
     // MARK: - Adjustment Card
@@ -189,7 +189,7 @@ struct BatchDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "arrow.triangle.2.circlepath")
-                    .foregroundColor(.orange)
+                    .foregroundStyle(.orange)
                 Text("Created by Adjustment")
                     .font(.headline)
             }
@@ -206,7 +206,7 @@ struct BatchDetailView: View {
         }
         .padding()
         .background(Color(.systemGray6))
-        .cornerRadius(16)
+        .clipShape(.rect(cornerRadius: 16))
     }
     
     // MARK: - Quantity Card
@@ -215,7 +215,7 @@ struct BatchDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "chart.bar.fill")
-                    .foregroundColor(.indigo)
+                    .foregroundStyle(.indigo)
                 Text("Quantity Tracking")
                     .font(.headline)
             }
@@ -227,12 +227,12 @@ struct BatchDetailView: View {
                 HStack {
                     Text("Original: \(detail.originalQuantity) uds")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Spacer()
                     Text("\(detail.remainingPercent)% remaining")
                         .font(.caption)
                         .fontWeight(.semibold)
-                        .foregroundColor(detail.quantity > 0 ? .green : .red)
+                        .foregroundStyle(detail.quantity > 0 ? .green : .red)
                 }
                 
                 GeometryReader { geometry in
@@ -253,17 +253,17 @@ struct BatchDetailView: View {
                 HStack {
                     Label("\(detail.quantity) remaining", systemImage: "cube.box")
                         .font(.caption)
-                        .foregroundColor(.green)
+                        .foregroundStyle(.green)
                     Spacer()
                     Label("\(detail.totalConsumed) consumed", systemImage: "arrow.right.circle")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
         }
         .padding()
         .background(Color(.systemGray6))
-        .cornerRadius(16)
+        .clipShape(.rect(cornerRadius: 16))
     }
     
     // MARK: - Consumption Card
@@ -272,13 +272,13 @@ struct BatchDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "list.bullet.rectangle")
-                    .foregroundColor(.blue)
+                    .foregroundStyle(.blue)
                 Text("Consumption History")
                     .font(.headline)
                 Spacer()
                 Text("\(detail.consumptionCount) events")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
             
             Divider()
@@ -287,13 +287,13 @@ struct BatchDetailView: View {
                 VStack(spacing: 8) {
                     Image(systemName: "tray")
                         .font(.title3)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Text("No consumption records yet")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Text("This batch hasn't been consumed by any sales or ajustes")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                 }
                 .frame(maxWidth: .infinity)
@@ -304,7 +304,7 @@ struct BatchDetailView: View {
                         // Type icon
                         Image(systemName: consumption.typeIcon)
                             .font(.caption)
-                            .foregroundColor(consumption.typeColor)
+                            .foregroundStyle(consumption.typeColor)
                             .frame(width: 20)
                         
                         VStack(alignment: .leading, spacing: 2) {
@@ -315,12 +315,12 @@ struct BatchDetailView: View {
                                 if let sale = consumption.sale {
                                     Text("(#\(sale.squareId.suffix(6)))")
                                         .font(.caption2)
-                                        .foregroundColor(.secondary)
+                                        .foregroundStyle(.secondary)
                                 }
                             }
                             Text(consumption.consumedAt.formatted(date: .abbreviated, time: .shortened))
                                 .font(.caption2)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                         
                         Spacer()
@@ -329,10 +329,10 @@ struct BatchDetailView: View {
                             Text("-\(consumption.quantity) uds")
                                 .font(.caption)
                                 .fontWeight(.semibold)
-                                .foregroundColor(.red)
+                                .foregroundStyle(.red)
                             Text(consumption.formattedTotalCost)
                                 .font(.caption2)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                     }
                     
@@ -344,7 +344,7 @@ struct BatchDetailView: View {
         }
         .padding()
         .background(Color(.systemGray6))
-        .cornerRadius(16)
+        .clipShape(.rect(cornerRadius: 16))
     }
     
     // MARK: - Helpers
@@ -354,26 +354,26 @@ struct BatchDetailView: View {
             Text(value)
                 .font(.title3)
                 .fontWeight(.bold)
-                .foregroundColor(color)
+                .foregroundStyle(color)
             Text(label)
                 .font(.caption2)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
         .background(color.opacity(0.08))
-        .cornerRadius(10)
+        .clipShape(.rect(cornerRadius: 10))
     }
     
     private func infoRow(icon: String, label: String, value: String, color: Color) -> some View {
         HStack(spacing: 8) {
             Image(systemName: icon)
                 .font(.caption)
-                .foregroundColor(color)
+                .foregroundStyle(color)
                 .frame(width: 16)
             Text(label)
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .frame(width: 100, alignment: .leading)
             Text(value)
                 .font(.caption)

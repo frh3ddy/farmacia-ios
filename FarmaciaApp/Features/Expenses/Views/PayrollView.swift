@@ -42,9 +42,9 @@ struct PayrollView: View {
         VStack(spacing: 16) {
             Image(systemName: "person.3")
                 .font(.system(size: 48))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             Text("No hay empleados cargados")
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             Button("Cargar desde Square") {
                 Task { await viewModel.loadTeamMembers() }
             }
@@ -108,18 +108,20 @@ struct PayrollView: View {
                         viewModel.weekOffset += 1
                     } label: {
                         Image(systemName: "chevron.left")
+                            .frame(minWidth: 44, minHeight: 44)
                     }
                     .buttonStyle(.borderless)
-                    
+                    .accessibilityLabel("Semana anterior")
+
                     Spacer()
                     if let period = viewModel.summary?.period {
                         Text(PayrollDateFormatting.periodLabel(start: period.startDate, end: period.endDate))
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     } else {
                         Text(viewModel.weekOffset == 0 ? "Semana actual" : "Hace \(viewModel.weekOffset) semana(s)")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                     Spacer()
                     
@@ -129,9 +131,11 @@ struct PayrollView: View {
                         }
                     } label: {
                         Image(systemName: "chevron.right")
+                            .frame(minWidth: 44, minHeight: 44)
                     }
                     .buttonStyle(.borderless)
                     .disabled(viewModel.weekOffset <= 0)
+                    .accessibilityLabel("Semana siguiente")
                 }
             }
         }
@@ -174,7 +178,7 @@ struct PayrollView: View {
                     Spacer()
                     Text(summary.formattedTotalCost)
                         .bold()
-                        .foregroundColor(.green)
+                        .foregroundStyle(.green)
                 }
             }
         }
@@ -193,7 +197,7 @@ struct PayrollView: View {
         } else if let summary = viewModel.summary, summary.shifts.isEmpty, !viewModel.isLoadingSummary {
             Section {
                 Text("Sin turnos en este periodo")
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
         }
     }
@@ -223,13 +227,13 @@ private struct ShiftRow: View {
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
                                 .background(Color.green.opacity(0.15))
-                                .foregroundColor(.green)
+                                .foregroundStyle(.green)
                                 .clipShape(Capsule())
                         }
                     }
                     Text(timeRangeText)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 4) {
@@ -238,11 +242,11 @@ private struct ShiftRow: View {
                         .bold()
                     Text("$\(String(format: "%.2f", shift.cost))")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
                 Image(systemName: "chevron.right")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
         }
         .buttonStyle(.plain)
@@ -296,17 +300,17 @@ private struct ShiftEditorSheet: View {
                         Text("Duración")
                         Spacer()
                         Text(durationText)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
             .navigationTitle("Ajustar turno")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancelar") { dismiss() }
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Guardar") {
                         Task {
                             let ok = await viewModel.updateShiftTimes(
@@ -320,9 +324,14 @@ private struct ShiftEditorSheet: View {
                     .disabled(viewModel.isSavingShift)
                 }
             }
+            .alert("Error", isPresented: $viewModel.showError) {
+                Button("OK") {}
+            } message: {
+                Text(viewModel.errorMessage ?? "Error desconocido")
+            }
         }
     }
-    
+
     private var durationText: String {
         let end = hasEnd ? endDate : Date()
         let minutes = max(0, Int(end.timeIntervalSince(startDate) / 60))

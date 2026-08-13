@@ -54,7 +54,7 @@ struct ReceiveFlowView: View {
             .navigationTitle(step == .review ? "Receive Items" : step == .submitting ? "Receiving..." : "Complete")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     if step == .review {
                         Button("Cancelar") { dismiss() }
                     }
@@ -80,13 +80,13 @@ struct ReceiveFlowView: View {
                 VStack(spacing: 4) {
                     HStack {
                         Image(systemName: "building.2")
-                            .foregroundColor(.blue)
+                            .foregroundStyle(.blue)
                         Text(list.supplierName ?? "Proveedor")
                             .fontWeight(.medium)
                         Spacer()
                         Text("\(selectedItems.count) of \(pendingItems.count) selected")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                     .padding(.horizontal)
                     .padding(.top, 12)
@@ -101,7 +101,7 @@ struct ReceiveFlowView: View {
                         .font(.caption)
                         
                         Text("·")
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         
                         Button("Select None") {
                             for item in pendingItems {
@@ -143,7 +143,7 @@ struct ReceiveFlowView: View {
                     HStack {
                         Text("Total")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         Spacer()
                         Text(String(format: "$%.2f", total))
                             .font(.headline)
@@ -162,8 +162,8 @@ struct ReceiveFlowView: View {
                     .frame(maxWidth: .infinity)
                     .padding()
                     .background(selectedItems.isEmpty ? Color.gray : Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(14)
+                    .foregroundStyle(.white)
+                    .clipShape(.rect(cornerRadius: 14))
                 }
                 .disabled(selectedItems.isEmpty)
                 .padding(.horizontal)
@@ -187,7 +187,7 @@ struct ReceiveFlowView: View {
             
             Text("Processing \(submittedCount + failedCount) of \(selectedItems.count) items")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             
             ProgressView(
                 value: Double(submittedCount + failedCount),
@@ -208,7 +208,7 @@ struct ReceiveFlowView: View {
             
             Image(systemName: failedCount == 0 ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                 .font(.system(size: 60))
-                .foregroundColor(failedCount == 0 ? .green : .orange)
+                .foregroundStyle(failedCount == 0 ? .green : .orange)
             
             Text(failedCount == 0 ? "Items Received!" : "Partially Received")
                 .font(.title2)
@@ -217,12 +217,12 @@ struct ReceiveFlowView: View {
             VStack(spacing: 8) {
                 Text("\(submittedCount) items received successfully")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                 
                 if failedCount > 0 {
                     Text("\(failedCount) items failed")
                         .font(.subheadline)
-                        .foregroundColor(.red)
+                        .foregroundStyle(.red)
                 }
                 
                 if let list = list {
@@ -230,11 +230,11 @@ struct ReceiveFlowView: View {
                         Text("Shopping list completed!")
                             .font(.subheadline)
                             .fontWeight(.semibold)
-                            .foregroundColor(.green)
+                            .foregroundStyle(.green)
                     } else if list.status == .partiallyReceived {
                         Text("\(list.pendingCount) items still pending")
                             .font(.subheadline)
-                            .foregroundColor(.orange)
+                            .foregroundStyle(.orange)
                     }
                 }
             }
@@ -243,16 +243,16 @@ struct ReceiveFlowView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Failed Items:")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     ForEach(failedItems, id: \.productName) { item in
                         Text("\u{2022} \(item.productName): \(item.error)")
                             .font(.caption)
-                            .foregroundColor(.red)
+                            .foregroundStyle(.red)
                     }
                 }
                 .padding()
                 .background(Color.red.opacity(0.1))
-                .cornerRadius(12)
+                .clipShape(.rect(cornerRadius: 12))
                 .padding(.horizontal)
             }
             
@@ -266,8 +266,8 @@ struct ReceiveFlowView: View {
                     .frame(maxWidth: .infinity)
                     .padding()
                     .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(14)
+                    .foregroundStyle(.white)
+                    .clipShape(.rect(cornerRadius: 14))
             }
             .padding()
         }
@@ -329,55 +329,62 @@ struct ReceiveFlowView: View {
         
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
-        
-        for item in itemsToReceive {
-            let state = itemStates[item.id]
-            let qty = state?.receivedQuantity ?? item.plannedQuantity
-            let batchNum: String? = {
-                guard let state = state else { return nil }
-                return state.batchNumber.isEmpty ? nil : state.batchNumber
-            }()
-            let expiryDateStr: String? = {
-                guard let state = state, state.hasExpiry else { return nil }
-                return dateFormatter.string(from: state.expiryDate)
-            }()
-            
-            do {
-                let request = ReceiveInventoryRequest(
-                    locationId: locationId,
-                    productId: item.productId,
-                    quantity: qty,
-                    unitCost: item.unitCost,
-                    supplierId: supplierId,
-                    invoiceNumber: list.invoiceNumber?.isEmpty == true ? nil : list.invoiceNumber,
-                    purchaseOrderId: nil,
-                    batchNumber: batchNum,
-                    expiryDate: expiryDateStr,
-                    manufacturingDate: nil,
-                    receivedBy: authManager.currentEmployee?.id,
-                    notes: list.notes?.isEmpty == true ? nil : list.notes.map { "Shopping List: \($0)" },
-                    syncToSquare: true,
-                    sellingPrice: nil,
-                    syncPriceToSquare: nil
-                )
-                
-                let _: ReceivingCreateResponse = try await apiClient.request(
-                    endpoint: .receiveInventory,
-                    body: request
-                )
-                
-                // Mark item as received in the store
-                store.markItemReceived(listId: listId, itemId: item.id, receivedQuantity: qty)
-                submittedCount += 1
-            } catch {
-                failedCount += 1
-                failedItems.append(FailedReceiveItem(
-                    productName: item.productName,
-                    error: error.localizedDescription
-                ))
+
+        // Submits are sequential, one POST per item — if the app is
+        // backgrounded mid-batch, iOS would otherwise suspend the process
+        // and silently stop the loop with no error and no record of which
+        // items posted. The background task buys enough extra execution
+        // time to finish the in-flight batch.
+        await withBackgroundTask(name: "SubmitReceive") {
+            for item in itemsToReceive {
+                let state = itemStates[item.id]
+                let qty = state?.receivedQuantity ?? item.plannedQuantity
+                let batchNum: String? = {
+                    guard let state = state else { return nil }
+                    return state.batchNumber.isEmpty ? nil : state.batchNumber
+                }()
+                let expiryDateStr: String? = {
+                    guard let state = state, state.hasExpiry else { return nil }
+                    return dateFormatter.string(from: state.expiryDate)
+                }()
+
+                do {
+                    let request = ReceiveInventoryRequest(
+                        locationId: locationId,
+                        productId: item.productId,
+                        quantity: qty,
+                        unitCost: item.unitCost,
+                        supplierId: supplierId,
+                        invoiceNumber: list.invoiceNumber?.isEmpty == true ? nil : list.invoiceNumber,
+                        purchaseOrderId: nil,
+                        batchNumber: batchNum,
+                        expiryDate: expiryDateStr,
+                        manufacturingDate: nil,
+                        receivedBy: authManager.currentEmployee?.id,
+                        notes: list.notes?.isEmpty == true ? nil : list.notes.map { "Shopping List: \($0)" },
+                        syncToSquare: true,
+                        sellingPrice: nil,
+                        syncPriceToSquare: nil
+                    )
+
+                    let _: ReceivingCreateResponse = try await apiClient.request(
+                        endpoint: .receiveInventory,
+                        body: request
+                    )
+
+                    // Mark item as received in the store
+                    store.markItemReceived(listId: listId, itemId: item.id, receivedQuantity: qty)
+                    submittedCount += 1
+                } catch {
+                    failedCount += 1
+                    failedItems.append(FailedReceiveItem(
+                        productName: item.productName,
+                        error: error.localizedDescription
+                    ))
+                }
             }
         }
-        
+
         withAnimation { step = .complete }
     }
 }
@@ -416,7 +423,7 @@ struct ReceiveItemRow: View {
                 } label: {
                     Image(systemName: state.isSelected ? "checkmark.circle.fill" : "circle")
                         .font(.title3)
-                        .foregroundColor(state.isSelected ? .blue : .secondary.opacity(0.4))
+                        .foregroundStyle(state.isSelected ? Color.blue : Color.secondary.opacity(0.4))
                 }
                 .buttonStyle(.plain)
                 
@@ -430,7 +437,7 @@ struct ReceiveItemRow: View {
                     if let sku = item.sku {
                         Text(sku)
                             .font(.caption2)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                 }
                 
@@ -446,34 +453,36 @@ struct ReceiveItemRow: View {
                                 }
                             } label: {
                                 Image(systemName: "minus.circle")
-                                    .foregroundColor(state.receivedQuantity <= 1 ? .gray : .red)
+                                    .foregroundStyle(state.receivedQuantity <= 1 ? .gray : .red)
                             }
                             .buttonStyle(.plain)
                             .disabled(state.receivedQuantity <= 1)
-                            
+                            .accessibilityLabel("Disminuir cantidad de \(item.productName)")
+
                             Text("\(state.receivedQuantity)")
                                 .font(.subheadline.weight(.semibold))
                                 .frame(width: 30, alignment: .center)
-                            
+
                             Button {
                                 state.receivedQuantity += 1
                             } label: {
                                 Image(systemName: "plus.circle")
-                                    .foregroundColor(.blue)
+                                    .foregroundStyle(.blue)
                             }
                             .buttonStyle(.plain)
+                            .accessibilityLabel("Aumentar cantidad de \(item.productName)")
                         }
                         
                         // Show if different from planned
                         if state.receivedQuantity != item.plannedQuantity {
                             Text("of \(item.plannedQuantity) planned")
                                 .font(.caption2)
-                                .foregroundColor(.orange)
+                                .foregroundStyle(.orange)
                         }
                         
                         Text(String(format: "$%.2f", Double(state.receivedQuantity) * item.unitCost))
                             .font(.caption)
-                            .foregroundColor(.blue)
+                            .foregroundStyle(.blue)
                     }
                 }
             }
@@ -485,21 +494,21 @@ struct ReceiveItemRow: View {
                     HStack {
                         Image(systemName: "number")
                             .font(.caption)
-                            .foregroundColor(.purple)
+                            .foregroundStyle(.purple)
                             .frame(width: 16)
                         TextField("Lot / Batch #", text: $state.batchNumber)
                             .font(.caption)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
                             .background(Color(.systemGray6))
-                            .cornerRadius(6)
+                            .clipShape(.rect(cornerRadius: 6))
                     }
                     
                     // Expiry date toggle
                     HStack {
                         Image(systemName: "calendar")
                             .font(.caption)
-                            .foregroundColor(.orange)
+                            .foregroundStyle(.orange)
                             .frame(width: 16)
                         Toggle("Expiry Date", isOn: $state.hasExpiry)
                             .font(.caption)

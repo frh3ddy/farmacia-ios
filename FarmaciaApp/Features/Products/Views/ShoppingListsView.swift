@@ -26,10 +26,10 @@ struct ShoppingListsView: View {
             .navigationTitle("Listas de Compras")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Listo") { dismiss() }
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     HStack(spacing: 12) {
                         if !store.completedLists.isEmpty {
                             Menu {
@@ -41,13 +41,15 @@ struct ShoppingListsView: View {
                             } label: {
                                 Image(systemName: "ellipsis.circle")
                             }
+                            .accessibilityLabel("Más opciones")
                         }
-                        
+
                         Button {
                             showCreateSheet = true
                         } label: {
                             Image(systemName: "plus.circle.fill")
                         }
+                        .accessibilityLabel("Nueva Lista")
                     }
                 }
             }
@@ -78,7 +80,7 @@ struct ShoppingListsView: View {
             
             Image(systemName: "list.clipboard")
                 .font(.system(size: 56))
-                .foregroundColor(.secondary.opacity(0.6))
+                .foregroundStyle(.secondary.opacity(0.6))
             
             Text("Sin Listas de Compras")
                 .font(.title3)
@@ -86,7 +88,7 @@ struct ShoppingListsView: View {
             
             Text("Create a shopping list to plan your purchases.\nAdd items over time, then receive them when the stock arrives.")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
             
@@ -101,8 +103,8 @@ struct ShoppingListsView: View {
                 .padding(.horizontal, 24)
                 .padding(.vertical, 12)
                 .background(Color.blue)
-                .foregroundColor(.white)
-                .cornerRadius(12)
+                .foregroundStyle(.white)
+                .clipShape(.rect(cornerRadius: 12))
             }
             .padding(.top, 8)
             
@@ -149,6 +151,14 @@ struct ShoppingListsView: View {
                     Text("Completed (\(completed.count))")
                 }
             }
+
+            // Lists are local JSON files (see ShoppingListStore) with no
+            // server sync — disclose that plainly, always, rather than let
+            // it surprise someone switching devices.
+            Section {
+            } footer: {
+                Text("Las listas de compras se guardan solo en este dispositivo y no se sincronizan con otros dispositivos.")
+            }
         }
         .listStyle(.insetGrouped)
     }
@@ -164,7 +174,7 @@ struct ShoppingListRow: View {
             // Status icon
             Image(systemName: list.status.icon)
                 .font(.title3)
-                .foregroundColor(statusColor)
+                .foregroundStyle(statusColor)
                 .frame(width: 32)
             
             VStack(alignment: .leading, spacing: 4) {
@@ -181,8 +191,8 @@ struct ShoppingListRow: View {
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(statusColor.opacity(0.15))
-                        .foregroundColor(statusColor)
-                        .cornerRadius(4)
+                        .foregroundStyle(statusColor)
+                        .clipShape(.rect(cornerRadius: 4))
                 }
                 
                 // Details line
@@ -190,17 +200,17 @@ struct ShoppingListRow: View {
                     if let supplier = list.supplierName {
                         Label(supplier, systemImage: "building.2")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                             .lineLimit(1)
                     }
                     
                     Text(itemSummary)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     
                     Text(list.formattedDate)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
             
@@ -210,7 +220,7 @@ struct ShoppingListRow: View {
             Text(list.formattedPlannedTotal)
                 .font(.subheadline)
                 .fontWeight(.semibold)
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
         }
         .padding(.vertical, 2)
     }
@@ -273,14 +283,14 @@ struct CreateShoppingListSheet: View {
                     } label: {
                         HStack {
                             Image(systemName: "building.2")
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                             
                             if let supplier = selectedSupplier {
                                 Text(supplier.name)
-                                    .foregroundColor(.primary)
+                                    .foregroundStyle(.primary)
                             } else {
                                 Text("None — assign later")
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                             }
                             
                             Spacer()
@@ -290,14 +300,15 @@ struct CreateShoppingListSheet: View {
                                     selectedSupplier = nil
                                 } label: {
                                     Image(systemName: "xmark.circle.fill")
-                                        .foregroundColor(.secondary)
+                                        .foregroundStyle(.secondary)
                                 }
                                 .buttonStyle(.plain)
+                                .accessibilityLabel("Quitar proveedor seleccionado")
                             }
                             
                             Image(systemName: "chevron.right")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                     }
                     .buttonStyle(.plain)
@@ -315,19 +326,19 @@ struct CreateShoppingListSheet: View {
                         } label: {
                             HStack {
                                 Image(systemName: "doc.on.doc")
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                                 
                                 if let prevList = selectedPreviousList {
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(prevList.name)
-                                            .foregroundColor(.primary)
+                                            .foregroundStyle(.primary)
                                         Text("\(prevList.itemCount) items \u{2022} \(prevList.formattedPlannedTotal)")
                                             .font(.caption)
-                                            .foregroundColor(.secondary)
+                                            .foregroundStyle(.secondary)
                                     }
                                 } else {
                                     Text("Start from scratch")
-                                        .foregroundColor(.secondary)
+                                        .foregroundStyle(.secondary)
                                 }
                                 
                                 Spacer()
@@ -337,14 +348,15 @@ struct CreateShoppingListSheet: View {
                                         selectedPreviousList = nil
                                     } label: {
                                         Image(systemName: "xmark.circle.fill")
-                                            .foregroundColor(.secondary)
+                                            .foregroundStyle(.secondary)
                                     }
                                     .buttonStyle(.plain)
+                                    .accessibilityLabel("Quitar lista seleccionada")
                                 }
                                 
                                 Image(systemName: "chevron.right")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                             }
                         }
                         .buttonStyle(.plain)
@@ -365,10 +377,10 @@ struct CreateShoppingListSheet: View {
             .navigationTitle("Nueva Lista de Compras")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancelar") { dismiss() }
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Crear") {
                         createList()
                     }
@@ -486,9 +498,9 @@ struct PreviousListPickerSheet: View {
                     VStack(spacing: 12) {
                         Image(systemName: "doc.on.doc")
                             .font(.system(size: 40))
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         Text("No previous lists available")
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                 } else {
                     List {
@@ -501,44 +513,44 @@ struct PreviousListPickerSheet: View {
                                     // Status icon
                                     Image(systemName: list.status.icon)
                                         .font(.title3)
-                                        .foregroundColor(statusColor(list.status))
+                                        .foregroundStyle(statusColor(list.status))
                                         .frame(width: 28)
                                     
                                     VStack(alignment: .leading, spacing: 3) {
                                         Text(list.name)
                                             .font(.subheadline)
                                             .fontWeight(.medium)
-                                            .foregroundColor(.primary)
+                                            .foregroundStyle(.primary)
                                             .lineLimit(1)
                                         
                                         HStack(spacing: 6) {
                                             if let supplier = list.supplierName {
                                                 Label(supplier, systemImage: "building.2")
                                                     .font(.caption)
-                                                    .foregroundColor(.secondary)
+                                                    .foregroundStyle(.secondary)
                                                     .lineLimit(1)
                                             }
                                             
                                             Text("\(list.itemCount) items")
                                                 .font(.caption)
-                                                .foregroundColor(.secondary)
+                                                .foregroundStyle(.secondary)
                                             
                                             Text(list.formattedPlannedTotal)
                                                 .font(.caption)
                                                 .fontWeight(.medium)
-                                                .foregroundColor(.secondary)
+                                                .foregroundStyle(.secondary)
                                         }
                                         
                                         Text(list.formattedDate)
                                             .font(.caption2)
-                                            .foregroundColor(.secondary)
+                                            .foregroundStyle(.secondary)
                                     }
                                     
                                     Spacer()
                                     
                                     if selected?.id == list.id {
                                         Image(systemName: "checkmark")
-                                            .foregroundColor(.blue)
+                                            .foregroundStyle(.blue)
                                     }
                                 }
                             }
@@ -550,7 +562,7 @@ struct PreviousListPickerSheet: View {
             .navigationTitle("From Previous List")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancelar") { dismiss() }
                 }
             }
@@ -592,9 +604,9 @@ struct SupplierPickerSheet: View {
                     VStack(spacing: 12) {
                         Image(systemName: "building.2")
                             .font(.system(size: 40))
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         Text("No suppliers found")
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                 } else {
                     List {
@@ -611,17 +623,17 @@ struct SupplierPickerSheet: View {
                                         Text(String(supplier.name.prefix(1)).uppercased())
                                             .font(.subheadline)
                                             .fontWeight(.semibold)
-                                            .foregroundColor(.blue)
+                                            .foregroundStyle(.blue)
                                     }
                                     
                                     Text(supplier.name)
-                                        .foregroundColor(.primary)
+                                        .foregroundStyle(.primary)
                                     
                                     Spacer()
                                     
                                     if selected?.id == supplier.id {
                                         Image(systemName: "checkmark")
-                                            .foregroundColor(.blue)
+                                            .foregroundStyle(.blue)
                                     }
                                 }
                             }
@@ -633,7 +645,7 @@ struct SupplierPickerSheet: View {
             .navigationTitle("Select Supplier")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancelar") { dismiss() }
                 }
             }

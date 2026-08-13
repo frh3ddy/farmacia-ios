@@ -156,9 +156,9 @@ struct GlobalActivityHistoryView: View {
         VStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 50))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             Text(message)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 40)
@@ -227,10 +227,10 @@ struct GlobalActivityRow: View {
             // Icon
             Image(systemName: item.icon)
                 .font(.subheadline)
-                .foregroundColor(item.iconColor)
+                .foregroundStyle(item.iconColor)
                 .frame(width: 32, height: 32)
                 .background(item.iconColor.opacity(0.12))
-                .cornerRadius(8)
+                .clipShape(.rect(cornerRadius: 8))
             
             // Info
             VStack(alignment: .leading, spacing: 4) {
@@ -240,19 +240,19 @@ struct GlobalActivityRow: View {
                 
                 Text(item.title)
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                 
                 HStack(spacing: 8) {
                     if !item.subtitle.isEmpty {
                         Text(item.subtitle)
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                             .lineLimit(1)
                     }
                     
                     Text(item.date.formatted(date: .omitted, time: .shortened))
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
             
@@ -261,7 +261,7 @@ struct GlobalActivityRow: View {
             // Quantity
             Text(item.quantityDisplay)
                 .font(.headline)
-                .foregroundColor(item.quantityColor)
+                .foregroundStyle(item.quantityColor)
         }
         .padding(.vertical, 4)
     }

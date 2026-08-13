@@ -11,7 +11,7 @@ struct ExpenseFormView: View {
     let expense: Expense?
     
     @State private var selectedType: ExpenseType = .other
-    @State private var amount = ""
+    @State private var amount: Double?
     @State private var date = Date()
     @State private var description = ""
     @State private var vendor = ""
@@ -43,7 +43,7 @@ struct ExpenseFormView: View {
     }()
     
     private var isValid: Bool {
-        !amount.isEmpty && Double(amount) ?? 0 > 0
+        (amount ?? 0) > 0
     }
     
     var body: some View {
@@ -71,7 +71,7 @@ struct ExpenseFormView: View {
                         Text("Monto")
                         Spacer()
                         Text("$")
-                        TextField("0.00", text: $amount)
+                        TextField("0.00", value: $amount, format: .number)
                             .keyboardType(.decimalPad)
                             .multilineTextAlignment(.trailing)
                             .frame(width: 100)
@@ -108,7 +108,7 @@ struct ExpenseFormView: View {
                         HStack(spacing: 8) {
                             ForEach([50, 100, 250, 500, 1000, 2500], id: \.self) { value in
                                 Button("$\(value)") {
-                                    amount = String(value)
+                                    amount = Double(value)
                                 }
                                 .buttonStyle(.bordered)
                             }
@@ -119,13 +119,13 @@ struct ExpenseFormView: View {
             .navigationTitle(isEditing ? "Editar Gasto" : "Agregar Gasto")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancelar") {
                         dismiss()
                     }
                 }
                 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Guardar") {
                         Task { await save() }
                     }
@@ -136,6 +136,16 @@ struct ExpenseFormView: View {
                 if let expense = expense {
                     populateForm(from: expense)
                 }
+            }
+            .alert("Error", isPresented: $viewModel.showError) {
+                Button("OK") {}
+            } message: {
+                Text(viewModel.errorMessage ?? "Ocurrió un error")
+            }
+            .alert("Error", isPresented: $payrollViewModel.showError) {
+                Button("OK") {}
+            } message: {
+                Text(payrollViewModel.errorMessage ?? "Ocurrió un error")
             }
         }
     }
@@ -148,7 +158,7 @@ struct ExpenseFormView: View {
                 HStack {
                     ProgressView()
                     Text("Cargando empleados...")
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             } else if payrollViewModel.teamMembers.isEmpty {
                 Button("Cargar empleados de Square") {
@@ -173,7 +183,7 @@ struct ExpenseFormView: View {
                             Text("Periodo")
                             Spacer()
                             Text("Semana actual (Lun - Dom)")
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                     }
                     
@@ -198,7 +208,7 @@ struct ExpenseFormView: View {
                             Label("$\(String(format: "%.2f", summary.hourlyRate))/hora", systemImage: "dollarsign.circle")
                         }
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     }
                 }
             }
@@ -224,7 +234,7 @@ struct ExpenseFormView: View {
         guard let summary = payrollViewModel.summary else { return }
         
         // Autofill amount, date, vendor and notes
-        amount = String(format: "%.2f", summary.totalCost)
+        amount = summary.totalCost
         // Date = end of the period (pay day), parsed as a local date to
         // avoid any timezone day-shift
         if let endDate = Self.dateOnlyFormatter.date(from: summary.period.endDate) {
@@ -240,7 +250,7 @@ struct ExpenseFormView: View {
     
     private func populateForm(from expense: Expense) {
         selectedType = expense.type
-        amount = String(expense.amountDouble)
+        amount = expense.amountDouble
         date = expense.date
         description = expense.description ?? ""
         vendor = expense.vendor ?? ""
@@ -253,7 +263,7 @@ struct ExpenseFormView: View {
     // MARK: - Save
     
     private func save() async {
-        guard let amountValue = Double(amount),
+        guard let amountValue = amount,
               let locationId = authManager.currentLocation?.id else { return }
         
         let success: Bool

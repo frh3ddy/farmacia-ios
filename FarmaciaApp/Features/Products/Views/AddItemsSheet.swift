@@ -23,7 +23,7 @@ struct AddItemsSheet: View {
     @State private var isLoading = false
     @State private var selectedTab: AddItemTab = .allProducts
     @State private var addedProductIds: Set<String> = []
-    @State private var quantities: [String: String] = [:]    // productId → qty string
+    @State private var quantities: [String: Int] = [:]    // productId → qty
     @State private var showBulkConfirm = false
     @State private var bulkType: BulkAddType = .outOfStock
     
@@ -79,15 +79,15 @@ struct AddItemsSheet: View {
             .navigationTitle("Agregar Artículos")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Listo") { dismiss() }
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     if !addedProductIds.isEmpty {
                         Text("\(addedProductIds.count) added")
                             .font(.caption)
                             .fontWeight(.semibold)
-                            .foregroundColor(.blue)
+                            .foregroundStyle(.blue)
                     }
                 }
             }
@@ -137,8 +137,8 @@ struct AddItemsSheet: View {
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
                         .background(Color.red.opacity(0.1))
-                        .foregroundColor(.red)
-                        .cornerRadius(16)
+                        .foregroundStyle(.red)
+                        .clipShape(.rect(cornerRadius: 16))
                     }
                 }
                 
@@ -156,8 +156,8 @@ struct AddItemsSheet: View {
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
                         .background(Color.orange.opacity(0.1))
-                        .foregroundColor(.orange)
-                        .cornerRadius(16)
+                        .foregroundStyle(.orange)
+                        .clipShape(.rect(cornerRadius: 16))
                     }
                 }
                 
@@ -217,7 +217,7 @@ struct AddItemsSheet: View {
             if stock < 10 && quantities[product.id] == nil {
                 let suggested = suggestedQuantity(for: product)
                 if suggested > 1 {
-                    quantities[product.id] = "\(suggested)"
+                    quantities[product.id] = suggested
                 }
             }
         }
@@ -239,9 +239,9 @@ struct AddItemsSheet: View {
                     Spacer()
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 36))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Text("No products match \"\(searchText)\"")
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Spacer()
                 }
             } else {
@@ -278,7 +278,7 @@ struct AddItemsSheet: View {
     }
     
     private func addProduct(_ product: Product) {
-        let qty = Int(quantities[product.id] ?? "") ?? suggestedQuantity(for: product)
+        let qty = quantities[product.id] ?? suggestedQuantity(for: product)
         // When supplier is assigned and catalog has a cost, use supplier cost; otherwise use average cost
         let supplierCost = supplierCostForProduct(product.id)
         let costToUse = supplierCost ?? product.averageCost ?? 0
@@ -305,9 +305,9 @@ struct AddItemsSheet: View {
                     Spacer()
                     Image(systemName: "tray")
                         .font(.system(size: 36))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Text("No catalog items found")
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Spacer()
                 }
             } else {
@@ -347,7 +347,7 @@ struct AddItemsSheet: View {
     private func addCatalogItem(_ item: SupplierCatalogItem, averageCost: Double) {
         let matchingProduct = products.first(where: { $0.id == item.productId })
         let qty: Int
-        if let qtyStr = quantities[item.productId], let parsed = Int(qtyStr), parsed > 0 {
+        if let parsed = quantities[item.productId], parsed > 0 {
             qty = parsed
         } else if let product = matchingProduct {
             qty = suggestedQuantity(for: product)
@@ -368,9 +368,9 @@ struct AddItemsSheet: View {
     
     // MARK: - Helpers
     
-    private func bindingForQuantity(_ productId: String) -> Binding<String> {
+    private func bindingForQuantity(_ productId: String) -> Binding<Int?> {
         Binding(
-            get: { quantities[productId] ?? "" },
+            get: { quantities[productId] },
             set: { quantities[productId] = $0 }
         )
     }
@@ -425,7 +425,7 @@ struct AddProductRow: View {
     let averageCost: Double
     let supplierCost: Double?       // Supplier-specific price (nil if no supplier assigned)
     let isAdded: Bool
-    @Binding var quantity: String
+    @Binding var quantity: Int?
     var onAdd: () -> Void
     
     /// The cost to display prominently (supplier cost if available, otherwise average)
@@ -461,7 +461,7 @@ struct AddProductRow: View {
                     if let sku = sku {
                         Text(sku)
                             .font(.caption2)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                     
                     stockBadge
@@ -469,7 +469,7 @@ struct AddProductRow: View {
                     // Primary cost display
                     Text(String(format: "$%.2f", displayCost))
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
                 
                 // Cost comparison indicator (Phase C)
@@ -484,31 +484,32 @@ struct AddProductRow: View {
                 // Already added indicator
                 HStack(spacing: 4) {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
+                        .foregroundStyle(.green)
                     Text("Added")
                         .font(.caption)
-                        .foregroundColor(.green)
+                        .foregroundStyle(.green)
                 }
             } else {
                 // Quantity input + add button
                 HStack(spacing: 6) {
-                    TextField("1", text: $quantity)
+                    TextField("1", value: $quantity, format: .number)
                         .keyboardType(.numberPad)
                         .frame(width: 36)
                         .multilineTextAlignment(.center)
                         .font(.subheadline)
                         .padding(.vertical, 4)
                         .background(Color(.systemGray6))
-                        .cornerRadius(6)
+                        .clipShape(.rect(cornerRadius: 6))
                     
                     Button {
                         onAdd()
                     } label: {
                         Image(systemName: "plus.circle.fill")
                             .font(.title3)
-                            .foregroundColor(.blue)
+                            .foregroundStyle(.blue)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Agregar \(name)")
                 }
             }
         }
@@ -524,8 +525,8 @@ struct AddProductRow: View {
                     .padding(.horizontal, 5)
                     .padding(.vertical, 1)
                     .background(Color.red.opacity(0.15))
-                    .foregroundColor(.red)
-                    .cornerRadius(4)
+                    .foregroundStyle(.red)
+                    .clipShape(.rect(cornerRadius: 4))
             } else if currentStock < 10 {
                 Text("LOW \(currentStock)")
                     .font(.caption2)
@@ -533,12 +534,12 @@ struct AddProductRow: View {
                     .padding(.horizontal, 5)
                     .padding(.vertical, 1)
                     .background(Color.orange.opacity(0.15))
-                    .foregroundColor(.orange)
-                    .cornerRadius(4)
+                    .foregroundStyle(.orange)
+                    .clipShape(.rect(cornerRadius: 4))
             } else {
                 Text("\(currentStock)")
                     .font(.caption2)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
         }
     }
@@ -577,8 +578,8 @@ struct CostComparisonBadge: View {
         .padding(.horizontal, 6)
         .padding(.vertical, 2)
         .background(info.color.opacity(0.1))
-        .foregroundColor(info.color)
-        .cornerRadius(4)
+        .foregroundStyle(info.color)
+        .clipShape(.rect(cornerRadius: 4))
     }
 }
 

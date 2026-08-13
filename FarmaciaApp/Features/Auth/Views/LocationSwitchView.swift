@@ -55,7 +55,7 @@ struct LocationSwitchView: View {
             .navigationTitle("Cambiar Ubicación")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancelar") {
                         dismiss()
                     }
@@ -79,7 +79,7 @@ struct LocationSwitchView: View {
     private var searchBar: some View {
         HStack {
             Image(systemName: "magnifyingglass")
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             
             TextField("Buscar ubicaciones...", text: $searchText)
                 .textFieldStyle(.plain)
@@ -92,13 +92,13 @@ struct LocationSwitchView: View {
                     }
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
         }
         .padding(12)
         .background(Color(.systemGray6))
-        .cornerRadius(10)
+        .clipShape(.rect(cornerRadius: 10))
         .padding(.horizontal)
         .padding(.vertical, 8)
     }
@@ -119,7 +119,7 @@ struct LocationSwitchView: View {
                 
                 Image(systemName: "building.2.fill")
                     .font(.system(size: 28))
-                    .foregroundColor(.blue)
+                    .foregroundStyle(.blue)
             }
             
             // Location Name
@@ -129,7 +129,7 @@ struct LocationSwitchView: View {
             
             // Role Badge
             HStack(spacing: 6) {
-                Image(systemName: roleIcon(for: location.role))
+                Image(systemName: location.role.icon)
                     .font(.caption)
                 Text(location.role.displayName)
                     .font(.caption)
@@ -137,9 +137,9 @@ struct LocationSwitchView: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .background(roleColor(for: location.role).opacity(0.15))
-            .foregroundColor(roleColor(for: location.role))
-            .cornerRadius(12)
+            .background(location.role.color.opacity(0.15))
+            .foregroundStyle(location.role.color)
+            .clipShape(.rect(cornerRadius: 12))
             
             // Status indicator
             HStack(spacing: 6) {
@@ -148,7 +148,7 @@ struct LocationSwitchView: View {
                     .frame(width: 8, height: 8)
                 Text("Actualmente Activa")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
         }
         .padding(.vertical, 24)
@@ -196,14 +196,14 @@ struct LocationSwitchView: View {
                     Text("Ubicaciones Disponibles")
                     Spacer()
                     Text("\(authManager.availableLocations.count)")
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .font(.caption)
                 }
             } footer: {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Selecciona una ubicación para cambiar tu lugar de trabajo actual.")
                     Text("Tu rol y permisos pueden variar según la ubicación.")
-                        .foregroundColor(.orange)
+                        .foregroundStyle(.orange)
                 }
                 .font(.caption)
             }
@@ -217,15 +217,15 @@ struct LocationSwitchView: View {
         VStack(spacing: 12) {
             Image(systemName: "magnifyingglass")
                 .font(.title)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             
             Text("No se encontraron ubicaciones")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             
             Text("Prueba con otro término de búsqueda")
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 40)
@@ -242,7 +242,7 @@ struct LocationSwitchView: View {
                 
                 Image(systemName: "building.2")
                     .font(.system(size: 40))
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
             
             Text("Sin Ubicaciones Disponibles")
@@ -250,7 +250,7 @@ struct LocationSwitchView: View {
             
             Text("No tienes acceso a ninguna ubicación.\nContacta a tu administrador para asistencia.")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
             
@@ -279,7 +279,7 @@ struct LocationSwitchView: View {
                 
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 50))
-                    .foregroundColor(.green)
+                    .foregroundStyle(.green)
             }
             
             Text("¡Todo Listo!")
@@ -288,7 +288,7 @@ struct LocationSwitchView: View {
             
             Text("Solo tienes acceso a una ubicación,\nla cual ya está activa.")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
             
             Button {
@@ -320,21 +320,21 @@ struct LocationSwitchView: View {
                     
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 60))
-                        .foregroundColor(.green)
+                        .foregroundStyle(.green)
                 }
                 
                 Text("Cambiado a")
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
                 
                 Text(successLocationName)
                     .font(.title2)
                     .fontWeight(.bold)
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
             }
             .padding(40)
             .background(.ultraThinMaterial)
-            .cornerRadius(20)
+            .clipShape(.rect(cornerRadius: 20))
         }
         .transition(.opacity)
     }
@@ -384,25 +384,6 @@ struct LocationSwitchView: View {
         switchingLocationId = nil
     }
     
-    // MARK: - Helpers
-    
-    private func roleIcon(for role: EmployeeRole) -> String {
-        switch role {
-        case .owner: return "crown.fill"
-        case .manager: return "person.badge.key.fill"
-        case .accountant: return "dollarsign.circle.fill"
-        case .cashier: return "cart.fill"
-        }
-    }
-    
-    private func roleColor(for role: EmployeeRole) -> Color {
-        switch role {
-        case .owner: return .purple
-        case .manager: return .blue
-        case .accountant: return .green
-        case .cashier: return .orange
-        }
-    }
 }
 
 // MARK: - Location Row
@@ -426,7 +407,7 @@ struct LocationRow: View {
                 } else {
                     Image(systemName: isCurrent ? "building.2.fill" : "building.2")
                         .font(.system(size: 20))
-                        .foregroundColor(isCurrent ? .green : .secondary)
+                        .foregroundStyle(isCurrent ? Color.green : Color.secondary)
                 }
             }
             
@@ -434,16 +415,16 @@ struct LocationRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(location.name)
                     .font(.headline)
-                    .foregroundColor(isCurrent ? .green : .primary)
+                    .foregroundStyle(isCurrent ? Color.green : Color.primary)
                 
                 // Role with icon
                 HStack(spacing: 4) {
-                    Image(systemName: roleIcon(for: location.role))
+                    Image(systemName: location.role.icon)
                         .font(.caption2)
                     Text(location.role.displayName)
                         .font(.caption)
                 }
-                .foregroundColor(roleColor(for: location.role).opacity(isCurrent ? 1.0 : 0.8))
+                .foregroundStyle(location.role.color.opacity(isCurrent ? 1.0 : 0.8))
             }
             
             Spacer()
@@ -459,13 +440,13 @@ struct LocationRow: View {
                             .font(.caption)
                             .fontWeight(.semibold)
                     }
-                    .foregroundColor(.green)
+                    .foregroundStyle(.green)
                 }
             } else if !isSwitching {
                 Image(systemName: "chevron.right")
                     .font(.caption)
                     .fontWeight(.semibold)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
         }
         .padding(.vertical, 8)
@@ -474,23 +455,6 @@ struct LocationRow: View {
         .animation(.easeInOut(duration: 0.2), value: isSwitching)
     }
     
-    private func roleIcon(for role: EmployeeRole) -> String {
-        switch role {
-        case .owner: return "crown.fill"
-        case .manager: return "person.badge.key.fill"
-        case .accountant: return "dollarsign.circle.fill"
-        case .cashier: return "cart.fill"
-        }
-    }
-    
-    private func roleColor(for role: EmployeeRole) -> Color {
-        switch role {
-        case .owner: return .purple
-        case .manager: return .blue
-        case .accountant: return .green
-        case .cashier: return .orange
-        }
-    }
 }
 
 // MARK: - Preview

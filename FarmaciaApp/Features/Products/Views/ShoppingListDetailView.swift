@@ -41,14 +41,14 @@ struct ShoppingListDetailView: View {
             } else {
                 VStack {
                     Text("List not found")
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
         }
         .navigationTitle(list?.name ?? "Shopping List")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
+            ToolbarItem(placement: .topBarTrailing) {
                 if let list = list {
                     Menu {
                         if list.isEditable {
@@ -208,7 +208,7 @@ struct ShoppingListDetailView: View {
                                 .padding(.trailing, 8)
                             Text("Refreshing costs from supplier catalog...")
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                     }
                 }
@@ -249,7 +249,7 @@ struct ShoppingListDetailView: View {
             // Status row
             HStack {
                 Image(systemName: list.status.icon)
-                    .foregroundColor(statusColor(list.status))
+                    .foregroundStyle(statusColor(list.status))
                 Text(list.status.label)
                     .fontWeight(.medium)
                 
@@ -257,7 +257,7 @@ struct ShoppingListDetailView: View {
                 
                 Text(list.formattedDate)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
             
             // Supplier row
@@ -269,14 +269,14 @@ struct ShoppingListDetailView: View {
             } label: {
                 HStack {
                     Image(systemName: "building.2")
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     
                     if let name = list.supplierName {
                         Text(name)
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
                     } else {
                         Text("No supplier assigned")
-                            .foregroundColor(.orange)
+                            .foregroundStyle(.orange)
                     }
                     
                     Spacer()
@@ -284,7 +284,7 @@ struct ShoppingListDetailView: View {
                     if list.isEditable {
                         Image(systemName: "chevron.right")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
@@ -328,15 +328,15 @@ struct ShoppingListDetailView: View {
             HStack(spacing: 4) {
                 Image(systemName: icon)
                     .font(.caption)
-                    .foregroundColor(color)
+                    .foregroundStyle(color)
                 Text(value)
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                    .foregroundColor(color)
+                    .foregroundStyle(color)
             }
             Text(label)
                 .font(.caption2)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
         }
     }
     
@@ -347,7 +347,7 @@ struct ShoppingListDetailView: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.orange)
+                        .foregroundStyle(.orange)
                     Text("Cost Changes Detected")
                         .font(.subheadline)
                         .fontWeight(.semibold)
@@ -362,7 +362,7 @@ struct ShoppingListDetailView: View {
                             Spacer()
                             Text(change)
                                 .font(.caption)
-                                .foregroundColor(.orange)
+                                .foregroundStyle(.orange)
                         }
                     }
                 }
@@ -378,7 +378,7 @@ struct ShoppingListDetailView: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
                     Image(systemName: result.updatedCount > 0 ? "arrow.triangle.2.circlepath.circle.fill" : "checkmark.circle.fill")
-                        .foregroundColor(result.updatedCount > 0 ? .blue : .green)
+                        .foregroundStyle(result.updatedCount > 0 ? .blue : .green)
                     Text(result.updatedCount > 0 ? "\(result.updatedCount) Cost(s) Updated" : "All Costs Current")
                         .font(.subheadline)
                         .fontWeight(.semibold)
@@ -390,9 +390,10 @@ struct ShoppingListDetailView: View {
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Descartar")
                 }
                 
                 if !result.changes.isEmpty {
@@ -404,7 +405,7 @@ struct ShoppingListDetailView: View {
                             Spacer()
                             Text(change.description)
                                 .font(.caption)
-                                .foregroundColor(change.isIncrease ? .red : .green)
+                                .foregroundStyle(change.isIncrease ? .red : .green)
                         }
                     }
                 }
@@ -412,7 +413,7 @@ struct ShoppingListDetailView: View {
                 if result.notFoundCount > 0 {
                     Text("\(result.notFoundCount) item(s) not in supplier catalog")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
             .padding(.vertical, 4)
@@ -464,11 +465,11 @@ struct ShoppingListDetailView: View {
         VStack(spacing: 12) {
             Image(systemName: "cart")
                 .font(.system(size: 36))
-                .foregroundColor(.secondary.opacity(0.5))
+                .foregroundStyle(.secondary.opacity(0.5))
             
             Text("No items yet")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             
             Button {
                 showAddItems = true
@@ -492,7 +493,7 @@ struct ShoppingListDetailView: View {
             if list.isEditable {
                 HStack {
                     Image(systemName: "doc.text")
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     TextField("Invoice Number", text: Binding(
                         get: { list.invoiceNumber ?? "" },
                         set: { newValue in
@@ -507,7 +508,7 @@ struct ShoppingListDetailView: View {
                 
                 HStack {
                     Image(systemName: "note.text")
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     TextField("Notas", text: Binding(
                         get: { list.notes ?? "" },
                         set: { newValue in
@@ -524,7 +525,7 @@ struct ShoppingListDetailView: View {
                     HStack {
                         Text("Invoice")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         Spacer()
                         Text(invoice)
                             .font(.subheadline)
@@ -534,11 +535,11 @@ struct ShoppingListDetailView: View {
                     HStack {
                         Text("Notas")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         Spacer()
                         Text(notes)
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
@@ -567,8 +568,8 @@ struct ShoppingListDetailView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                         .background(Color(.systemGray5))
-                        .foregroundColor(.primary)
-                        .cornerRadius(12)
+                        .foregroundStyle(.primary)
+                        .clipShape(.rect(cornerRadius: 12))
                     }
                 }
                 
@@ -585,8 +586,8 @@ struct ShoppingListDetailView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                         .background(list.supplierId != nil ? Color.blue : Color.orange)
-                        .foregroundColor(.white)
-                        .cornerRadius(12)
+                        .foregroundStyle(.white)
+                        .clipShape(.rect(cornerRadius: 12))
                     }
                     .disabled(list.supplierId == nil)
                 }
@@ -597,7 +598,7 @@ struct ShoppingListDetailView: View {
             if list.canReceive && list.supplierId == nil {
                 Text("Assign a supplier before receiving items")
                     .font(.caption)
-                    .foregroundColor(.orange)
+                    .foregroundStyle(.orange)
                     .padding(.bottom, 4)
             }
         }
@@ -746,11 +747,11 @@ struct ShoppingListItemRow: View {
             // Status icon
             if item.isReceived {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(.green)
+                    .foregroundStyle(.green)
                     .font(.body)
             } else {
                 Image(systemName: "circle")
-                    .foregroundColor(.secondary.opacity(0.4))
+                    .foregroundStyle(.secondary.opacity(0.4))
                     .font(.body)
             }
             
@@ -761,19 +762,19 @@ struct ShoppingListItemRow: View {
                     .fontWeight(.medium)
                     .lineLimit(2)
                     .strikethrough(item.isReceived, color: .secondary)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
                 
                 HStack(spacing: 6) {
                     if let sku = item.sku {
                         Text(sku)
                             .font(.caption2)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                     
                     if let change = item.costChangeDescription {
                         Text(change)
                             .font(.caption2)
-                            .foregroundColor(.orange)
+                            .foregroundStyle(.orange)
                     }
                     
                     // Metadata pills inline
@@ -783,7 +784,7 @@ struct ShoppingListItemRow: View {
                             .padding(.horizontal, 4)
                             .padding(.vertical, 1)
                             .background(Color(.systemGray5))
-                            .cornerRadius(3)
+                            .clipShape(.rect(cornerRadius: 3))
                     }
                     
                     if let expiry = item.formattedExpiryDate {
@@ -792,7 +793,7 @@ struct ShoppingListItemRow: View {
                             .padding(.horizontal, 4)
                             .padding(.vertical, 1)
                             .background(Color(.systemGray5))
-                            .cornerRadius(3)
+                            .clipShape(.rect(cornerRadius: 3))
                     }
                 }
             }
@@ -803,16 +804,16 @@ struct ShoppingListItemRow: View {
             VStack(alignment: .trailing, spacing: 2) {
                 Text("\(item.plannedQuantity) × \(item.formattedUnitCost)")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                 Text(item.formattedPlannedTotal)
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.blue)
+                    .foregroundStyle(.blue)
                 
                 if item.isReceived {
                     Text("Rcvd: \(item.receivedQuantity)")
                         .font(.caption2)
-                        .foregroundColor(.green)
+                        .foregroundStyle(.green)
                 }
             }
         }
@@ -869,18 +870,18 @@ struct EditItemSheet: View {
                         if let sku = item.sku {
                             Text(sku)
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                     }
                     
                     if let change = item.costChangeDescription {
                         HStack {
                             Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundColor(.orange)
+                                .foregroundStyle(.orange)
                                 .font(.caption)
                             Text(change)
                                 .font(.caption)
-                                .foregroundColor(.orange)
+                                .foregroundStyle(.orange)
                         }
                     }
                 }
@@ -894,7 +895,7 @@ struct EditItemSheet: View {
                             Spacer()
                             Text("\(quantity)")
                                 .fontWeight(.semibold)
-                                .foregroundColor(.blue)
+                                .foregroundStyle(.blue)
                                 .monospacedDigit()
                         }
                     }
@@ -904,7 +905,7 @@ struct EditItemSheet: View {
                         Text("Costo Unitario")
                         Spacer()
                         Text("$")
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         TextField("0.00", text: $costText)
                             .keyboardType(.decimalPad)
                             .multilineTextAlignment(.trailing)
@@ -918,7 +919,7 @@ struct EditItemSheet: View {
                         Spacer()
                         Text(String(format: "$%.2f", lineTotal))
                             .fontWeight(.semibold)
-                            .foregroundColor(.blue)
+                            .foregroundStyle(.blue)
                     }
                 } header: {
                     Text("Quantity & Cost")
@@ -928,7 +929,7 @@ struct EditItemSheet: View {
                 Section {
                     HStack {
                         Image(systemName: "number")
-                            .foregroundColor(.purple)
+                            .foregroundStyle(.purple)
                             .frame(width: 20)
                         TextField("Lot / Batch # (optional)", text: $batchNumber)
                     }
@@ -936,7 +937,7 @@ struct EditItemSheet: View {
                     Toggle(isOn: $hasExpiry) {
                         HStack {
                             Image(systemName: "calendar")
-                                .foregroundColor(.orange)
+                                .foregroundStyle(.orange)
                                 .frame(width: 20)
                             Text("Expiry Date")
                         }
@@ -964,10 +965,10 @@ struct EditItemSheet: View {
             .navigationTitle("Edit Item")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancelar") { dismiss() }
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Guardar") {
                         save()
                     }

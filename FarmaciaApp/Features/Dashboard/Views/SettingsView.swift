@@ -16,7 +16,7 @@ struct SettingsView: View {
                         Text(String(authManager.currentEmployee?.name.prefix(2).uppercased() ?? "??"))
                             .font(.title2)
                             .fontWeight(.bold)
-                            .foregroundColor(.white)
+                            .foregroundStyle(.white)
                             .frame(width: 60, height: 60)
                             .background(Color.blue)
                             .clipShape(Circle())
@@ -27,7 +27,7 @@ struct SettingsView: View {
                             
                             Text(authManager.currentEmployee?.role.rawValue.capitalized ?? "")
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                     }
                     .padding(.vertical, 8)
@@ -44,7 +44,7 @@ struct SettingsView: View {
                             
                             Image(systemName: "building.2.fill")
                                 .font(.system(size: 18))
-                                .foregroundColor(.blue)
+                                .foregroundStyle(.blue)
                         }
                         
                         VStack(alignment: .leading, spacing: 4) {
@@ -53,12 +53,12 @@ struct SettingsView: View {
                             
                             if let role = authManager.currentLocation?.role {
                                 HStack(spacing: 4) {
-                                    Image(systemName: roleIcon(for: role))
+                                    Image(systemName: role.icon)
                                         .font(.caption2)
                                     Text(role.displayName)
                                         .font(.caption)
                                 }
-                                .foregroundColor(roleColor(for: role))
+                                .foregroundStyle(role.color)
                             }
                         }
                         
@@ -72,7 +72,7 @@ struct SettingsView: View {
                             Text("Activa")
                                 .font(.caption)
                         }
-                        .foregroundColor(.green)
+                        .foregroundStyle(.green)
                     }
                     .padding(.vertical, 4)
                     
@@ -82,12 +82,12 @@ struct SettingsView: View {
                         } label: {
                             HStack {
                                 Image(systemName: "arrow.left.arrow.right")
-                                    .foregroundColor(.blue)
+                                    .foregroundStyle(.blue)
                                 Text("Cambiar Ubicación")
                                 Spacer()
                                 Text("\(authManager.availableLocations.count) disponibles")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                             }
                         }
                     }
@@ -106,7 +106,7 @@ struct SettingsView: View {
                             Text("La Sesión Expira")
                             Spacer()
                             Text(expiresAt, style: .relative)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                     }
                     
@@ -123,14 +123,14 @@ struct SettingsView: View {
                         Text("Versión")
                         Spacer()
                         Text("\(AppConfiguration.appVersion) (\(AppConfiguration.buildNumber))")
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                     
                     HStack {
                         Text("Ambiente")
                         Spacer()
                         Text(environmentName)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                 }
                 
@@ -144,7 +144,7 @@ struct SettingsView: View {
                     
                     Text("Desactivar eliminará este dispositivo de Farmacia. Necesitarás credenciales de dueño o gerente para reactivarlo.")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
             .navigationTitle("Ajustes")
@@ -177,23 +177,6 @@ struct SettingsView: View {
         }
     }
     
-    private func roleIcon(for role: EmployeeRole) -> String {
-        switch role {
-        case .owner: return "crown.fill"
-        case .manager: return "person.badge.key.fill"
-        case .accountant: return "dollarsign.circle.fill"
-        case .cashier: return "cart.fill"
-        }
-    }
-    
-    private func roleColor(for role: EmployeeRole) -> Color {
-        switch role {
-        case .owner: return .purple
-        case .manager: return .blue
-        case .accountant: return .green
-        case .cashier: return .orange
-        }
-    }
 }
 
 // MARK: - Preview

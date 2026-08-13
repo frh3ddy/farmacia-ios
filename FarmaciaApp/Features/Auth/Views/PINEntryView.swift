@@ -27,7 +27,7 @@ struct PINEntryView: View {
             .navigationTitle("Inicio de Sesión")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Button(role: .destructive) {
                             viewModel.showDeactivateAlert = true
@@ -76,7 +76,7 @@ struct PINEntryView: View {
             } label: {
                 HStack {
                     Image(systemName: "building.2")
-                        .foregroundColor(.blue)
+                        .foregroundStyle(.blue)
                     
                     Text(viewModel.selectedLocation?.name ?? "Seleccionar Ubicación")
                         .fontWeight(.medium)
@@ -88,13 +88,13 @@ struct PINEntryView: View {
                 }
                 .padding()
                 .background(Color(.systemGray6))
-                .cornerRadius(12)
+                .clipShape(.rect(cornerRadius: 12))
             }
             .buttonStyle(.plain)
             
             Text("Ingresa tu PIN para iniciar sesión")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
         }
         .padding(.top, 20)
     }
@@ -112,6 +112,9 @@ struct PINEntryView: View {
                         .animation(.easeInOut(duration: 0.15), value: viewModel.pin.count)
                 }
             }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("PIN")
+            .accessibilityValue("\(viewModel.pin.count) de \(AppConfiguration.pinLength) dígitos ingresados")
             
             // Loading indicator
             if viewModel.isLoading {
@@ -161,7 +164,7 @@ struct PINEntryView: View {
                 .fontWeight(.medium)
                 .frame(width: 80, height: 80)
                 .background(Color(.systemGray6))
-                .cornerRadius(40)
+                .clipShape(.rect(cornerRadius: 40))
         }
         .buttonStyle(.plain)
         .disabled(viewModel.pin.count >= AppConfiguration.pinLength || viewModel.isLoading)
@@ -177,10 +180,11 @@ struct PINEntryView: View {
                 .font(.title2)
                 .frame(width: 80, height: 80)
                 .background(Color(.systemGray6))
-                .cornerRadius(40)
+                .clipShape(.rect(cornerRadius: 40))
         }
         .buttonStyle(.plain)
         .disabled(viewModel.pin.isEmpty || viewModel.isLoading)
+        .accessibilityLabel("Eliminar")
     }
 }
 
@@ -309,7 +313,7 @@ struct LocationPickerView: View {
                             if let address = location.address {
                                 Text(address)
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                             }
                         }
                         
@@ -317,7 +321,7 @@ struct LocationPickerView: View {
                         
                         if selectedLocation?.id == location.id {
                             Image(systemName: "checkmark")
-                                .foregroundColor(.blue)
+                                .foregroundStyle(.blue)
                         }
                     }
                 }
@@ -326,7 +330,7 @@ struct LocationPickerView: View {
             .navigationTitle("Seleccionar Ubicación")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancelar") {
                         dismiss()
                     }

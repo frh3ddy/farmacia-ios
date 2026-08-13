@@ -27,7 +27,7 @@ struct PurchaseOrderView: View {
             .navigationTitle(viewModel.navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     if viewModel.step == .selectSupplier {
                         Button("Cancelar") { dismiss() }
                     } else if viewModel.step != .submitting && viewModel.step != .complete {
@@ -58,13 +58,13 @@ struct PurchaseOrderView: View {
             VStack(spacing: 8) {
                 Image(systemName: "cart.badge.plus")
                     .font(.system(size: 40))
-                    .foregroundColor(.blue)
+                    .foregroundStyle(.blue)
                 Text("New Purchase Order")
                     .font(.title3)
                     .fontWeight(.semibold)
                 Text("Select a supplier to see their product catalog")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
             .padding(.vertical, 20)
@@ -78,12 +78,12 @@ struct PurchaseOrderView: View {
                 VStack(spacing: 12) {
                     Image(systemName: "building.2")
                         .font(.system(size: 50))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Text("No suppliers found")
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Text("Suppliers are created when you receive inventory with a supplier selected")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 40)
                 }
@@ -103,18 +103,18 @@ struct PurchaseOrderView: View {
                                         .frame(width: 44, height: 44)
                                     Text(String(supplier.name.prefix(1)).uppercased())
                                         .font(.headline)
-                                        .foregroundColor(.blue)
+                                        .foregroundStyle(.blue)
                                 }
                                 
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(supplier.name)
                                         .font(.subheadline)
                                         .fontWeight(.medium)
-                                        .foregroundColor(.primary)
+                                        .foregroundStyle(.primary)
                                     if let contact = supplier.contactInfo, !contact.isEmpty {
                                         Text(contact)
                                             .font(.caption)
-                                            .foregroundColor(.secondary)
+                                            .foregroundStyle(.secondary)
                                     }
                                 }
                                 
@@ -122,7 +122,7 @@ struct PurchaseOrderView: View {
                                 
                                 Image(systemName: "chevron.right")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                             }
                         }
                     }
@@ -169,7 +169,7 @@ struct PurchaseOrderView: View {
                         Text(String(supplier.name.prefix(1)).uppercased())
                             .font(.subheadline)
                             .fontWeight(.semibold)
-                            .foregroundColor(.blue)
+                            .foregroundStyle(.blue)
                     }
                     
                     VStack(alignment: .leading, spacing: 2) {
@@ -178,7 +178,7 @@ struct PurchaseOrderView: View {
                             .fontWeight(.medium)
                         Text("\(viewModel.catalogItems.count) products available")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                     
                     Spacer()
@@ -196,8 +196,8 @@ struct PurchaseOrderView: View {
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
                             .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(20)
+                            .foregroundStyle(.white)
+                            .clipShape(.rect(cornerRadius: 20))
                         }
                     }
                 }
@@ -220,8 +220,8 @@ struct PurchaseOrderView: View {
                             .padding(.horizontal, 10)
                             .padding(.vertical, 5)
                             .background(viewModel.catalogFilter == filter ? Color.blue.opacity(0.15) : Color(.systemGray5))
-                            .foregroundColor(viewModel.catalogFilter == filter ? .blue : .primary)
-                            .cornerRadius(12)
+                            .foregroundStyle(viewModel.catalogFilter == filter ? Color.blue : Color.primary)
+                            .clipShape(.rect(cornerRadius: 12))
                     }
                 }
                 Spacer()
@@ -238,9 +238,9 @@ struct PurchaseOrderView: View {
                 VStack(spacing: 12) {
                     Image(systemName: "tray")
                         .font(.system(size: 40))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Text("No se encontraron productos")
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
                 Spacer()
             } else {
@@ -274,13 +274,13 @@ struct PurchaseOrderView: View {
                                 .font(.headline)
                             Text("\(viewModel.orderItemCount) items")
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                         Spacer()
                         VStack(alignment: .trailing, spacing: 4) {
                             Text("Total")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                             Text(viewModel.formattedOrderTotal)
                                 .font(.title3)
                                 .fontWeight(.bold)
@@ -294,12 +294,12 @@ struct PurchaseOrderView: View {
                 Section {
                     HStack {
                         Image(systemName: "doc.text")
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         TextField("Invoice Number (optional)", text: $viewModel.invoiceNumber)
                     }
                     HStack {
                         Image(systemName: "note.text")
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         TextField("Notes (optional)", text: $viewModel.orderNotes)
                     }
                 } header: {
@@ -318,7 +318,7 @@ struct PurchaseOrderView: View {
                                     if let sku = lineItem.sku {
                                         Text("SKU: \(sku)")
                                             .font(.caption)
-                                            .foregroundColor(.secondary)
+                                            .foregroundStyle(.secondary)
                                     }
                                 }
                                 
@@ -330,7 +330,7 @@ struct PurchaseOrderView: View {
                                     Text(lineItem.formattedLineTotal)
                                         .font(.caption)
                                         .fontWeight(.semibold)
-                                        .foregroundColor(.blue)
+                                        .foregroundStyle(.blue)
                                 }
                             }
                             
@@ -344,7 +344,7 @@ struct PurchaseOrderView: View {
                                             .padding(.horizontal, 6)
                                             .padding(.vertical, 2)
                                             .background(Color(.systemGray5))
-                                            .cornerRadius(4)
+                                            .clipShape(.rect(cornerRadius: 4))
                                     }
                                 }
                             }
@@ -373,8 +373,8 @@ struct PurchaseOrderView: View {
                 .frame(maxWidth: .infinity)
                 .padding()
                 .background(Color.blue)
-                .foregroundColor(.white)
-                .cornerRadius(14)
+                .foregroundStyle(.white)
+                .clipShape(.rect(cornerRadius: 14))
             }
             .padding()
         }
@@ -394,7 +394,7 @@ struct PurchaseOrderView: View {
             
             Text("Processing \(viewModel.submittedCount) of \(viewModel.orderItemCount) items")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             
             // Progress bar
             ProgressView(value: Double(viewModel.submittedCount), total: Double(viewModel.orderItemCount))
@@ -413,7 +413,7 @@ struct PurchaseOrderView: View {
             
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 60))
-                .foregroundColor(.green)
+                .foregroundStyle(.green)
             
             Text("Order Received!")
                 .font(.title2)
@@ -422,12 +422,12 @@ struct PurchaseOrderView: View {
             VStack(spacing: 8) {
                 Text("\(viewModel.submittedCount) items received successfully")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                 
                 if viewModel.failedCount > 0 {
                     Text("\(viewModel.failedCount) items failed")
                         .font(.subheadline)
-                        .foregroundColor(.red)
+                        .foregroundStyle(.red)
                 }
                 
                 Text("Total: \(viewModel.formattedOrderTotal)")
@@ -438,16 +438,16 @@ struct PurchaseOrderView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Failed Items:")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     ForEach(viewModel.failedItems, id: \.productName) { item in
                         Text("• \(item.productName): \(item.error)")
                             .font(.caption)
-                            .foregroundColor(.red)
+                            .foregroundStyle(.red)
                     }
                 }
                 .padding()
                 .background(Color.red.opacity(0.1))
-                .cornerRadius(12)
+                .clipShape(.rect(cornerRadius: 12))
                 .padding(.horizontal)
             }
             
@@ -461,8 +461,8 @@ struct PurchaseOrderView: View {
                     .frame(maxWidth: .infinity)
                     .padding()
                     .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(14)
+                    .foregroundStyle(.white)
+                    .clipShape(.rect(cornerRadius: 14))
             }
             .padding()
         }
@@ -506,7 +506,7 @@ struct CatalogItemRow: View {
                         productPlaceholder
                     }
                     .frame(width: 44, height: 44)
-                    .cornerRadius(8)
+                    .clipShape(.rect(cornerRadius: 8))
                     .clipped()
                 } else {
                     productPlaceholder
@@ -523,7 +523,7 @@ struct CatalogItemRow: View {
                         if let sku = item.sku {
                             Text(sku)
                                 .font(.caption2)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                         
                         // Stock badge
@@ -537,7 +537,7 @@ struct CatalogItemRow: View {
                 VStack(alignment: .trailing, spacing: 4) {
                     Text(item.formattedCost)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     
                     // Quick quantity input
                     HStack(spacing: 6) {
@@ -549,11 +549,12 @@ struct CatalogItemRow: View {
                             }
                         } label: {
                             Image(systemName: "minus.circle.fill")
-                                .foregroundColor(quantity.isEmpty ? .gray : .red)
+                                .foregroundStyle(quantity.isEmpty ? .gray : .red)
                         }
                         .buttonStyle(.plain)
                         .disabled(quantity.isEmpty)
-                        
+                        .accessibilityLabel("Disminuir cantidad de \(item.productName)")
+
                         TextField("0", text: $quantity)
                             .keyboardType(.numberPad)
                             .frame(width: 44)
@@ -574,9 +575,10 @@ struct CatalogItemRow: View {
                             quantity = "\(current + 1)"
                         } label: {
                             Image(systemName: "plus.circle.fill")
-                                .foregroundColor(.blue)
+                                .foregroundStyle(.blue)
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel("Aumentar cantidad de \(item.productName)")
                     }
                 }
             }
@@ -587,7 +589,7 @@ struct CatalogItemRow: View {
                     HStack {
                         Text("Unit Cost:")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         
                         TextField("Cost", text: $unitCost)
                             .keyboardType(.decimalPad)
@@ -597,7 +599,7 @@ struct CatalogItemRow: View {
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
                             .background(Color(.systemGray6))
-                            .cornerRadius(6)
+                            .clipShape(.rect(cornerRadius: 6))
                         
                         Spacer()
                         
@@ -605,7 +607,7 @@ struct CatalogItemRow: View {
                             Text("Line: \(String(format: "$%.2f", Double(qty) * cost))")
                                 .font(.caption)
                                 .fontWeight(.semibold)
-                                .foregroundColor(.blue)
+                                .foregroundStyle(.blue)
                         }
                     }
                     
@@ -613,21 +615,21 @@ struct CatalogItemRow: View {
                     HStack {
                         Image(systemName: "number")
                             .font(.caption)
-                            .foregroundColor(.purple)
+                            .foregroundStyle(.purple)
                             .frame(width: 16)
                         TextField("Lot / Batch # (optional)", text: $batchNumber)
                             .font(.caption)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
                             .background(Color(.systemGray6))
-                            .cornerRadius(6)
+                            .clipShape(.rect(cornerRadius: 6))
                     }
                     
                     // Expiry date toggle + picker
                     HStack {
                         Image(systemName: "calendar")
                             .font(.caption)
-                            .foregroundColor(.orange)
+                            .foregroundStyle(.orange)
                             .frame(width: 16)
                         Toggle("Expiry Date", isOn: $hasExpiry)
                             .font(.caption)
@@ -690,7 +692,7 @@ struct CatalogItemRow: View {
                 .fill(Color(.systemGray5))
                 .frame(width: 44, height: 44)
             Image(systemName: "pills.fill")
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .font(.caption)
         }
     }
@@ -704,8 +706,8 @@ struct CatalogItemRow: View {
                     .padding(.horizontal, 5)
                     .padding(.vertical, 1)
                     .background(Color.red.opacity(0.15))
-                    .foregroundColor(.red)
-                    .cornerRadius(4)
+                    .foregroundStyle(.red)
+                    .clipShape(.rect(cornerRadius: 4))
             } else if item.isLowStock {
                 Text("LOW \(item.currentStock)")
                     .font(.caption2)
@@ -713,12 +715,12 @@ struct CatalogItemRow: View {
                     .padding(.horizontal, 5)
                     .padding(.vertical, 1)
                     .background(Color.orange.opacity(0.15))
-                    .foregroundColor(.orange)
-                    .cornerRadius(4)
+                    .foregroundStyle(.orange)
+                    .clipShape(.rect(cornerRadius: 4))
             } else {
                 Text("\(item.currentStock) in stock")
                     .font(.caption2)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
         }
     }
@@ -1037,44 +1039,50 @@ class PurchaseOrderViewModel: ObservableObject {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
         
-        // Submit each line item as a separate receiving
-        for lineItem in lineItems {
-            do {
-                let expiryDateString = lineItem.expiryDate.map { dateFormatter.string(from: $0) }
-                
-                let request = ReceiveInventoryRequest(
-                    locationId: locationId,
-                    productId: lineItem.productId,
-                    quantity: lineItem.quantity,
-                    unitCost: lineItem.unitCost,
-                    supplierId: supplierId,
-                    invoiceNumber: invoiceNumber.isEmpty ? nil : invoiceNumber,
-                    purchaseOrderId: nil,
-                    batchNumber: lineItem.batchNumber,
-                    expiryDate: expiryDateString,
-                    manufacturingDate: nil,
-                    receivedBy: receivedBy,
-                    notes: orderNotes.isEmpty ? nil : "Purchase Order: \(orderNotes)",
-                    syncToSquare: true,
-                    sellingPrice: nil,
-                    syncPriceToSquare: nil
-                )
-                
-                let _: ReceivingCreateResponse = try await apiClient.request(
-                    endpoint: .receiveInventory,
-                    body: request
-                )
-                
-                submittedCount += 1
-            } catch {
-                failedCount += 1
-                failedItems.append(FailedOrderItem(
-                    productName: lineItem.productName,
-                    error: error.localizedDescription
-                ))
+        // Submit each line item as a separate receiving. Sequential, one POST
+        // per item — if the app is backgrounded mid-batch, iOS would otherwise
+        // suspend the process and silently stop the loop with no error and no
+        // record of which items posted, so this runs under a background task
+        // that buys enough extra execution time to finish the in-flight batch.
+        await withBackgroundTask(name: "SubmitPurchaseOrder") {
+            for lineItem in lineItems {
+                do {
+                    let expiryDateString = lineItem.expiryDate.map { dateFormatter.string(from: $0) }
+
+                    let request = ReceiveInventoryRequest(
+                        locationId: locationId,
+                        productId: lineItem.productId,
+                        quantity: lineItem.quantity,
+                        unitCost: lineItem.unitCost,
+                        supplierId: supplierId,
+                        invoiceNumber: invoiceNumber.isEmpty ? nil : invoiceNumber,
+                        purchaseOrderId: nil,
+                        batchNumber: lineItem.batchNumber,
+                        expiryDate: expiryDateString,
+                        manufacturingDate: nil,
+                        receivedBy: receivedBy,
+                        notes: orderNotes.isEmpty ? nil : "Purchase Order: \(orderNotes)",
+                        syncToSquare: true,
+                        sellingPrice: nil,
+                        syncPriceToSquare: nil
+                    )
+
+                    let _: ReceivingCreateResponse = try await apiClient.request(
+                        endpoint: .receiveInventory,
+                        body: request
+                    )
+
+                    submittedCount += 1
+                } catch {
+                    failedCount += 1
+                    failedItems.append(FailedOrderItem(
+                        productName: lineItem.productName,
+                        error: error.localizedDescription
+                    ))
+                }
             }
         }
-        
+
         withAnimation { step = .complete }
     }
 }

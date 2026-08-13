@@ -27,7 +27,7 @@ struct CreateProductView: View {
                                     .resizable()
                                     .aspectRatio(contentMode: .fill)
                                     .frame(width: 100, height: 100)
-                                    .cornerRadius(16)
+                                    .clipShape(.rect(cornerRadius: 16))
                             } else {
                                 ZStack {
                                     RoundedRectangle(cornerRadius: 16)
@@ -36,17 +36,17 @@ struct CreateProductView: View {
                                     VStack(spacing: 4) {
                                         Image(systemName: "camera.fill")
                                             .font(.title2)
-                                            .foregroundColor(.secondary)
+                                            .foregroundStyle(.secondary)
                                         Text("Agregar Foto")
                                             .font(.caption2)
-                                            .foregroundColor(.secondary)
+                                            .foregroundStyle(.secondary)
                                     }
                                 }
                             }
                             
                             Image(systemName: selectedImage != nil ? "pencil.circle.fill" : "plus.circle.fill")
                                 .font(.title3)
-                                .foregroundColor(.white)
+                                .foregroundStyle(.white)
                                 .background(Circle().fill(Color.blue).frame(width: 28, height: 28))
                                 .offset(x: 4, y: 4)
                         }
@@ -99,11 +99,11 @@ struct CreateProductView: View {
                 Section {
                     HStack {
                         Text("$")
-                            .foregroundColor(.secondary)
-                        TextField("0.00", text: $viewModel.sellingPriceText)
+                            .foregroundStyle(.secondary)
+                        TextField("0.00", value: $viewModel.sellingPrice, format: .number)
                             .keyboardType(.decimalPad)
                         Text("MXN")
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                 } header: {
                     Text("Precio de Venta")
@@ -119,25 +119,25 @@ struct CreateProductView: View {
                         HStack {
                             Text("Cantidad")
                             Spacer()
-                            TextField("0", text: $viewModel.initialStockText)
+                            TextField("0", value: $viewModel.initialStock, format: .number)
                                 .keyboardType(.numberPad)
                                 .multilineTextAlignment(.trailing)
                                 .frame(width: 100)
                             Text("unidades")
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                         
                         HStack {
                             Text("Costo por Unidad")
                             Spacer()
                             Text("$")
-                                .foregroundColor(.secondary)
-                            TextField("0.00", text: $viewModel.costPriceText)
+                                .foregroundStyle(.secondary)
+                            TextField("0.00", value: $viewModel.costPrice, format: .number)
                                 .keyboardType(.decimalPad)
                                 .multilineTextAlignment(.trailing)
                                 .frame(width: 100)
                             Text("MXN")
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                     }
                 } header: {
@@ -188,13 +188,13 @@ struct CreateProductView: View {
                 }
             }
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancelar") {
                         dismiss()
                     }
                 }
                 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Crear") {
                         Task {
                             await createProduct()
@@ -231,12 +231,12 @@ struct CreateProductView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Ganancia por Unidad")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                 
                 if let profit = viewModel.profitPerUnit {
                     Text(formatCurrency(profit))
                         .font(.headline)
-                        .foregroundColor(profit >= 0 ? .green : .red)
+                        .foregroundStyle(profit >= 0 ? .green : .red)
                 }
             }
             
@@ -245,12 +245,12 @@ struct CreateProductView: View {
             VStack(alignment: .trailing, spacing: 4) {
                 Text("Margen")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                 
                 if let margin = viewModel.marginPercent {
                     Text(String(format: "%.1f%%", margin))
                         .font(.headline)
-                        .foregroundColor(margin >= 20 ? .green : (margin >= 10 ? .orange : .red))
+                        .foregroundStyle(margin >= 20 ? .green : (margin >= 10 ? .orange : .red))
                 }
             }
         }
@@ -273,16 +273,16 @@ struct CreateProductView: View {
                 if selectedImage != nil {
                     Text("Se subirá la imagen después de crear...")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 } else if viewModel.syncToSquare {
                     Text("Syncing to Square...")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
             .padding(32)
             .background(.regularMaterial)
-            .cornerRadius(16)
+            .clipShape(.rect(cornerRadius: 16))
         }
     }
     
@@ -317,9 +317,9 @@ class CreateProductViewModel: ObservableObject {
     @Published var name = ""
     @Published var sku = ""
     @Published var description = ""
-    @Published var sellingPriceText = ""
-    @Published var costPriceText = ""
-    @Published var initialStockText = ""
+    @Published var sellingPrice: Double?
+    @Published var costPrice: Double?
+    @Published var initialStock: Int?
     @Published var hasInitialStock = false
     @Published var syncToSquare = true
     
@@ -333,19 +333,7 @@ class CreateProductViewModel: ObservableObject {
     private let apiClient = APIClient.shared
     
     // MARK: - Computed Properties
-    
-    var sellingPrice: Double? {
-        Double(sellingPriceText.replacingOccurrences(of: ",", with: "."))
-    }
-    
-    var costPrice: Double? {
-        Double(costPriceText.replacingOccurrences(of: ",", with: "."))
-    }
-    
-    var initialStock: Int? {
-        Int(initialStockText)
-    }
-    
+
     var isValid: Bool {
         // Name is required
         guard !name.trimmingCharacters(in: .whitespaces).isEmpty else { return false }

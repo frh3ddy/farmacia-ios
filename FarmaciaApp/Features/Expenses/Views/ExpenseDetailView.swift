@@ -3,16 +3,31 @@ import SwiftUI
 // MARK: - Expense Detail View
 
 struct ExpenseDetailView: View {
-    let expense: Expense
     @ObservedObject var viewModel: ExpensesViewModel
-    
+
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var authManager: AuthManager
-    
+
     @State private var showEditSheet = false
     @State private var showDeleteConfirmation = false
     @State private var showMarkPaidConfirmation = false
-    
+
+    private let expenseId: String
+    private let fallbackExpense: Expense
+
+    /// Reads live from viewModel.expenses by id — a saved edit in the embedded
+    /// ExpenseFormView refreshes this list, and this view picks it up instead
+    /// of continuing to show the snapshot captured when the sheet opened.
+    private var expense: Expense {
+        viewModel.expenses.first(where: { $0.id == expenseId }) ?? fallbackExpense
+    }
+
+    init(expense: Expense, viewModel: ExpensesViewModel) {
+        self.expenseId = expense.id
+        self.fallbackExpense = expense
+        self.viewModel = viewModel
+    }
+
     var body: some View {
         NavigationStack {
             List {
@@ -27,7 +42,7 @@ struct ExpenseDetailView: View {
                             
                             Image(systemName: expense.type.icon)
                                 .font(.system(size: 36))
-                                .foregroundColor(typeColor)
+                                .foregroundStyle(typeColor)
                         }
                         
                         // Amount
@@ -38,7 +53,7 @@ struct ExpenseDetailView: View {
                         // Type
                         Text(expense.type.displayName)
                             .font(.headline)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         
                         // Status Badge
                         HStack(spacing: 8) {
@@ -48,16 +63,16 @@ struct ExpenseDetailView: View {
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 4)
                                     .background(Color.green.opacity(0.15))
-                                    .foregroundColor(.green)
-                                    .cornerRadius(8)
+                                    .foregroundStyle(.green)
+                                    .clipShape(.rect(cornerRadius: 8))
                             } else {
                                 Label("No Pagado", systemImage: "clock")
                                     .font(.caption)
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 4)
                                     .background(Color.orange.opacity(0.15))
-                                    .foregroundColor(.orange)
-                                    .cornerRadius(8)
+                                    .foregroundStyle(.orange)
+                                    .clipShape(.rect(cornerRadius: 8))
                             }
                         }
                     }
@@ -95,7 +110,7 @@ struct ExpenseDetailView: View {
                 Section("Pago") {
                     LabeledContent("Estado") {
                         Text(expense.isPaid ? "Pagado" : "No Pagado")
-                            .foregroundColor(expense.isPaid ? .green : .orange)
+                            .foregroundStyle(expense.isPaid ? .green : .orange)
                     }
                     
                     if expense.isPaid, let paidAt = expense.paidAt {
@@ -134,7 +149,7 @@ struct ExpenseDetailView: View {
                         } label: {
                             Label("Marcar como Pagado", systemImage: "checkmark.circle")
                         }
-                        .foregroundColor(.green)
+                        .foregroundStyle(.green)
                     }
                     
                     Button {
@@ -154,7 +169,7 @@ struct ExpenseDetailView: View {
             .navigationTitle("Gasto")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Listo") {
                         dismiss()
                     }
@@ -178,6 +193,11 @@ struct ExpenseDetailView: View {
                 }
             } message: {
                 Text("¿Marcar este gasto como pagado?")
+            }
+            .alert("Error", isPresented: $viewModel.showError) {
+                Button("OK") {}
+            } message: {
+                Text(viewModel.errorMessage ?? "Ocurrió un error")
             }
         }
     }

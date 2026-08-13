@@ -60,7 +60,7 @@ struct InitialSetupView: View {
             
             Text("Crea tu cuenta de dueño y ubicación de farmacia para comenzar")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
     }
@@ -83,7 +83,7 @@ struct InitialSetupView: View {
                         .textFieldStyle(.roundedBorder)
                         .textContentType(.emailAddress)
                         .keyboardType(.emailAddress)
-                        .autocapitalization(.none)
+                        .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                     
                     SecureField("Contraseña (mín 6 caracteres)", text: $viewModel.ownerPassword)
@@ -98,7 +98,7 @@ struct InitialSetupView: View {
                         VStack(alignment: .leading) {
                             Text("PIN (4-6 dígitos)")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                             SecureField("PIN", text: $viewModel.ownerPin)
                                 .textFieldStyle(.roundedBorder)
                                 .keyboardType(.numberPad)
@@ -110,7 +110,7 @@ struct InitialSetupView: View {
                         VStack(alignment: .leading) {
                             Text("Confirmar PIN")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                             SecureField("Confirmar", text: $viewModel.confirmPin)
                                 .textFieldStyle(.roundedBorder)
                                 .keyboardType(.numberPad)
@@ -123,7 +123,7 @@ struct InitialSetupView: View {
             }
             .padding(16)
             .background(Color(.systemGray6))
-            .cornerRadius(12)
+            .clipShape(.rect(cornerRadius: 12))
             
             // Location Section
             VStack(alignment: .leading, spacing: 16) {
@@ -151,11 +151,18 @@ struct InitialSetupView: View {
                         }
                     }
                     .disabled(viewModel.isSyncingSquare)
-                    .foregroundColor(.blue)
+                    .foregroundStyle(.blue)
                 }
                 
                 // Show location choice if locations exist
-                if !viewModel.availableLocations.isEmpty {
+                if viewModel.isLoadingLocations {
+                    HStack {
+                        Spacer()
+                        ProgressView("Buscando ubicaciones...")
+                        Spacer()
+                    }
+                    .padding(.vertical, 8)
+                } else if !viewModel.availableLocations.isEmpty {
                     Picker("Opción de Ubicación", selection: $viewModel.useExistingLocation) {
                         Text("Usar ubicación existente").tag(true)
                         Text("Crear nueva ubicación").tag(false)
@@ -171,7 +178,7 @@ struct InitialSetupView: View {
                                     if location.squareId != nil {
                                         Text("(Square)")
                                             .font(.caption)
-                                            .foregroundColor(.secondary)
+                                            .foregroundStyle(.secondary)
                                     }
                                 }
                                 .tag(location.id)
@@ -181,7 +188,7 @@ struct InitialSetupView: View {
                         
                         Text("\(viewModel.availableLocations.count) ubicación(es) disponibles de la sincronización con Square")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     } else {
                         TextField("Nombre de Farmacia", text: $viewModel.locationName)
                             .textFieldStyle(.roundedBorder)
@@ -190,7 +197,7 @@ struct InitialSetupView: View {
                 } else {
                     Text("No se encontraron ubicaciones. Toca 'Sincronizar Square' para importar de Square, o ingresa un nombre abajo.")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     
                     TextField("Nombre de Farmacia", text: $viewModel.locationName)
                         .textFieldStyle(.roundedBorder)
@@ -199,7 +206,7 @@ struct InitialSetupView: View {
             }
             .padding(16)
             .background(Color(.systemGray6))
-            .cornerRadius(12)
+            .clipShape(.rect(cornerRadius: 12))
         }
     }
     
@@ -223,8 +230,8 @@ struct InitialSetupView: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
             .background(viewModel.isFormValid ? Color.green : Color.gray)
-            .foregroundColor(.white)
-            .cornerRadius(12)
+            .foregroundStyle(.white)
+            .clipShape(.rect(cornerRadius: 12))
             .fontWeight(.semibold)
         }
         .disabled(!viewModel.isFormValid || viewModel.isLoading)
@@ -238,7 +245,7 @@ struct InitialSetupView: View {
         } label: {
             Text("¿Ya tienes cuenta? Iniciar sesión")
                 .font(.subheadline)
-                .foregroundColor(.blue)
+                .foregroundStyle(.blue)
         }
     }
 }

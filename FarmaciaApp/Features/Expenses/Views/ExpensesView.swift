@@ -43,12 +43,13 @@ struct ExpensesView: View {
             }
             .navigationTitle("Gastos")
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         showAddExpense = true
                     } label: {
                         Image(systemName: "plus")
                     }
+                    .accessibilityLabel("Agregar Gasto")
                 }
             }
             .sheet(isPresented: $showAddExpense) {
@@ -137,7 +138,7 @@ struct ExpensesView: View {
                     } label: {
                         Text("Limpiar")
                             .font(.caption)
-                            .foregroundColor(.red)
+                            .foregroundStyle(.red)
                     }
                 }
             }
@@ -191,14 +192,14 @@ struct ExpensesView: View {
         VStack(spacing: 16) {
             Image(systemName: "creditcard")
                 .font(.system(size: 60))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             
             Text("No Hay Gastos")
                 .font(.headline)
             
             Text("Toca + para agregar tu primer gasto")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -249,8 +250,8 @@ struct FilterChip: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
         .background(isActive ? Color.blue.opacity(0.15) : Color(.systemGray6))
-        .foregroundColor(isActive ? .blue : .primary)
-        .cornerRadius(16)
+        .foregroundStyle(isActive ? Color.blue : Color.primary)
+        .clipShape(.rect(cornerRadius: 16))
     }
 }
 
@@ -265,7 +266,7 @@ struct ExpenseSummaryCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Total de Gastos")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Text(formatCurrency(summary.totalDouble))
                         .font(.title2)
                         .fontWeight(.bold)
@@ -276,7 +277,7 @@ struct ExpenseSummaryCard: View {
                 VStack(alignment: .trailing, spacing: 4) {
                     Text("\(summary.expenseCount) gastos")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
             
@@ -286,10 +287,10 @@ struct ExpenseSummaryCard: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Pagado")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Text(formatCurrency(summary.paidDouble))
                         .font(.subheadline)
-                        .foregroundColor(.green)
+                        .foregroundStyle(.green)
                 }
                 
                 Spacer()
@@ -297,23 +298,23 @@ struct ExpenseSummaryCard: View {
                 VStack(alignment: .trailing, spacing: 2) {
                     Text("No Pagado")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Text(formatCurrency(summary.unpaidDouble))
                         .font(.subheadline)
-                        .foregroundColor(.orange)
+                        .foregroundStyle(.orange)
                 }
             }
         }
         .padding()
         .background(Color(.systemBackground))
-        .cornerRadius(12)
+        .clipShape(.rect(cornerRadius: 12))
         .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
     }
     
     private func formatCurrency(_ value: Double) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
-        formatter.currencyCode = "USD"
+        formatter.currencyCode = "MXN"
         return formatter.string(from: NSNumber(value: value)) ?? "$\(value)"
     }
 }
@@ -332,7 +333,7 @@ struct ExpenseRow: View {
                     .frame(width: 44, height: 44)
                 
                 Image(systemName: expense.type.icon)
-                    .foregroundColor(typeColor)
+                    .foregroundStyle(typeColor)
             }
             
             // Details
@@ -347,21 +348,21 @@ struct ExpenseRow: View {
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(Color.orange.opacity(0.15))
-                            .foregroundColor(.orange)
-                            .cornerRadius(4)
+                            .foregroundStyle(.orange)
+                            .clipShape(.rect(cornerRadius: 4))
                     }
                 }
                 
                 if let description = expense.description, !description.isEmpty {
                     Text(description)
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
                 
                 Text(expense.date, style: .date)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
             
             Spacer()
@@ -369,7 +370,7 @@ struct ExpenseRow: View {
             // Amount
             Text(expense.formattedAmount)
                 .font(.headline)
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
         }
         .padding(.vertical, 4)
     }

@@ -56,9 +56,9 @@ struct ProductImageViewer: View {
                                 VStack(spacing: 12) {
                                     Image(systemName: "photo.badge.exclamationmark")
                                         .font(.system(size: 50))
-                                        .foregroundColor(.gray)
+                                        .foregroundStyle(.gray)
                                     Text("Error al cargar imagen")
-                                        .foregroundColor(.gray)
+                                        .foregroundStyle(.gray)
                                 }
                                 
                             case .empty:
@@ -80,7 +80,7 @@ struct ProductImageViewer: View {
                     Text(productName)
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                         .lineLimit(1)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
@@ -91,6 +91,7 @@ struct ProductImageViewer: View {
                             .font(.title3)
                             .foregroundStyle(.white.opacity(0.7))
                     }
+                    .accessibilityLabel("Cerrar")
                 }
             }
             .toolbarBackground(.black, for: .navigationBar)

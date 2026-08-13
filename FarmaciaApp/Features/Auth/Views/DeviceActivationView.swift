@@ -39,7 +39,7 @@ struct DeviceActivationView: View {
             ProgressView()
                 .scaleEffect(1.5)
             Text("Verificando estado...")
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
         }
     }
     
@@ -108,7 +108,7 @@ struct DeviceActivationView: View {
             
             Text("Activa este dispositivo para comenzar")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
     }
@@ -144,7 +144,7 @@ struct DeviceActivationView: View {
                     .textFieldStyle(.roundedBorder)
                     .textContentType(.emailAddress)
                     .keyboardType(.emailAddress)
-                    .autocapitalization(.none)
+                    .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
             }
             
@@ -161,7 +161,7 @@ struct DeviceActivationView: View {
         }
         .padding(20)
         .background(Color(.systemGray6))
-        .cornerRadius(16)
+        .clipShape(.rect(cornerRadius: 16))
     }
     
     // MARK: - Activate Button
@@ -184,8 +184,8 @@ struct DeviceActivationView: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
             .background(viewModel.isFormValid ? Color.blue : Color.gray)
-            .foregroundColor(.white)
-            .cornerRadius(12)
+            .foregroundStyle(.white)
+            .clipShape(.rect(cornerRadius: 12))
             .fontWeight(.semibold)
         }
         .disabled(!viewModel.isFormValid || viewModel.isLoading)
@@ -199,7 +199,7 @@ struct DeviceActivationView: View {
             
             Text("¿Primera vez usando Farmacia?")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             
             Button {
                 showSetup = true
@@ -209,7 +209,7 @@ struct DeviceActivationView: View {
                     Text("Configura Tu Farmacia")
                 }
                 .font(.headline)
-                .foregroundColor(.green)
+                .foregroundStyle(.green)
             }
         }
         .padding(.top, 8)
@@ -221,14 +221,14 @@ struct DeviceActivationView: View {
         VStack(spacing: 12) {
             Text("La activación del dispositivo es única")
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             
             HStack(spacing: 4) {
                 Image(systemName: "lock.shield")
                 Text("Solo dueños y gerentes pueden activar dispositivos")
             }
             .font(.caption)
-            .foregroundColor(.secondary)
+            .foregroundStyle(.secondary)
         }
     }
 }

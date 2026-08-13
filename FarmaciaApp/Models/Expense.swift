@@ -91,9 +91,11 @@ struct Expense: Codable, Identifiable {
     }
     
     var formattedAmount: String {
+        // This business operates in MXN only — the backend's Expense model
+        // has no currency field, matching Product's own "MXN" default.
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
-        formatter.currencyCode = "USD"
+        formatter.currencyCode = "MXN"
         return formatter.string(from: NSNumber(value: amountDouble)) ?? "$\(amount)"
     }
 }

@@ -85,7 +85,7 @@ struct LoadingView: View {
             
             Text("Cargando...")
                 .font(.headline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
         }
     }
 }

@@ -21,13 +21,14 @@ struct EmployeesView: View {
             }
             .navigationTitle("Empleados")
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     if authManager.currentLocation?.role == .owner {
                         Button {
                             viewModel.showAddEmployee = true
                         } label: {
                             Image(systemName: "plus")
                         }
+                        .accessibilityLabel("Agregar Empleado")
                     }
                 }
             }
@@ -58,7 +59,7 @@ struct EmployeesView: View {
             ProgressView()
                 .scaleEffect(1.5)
             Text("Cargando empleados...")
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
         }
     }
     
@@ -68,14 +69,14 @@ struct EmployeesView: View {
         VStack(spacing: 20) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 60))
-                .foregroundColor(.orange)
+                .foregroundStyle(.orange)
             
             Text("Error al Cargar")
                 .font(.headline)
             
             Text(message)
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
             
             Button {
@@ -96,14 +97,14 @@ struct EmployeesView: View {
         VStack(spacing: 20) {
             Image(systemName: "person.3")
                 .font(.system(size: 60))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             
             Text("No Hay Empleados Aún")
                 .font(.headline)
             
             Text("Agrega empleados para permitirles iniciar sesión y acceder al sistema.")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
             
             if authManager.currentLocation?.role == .owner {
@@ -136,7 +137,7 @@ struct EmployeesView: View {
                 ProgressView()
                     .padding()
                     .background(.ultraThinMaterial)
-                    .cornerRadius(8)
+                    .clipShape(.rect(cornerRadius: 8))
             }
         }
     }
@@ -152,16 +153,16 @@ struct EmployeeRow: View {
             // Avatar
             Text(employee.initials)
                 .font(.headline)
-                .foregroundColor(.white)
+                .foregroundStyle(.white)
                 .frame(width: 44, height: 44)
-                .background(roleColor)
+                .background(employee.primaryRole.color)
                 .clipShape(Circle())
             
             // Info
             VStack(alignment: .leading, spacing: 4) {
                 Text(employee.displayName)
                     .font(.headline)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
                 
                 HStack(spacing: 8) {
                     // Role badge
@@ -169,9 +170,9 @@ struct EmployeeRow: View {
                         .font(.caption)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 2)
-                        .background(roleColor.opacity(0.2))
-                        .foregroundColor(roleColor)
-                        .cornerRadius(4)
+                        .background(employee.primaryRole.color.opacity(0.2))
+                        .foregroundStyle(employee.primaryRole.color)
+                        .clipShape(.rect(cornerRadius: 4))
                     
                     // PIN status
                     if !employee.hasPIN {
@@ -181,7 +182,7 @@ struct EmployeeRow: View {
                             Text("Sin PIN")
                         }
                         .font(.caption)
-                        .foregroundColor(.orange)
+                        .foregroundStyle(.orange)
                     }
                     
                     // Location count
@@ -192,7 +193,7 @@ struct EmployeeRow: View {
                             Text("\(assignments.count)")
                         }
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     }
                 }
             }
@@ -206,19 +207,11 @@ struct EmployeeRow: View {
             
             Image(systemName: "chevron.right")
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
         }
         .padding(.vertical, 4)
     }
     
-    private var roleColor: Color {
-        switch employee.primaryRole {
-        case .owner: return .purple
-        case .manager: return .blue
-        case .cashier: return .green
-        case .accountant: return .orange
-        }
-    }
 }
 
 // MARK: - Add Employee View
@@ -241,13 +234,13 @@ struct AddEmployeeView: View {
                 Section("Información Básica") {
                     TextField("Nombre Completo", text: $name)
                         .textContentType(.name)
-                        .autocapitalization(.words)
+                        .textInputAutocapitalization(.words)
                 }
                 
                 Section("Contacto (Opcional)") {
                     TextField("Correo Electrónico", text: $email)
                         .keyboardType(.emailAddress)
-                        .autocapitalization(.none)
+                        .textInputAutocapitalization(.never)
                         .textContentType(.emailAddress)
                 }
                 
@@ -261,7 +254,7 @@ struct AddEmployeeView: View {
                     
                     Text(roleDescription)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
                 
                 Section {
@@ -274,7 +267,7 @@ struct AddEmployeeView: View {
                         if !pin.isEmpty && !isValidPIN {
                             Text("El PIN debe tener 4-6 dígitos")
                                 .font(.caption)
-                                .foregroundColor(.red)
+                                .foregroundStyle(.red)
                         }
                     }
                 } header: {
@@ -286,14 +279,14 @@ struct AddEmployeeView: View {
             .navigationTitle("Agregar Empleado")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancelar") {
                         dismiss()
                     }
                     .disabled(isSubmitting)
                 }
                 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Guardar") {
                         Task {
                             await createEmployee()
@@ -309,7 +302,7 @@ struct AddEmployeeView: View {
                     ProgressView("Creando...")
                         .padding()
                         .background(.ultraThickMaterial)
-                        .cornerRadius(10)
+                        .clipShape(.rect(cornerRadius: 10))
                 }
             }
         }
@@ -397,26 +390,32 @@ struct EmployeeDetailView: View {
                         Text("Activo")
                         Spacer()
                         Image(systemName: employee.isActive ? "checkmark.circle.fill" : "xmark.circle.fill")
-                            .foregroundColor(employee.isActive ? .green : .red)
+                            .foregroundStyle(employee.isActive ? .green : .red)
                     }
                     
                     HStack {
                         Text("PIN Establecido")
                         Spacer()
                         Image(systemName: employee.hasPIN ? "checkmark.circle.fill" : "xmark.circle.fill")
-                            .foregroundColor(employee.hasPIN ? .green : .orange)
+                            .foregroundStyle(employee.hasPIN ? .green : .orange)
                     }
                     
-                    if let detail = detailEmployee {
+                    if isLoadingDetail && detailEmployee == nil {
+                        HStack {
+                            Spacer()
+                            ProgressView()
+                            Spacer()
+                        }
+                    } else if let detail = detailEmployee {
                         if detail.isLocked, let lockedUntil = detail.lockedUntil {
                             HStack {
                                 Text("Bloqueado Hasta")
                                 Spacer()
                                 Text(lockedUntil, style: .time)
-                                    .foregroundColor(.red)
+                                    .foregroundStyle(.red)
                             }
                         }
-                        
+
                         if detail.failedPinAttempts > 0 {
                             LabeledContent("Intentos Fallidos de PIN", value: "\(detail.failedPinAttempts)")
                         }
@@ -438,7 +437,7 @@ struct EmployeeDetailView: View {
                                     Text(assignment.locationName)
                                     Text(assignment.role.displayName)
                                         .font(.caption)
-                                        .foregroundColor(.secondary)
+                                        .foregroundStyle(.secondary)
                                 }
                                 Spacer()
                             }
@@ -463,7 +462,7 @@ struct EmployeeDetailView: View {
                             } label: {
                                 Label("Desbloquear Cuenta", systemImage: "lock.open")
                             }
-                            .foregroundColor(.orange)
+                            .foregroundStyle(.orange)
                         }
                         
                         // Deactivate (if active and not self)
@@ -480,7 +479,7 @@ struct EmployeeDetailView: View {
             .navigationTitle(employee.displayName)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Listo") {
                         dismiss()
                     }
@@ -496,7 +495,7 @@ struct EmployeeDetailView: View {
                     ProgressView()
                         .padding()
                         .background(.ultraThickMaterial)
-                        .cornerRadius(10)
+                        .clipShape(.rect(cornerRadius: 10))
                 }
             }
             // Set PIN Alert
