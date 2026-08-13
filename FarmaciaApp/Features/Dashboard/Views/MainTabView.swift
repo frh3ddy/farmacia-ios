@@ -51,7 +51,7 @@ struct MainTabView: View {
             if authManager.canManageExpenses {
                 PayrollView()
                     .tabItem {
-                        Label("Nómina", systemImage: "person.2.badge.clock")
+                        Label("Nómina", systemImage: "person.badge.clock")
                     }
                     .tag(Tab.payroll)
             }
