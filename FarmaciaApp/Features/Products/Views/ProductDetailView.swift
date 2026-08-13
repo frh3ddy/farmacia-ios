@@ -1152,9 +1152,10 @@ struct ProductDetailView: View {
                     .foregroundStyle(.cyan)
                 Text("Historial de Costos y Proveedores")
                     .font(.headline)
-                
+                    .lineLimit(1)
+
                 Spacer()
-                
+
                 if costSupplierViewModel.isLoading {
                     ProgressView()
                         .scaleEffect(0.7)

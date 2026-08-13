@@ -6,7 +6,11 @@ import Foundation
 class CostSupplierViewModel: ObservableObject {
     @Published var suppliers: [ProductSupplier] = []
     @Published var costHistory: [SupplierCostHistoryGroup] = []
-    @Published var isLoading = false
+    // Starts true: ProductDetailView always calls loadData() unconditionally
+    // on appear, so the very first render should already show the loading
+    // skeleton rather than briefly flashing the "no data yet" empty state
+    // before .task fires — that flash-then-flip was the reflow on navigate-in.
+    @Published var isLoading = true
     
     private let apiClient = APIClient.shared
     
