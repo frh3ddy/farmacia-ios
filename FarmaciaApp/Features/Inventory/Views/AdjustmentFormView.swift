@@ -19,6 +19,7 @@ struct AdjustmentFormView: View {
     @State private var quantity: Int?
     @State private var reason = ""
     @State private var notes = ""
+    @FocusState private var isFieldFocused: Bool
 
     /// Convenience initializer for standalone use (no pre-selected product)
     init(adjustmentType: AdjustmentType, viewModel: InventoryViewModel) {
@@ -106,6 +107,7 @@ struct AdjustmentFormView: View {
                             .keyboardType(.numberPad)
                             .multilineTextAlignment(.trailing)
                             .frame(width: 100)
+                            .focused($isFieldFocused)
                     }
 
                     if adjustmentType.isVariable {
@@ -125,12 +127,14 @@ struct AdjustmentFormView: View {
 
                 Section("Detalles") {
                     TextField("Razón", text: $reason)
+                        .focused($isFieldFocused)
                     TextField("Notas (opcional)", text: $notes)
+                        .focused($isFieldFocused)
                 }
             }
             .navigationTitle(adjustmentType.displayName)
             .navigationBarTitleDisplayMode(.inline)
-            .keyboardTopSpacing(24)
+            .keyboardTopSpacing(24, isActive: isFieldFocused)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancelar") {

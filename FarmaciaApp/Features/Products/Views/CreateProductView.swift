@@ -10,6 +10,14 @@ struct CreateProductView: View {
     // Image picker state
     @State private var selectedImage: UIImage?
     @State private var showImageSourcePicker = false
+    @State private var quantity: Int?
+    @State private var unitCost: Double?
+    @State private var sellingPrice: Double?
+
+    private enum Field: Hashable {
+        case quantity, unitCost, sellingPrice
+    }
+    @FocusState private var focusedField: Field?
 
     // Optional prefilled SKU (e.g. from barcode scanner) — seeded directly
     // into the StateObject at construction time rather than via .onAppear,
@@ -108,9 +116,12 @@ struct CreateProductView: View {
                             .foregroundStyle(.secondary)
                         TextField("0.00", value: $viewModel.sellingPrice, format: .number)
                             .keyboardType(.decimalPad)
+                            .focused($focusedField, equals: .sellingPrice)
                         Text("MXN")
                             .foregroundStyle(.secondary)
                     }
+                    .contentShape(Rectangle())
+                    .onTapGesture { focusedField = .sellingPrice }
                 } header: {
                     Text("Precio de Venta")
                 } footer: {
@@ -128,23 +139,24 @@ struct CreateProductView: View {
                             TextField("0", value: $viewModel.initialStock, format: .number)
                                 .keyboardType(.numberPad)
                                 .multilineTextAlignment(.trailing)
-                                .frame(width: 100)
-                            Text("unidades")
+                                .focused($focusedField, equals: .quantity)
+                            Text("UDS")
                                 .foregroundStyle(.secondary)
                         }
+                        .contentShape(Rectangle())
+                        .onTapGesture { focusedField = .quantity }
                         
                         HStack {
                             Text("Costo por Unidad")
-                            Spacer()
-                            Text("$")
-                                .foregroundStyle(.secondary)
                             TextField("0.00", value: $viewModel.costPrice, format: .number)
                                 .keyboardType(.decimalPad)
                                 .multilineTextAlignment(.trailing)
-                                .frame(width: 100)
+                                .focused($focusedField, equals: .unitCost)
                             Text("MXN")
                                 .foregroundStyle(.secondary)
                         }
+                        .contentShape(Rectangle())
+                        .onTapGesture { focusedField = .unitCost }
                     }
                 } header: {
                     Text("Inventario Inicial (Opcional)")
@@ -182,7 +194,7 @@ struct CreateProductView: View {
             .navigationBarTitleDisplayMode(.inline)
             // Breathing room between the keyboard's top edge and bottom
             // fields while editing
-            .keyboardTopSpacing(24)
+            .keyboardTopSpacing(200, isActive: focusedField != nil)
             // Scrolling dismisses the keyboard and removes field focus —
             // otherwise the first tap on the photo area is consumed by the
             // scroll view scrolling back to the focused (off-screen) field

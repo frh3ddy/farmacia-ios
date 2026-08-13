@@ -27,6 +27,11 @@ struct ReceiveInventoryFormView: View {
     @State private var showSupplierPicker = false
     @State private var notes = ""
 
+    private enum Field: Hashable {
+        case quantity, unitCost, sellingPrice
+    }
+    @FocusState private var focusedField: Field?
+
     // Supplier intelligence
     @State private var productSuppliers: [ProductSupplier] = []
     @State private var isLoadingSuppliers = false
@@ -111,22 +116,27 @@ struct ReceiveInventoryFormView: View {
                 Section("Cantidad y Costo") {
                     HStack {
                         Text("Cantidad")
-                        Spacer()
                         TextField("0", value: $quantity, format: .number)
                             .keyboardType(.numberPad)
                             .multilineTextAlignment(.trailing)
-                            .frame(width: 100)
+                            .focused($focusedField, equals: .quantity)
+                        Text("UDS")
+                            .foregroundStyle(.secondary)
                     }
+                    .contentShape(Rectangle())
+                    .onTapGesture { focusedField = .quantity }
 
                     HStack {
                         Text("Costo Unitario")
-                        Spacer()
-                        Text("$")
                         TextField("0.00", value: $unitCost, format: .number)
                             .keyboardType(.decimalPad)
                             .multilineTextAlignment(.trailing)
-                            .frame(width: 100)
+                            .focused($focusedField, equals: .unitCost)
+                        Text("MXN")
+                            .foregroundStyle(.secondary)
                     }
+                    .contentShape(Rectangle())
+                    .onTapGesture { focusedField = .unitCost }
 
                     if let qty = quantity, qty > 0,
                        let cost = unitCost, cost > 0 {
@@ -146,16 +156,15 @@ struct ReceiveInventoryFormView: View {
                     if updateSellingPrice {
                         HStack {
                             Text("Nuevo Precio")
-                            Spacer()
-                            Text("$")
-                                .foregroundStyle(.secondary)
                             TextField("0.00", value: $newSellingPrice, format: .number)
                                 .keyboardType(.decimalPad)
                                 .multilineTextAlignment(.trailing)
-                                .frame(width: 100)
+                                .focused($focusedField, equals: .sellingPrice)
                             Text("MXN")
                                 .foregroundStyle(.secondary)
                         }
+                        .contentShape(Rectangle())
+                        .onTapGesture { focusedField = .sellingPrice }
 
                         // Show current price if available
                         if let currentPrice = selectedProduct?.sellingPrice {
@@ -301,7 +310,7 @@ struct ReceiveInventoryFormView: View {
             }
             .navigationTitle("Recibir Inventario")
             .navigationBarTitleDisplayMode(.inline)
-            .keyboardTopSpacing(24)
+            .keyboardTopSpacing(200, isActive: focusedField != nil)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancelar") {

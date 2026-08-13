@@ -14,7 +14,8 @@ struct EditPriceView: View {
     @State private var isSubmitting = false
     @State private var showError = false
     @State private var errorMessage = ""
-    
+    @FocusState private var priceFieldFocused: Bool
+
     private var newPrice: Double? {
         Double(priceText.replacingOccurrences(of: ",", with: "."))
     }
@@ -36,18 +37,21 @@ struct EditPriceView: View {
                     HStack {
                         Text("Precio Actual")
                         Spacer()
-                        Text(product.formattedPrice ?? "No definido")
+                        Text(product.sellingPrice.map { String(format: "%.2f MXN", $0) } ?? "No definido")
                             .foregroundStyle(.secondary)
                     }
                     
                     HStack {
-                        Text("$")
-                            .foregroundStyle(.secondary)
-                        TextField("Nuevo Precio", text: $priceText)
+                        Text("Nuevo precio")
+                        TextField("0.00", text: $priceText)
                             .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            .focused($priceFieldFocused)
                         Text("MXN")
                             .foregroundStyle(.secondary)
                     }
+                    .contentShape(Rectangle())
+                    .onTapGesture { priceFieldFocused = true }
                 } header: {
                     Text("Precio de Venta")
                 }
@@ -99,7 +103,7 @@ struct EditPriceView: View {
             }
             .navigationTitle("Editar Precio")
             .navigationBarTitleDisplayMode(.inline)
-            .keyboardTopSpacing(24)
+            .keyboardTopSpacing(24, isActive: priceFieldFocused)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancelar") {
@@ -115,11 +119,6 @@ struct EditPriceView: View {
                     }
                     .fontWeight(.semibold)
                     .disabled(!isValid || !priceChanged || isSubmitting)
-                }
-            }
-            .onAppear {
-                if let price = product.sellingPrice {
-                    priceText = String(format: "%.2f", price)
                 }
             }
             .overlay {
