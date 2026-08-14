@@ -80,71 +80,69 @@ struct ExpensesView: View {
     // MARK: - Filter Bar
     
     private var filterBar: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                // Paid Status Filter — uses Picker to avoid SwiftUI Menu+ForEach first-item bug
-                Menu {
-                    Picker("Estado de Pago", selection: $filterPaidStatus) {
-                        ForEach(PaidFilter.allCases, id: \.self) { filter in
-                            Text(filter.rawValue).tag(filter)
+        HStack(spacing: 8) {
+            // Paid Status Filter — uses Picker to avoid SwiftUI Menu+ForEach first-item bug
+            Menu {
+                Picker("Estado de Pago", selection: $filterPaidStatus) {
+                    ForEach(PaidFilter.allCases, id: \.self) { filter in
+                        Text(filter.rawValue).tag(filter)
+                    }
+                }
+            } label: {
+                FilterChip(
+                    title: filterPaidStatus.rawValue,
+                    isActive: filterPaidStatus != .all
+                )
+            }
+
+            // Type Filter — static buttons to avoid SwiftUI Menu+ForEach first-item bug
+            Menu {
+                Button {
+                    filterType = nil
+                } label: {
+                    HStack {
+                        Text("Todos los Tipos")
+                        if filterType == nil {
+                            Image(systemName: "checkmark")
                         }
                     }
-                } label: {
-                    FilterChip(
-                        title: filterPaidStatus.rawValue,
-                        isActive: filterPaidStatus != .all
-                    )
                 }
-                
-                // Type Filter — static buttons to avoid SwiftUI Menu+ForEach first-item bug
-                Menu {
-                    Button {
-                        filterType = nil
-                    } label: {
-                        HStack {
-                            Text("Todos los Tipos")
-                            if filterType == nil {
-                                Image(systemName: "checkmark")
-                            }
-                        }
-                    }
-                    
-                    Divider()
-                    
-                    Button { filterType = .rent } label: { Label("Renta", systemImage: "building.2") }
-                    Button { filterType = .utilities } label: { Label("Servicios", systemImage: "bolt") }
-                    Button { filterType = .payroll } label: { Label("Nómina", systemImage: "person.3") }
-                    Button { filterType = .insurance } label: { Label("Seguro", systemImage: "shield") }
-                    Button { filterType = .supplies } label: { Label("Insumos", systemImage: "shippingbox") }
-                    Button { filterType = .marketing } label: { Label("Publicidad", systemImage: "megaphone") }
-                    Button { filterType = .maintenance } label: { Label("Mantenimiento", systemImage: "wrench.and.screwdriver") }
-                    Button { filterType = .taxes } label: { Label("Impuestos", systemImage: "doc.text") }
-                    Button { filterType = .bankFees } label: { Label("Comisiones Bancarias", systemImage: "banknote") }
-                    Button { filterType = .software } label: { Label("Software", systemImage: "desktopcomputer") }
-                    Button { filterType = .professional } label: { Label("Servicios Profesionales", systemImage: "briefcase") }
-                    Button { filterType = .other } label: { Label("Otro", systemImage: "ellipsis.circle") }
+
+                Divider()
+
+                Button { filterType = .rent } label: { Label("Renta", systemImage: "building.2") }
+                Button { filterType = .utilities } label: { Label("Servicios", systemImage: "bolt") }
+                Button { filterType = .payroll } label: { Label("Nómina", systemImage: "person.3") }
+                Button { filterType = .insurance } label: { Label("Seguro", systemImage: "shield") }
+                Button { filterType = .supplies } label: { Label("Insumos", systemImage: "shippingbox") }
+                Button { filterType = .marketing } label: { Label("Publicidad", systemImage: "megaphone") }
+                Button { filterType = .maintenance } label: { Label("Mantenimiento", systemImage: "wrench.and.screwdriver") }
+                Button { filterType = .taxes } label: { Label("Impuestos", systemImage: "doc.text") }
+                Button { filterType = .bankFees } label: { Label("Comisiones Bancarias", systemImage: "banknote") }
+                Button { filterType = .software } label: { Label("Software", systemImage: "desktopcomputer") }
+                Button { filterType = .professional } label: { Label("Servicios Profesionales", systemImage: "briefcase") }
+                Button { filterType = .other } label: { Label("Otro", systemImage: "ellipsis.circle") }
+            } label: {
+                FilterChip(
+                    title: filterType?.displayName ?? "Todos los Tipos",
+                    isActive: filterType != nil
+                )
+            }
+
+            // Clear filters
+            if filterType != nil || filterPaidStatus != .all {
+                Button {
+                    filterType = nil
+                    filterPaidStatus = .all
                 } label: {
-                    FilterChip(
-                        title: filterType?.displayName ?? "Todos los Tipos",
-                        isActive: filterType != nil
-                    )
-                }
-                
-                // Clear filters
-                if filterType != nil || filterPaidStatus != .all {
-                    Button {
-                        filterType = nil
-                        filterPaidStatus = .all
-                    } label: {
-                        Text("Limpiar")
-                            .font(.caption)
-                            .foregroundStyle(.red)
-                    }
+                    Text("Limpiar")
+                        .font(.caption)
+                        .foregroundStyle(.red)
                 }
             }
-            .padding(.horizontal)
-            .padding(.vertical, 8)
         }
+        .padding(.horizontal)
+        .padding(.vertical, 8)
     }
     
     // MARK: - Filtered Expenses
@@ -244,6 +242,8 @@ struct FilterChip: View {
         HStack(spacing: 4) {
             Text(title)
                 .font(.subheadline)
+                .lineLimit(1)
+                .frame(maxWidth: 120, alignment: .leading)
             Image(systemName: "chevron.down")
                 .font(.caption)
         }

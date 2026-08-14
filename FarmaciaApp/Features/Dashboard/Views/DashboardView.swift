@@ -402,12 +402,8 @@ struct DashboardView: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(Color(.systemGray6))
-            .clipShape(.rect(cornerRadius: 8))
+            .padding(.horizontal, 4)
         }
-        .buttonStyle(.plain)
     }
     
     private var userButton: some View {
