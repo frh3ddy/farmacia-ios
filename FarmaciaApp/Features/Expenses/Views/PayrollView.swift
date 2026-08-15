@@ -546,6 +546,8 @@ private struct ShiftEditorSheet: View {
                     }
                 }
                 Button("Cancelar", role: .cancel) {}
+            } message: {
+                Text(saveConfirmationMessage)
             }
             .alert(
                 "¿Eliminar este turno?",
@@ -573,6 +575,27 @@ private struct ShiftEditorSheet: View {
         let end = hasEnd ? endDate : Date()
         let minutes = max(0, Int(end.timeIntervalSince(startDate) / 60))
         return String(format: "%d:%02d", minutes / 60, minutes % 60)
+    }
+
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "h:mm a"
+        return f
+    }()
+
+    /// Before → after summary for start/end/duration, so the confirmation
+    /// alert shows exactly what's changing before it's persisted to Square.
+    private var saveConfirmationMessage: String {
+        let oldStart = shift.startDateValue.map { Self.timeFormatter.string(from: $0) } ?? "—"
+        let oldEnd = shift.endDateValue.map { Self.timeFormatter.string(from: $0) } ?? "en curso"
+        let newStart = Self.timeFormatter.string(from: startDate)
+        let newEnd = hasEnd ? Self.timeFormatter.string(from: endDate) : "en curso"
+
+        return """
+        Entrada: \(oldStart) → \(newStart)
+        Salida: \(oldEnd) → \(newEnd)
+        Duración: \(shift.formattedDuration) → \(durationText)
+        """
     }
 }
 
