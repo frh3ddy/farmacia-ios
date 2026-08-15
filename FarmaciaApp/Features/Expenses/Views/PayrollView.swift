@@ -583,19 +583,36 @@ private struct ShiftEditorSheet: View {
         return f
     }()
 
-    /// Before → after summary for start/end/duration, so the confirmation
-    /// alert shows exactly what's changing before it's persisted to Square.
-    private var saveConfirmationMessage: String {
-        let oldStart = shift.startDateValue.map { Self.timeFormatter.string(from: $0) } ?? "—"
-        let oldEnd = shift.endDateValue.map { Self.timeFormatter.string(from: $0) } ?? "en curso"
-        let newStart = Self.timeFormatter.string(from: startDate)
-        let newEnd = hasEnd ? Self.timeFormatter.string(from: endDate) : "en curso"
+    private func sameMinute(_ a: Date?, _ b: Date?) -> Bool {
+        switch (a, b) {
+        case (nil, nil): return true
+        case let (a?, b?): return Calendar.current.isDate(a, equalTo: b, toGranularity: .minute)
+        default: return false
+        }
+    }
 
-        return """
-        Entrada: \(oldStart) → \(newStart)
-        Salida: \(oldEnd) → \(newEnd)
-        Duración: \(shift.formattedDuration) → \(durationText)
-        """
+    /// Before → after summary for whichever of start/end/duration actually
+    /// changed, so the confirmation alert only shows what's about to be
+    /// persisted to Square instead of repeating untouched values.
+    private var saveConfirmationMessage: String {
+        let newEnd: Date? = hasEnd ? endDate : nil
+        let startChanged = !sameMinute(shift.startDateValue, startDate)
+        let endChanged = !sameMinute(shift.endDateValue, newEnd)
+
+        var lines: [String] = []
+        if startChanged {
+            let oldText = shift.startDateValue.map { Self.timeFormatter.string(from: $0) } ?? "—"
+            lines.append("Entrada: \(oldText) → \(Self.timeFormatter.string(from: startDate))")
+        }
+        if endChanged {
+            let oldText = shift.endDateValue.map { Self.timeFormatter.string(from: $0) } ?? "en curso"
+            let newText = newEnd.map { Self.timeFormatter.string(from: $0) } ?? "en curso"
+            lines.append("Salida: \(oldText) → \(newText)")
+        }
+        if startChanged || endChanged {
+            lines.append("Duración: \(shift.formattedDuration) → \(durationText)")
+        }
+        return lines.isEmpty ? "No hay cambios en el horario." : lines.joined(separator: "\n")
     }
 }
 
