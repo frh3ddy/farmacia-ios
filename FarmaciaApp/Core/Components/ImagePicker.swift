@@ -25,7 +25,8 @@ enum ImagePickerPresenter {
 
             let picker = UIImagePickerController()
             picker.sourceType = sourceType
-            picker.allowsEditing = true
+            // Cropping is handled by SwiftyCrop after the image is picked,
+            // so the picker returns the untouched original.
 
             let delegate = Delegate(onImagePicked: onImagePicked)
             picker.delegate = delegate
@@ -65,8 +66,7 @@ enum ImagePickerPresenter {
 
         func imagePickerController(_ picker: UIImagePickerController,
                                    didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
-            // Prefer edited image (cropped), fall back to original
-            if let image = info[.editedImage] as? UIImage ?? info[.originalImage] as? UIImage {
+            if let image = info[.originalImage] as? UIImage {
                 onImagePicked(image)
             }
             picker.dismiss(animated: true)

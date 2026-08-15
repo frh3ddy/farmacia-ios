@@ -96,6 +96,7 @@
 		F000000100000024 /* Reports.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000024 /* Reports.swift */; };
 		F000000100000030 /* InventoryAging.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000030 /* InventoryAging.swift */; };
 		FF00000100000001 /* CodeScanner in Frameworks */ = {isa = PBXBuildFile; productRef = FF00000200000001 /* CodeScanner */; };
+		FF00000100000002 /* SwiftyCrop in Frameworks */ = {isa = PBXBuildFile; productRef = FF00000200000002 /* SwiftyCrop */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -197,6 +198,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				FF00000100000001 /* CodeScanner in Frameworks */,
+				FF00000100000002 /* SwiftyCrop in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -532,6 +534,7 @@
 			name = FarmaciaApp;
 			packageProductDependencies = (
 				FF00000200000001 /* CodeScanner */,
+				FF00000200000002 /* SwiftyCrop */,
 			);
 			productName = FarmaciaApp;
 			productReference = F100000000000000 /* FarmaciaApp.app */;
@@ -563,6 +566,7 @@
 			mainGroup = F300000000000000;
 			packageReferences = (
 				FF00000300000001 /* XCRemoteSwiftPackageReference "CodeScanner" */,
+				FF00000300000002 /* XCRemoteSwiftPackageReference "SwiftyCrop" */,
 			);
 			productRefGroup = F300000000000099 /* Products */;
 			projectDirPath = "";
@@ -881,6 +885,14 @@
 				minimumVersion = 2.0.0;
 			};
 		};
+		FF00000300000002 /* XCRemoteSwiftPackageReference "SwiftyCrop" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/benedom/SwiftyCrop";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -888,6 +900,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = FF00000300000001 /* XCRemoteSwiftPackageReference "CodeScanner" */;
 			productName = CodeScanner;
+		};
+		FF00000200000002 /* SwiftyCrop */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FF00000300000002 /* XCRemoteSwiftPackageReference "SwiftyCrop" */;
+			productName = SwiftyCrop;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -1,6 +1,12 @@
 import SwiftUI
+import SwiftyCrop
 
 // MARK: - Create Product View
+
+private struct ImageToCrop: Identifiable {
+    let id = UUID()
+    let image: UIImage
+}
 
 struct CreateProductView: View {
     @EnvironmentObject var authManager: AuthManager
@@ -9,6 +15,7 @@ struct CreateProductView: View {
 
     // Image picker state
     @State private var selectedImage: UIImage?
+    @State private var imageToCrop: ImageToCrop?
     @State private var showImageSourcePicker = false
     @State private var quantity: Int?
     @State private var unitCost: Double?
@@ -76,12 +83,12 @@ struct CreateProductView: View {
                 .confirmationDialog("Agregar Imagen del Producto", isPresented: $showImageSourcePicker) {
                     Button("Tomar Foto") {
                         ImagePickerPresenter.present(sourceType: .camera) { image in
-                            selectedImage = image
+                            imageToCrop = ImageToCrop(image: image)
                         }
                     }
                     Button("Elegir de la Biblioteca") {
                         ImagePickerPresenter.present(sourceType: .photoLibrary) { image in
-                            selectedImage = image
+                            imageToCrop = ImageToCrop(image: image)
                         }
                     }
                     if selectedImage != nil {
@@ -90,6 +97,23 @@ struct CreateProductView: View {
                         }
                     }
                     Button("Cancelar", role: .cancel) {}
+                }
+                .fullScreenCover(item: $imageToCrop) { item in
+                    SwiftyCropView(
+                        imageToCrop: item.image,
+                        maskShape: .square,
+                        // ponytail: SwiftyCrop scales magnification gesture magnitude
+                        // by 0.1 * zoomSensitivity internally, so the default (1.0) only
+                        // applies 10% of the pinch as zoom. 8 gets close to a native,
+                        // 1:1-feeling pinch; retune if it still feels off.
+                        configuration: SwiftyCropConfiguration(zoomSensitivity: 8),
+                        onCancel: { imageToCrop = nil }
+                    ) { croppedImage in
+                        if let croppedImage {
+                            selectedImage = croppedImage
+                        }
+                        imageToCrop = nil
+                    }
                 }
                 
                 // Product Info Section
