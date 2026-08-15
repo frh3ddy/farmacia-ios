@@ -11,6 +11,7 @@ import SwiftUI
 
 struct PayrollView: View {
     @StateObject private var viewModel = PayrollViewModel()
+    @State private var showPeriodPicker = false
 
     var body: some View {
         Group {
@@ -71,6 +72,9 @@ struct PayrollView: View {
                 periodSection
                 totalsSection
                 shiftsSection
+            }
+            .sheet(isPresented: $showPeriodPicker) {
+                PeriodPickerSheet(viewModel: viewModel)
             }
         }
     }
@@ -139,59 +143,74 @@ struct PayrollView: View {
     
     private var periodSection: some View {
         Section("Periodo") {
-            Toggle("Rango personalizado", isOn: Binding(
-                get: { viewModel.useCustomRange },
-                set: { newValue in
-                    viewModel.useCustomRange = newValue
-                    Task { await viewModel.loadSummary() }
-                }
-            ))
-            
-            if viewModel.useCustomRange {
-                DatePicker("Desde", selection: $viewModel.customStart, displayedComponents: .date)
-                    .onChange(of: viewModel.customStart) { _, _ in
-                        Task { await viewModel.loadSummary() }
-                    }
-                DatePicker("Hasta", selection: $viewModel.customEnd, displayedComponents: .date)
-                    .onChange(of: viewModel.customEnd) { _, _ in
-                        Task { await viewModel.loadSummary() }
-                    }
-            } else {
-                HStack {
+            HStack {
+                if viewModel.granularity != .custom {
                     Button {
-                        viewModel.weekOffset += 1
+                        viewModel.periodOffset += 1
                     } label: {
                         Image(systemName: "chevron.left")
-                            .frame(minWidth: 44, minHeight: 44)
                     }
                     .buttonStyle(.borderless)
-                    .accessibilityLabel("Semana anterior")
-
+                    .accessibilityLabel("Periodo anterior")
                     Spacer()
-                    if let period = viewModel.summary?.period {
-                        Text(PayrollDateFormatting.periodLabel(start: period.startDate, end: period.endDate))
+                } else {
+                    Spacer()
+                }
+
+                Button {
+                    showPeriodPicker = true
+                } label: {
+                    HStack(spacing: 4) {
+                        periodLabel
                             .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Text(viewModel.weekOffset == 0 ? "Semana actual" : "Hace \(viewModel.weekOffset) semana(s)")
-                            .font(.subheadline)
+                            .fontWeight(.bold)
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.caption2)
                             .foregroundStyle(.secondary)
                     }
+                }
+                .buttonStyle(.plain)
+
+                if viewModel.granularity != .custom {
                     Spacer()
-                    
                     Button {
-                        if viewModel.weekOffset > 0 {
-                            viewModel.weekOffset -= 1
+                        if viewModel.periodOffset > 0 {
+                            viewModel.periodOffset -= 1
                         }
                     } label: {
                         Image(systemName: "chevron.right")
-                            .frame(minWidth: 44, minHeight: 44)
                     }
                     .buttonStyle(.borderless)
-                    .disabled(viewModel.weekOffset <= 0)
-                    .accessibilityLabel("Semana siguiente")
+                    .disabled(viewModel.periodOffset <= 0)
+                    .accessibilityLabel("Periodo siguiente")
+                } else {
+                    Spacer()
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private var periodLabel: some View {
+        switch viewModel.granularity {
+        case .week:
+            if viewModel.periodOffset == 0 {
+                Text("Semana actual")
+            } else if let period = viewModel.summary?.period {
+                Text("Semana del \(PayrollDateFormatting.periodLabel(start: period.startDate, end: period.endDate))")
+            } else {
+                Text("Hace \(viewModel.periodOffset) semana(s)")
+            }
+        case .day:
+            if viewModel.periodOffset == 0 {
+                Text("Hoy \(PayrollDateFormatting.dayMonthNameLabel(from: viewModel.selectedDay))")
+            } else {
+                Text(PayrollDateFormatting.weekdayDayMonthLabel(from: viewModel.selectedDay))
+            }
+        case .month:
+            Text(PayrollDateFormatting.monthLabel(from: viewModel.selectedMonthStart))
+        case .custom:
+            Text(PayrollDateFormatting.periodLabel(start: viewModel.customStart, end: viewModel.customEnd))
         }
     }
     
@@ -354,6 +373,98 @@ private struct ShiftRowPlaceholder: View {
     }
 }
 
+// MARK: - Period Picker Sheet
+
+private struct PeriodPickerSheet: View {
+    @ObservedObject var viewModel: PayrollViewModel
+    @Environment(\.dismiss) var dismiss
+    @State private var detent: PresentationDetent
+
+    /// Custom range is edited as a draft so the background period label
+    /// (bound to `viewModel.granularity`/`customStart`/`customEnd`) doesn't
+    /// change until the user actually confirms something by closing the sheet.
+    @State private var showCustomRange: Bool
+    @State private var draftStart: Date
+    @State private var draftEnd: Date
+    private let initialCustomStart: Date
+    private let initialCustomEnd: Date
+
+    init(viewModel: PayrollViewModel) {
+        self.viewModel = viewModel
+        _detent = State(initialValue: viewModel.granularity == .custom ? .large : .medium)
+        _showCustomRange = State(initialValue: viewModel.granularity == .custom)
+        _draftStart = State(initialValue: viewModel.customStart)
+        _draftEnd = State(initialValue: viewModel.customEnd)
+        initialCustomStart = viewModel.customStart
+        initialCustomEnd = viewModel.customEnd
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    optionRow("Hoy", granularity: .day)
+                    optionRow("Esta semana", granularity: .week)
+                    optionRow("Este mes", granularity: .month)
+                }
+                Section {
+                    Button {
+                        showCustomRange = true
+                        detent = .large
+                    } label: {
+                        HStack {
+                            Text("Rango personalizado")
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            if showCustomRange {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(.tint)
+                            }
+                        }
+                    }
+                    if showCustomRange {
+                        DatePicker("Desde", selection: $draftStart, displayedComponents: .date)
+                        DatePicker("Hasta", selection: $draftEnd, displayedComponents: .date)
+                    }
+                }
+            }
+            .navigationTitle("Periodo")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Listo") { dismiss() }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large], selection: $detent)
+        .onDisappear {
+            guard showCustomRange else { return }
+            guard draftStart != initialCustomStart || draftEnd != initialCustomEnd else { return }
+            viewModel.granularity = .custom
+            viewModel.customStart = draftStart
+            viewModel.customEnd = draftEnd
+            Task { await viewModel.loadSummary() }
+        }
+    }
+
+    private func optionRow(_ title: String, granularity: PayrollViewModel.Granularity) -> some View {
+        Button {
+            viewModel.granularity = granularity
+            viewModel.periodOffset = 0
+            dismiss()
+        } label: {
+            HStack {
+                Text(title).foregroundStyle(.primary)
+                Spacer()
+                if !showCustomRange && viewModel.granularity == granularity {
+                    Image(systemName: "checkmark")
+                        .foregroundStyle(.tint)
+                }
+            }
+        }
+    }
+}
+
 // MARK: - Shift Editor Sheet
 
 private struct ShiftEditorSheet: View {
@@ -466,30 +577,71 @@ private enum PayrollDateFormatting {
         f.timeZone = TimeZone.current
         return f
     }()
-    
+
+    /// "14 de agosto" — day + full month name, no year
+    static let dayOfMonthName: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "es_MX")
+        f.dateFormat = "d 'de' MMMM"
+        f.timeZone = TimeZone.current
+        return f
+    }()
+
+    /// "agosto" — full month name only
+    static let monthName: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "es_MX")
+        f.dateFormat = "MMMM"
+        f.timeZone = TimeZone.current
+        return f
+    }()
+
     /// "Lunes 10/08" — Spanish day name + DD/MM, no year
     static func shiftLabel(from dateString: String) -> String {
         guard let date = input.date(from: dateString) else { return dateString }
         let name = dayName.string(from: date)
         return "\(name.prefix(1).uppercased())\(name.dropFirst()) \(dayMonth.string(from: date))"
     }
-    
+
+    /// "14 de agosto"
+    static func dayMonthNameLabel(from date: Date) -> String {
+        dayOfMonthName.string(from: date)
+    }
+
+    /// "Lunes 10 de agosto" — capitalized weekday + day + month name
+    static func weekdayDayMonthLabel(from date: Date) -> String {
+        let weekday = dayName.string(from: date)
+        let capitalized = weekday.prefix(1).uppercased() + weekday.dropFirst()
+        return "\(capitalized) \(dayOfMonthName.string(from: date))"
+    }
+
+    /// "Agosto" — capitalized month name
+    static func monthLabel(from date: Date) -> String {
+        let name = monthName.string(from: date)
+        return name.prefix(1).uppercased() + name.dropFirst()
+    }
+
     /// "10/08 – 16/08"; adds the year only when the range falls (fully or
     /// partially) outside the current year, e.g. "28/12/2025 – 03/01/2026"
+    static func periodLabel(start: Date, end: Date) -> String {
+        let calendar = Calendar.current
+        let currentYear = calendar.component(.year, from: Date())
+        let withinCurrentYear =
+            calendar.component(.year, from: start) == currentYear &&
+            calendar.component(.year, from: end) == currentYear
+        if withinCurrentYear {
+            return "\(dayMonth.string(from: start)) – \(dayMonth.string(from: end))"
+        }
+        return "\(dayMonthYear.string(from: start)) – \(dayMonthYear.string(from: end))"
+    }
+
+    /// String-date overload for the backend's `YYYY-MM-DD` period fields.
     static func periodLabel(start: String, end: String) -> String {
         guard let startDate = input.date(from: start),
               let endDate = input.date(from: end) else {
             return "\(start) – \(end)"
         }
-        let calendar = Calendar.current
-        let currentYear = calendar.component(.year, from: Date())
-        let withinCurrentYear =
-            calendar.component(.year, from: startDate) == currentYear &&
-            calendar.component(.year, from: endDate) == currentYear
-        if withinCurrentYear {
-            return "\(dayMonth.string(from: startDate)) – \(dayMonth.string(from: endDate))"
-        }
-        return "\(dayMonthYear.string(from: startDate)) – \(dayMonthYear.string(from: endDate))"
+        return periodLabel(start: startDate, end: endDate)
     }
     
     /// "Lunes, 10 de agosto de 2026" — used in the shift editor for full context

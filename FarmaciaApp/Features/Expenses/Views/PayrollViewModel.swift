@@ -23,22 +23,44 @@ class PayrollViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var showError = false
     
-    /// Period selection mode: current week (default), past weeks, or custom range
-    @Published var weekOffset = 0 {
-        didSet { if !useCustomRange { Task { await loadSummary() } } }
+    enum Granularity {
+        case day, week, month, custom
     }
-    @Published var useCustomRange = false
+
+    /// Period selection mode: a day, week, or month (navigated via `periodOffset`), or a custom range.
+    @Published var granularity: Granularity = .week
+    /// Number of periods (in the active granularity's unit) before the current one. 0 = current.
+    @Published var periodOffset = 0 {
+        didSet { if granularity != .custom { Task { await loadSummary() } } }
+    }
     @Published var customStart = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
     @Published var customEnd = Date()
-    
+
     private let apiClient = APIClient.shared
-    
+
     private static let dateOnlyFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd"
         f.timeZone = TimeZone.current
         return f
     }()
+
+    /// The day represented by `periodOffset` when granularity is `.day`.
+    var selectedDay: Date {
+        Calendar.current.date(byAdding: .day, value: -periodOffset, to: Date()) ?? Date()
+    }
+
+    /// The first day of the month represented by `periodOffset` when granularity is `.month`.
+    var selectedMonthStart: Date {
+        let calendar = Calendar.current
+        let startOfThisMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: Date())) ?? Date()
+        return calendar.date(byAdding: .month, value: -periodOffset, to: startOfThisMonth) ?? startOfThisMonth
+    }
+
+    private var selectedMonthEnd: Date {
+        let calendar = Calendar.current
+        return calendar.date(byAdding: DateComponents(month: 1, day: -1), to: selectedMonthStart) ?? selectedMonthStart
+    }
     
     // MARK: - Team Members
     
@@ -74,11 +96,19 @@ class PayrollViewModel: ObservableObject {
         defer { isLoadingSummary = false }
         
         var params: [String: String] = ["teamMemberId": member.id]
-        if useCustomRange {
+        switch granularity {
+        case .week:
+            params["weekOffset"] = String(periodOffset)
+        case .day:
+            let day = Self.dateOnlyFormatter.string(from: selectedDay)
+            params["startDate"] = day
+            params["endDate"] = day
+        case .month:
+            params["startDate"] = Self.dateOnlyFormatter.string(from: selectedMonthStart)
+            params["endDate"] = Self.dateOnlyFormatter.string(from: selectedMonthEnd)
+        case .custom:
             params["startDate"] = Self.dateOnlyFormatter.string(from: customStart)
             params["endDate"] = Self.dateOnlyFormatter.string(from: customEnd)
-        } else {
-            params["weekOffset"] = String(weekOffset)
         }
         
         do {

@@ -219,7 +219,7 @@ struct ExpenseFormView: View {
         guard let member = selectedTeamMember else { return }
         
         payrollViewModel.selectedMember = member
-        payrollViewModel.useCustomRange = payrollUseCustomRange
+        payrollViewModel.granularity = payrollUseCustomRange ? .custom : .week
         payrollViewModel.customStart = payrollStart
         payrollViewModel.customEnd = payrollEnd
         await payrollViewModel.loadSummary()
