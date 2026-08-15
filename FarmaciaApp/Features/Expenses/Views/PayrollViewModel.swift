@@ -182,4 +182,45 @@ class PayrollViewModel: ObservableObject {
             return false
         }
     }
+
+    // MARK: - Shift Deletion
+
+    /// Deletes a shift entirely (e.g. an accidental clock-in) and removes it
+    /// from the local summary so totals refresh instantly.
+    func deleteShift(shiftId: String) async -> Bool {
+        isSavingShift = true
+        defer { isSavingShift = false }
+
+        do {
+            try await apiClient.requestVoid(endpoint: .laborDeleteShift(id: shiftId))
+
+            if let current = summary {
+                let patchedShifts = current.shifts.filter { $0.shiftId != shiftId }
+                let totalMinutes = patchedShifts.reduce(0) { $0 + $1.workedMinutes }
+                let workedDays = Set(patchedShifts.map { $0.date }).count
+                let cost = (Double(totalMinutes) / 60.0) * current.hourlyRate
+                summary = PayrollSummary(
+                    teamMemberId: current.teamMemberId,
+                    period: current.period,
+                    hourlyRate: current.hourlyRate,
+                    currency: current.currency,
+                    totalWorkedMinutes: totalMinutes,
+                    totalHours: totalMinutes / 60,
+                    totalMinutes: totalMinutes % 60,
+                    workedDays: workedDays,
+                    totalCost: (cost * 100).rounded() / 100,
+                    shifts: patchedShifts
+                )
+            }
+            return true
+        } catch let error as NetworkError {
+            errorMessage = error.errorDescription
+            showError = true
+            return false
+        } catch {
+            errorMessage = "Error al eliminar el turno"
+            showError = true
+            return false
+        }
+    }
 }

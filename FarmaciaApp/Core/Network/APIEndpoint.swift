@@ -83,6 +83,7 @@ enum APIEndpoint {
     case laborTeamMembers
     case laborPayrollSummary
     case laborUpdateShift(id: String)
+    case laborDeleteShift(id: String)
     
     // MARK: - Inventory Aging Endpoints
     case agingSummary
@@ -187,6 +188,7 @@ enum APIEndpoint {
         case .laborTeamMembers: return "/labor/team-members"
         case .laborPayrollSummary: return "/labor/payroll-summary"
         case .laborUpdateShift(let id): return "/labor/shifts/\(id)"
+        case .laborDeleteShift(let id): return "/labor/shifts/\(id)"
             
         // Inventory Aging
         case .agingSummary: return "/inventory/aging/summary"
@@ -290,6 +292,8 @@ enum APIEndpoint {
             return .get
         case .laborUpdateShift:
             return .put
+        case .laborDeleteShift:
+            return .delete
             
         // Reconciliation
         case .reconcileProduct, .reconcileLocation, .consumptionSummary,

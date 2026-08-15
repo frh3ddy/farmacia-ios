@@ -480,7 +480,9 @@ private struct ShiftEditorSheet: View {
     @State private var startDate: Date
     @State private var endDate: Date
     @State private var hasEnd: Bool
-    
+    @State private var showSaveConfirmation = false
+    @State private var showDeleteConfirmation = false
+
     init(shift: ShiftSummary, viewModel: PayrollViewModel) {
         self.shift = shift
         self.viewModel = viewModel
@@ -488,7 +490,7 @@ private struct ShiftEditorSheet: View {
         _endDate = State(initialValue: shift.endDateValue ?? Date())
         _hasEnd = State(initialValue: shift.endDateValue != nil)
     }
-    
+
     var body: some View {
         NavigationStack {
             Form {
@@ -499,7 +501,7 @@ private struct ShiftEditorSheet: View {
                         DatePicker("Salida", selection: $endDate, displayedComponents: [.date, .hourAndMinute])
                     }
                 }
-                
+
                 Section {
                     HStack {
                         Text("Duración")
@@ -507,6 +509,13 @@ private struct ShiftEditorSheet: View {
                         Text(durationText)
                             .foregroundStyle(.secondary)
                     }
+                }
+
+                Section {
+                    Button("Eliminar turno", role: .destructive) {
+                        showDeleteConfirmation = true
+                    }
+                    .disabled(viewModel.isSavingShift)
                 }
             }
             .navigationTitle("Ajustar turno")
@@ -517,17 +526,42 @@ private struct ShiftEditorSheet: View {
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Guardar") {
-                        Task {
-                            let ok = await viewModel.updateShiftTimes(
-                                shiftId: shift.shiftId,
-                                startAt: startDate,
-                                endAt: hasEnd ? endDate : nil
-                            )
-                            if ok { dismiss() }
-                        }
+                        showSaveConfirmation = true
                     }
                     .disabled(viewModel.isSavingShift)
                 }
+            }
+            .confirmationDialog(
+                "¿Guardar los cambios de este turno?",
+                isPresented: $showSaveConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Guardar cambios") {
+                    Task {
+                        let ok = await viewModel.updateShiftTimes(
+                            shiftId: shift.shiftId,
+                            startAt: startDate,
+                            endAt: hasEnd ? endDate : nil
+                        )
+                        if ok { dismiss() }
+                    }
+                }
+                Button("Cancelar", role: .cancel) {}
+            }
+            .confirmationDialog(
+                "¿Eliminar este turno?",
+                isPresented: $showDeleteConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Eliminar turno", role: .destructive) {
+                    Task {
+                        let ok = await viewModel.deleteShift(shiftId: shift.shiftId)
+                        if ok { dismiss() }
+                    }
+                }
+                Button("Cancelar", role: .cancel) {}
+            } message: {
+                Text("Esta acción no se puede deshacer.")
             }
             .alert("Error", isPresented: $viewModel.showError) {
                 Button("OK") {}
