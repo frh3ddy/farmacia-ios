@@ -66,6 +66,7 @@
 		F000000100000054 /* DashboardExpiringViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000054 /* DashboardExpiringViewModel.swift */; };
 		F000000100000055 /* AlertsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000055 /* AlertsView.swift */; };
 		F000000100000013 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000013 /* SettingsView.swift */; };
+		F000000100000056 /* MoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000056 /* MoreView.swift */; };
 		F000000100000014 /* InventoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000014 /* InventoryView.swift */; };
 		F000000100000040 /* InventoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000040 /* InventoryViewModel.swift */; };
 		F000000100000041 /* ReceiveInventoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000041 /* ReceiveInventoryView.swift */; };
@@ -160,6 +161,7 @@
 		F100000100000054 /* DashboardExpiringViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardExpiringViewModel.swift; sourceTree = "<group>"; };
 		F100000100000055 /* AlertsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertsView.swift; sourceTree = "<group>"; };
 		F100000100000013 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		F100000100000056 /* MoreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoreView.swift; sourceTree = "<group>"; };
 		F100000100000014 /* InventoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryView.swift; sourceTree = "<group>"; };
 		F100000100000040 /* InventoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryViewModel.swift; sourceTree = "<group>"; };
 		F100000100000041 /* ReceiveInventoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiveInventoryView.swift; sourceTree = "<group>"; };
@@ -464,6 +466,7 @@
 				F100000100000048 /* StatCard.swift */,
 				F100000100000049 /* DashboardViewModel.swift */,
 				F100000100000013 /* SettingsView.swift */,
+				F100000100000056 /* MoreView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -615,6 +618,7 @@
 				F000000100000054 /* DashboardExpiringViewModel.swift in Sources */,
 				F000000100000055 /* AlertsView.swift in Sources */,
 				F000000100000013 /* SettingsView.swift in Sources */,
+				F000000100000056 /* MoreView.swift in Sources */,
 				F000000100000014 /* InventoryView.swift in Sources */,
 				F000000100000040 /* InventoryViewModel.swift in Sources */,
 				F000000100000041 /* ReceiveInventoryView.swift in Sources */,

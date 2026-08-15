@@ -18,62 +18,60 @@ struct ExpensesView: View {
     }
     
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                // Summary Card
-                if let summary = viewModel.summary {
-                    ExpenseSummaryCard(summary: summary)
-                        .padding()
+        VStack(spacing: 0) {
+            // Summary Card
+            if let summary = viewModel.summary {
+                ExpenseSummaryCard(summary: summary)
+                    .padding()
+            }
+
+            // Filter Bar
+            filterBar
+
+            Divider()
+
+            // Expense List
+            if viewModel.isLoading && viewModel.expenses.isEmpty {
+                ProgressView("Cargando gastos...")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if filteredExpenses.isEmpty {
+                emptyStateView
+            } else {
+                expenseList
+            }
+        }
+        .navigationTitle("Gastos")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showAddExpense = true
+                } label: {
+                    Image(systemName: "plus")
                 }
-                
-                // Filter Bar
-                filterBar
-                
-                Divider()
-                
-                // Expense List
-                if viewModel.isLoading && viewModel.expenses.isEmpty {
-                    ProgressView("Cargando gastos...")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if filteredExpenses.isEmpty {
-                    emptyStateView
-                } else {
-                    expenseList
-                }
+                .accessibilityLabel("Agregar Gasto")
             }
-            .navigationTitle("Gastos")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showAddExpense = true
-                    } label: {
-                        Image(systemName: "plus")
-                    }
-                    .accessibilityLabel("Agregar Gasto")
-                }
-            }
-            .sheet(isPresented: $showAddExpense) {
-                ExpenseFormView(viewModel: viewModel, expense: nil)
-            }
-            .sheet(item: $selectedExpense) { expense in
-                ExpenseDetailView(expense: expense, viewModel: viewModel)
-            }
-            .onAppear {
-                loadData()
-            }
-            .refreshable {
-                await refreshData()
-            }
-            .alert("Error", isPresented: $viewModel.showError) {
-                Button("OK") {}
-            } message: {
-                Text(viewModel.errorMessage ?? "Ocurrió un error")
-            }
-            .alert("Éxito", isPresented: $viewModel.showSuccess) {
-                Button("OK") {}
-            } message: {
-                Text(viewModel.successMessage ?? "Operación completada")
-            }
+        }
+        .sheet(isPresented: $showAddExpense) {
+            ExpenseFormView(viewModel: viewModel, expense: nil)
+        }
+        .sheet(item: $selectedExpense) { expense in
+            ExpenseDetailView(expense: expense, viewModel: viewModel)
+        }
+        .onAppear {
+            loadData()
+        }
+        .refreshable {
+            await refreshData()
+        }
+        .alert("Error", isPresented: $viewModel.showError) {
+            Button("OK") {}
+        } message: {
+            Text(viewModel.errorMessage ?? "Ocurrió un error")
+        }
+        .alert("Éxito", isPresented: $viewModel.showSuccess) {
+            Button("OK") {}
+        } message: {
+            Text(viewModel.successMessage ?? "Operación completada")
         }
     }
     
@@ -237,7 +235,7 @@ struct ExpensesView: View {
 struct FilterChip: View {
     let title: String
     let isActive: Bool
-    
+
     var body: some View {
         HStack(spacing: 4) {
             Text(title)
@@ -614,6 +612,8 @@ struct ExpenseActionResponse: Decodable {
 // MARK: - Preview
 
 #Preview {
-    ExpensesView()
-        .environmentObject(AuthManager.shared)
+    NavigationStack {
+        ExpensesView()
+    }
+    .environmentObject(AuthManager.shared)
 }

@@ -7,48 +7,46 @@ struct EmployeesView: View {
     @StateObject private var viewModel = EmployeesViewModel()
     
     var body: some View {
-        NavigationStack {
-            Group {
-                if viewModel.isLoading && viewModel.employees.isEmpty {
-                    loadingView
-                } else if let error = viewModel.errorMessage, viewModel.employees.isEmpty {
-                    errorView(message: error)
-                } else if viewModel.employees.isEmpty {
-                    emptyView
-                } else {
-                    employeeList
-                }
+        Group {
+            if viewModel.isLoading && viewModel.employees.isEmpty {
+                loadingView
+            } else if let error = viewModel.errorMessage, viewModel.employees.isEmpty {
+                errorView(message: error)
+            } else if viewModel.employees.isEmpty {
+                emptyView
+            } else {
+                employeeList
             }
-            .navigationTitle("Empleados")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    if authManager.currentLocation?.role == .owner {
-                        Button {
-                            viewModel.showAddEmployee = true
-                        } label: {
-                            Image(systemName: "plus")
-                        }
-                        .accessibilityLabel("Agregar Empleado")
+        }
+        .navigationTitle("Empleados")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                if authManager.currentLocation?.role == .owner {
+                    Button {
+                        viewModel.showAddEmployee = true
+                    } label: {
+                        Image(systemName: "plus")
                     }
+                    .accessibilityLabel("Agregar Empleado")
                 }
             }
-            .sheet(isPresented: $viewModel.showAddEmployee) {
-                AddEmployeeView(viewModel: viewModel)
-            }
-            .sheet(item: $viewModel.selectedEmployee) { employee in
-                EmployeeDetailView(employee: employee, viewModel: viewModel)
-            }
-            .refreshable {
-                await viewModel.loadEmployees()
-            }
-            .task {
-                await viewModel.loadEmployees()
-            }
-            .alert("Error", isPresented: $viewModel.showError) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(viewModel.errorMessage ?? "Error desconocido")
-            }
+        }
+        .sheet(isPresented: $viewModel.showAddEmployee) {
+            AddEmployeeView(viewModel: viewModel)
+        }
+        .sheet(item: $viewModel.selectedEmployee) { employee in
+            EmployeeDetailView(employee: employee, viewModel: viewModel)
+        }
+        .refreshable {
+            await viewModel.loadEmployees()
+        }
+        .task {
+            await viewModel.loadEmployees()
+        }
+        .alert("Error", isPresented: $viewModel.showError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(viewModel.errorMessage ?? "Error desconocido")
         }
     }
     
@@ -732,7 +730,9 @@ class EmployeesViewModel: ObservableObject {
 // MARK: - Preview
 
 #Preview {
-    EmployeesView()
-        .environmentObject(AuthManager.shared)
+    NavigationStack {
+        EmployeesView()
+    }
+    .environmentObject(AuthManager.shared)
 }
 

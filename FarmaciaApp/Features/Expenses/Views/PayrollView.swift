@@ -11,33 +11,38 @@ import SwiftUI
 
 struct PayrollView: View {
     @StateObject private var viewModel = PayrollViewModel()
-    
+
     var body: some View {
-        NavigationStack {
-            Group {
-                if viewModel.teamMembers.isEmpty && !viewModel.isLoadingMembers {
-                    emptyTeamState
-                } else {
-                    content
-                }
-            }
-            .navigationTitle("Nómina")
-            .navigationBarTitleDisplayMode(.inline)
-            .task {
-                if viewModel.teamMembers.isEmpty {
-                    await viewModel.loadTeamMembers()
-                }
-            }
-            .alert("Error", isPresented: $viewModel.showError) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(viewModel.errorMessage ?? "Error desconocido")
+        Group {
+            if viewModel.teamMembers.isEmpty && !viewModel.isLoadingMembers {
+                emptyTeamState
+            } else {
+                content
             }
         }
+        .navigationTitle("Nómina")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if let selectedMember = viewModel.selectedMember {
+                ToolbarItem(placement: .topBarTrailing) {
+                    memberMenu(selectedMember: selectedMember)
+                }
+            }
+        }
+        .task {
+            if viewModel.teamMembers.isEmpty {
+                await viewModel.loadTeamMembers()
+            }
+        }
+        .alert("Error", isPresented: $viewModel.showError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(viewModel.errorMessage ?? "Error desconocido")
+        }
     }
-    
+
     // MARK: - States
-    
+
     private var emptyTeamState: some View {
         VStack(spacing: 16) {
             Image(systemName: "person.3")
@@ -56,14 +61,55 @@ struct PayrollView: View {
     @ViewBuilder
     private var content: some View {
         if viewModel.selectedMember == nil {
-            memberList
+            if viewModel.isLoadingMembers {
+                loadingMembersState
+            } else {
+                memberList
+            }
         } else {
             List {
-                selectedMemberSection
                 periodSection
                 totalsSection
                 shiftsSection
             }
+        }
+    }
+
+    // MARK: - Member Menu (toolbar)
+
+    private func memberMenu(selectedMember: TeamMember) -> some View {
+        Menu {
+            Picker("Empleado", selection: Binding(
+                get: { selectedMember.id },
+                set: { newId in
+                    if let member = viewModel.teamMembers.first(where: { $0.id == newId }) {
+                        Task { await viewModel.selectMember(member) }
+                    }
+                }
+            )) {
+                ForEach(viewModel.teamMembers) { member in
+                    Text(member.displayName).tag(member.id)
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(selectedMember.displayName)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption2)
+            }
+        }
+    }
+
+    private var loadingMembersState: some View {
+        List(0..<6, id: \.self) { _ in
+            HStack {
+                Text("               ")
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .redacted(reason: .placeholder)
         }
     }
 
@@ -89,20 +135,6 @@ struct PayrollView: View {
         }
     }
 
-    private var selectedMemberSection: some View {
-        Section {
-            HStack {
-                Text(viewModel.selectedMember?.displayName ?? "")
-                    .font(.headline)
-                Spacer()
-                Button("Cambiar") {
-                    viewModel.selectedMember = nil
-                }
-                .font(.subheadline)
-            }
-        }
-    }
-    
     // MARK: - Period Selection
     
     private var periodSection: some View {
@@ -168,11 +200,15 @@ struct PayrollView: View {
     @ViewBuilder
     private var totalsSection: some View {
         if viewModel.isLoadingSummary {
-            Section {
-                HStack {
-                    Spacer()
-                    ProgressView()
-                    Spacer()
+            Section("Totales") {
+                ForEach(0..<4, id: \.self) { _ in
+                    HStack {
+                        Label("Días trabajados", systemImage: "calendar")
+                        Spacer()
+                        Text("00")
+                            .bold()
+                    }
+                    .redacted(reason: .placeholder)
                 }
             }
         } else if let summary = viewModel.summary {
@@ -210,7 +246,13 @@ struct PayrollView: View {
     
     @ViewBuilder
     private var shiftsSection: some View {
-        if let summary = viewModel.summary, !summary.shifts.isEmpty {
+        if viewModel.isLoadingSummary {
+            Section("Turnos") {
+                ForEach(0..<3, id: \.self) { _ in
+                    ShiftRowPlaceholder()
+                }
+            }
+        } else if let summary = viewModel.summary, !summary.shifts.isEmpty {
             Section("Turnos (\(summary.shifts.count))") {
                 ForEach(summary.shifts) { shift in
                     ShiftRow(shift: shift, viewModel: viewModel)
@@ -284,6 +326,31 @@ private struct ShiftRow: View {
         let start = shift.startDateValue.map { formatter.string(from: $0) } ?? "—"
         let end = shift.endDateValue.map { formatter.string(from: $0) } ?? "en curso"
         return "\(start) – \(end)"
+    }
+}
+
+private struct ShiftRowPlaceholder: View {
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Lunes 00/00")
+                    .font(.subheadline)
+                    .bold()
+                Text("00:00 – 00:00")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            VStack(alignment: .trailing, spacing: 4) {
+                Text("0:00")
+                    .font(.subheadline)
+                    .bold()
+                Text("$0.00")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .redacted(reason: .placeholder)
     }
 }
 
@@ -440,5 +507,7 @@ private enum PayrollDateFormatting {
 // MARK: - Preview
 
 #Preview {
-    PayrollView()
+    NavigationStack {
+        PayrollView()
+    }
 }

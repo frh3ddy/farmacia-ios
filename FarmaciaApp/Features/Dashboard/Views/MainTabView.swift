@@ -12,15 +12,17 @@ struct MainTabView: View {
     /// Bumped every time a tab is selected; observed by child views to trigger a re-fetch.
     @State private var refreshTrigger: UUID = UUID()
     
+    /// At most 4 direct tabs, always — Expenses/Payroll/Reports/Employees/
+    /// Settings live inside `.more` instead of being individual tags. Beyond
+    /// 5 tabs, iOS folds the rest into its own automatic "More" screen (its
+    /// own UINavigationController), which double-nests navigation bars for
+    /// any pushed view that also owns a NavigationStack. Keeping a hand-built
+    /// "Más" tab avoids that entirely, regardless of permission combination.
     enum Tab: Hashable {
         case dashboard
-        case alerts
         case products
-        case expenses
-        case payroll
-        case reports
-        case employees
-        case settings
+        case alerts
+        case more
     }
 
     var body: some View {
@@ -38,7 +40,7 @@ struct MainTabView: View {
                     Label("Productos", systemImage: "shippingbox.fill")
                 }
                 .tag(Tab.products)
-            
+
             // Alerts (stock warnings, expiring products, actionable signals)
             AlertsView()
                 .tabItem {
@@ -46,48 +48,12 @@ struct MainTabView: View {
                 }
                 .tag(Tab.alerts)
 
-            // Expenses (if has permission)
-            if authManager.canManageExpenses {
-                ExpensesView()
-                    .tabItem {
-                        Label("Gastos", systemImage: "creditcard")
-                    }
-                    .tag(Tab.expenses)
-            }
-
-            // Payroll / Nómina (same permission as expenses)
-            if authManager.canManageExpenses {
-                PayrollView()
-                    .tabItem {
-                        Label("Nómina", systemImage: "person.badge.clock")
-                    }
-                    .tag(Tab.payroll)
-            }
-
-            // Reports (if has permission)
-            if authManager.canViewReports {
-                ReportsView()
-                    .tabItem {
-                        Label("Reportes", systemImage: "doc.text.magnifyingglass")
-                    }
-                    .tag(Tab.reports)
-            }
-
-            // Employees (if has permission)
-            if authManager.canManageEmployees {
-                EmployeesView()
-                    .tabItem {
-                        Label("Empleados", systemImage: "person.3")
-                    }
-                    .tag(Tab.employees)
-            }
-
-            // Settings
-            SettingsView()
+            // Gastos, Nómina, Reportes, Empleados, Ajustes
+            MoreView()
                 .tabItem {
-                    Label("Ajustes", systemImage: "gearshape")
+                    Label("Más", systemImage: "ellipsis")
                 }
-                .tag(Tab.settings)
+                .tag(Tab.more)
         }
         .accentColor(.blue)
         .onChange(of: selectedTab) { _, _ in
