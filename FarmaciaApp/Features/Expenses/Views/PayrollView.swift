@@ -686,9 +686,10 @@ private enum PayrollDateFormatting {
         return dayMonth.string(from: date)
     }
 
-    /// "14 de agosto"
+    /// "14 de agosto" — capitalized (matches shiftWeekday/monthLabel style)
     static func dayMonthNameLabel(from date: Date) -> String {
-        dayOfMonthName.string(from: date)
+        let text = dayOfMonthName.string(from: date)
+        return text.prefix(1).uppercased() + text.dropFirst()
     }
 
     /// "Lunes 10 de agosto" — capitalized weekday + day + month name
