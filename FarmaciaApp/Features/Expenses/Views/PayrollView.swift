@@ -686,17 +686,24 @@ private enum PayrollDateFormatting {
         return dayMonth.string(from: date)
     }
 
-    /// "14 de agosto" — capitalized (matches shiftWeekday/monthLabel style)
-    static func dayMonthNameLabel(from date: Date) -> String {
-        let text = dayOfMonthName.string(from: date)
-        return text.prefix(1).uppercased() + text.dropFirst()
+    /// Capitalizes the month word in a "d 'de' MMMM" formatted string, e.g.
+    /// "14 de agosto" → "14 de Agosto".
+    private static func capitalizingMonth(_ text: String) -> String {
+        guard let range = text.range(of: " de ") else { return text }
+        let month = text[range.upperBound...]
+        return text[..<range.upperBound] + month.prefix(1).uppercased() + month.dropFirst()
     }
 
-    /// "Lunes 10 de agosto" — capitalized weekday + day + month name
+    /// "14 de Agosto"
+    static func dayMonthNameLabel(from date: Date) -> String {
+        capitalizingMonth(dayOfMonthName.string(from: date))
+    }
+
+    /// "Lunes 10 de Agosto" — capitalized weekday + day + month name
     static func weekdayDayMonthLabel(from date: Date) -> String {
         let weekday = dayName.string(from: date)
         let capitalized = weekday.prefix(1).uppercased() + weekday.dropFirst()
-        return "\(capitalized) \(dayOfMonthName.string(from: date))"
+        return "\(capitalized) \(capitalizingMonth(dayOfMonthName.string(from: date)))"
     }
 
     /// "Agosto" — capitalized month name
@@ -728,7 +735,7 @@ private enum PayrollDateFormatting {
         return periodLabel(start: startDate, end: endDate)
     }
     
-    /// "Lunes, 10 de agosto de 2026" — used in the shift editor for full context
+    /// "Lunes, 10 de Agosto de 2026" — used in the shift editor for full context
     static func fullLabel(from dateString: String) -> String {
         guard let date = input.date(from: dateString) else { return dateString }
         let f = DateFormatter()
@@ -736,7 +743,7 @@ private enum PayrollDateFormatting {
         f.dateStyle = .full
         f.timeZone = TimeZone.current
         let text = f.string(from: date)
-        return text.prefix(1).uppercased() + text.dropFirst()
+        return capitalizingMonth(text.prefix(1).uppercased() + text.dropFirst())
     }
 }
 
