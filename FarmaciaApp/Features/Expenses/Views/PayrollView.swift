@@ -531,10 +531,9 @@ private struct ShiftEditorSheet: View {
                     .disabled(viewModel.isSavingShift)
                 }
             }
-            .confirmationDialog(
+            .alert(
                 "¿Guardar los cambios de este turno?",
-                isPresented: $showSaveConfirmation,
-                titleVisibility: .visible
+                isPresented: $showSaveConfirmation
             ) {
                 Button("Guardar cambios") {
                     Task {
@@ -548,10 +547,9 @@ private struct ShiftEditorSheet: View {
                 }
                 Button("Cancelar", role: .cancel) {}
             }
-            .confirmationDialog(
+            .alert(
                 "¿Eliminar este turno?",
-                isPresented: $showDeleteConfirmation,
-                titleVisibility: .visible
+                isPresented: $showDeleteConfirmation
             ) {
                 Button("Eliminar turno", role: .destructive) {
                     Task {
