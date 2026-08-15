@@ -104,3 +104,6 @@ Temporary Items
 
 # graphify (local knowledge graph, not shared)
 graphify-out/
+
+# sourcekit-lsp / xcode-build-server (embeds machine-local DerivedData path)
+buildServer.json
