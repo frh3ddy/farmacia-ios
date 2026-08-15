@@ -300,9 +300,14 @@ private struct ShiftRow: View {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
-                        Text(PayrollDateFormatting.shiftLabel(from: shift.date))
-                            .font(.subheadline)
-                            .bold()
+                        HStack(spacing: 5) {
+                            Text(PayrollDateFormatting.shiftWeekday(from: shift.date))
+                                .frame(width: 76, alignment: .leading)
+                                .bold()
+                            Text(PayrollDateFormatting.shiftDayMonth(from: shift.date))
+                            .foregroundStyle(.secondary)
+                        }
+                        .font(.subheadline)
                         if shift.isOpen {
                             Text("EN CURSO")
                                 .font(.caption2)
@@ -596,11 +601,17 @@ private enum PayrollDateFormatting {
         return f
     }()
 
-    /// "Lunes 10/08" — Spanish day name + DD/MM, no year
-    static func shiftLabel(from dateString: String) -> String {
+    /// "Lunes" — capitalized Spanish weekday name
+    static func shiftWeekday(from dateString: String) -> String {
         guard let date = input.date(from: dateString) else { return dateString }
         let name = dayName.string(from: date)
-        return "\(name.prefix(1).uppercased())\(name.dropFirst()) \(dayMonth.string(from: date))"
+        return "\(name.prefix(1).uppercased())\(name.dropFirst())"
+    }
+
+    /// "10/08" — DD/MM, no year
+    static func shiftDayMonth(from dateString: String) -> String {
+        guard let date = input.date(from: dateString) else { return dateString }
+        return dayMonth.string(from: date)
     }
 
     /// "14 de agosto"
