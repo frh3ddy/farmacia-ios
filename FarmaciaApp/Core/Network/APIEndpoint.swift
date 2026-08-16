@@ -27,6 +27,8 @@ enum APIEndpoint {
     case currentUser
     case logout
     case auditLogs
+    case listDevices
+    case deactivateDevice(deviceId: String)
     
     // MARK: - Employee Endpoints
     case createEmployee
@@ -138,6 +140,8 @@ enum APIEndpoint {
         case .currentUser: return "/auth/me"
         case .logout: return "/auth/logout"
         case .auditLogs: return "/auth/audit-logs"
+        case .listDevices: return "/auth/devices"
+        case .deactivateDevice(let deviceId): return "/auth/device/\(deviceId)/deactivate"
             
         // Employees
         case .createEmployee, .listEmployees: return "/employees"
@@ -237,9 +241,9 @@ enum APIEndpoint {
             return .post
             
         // Auth
-        case .deviceActivate, .pinLogin, .pinRefresh, .switchLocation, .logout:
+        case .deviceActivate, .pinLogin, .pinRefresh, .switchLocation, .logout, .deactivateDevice:
             return .post
-        case .currentUser, .auditLogs:
+        case .currentUser, .auditLogs, .listDevices:
             return .get
             
         // Employees

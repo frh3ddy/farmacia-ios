@@ -135,6 +135,14 @@ struct SettingsView: View {
 
             // Device Section
             Section("Dispositivo") {
+                if authManager.isOwner {
+                    NavigationLink {
+                        DeviceManagementView()
+                    } label: {
+                        Label("Administrar Dispositivos", systemImage: "ipad.and.iphone")
+                    }
+                }
+
                 Button(role: .destructive) {
                     showDeactivateAlert = true
                 } label: {

@@ -422,6 +422,22 @@ struct DeviceActivationResponse: Decodable {
     let activatedBy: ActivatedBy
 }
 
+// Device management (OWNER only) — GET /auth/devices, POST /auth/device/:id/deactivate
+struct ManagedDevice: Decodable, Identifiable {
+    let id: String
+    let name: String
+    let type: String
+    let isActive: Bool
+    let lastActiveAt: Date?
+    let activatedAt: Date
+}
+
+struct DeviceListResponse: Decodable {
+    let success: Bool
+    let count: Int
+    let data: [ManagedDevice]
+}
+
 // Lightweight structs for PIN login response (matches backend exactly)
 struct PINLoginEmployee: Decodable {
     let id: String
