@@ -138,12 +138,7 @@ Edit `AppConfiguration.swift` to change:
 
 This app connects to the Farmacia NestJS backend:
 - **Repository**: https://github.com/frh3ddy/farmacia-ops
-- **Documentation**: See `API_CONTRACTS.md` and `CONTEXT.md`
-
-## Related Documentation
-
-- `CONTEXT.md` - System overview and implementation status
-- `API_CONTRACTS.md` - Full API endpoint documentation
+- **Documentation**: query the farmacia-ops graphify knowledge graph (`graphify-out/`) for current endpoint contracts and domain model — the old hand-written `API_CONTRACTS.md`/`CONTEXT.md` were removed for having drifted stale.
 
 ## Development
 
