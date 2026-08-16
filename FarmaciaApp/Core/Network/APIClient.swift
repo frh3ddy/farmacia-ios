@@ -110,8 +110,35 @@ final class APIClient {
         return try await perform(request)
     }
     
+    /// Replays a queued write during an offline-queue flush. Retries transient
+    /// server errors like a live request, but — unlike `perform` — never
+    /// re-queues on a connectivity failure; OfflineQueueManager owns that
+    /// decision (stop flushing, leave the rest queued) to avoid double-queuing
+    /// the item it's already replaying.
+    func replay(method: String, path: String, bodyData: Data?) async throws {
+        let urlString = AppConfiguration.apiBaseURL + path
+        guard let url = URL(string: urlString) else { throw NetworkError.invalidURL }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = method
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("FarmaciaApp/\(AppConfiguration.appVersion)", forHTTPHeaderField: "User-Agent")
+        if let deviceToken {
+            request.setValue("Bearer \(deviceToken)", forHTTPHeaderField: "Authorization")
+        }
+        if let sessionToken {
+            request.setValue(sessionToken, forHTTPHeaderField: "X-Session-Token")
+        }
+        request.httpBody = bodyData
+
+        let _: EmptyResponse = try await RetryPolicy.withBackoff {
+            try await self.executeOnce(request)
+        }
+    }
+
     // MARK: - Private Methods
-    
+
     private func buildRequest(
         endpoint: APIEndpoint,
         body: Encodable?,
@@ -159,7 +186,50 @@ final class APIClient {
         return request
     }
     
+    /// Live request path: retries transient server errors, and — for
+    /// mutating JSON requests only — auto-queues on a connectivity failure
+    /// instead of surfacing a hard error, so the caller can dismiss its form
+    /// as accepted and the write syncs automatically on reconnect.
     private func perform<T: Decodable>(_ request: URLRequest) async throws -> T {
+        do {
+            return try await RetryPolicy.withBackoff {
+                try await self.executeOnce(request)
+            }
+        } catch let error as NetworkError {
+            if isConnectivityFailure(error), isQueueableWrite(request) {
+                await enqueueForSync(request)
+                throw NetworkError.queuedForSync
+            }
+            throw error
+        }
+    }
+
+    private func isConnectivityFailure(_ error: NetworkError) -> Bool {
+        switch error {
+        case .networkUnavailable, .timeout:
+            return true
+        default:
+            return false
+        }
+    }
+
+    /// Only JSON-bodied mutations are queueable — GETs have nothing to
+    /// replay, and multipart image uploads are excluded to avoid persisting
+    /// large blobs offline (image edits aren't part of the numbers being
+    /// reconciled).
+    private func isQueueableWrite(_ request: URLRequest) -> Bool {
+        guard let method = request.httpMethod, method != "GET" else { return false }
+        return request.value(forHTTPHeaderField: "Content-Type") == "application/json"
+    }
+
+    private func enqueueForSync(_ request: URLRequest) async {
+        guard let method = request.httpMethod else { return }
+        let path = request.url?.path ?? ""
+        let summary = "\(method) \(path)"
+        await OfflineQueueManager.shared.enqueue(method: method, path: path, bodyData: request.httpBody, summary: summary)
+    }
+
+    private func executeOnce<T: Decodable>(_ request: URLRequest) async throws -> T {
         let data: Data
         let response: URLResponse
         
@@ -295,6 +365,8 @@ struct ReceiveInventoryRequest: Encodable {
     // Optional selling price update
     let sellingPrice: Double?
     let syncPriceToSquare: Bool?
+    // Dedup key for safe offline-queue replay — see OfflineQueueManager.
+    let clientRequestId: String
 }
 
 struct CreateAdjustmentRequest: Encodable {
@@ -308,6 +380,8 @@ struct CreateAdjustmentRequest: Encodable {
     let effectiveDate: String?  // Date-only string in YYYY-MM-DD format
     let adjustedBy: String?
     let syncToSquare: Bool?
+    // Dedup key for safe offline-queue replay — see OfflineQueueManager.
+    let clientRequestId: String
 }
 
 struct QuickAdjustmentRequest: Encodable {
@@ -317,6 +391,8 @@ struct QuickAdjustmentRequest: Encodable {
     let reason: String?
     let notes: String?
     let syncToSquare: Bool?
+    // Dedup key for safe offline-queue replay — see OfflineQueueManager.
+    let clientRequestId: String
 }
 
 struct CreateExpenseRequest: Encodable {
@@ -331,6 +407,8 @@ struct CreateExpenseRequest: Encodable {
     let paidAt: Date?
     let notes: String?
     let createdBy: String?
+    // Dedup key for safe offline-queue replay — see OfflineQueueManager.
+    let clientRequestId: String
 }
 
 struct UpdateExpenseRequest: Encodable {

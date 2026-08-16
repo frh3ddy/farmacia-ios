@@ -656,6 +656,10 @@ class EmployeesViewModel: ObservableObject {
             // Reload the list
             await loadEmployees()
             return true
+        } catch NetworkError.queuedForSync {
+            // POST, not an overwrite — same duplicate-on-manual-retry caveat
+            // as CreateProductView (no client dedup key for this endpoint).
+            return true
         } catch let error as NetworkError {
             errorMessage = error.errorDescription
             showError = true
@@ -666,9 +670,9 @@ class EmployeesViewModel: ObservableObject {
             return false
         }
     }
-    
+
     // MARK: - Set PIN
-    
+
     func setPIN(employeeId: String, pin: String) async -> Bool {
         do {
             let request = SetPINRequest(pin: pin)
@@ -677,24 +681,7 @@ class EmployeesViewModel: ObservableObject {
                 body: request
             )
             return true
-        } catch let error as NetworkError {
-            errorMessage = error.localizedDescription
-            showError = true
-            return false
-        } catch {
-            errorMessage = error.localizedDescription
-            showError = true
-            return false
-        }
-    }
-    
-    // MARK: - Deactivate Employee
-    
-    func deactivateEmployee(id: String) async -> Bool {
-        do {
-            let _: EmployeeActionResponse = try await apiClient.request(
-                endpoint: .deleteEmployee(id: id)
-            )
+        } catch NetworkError.queuedForSync {
             return true
         } catch let error as NetworkError {
             errorMessage = error.localizedDescription
@@ -706,14 +693,37 @@ class EmployeesViewModel: ObservableObject {
             return false
         }
     }
-    
+
+    // MARK: - Deactivate Employee
+
+    func deactivateEmployee(id: String) async -> Bool {
+        do {
+            let _: EmployeeActionResponse = try await apiClient.request(
+                endpoint: .deleteEmployee(id: id)
+            )
+            return true
+        } catch NetworkError.queuedForSync {
+            return true
+        } catch let error as NetworkError {
+            errorMessage = error.localizedDescription
+            showError = true
+            return false
+        } catch {
+            errorMessage = error.localizedDescription
+            showError = true
+            return false
+        }
+    }
+
     // MARK: - Reset PIN Lockout
-    
+
     func resetPINLockout(employeeId: String) async -> Bool {
         do {
             let _: EmployeeActionResponse = try await apiClient.request(
                 endpoint: .resetPINLockout(employeeId: employeeId)
             )
+            return true
+        } catch NetworkError.queuedForSync {
             return true
         } catch let error as NetworkError {
             errorMessage = error.localizedDescription

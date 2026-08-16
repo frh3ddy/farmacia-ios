@@ -364,7 +364,8 @@ struct ReceiveFlowView: View {
                         notes: list.notes?.isEmpty == true ? nil : list.notes.map { "Shopping List: \($0)" },
                         syncToSquare: true,
                         sellingPrice: nil,
-                        syncPriceToSquare: nil
+                        syncPriceToSquare: nil,
+                        clientRequestId: UUID().uuidString
                     )
 
                     let _: ReceivingCreateResponse = try await apiClient.request(
@@ -373,6 +374,11 @@ struct ReceiveFlowView: View {
                     )
 
                     // Mark item as received in the store
+                    store.markItemReceived(listId: listId, itemId: item.id, receivedQuantity: qty)
+                    submittedCount += 1
+                } catch NetworkError.queuedForSync {
+                    // Accepted offline — it'll sync automatically, so treat it
+                    // like a success rather than a failed item.
                     store.markItemReceived(listId: listId, itemId: item.id, receivedQuantity: qty)
                     submittedCount += 1
                 } catch {

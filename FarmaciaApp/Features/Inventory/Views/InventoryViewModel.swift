@@ -161,7 +161,8 @@ class InventoryViewModel: ObservableObject {
             notes: notes?.isEmpty == true ? nil : notes,
             syncToSquare: true,
             sellingPrice: sellingPrice,
-            syncPriceToSquare: sellingPrice != nil ? syncPriceToSquare : nil
+            syncPriceToSquare: sellingPrice != nil ? syncPriceToSquare : nil,
+            clientRequestId: UUID().uuidString
         )
 
         do {
@@ -180,6 +181,10 @@ class InventoryViewModel: ObservableObject {
             // Reload recepciones
             await loadReceivings(locationId: locationId)
 
+            return true
+        } catch NetworkError.queuedForSync {
+            // Accepted offline — the global connectivity banner already tells
+            // the user it'll sync, so the form can close as if it succeeded.
             return true
         } catch let error as NetworkError {
             errorMessage = error.errorDescription
@@ -247,7 +252,8 @@ class InventoryViewModel: ObservableObject {
                 unitCost: nil,
                 effectiveDate: nil,
                 adjustedBy: nil,
-                syncToSquare: true
+                syncToSquare: true,
+                clientRequestId: UUID().uuidString
             )
 
             do {
@@ -258,6 +264,8 @@ class InventoryViewModel: ObservableObject {
                 successMessage = response.message
                 showSuccess = true
                 await loadAdjustments(locationId: locationId)
+                return true
+            } catch NetworkError.queuedForSync {
                 return true
             } catch let error as NetworkError {
                 errorMessage = error.errorDescription
@@ -276,7 +284,8 @@ class InventoryViewModel: ObservableObject {
                 quantity: abs(quantity),
                 reason: reason,
                 notes: notes,
-                syncToSquare: true
+                syncToSquare: true,
+                clientRequestId: UUID().uuidString
             )
 
             do {
@@ -287,6 +296,8 @@ class InventoryViewModel: ObservableObject {
                 successMessage = response.message
                 showSuccess = true
                 await loadAdjustments(locationId: locationId)
+                return true
+            } catch NetworkError.queuedForSync {
                 return true
             } catch let error as NetworkError {
                 errorMessage = error.errorDescription

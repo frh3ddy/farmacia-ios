@@ -163,6 +163,14 @@ struct EditPriceView: View {
             }
             
             dismiss()
+        } catch NetworkError.queuedForSync {
+            // Safe to reflect immediately: a price PATCH is a plain
+            // overwrite, not a delta — unlike inventory adjustments, there's
+            // no double-count risk if the queued write replays later.
+            let optimisticProduct = product.withSellingPrice(price)
+            onUpdate?(optimisticProduct)
+            ProductCacheManager.shared.saveProduct(optimisticProduct)
+            dismiss()
         } catch let error as NetworkError {
             errorMessage = error.errorDescription ?? "Failed to update price"
             showError = true

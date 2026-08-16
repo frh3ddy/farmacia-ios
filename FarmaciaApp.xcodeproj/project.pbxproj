@@ -98,6 +98,12 @@
 		F000000100000030 /* InventoryAging.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000030 /* InventoryAging.swift */; };
 		FF00000100000001 /* CodeScanner in Frameworks */ = {isa = PBXBuildFile; productRef = FF00000200000001 /* CodeScanner */; };
 		FF00000100000002 /* SwiftyCrop in Frameworks */ = {isa = PBXBuildFile; productRef = FF00000200000002 /* SwiftyCrop */; };
+		JJ00000100000001 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = JJ00000200000001 /* NetworkMonitor.swift */; };
+		JJ00000100000002 /* OfflineQueueManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = JJ00000200000002 /* OfflineQueueManager.swift */; };
+		JJ00000100000003 /* RetryPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = JJ00000200000003 /* RetryPolicy.swift */; };
+		JJ00000100000004 /* QueuedRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = JJ00000200000004 /* QueuedRequest.swift */; };
+		JJ00000100000005 /* OfflineSyncBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = JJ00000200000005 /* OfflineSyncBanner.swift */; };
+		JJ00000100000006 /* OfflineSyncIssuesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = JJ00000200000006 /* OfflineSyncIssuesView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -192,6 +198,12 @@
 		F100000100000024 /* Reports.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Reports.swift; sourceTree = "<group>"; };
 		F100000100000025 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F100000100000030 /* InventoryAging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryAging.swift; sourceTree = "<group>"; };
+		JJ00000200000001 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
+		JJ00000200000002 /* OfflineQueueManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineQueueManager.swift; sourceTree = "<group>"; };
+		JJ00000200000003 /* RetryPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetryPolicy.swift; sourceTree = "<group>"; };
+		JJ00000200000004 /* QueuedRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueuedRequest.swift; sourceTree = "<group>"; };
+		JJ00000200000005 /* OfflineSyncBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineSyncBanner.swift; sourceTree = "<group>"; };
+		JJ00000200000006 /* OfflineSyncIssuesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineSyncIssuesView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -266,6 +278,7 @@
 			children = (
 				CA00000200000001 /* CachedProduct.swift */,
 				CA00000200000002 /* ProductCacheManager.swift */,
+				JJ00000200000004 /* QueuedRequest.swift */,
 			);
 			path = Storage;
 			sourceTree = "<group>";
@@ -280,6 +293,8 @@
 				EE00000200000005 /* KeyboardHelpers.swift */,
 				EE00000200000006 /* StateViews.swift */,
 				EE00000200000007 /* BackgroundTask.swift */,
+				JJ00000200000005 /* OfflineSyncBanner.swift */,
+				JJ00000200000006 /* OfflineSyncIssuesView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -373,6 +388,9 @@
 				F100000100000003 /* APIClient.swift */,
 				F100000100000004 /* APIEndpoint.swift */,
 				F100000100000005 /* NetworkError.swift */,
+				JJ00000200000001 /* NetworkMonitor.swift */,
+				JJ00000200000002 /* OfflineQueueManager.swift */,
+				JJ00000200000003 /* RetryPolicy.swift */,
 			);
 			path = Network;
 			sourceTree = "<group>";
@@ -674,6 +692,12 @@
 				GG00000100000003 /* PayrollViewModel.swift in Sources */,
 				CA00000100000001 /* CachedProduct.swift in Sources */,
 				CA00000100000002 /* ProductCacheManager.swift in Sources */,
+				JJ00000100000001 /* NetworkMonitor.swift in Sources */,
+				JJ00000100000002 /* OfflineQueueManager.swift in Sources */,
+				JJ00000100000003 /* RetryPolicy.swift in Sources */,
+				JJ00000100000004 /* QueuedRequest.swift in Sources */,
+				JJ00000100000005 /* OfflineSyncBanner.swift in Sources */,
+				JJ00000100000006 /* OfflineSyncIssuesView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

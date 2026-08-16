@@ -17,7 +17,8 @@ enum NetworkError: LocalizedError {
     case timeout
     case serverError(message: String)
     case unknown(Error)
-    
+    case queuedForSync
+
     var errorDescription: String? {
         switch self {
         case .invalidURL:
@@ -53,6 +54,8 @@ enum NetworkError: LocalizedError {
             return message
         case .unknown(let error):
             return error.localizedDescription
+        case .queuedForSync:
+            return "Sin conexión. Este cambio se guardó y se sincronizará automáticamente."
         }
     }
     
@@ -62,7 +65,7 @@ enum NetworkError: LocalizedError {
             return true
         case .accountLocked:
             return true // Wait for lockout to end
-        case .networkUnavailable, .timeout:
+        case .networkUnavailable, .timeout, .queuedForSync:
             return true // Retry
         default:
             return false

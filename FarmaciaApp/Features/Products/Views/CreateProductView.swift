@@ -251,7 +251,10 @@ struct CreateProductView: View {
             } message: {
                 Text(viewModel.errorMessage)
             }
-            .alert("Producto Creado", isPresented: $viewModel.showSuccess) {
+            .alert(
+                viewModel.successMessage.hasPrefix("Sin conexión") ? "Sin conexión" : "Producto Creado",
+                isPresented: $viewModel.showSuccess
+            ) {
                 Button("OK") {
                     dismiss()
                 }
@@ -456,6 +459,13 @@ class CreateProductViewModel: ObservableObject {
                 successMessage = message
                 showSuccess = true
             }
+        } catch NetworkError.queuedForSync {
+            // Creating a product is a POST, not an overwrite — no client
+            // dedup key exists for it (unlike adjustments/receiving/expenses),
+            // so a manual retry before this syncs could create a duplicate.
+            // No product id exists yet either, so image upload can't run.
+            successMessage = "Sin conexión. \"\(name)\" se creará automáticamente cuando vuelva la conexión — evita crearlo de nuevo mientras tanto."
+            showSuccess = true
         } catch let error as NetworkError {
             errorMessage = error.errorDescription ?? "Error al crear producto"
             showError = true

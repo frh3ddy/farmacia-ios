@@ -80,6 +80,22 @@ struct Product: Codable, Identifiable, Equatable, Hashable {
         return ((price - cost) / price) * 100
     }
     
+    /// Copy with a new selling price — used for optimistic local display when
+    /// a price edit is queued for offline sync. Safe to show immediately
+    /// (unlike inventory quantities): a price PATCH is a plain overwrite, so
+    /// replaying it later just re-applies the same end value.
+    func withSellingPrice(_ newPrice: Double) -> Product {
+        Product(
+            id: id, name: name, sku: sku, categoryId: categoryId,
+            squareProductName: squareProductName, squareDescription: squareDescription,
+            squareImageUrl: squareImageUrl, squareVariationName: squareVariationName,
+            squareDataSyncedAt: squareDataSyncedAt, category: category,
+            supplierCount: supplierCount, createdAt: createdAt,
+            sellingPrice: newPrice, currency: currency, totalInventory: totalInventory,
+            averageCost: averageCost, hasSquareSync: hasSquareSync
+        )
+    }
+
     // NOTE: deliberately NO custom `==` — the synthesized memberwise equality
     // is required so SwiftUI invalidates list rows when price, stock, or the
     // image URL change. An id-only `==` made updated rows compare "equal"

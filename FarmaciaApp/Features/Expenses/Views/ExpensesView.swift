@@ -482,9 +482,10 @@ class ExpensesViewModel: ObservableObject {
             isPaid: isPaid,
             paidAt: isPaid ? (paidAt ?? date) : nil,
             notes: notes,
-            createdBy: nil
+            createdBy: nil,
+            clientRequestId: UUID().uuidString
         )
-        
+
         do {
             let response: ExpenseCreateResponse = try await apiClient.request(
                 endpoint: .createExpense,
@@ -494,6 +495,8 @@ class ExpensesViewModel: ObservableObject {
             showSuccess = true
             await loadExpenses(locationId: locationId)
             await loadSummary(locationId: locationId)
+            return true
+        } catch NetworkError.queuedForSync {
             return true
         } catch let error as NetworkError {
             errorMessage = error.errorDescription

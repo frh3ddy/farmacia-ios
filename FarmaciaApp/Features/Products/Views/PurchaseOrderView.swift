@@ -1064,7 +1064,8 @@ class PurchaseOrderViewModel: ObservableObject {
                         notes: orderNotes.isEmpty ? nil : "Purchase Order: \(orderNotes)",
                         syncToSquare: true,
                         sellingPrice: nil,
-                        syncPriceToSquare: nil
+                        syncPriceToSquare: nil,
+                        clientRequestId: UUID().uuidString
                     )
 
                     let _: ReceivingCreateResponse = try await apiClient.request(
@@ -1072,6 +1073,10 @@ class PurchaseOrderViewModel: ObservableObject {
                         body: request
                     )
 
+                    submittedCount += 1
+                } catch NetworkError.queuedForSync {
+                    // Accepted offline — it'll sync automatically, so treat it
+                    // like a success rather than a failed item.
                     submittedCount += 1
                 } catch {
                     failedCount += 1

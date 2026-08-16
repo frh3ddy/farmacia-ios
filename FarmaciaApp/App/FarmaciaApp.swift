@@ -18,16 +18,17 @@ struct FarmaciaApp: App {
         )
 
         do {
-            let schema = Schema([CachedProduct.self, SyncMetadata.self])
+            let schema = Schema([CachedProduct.self, SyncMetadata.self, QueuedRequest.self])
             let config = ModelConfiguration(isStoredInMemoryOnly: false)
             modelContainer = try ModelContainer(for: schema, configurations: config)
             // Configure the shared cache manager
             ProductCacheManager.shared.configure(container: modelContainer)
+            OfflineQueueManager.shared.configure(container: modelContainer)
         } catch {
             fatalError("Failed to initialize SwiftData: \(error)")
         }
     }
-    
+
     var body: some Scene {
         WindowGroup {
             RootView()
@@ -39,6 +40,11 @@ struct FarmaciaApp: App {
                 // Validate session when app becomes active
                 Task {
                     await authManager.validateSession()
+                    // Covers the case where writes were queued last session
+                    // while offline, and the app is relaunched already online
+                    // — NetworkMonitor's own flush only fires on a live
+                    // offline→online transition, which won't happen here.
+                    await OfflineQueueManager.shared.flush()
                 }
             }
         }
@@ -49,19 +55,22 @@ struct FarmaciaApp: App {
 
 struct RootView: View {
     @EnvironmentObject var authManager: AuthManager
-    
+    @Bindable private var networkMonitor = NetworkMonitor.shared
+    @Bindable private var offlineQueue = OfflineQueueManager.shared
+    @State private var showSyncIssues = false
+
     var body: some View {
         Group {
             switch authManager.authState {
             case .loading:
                 LoadingView()
-                
+
             case .deviceNotActivated:
                 DeviceActivationView()
-                
+
             case .needsPIN:
                 PINEntryView()
-                
+
             case .authenticated:
                 MainTabView()
             }
@@ -71,6 +80,24 @@ struct RootView: View {
             // WhatsApp-style: tapping anywhere outside a text input
             // dismisses the keyboard and resigns field focus globally.
             KeyboardDismissInstaller.install()
+        }
+        .safeAreaInset(edge: .top) {
+            if authManager.authState == .authenticated {
+                OfflineSyncBanner(
+                    isOffline: !networkMonitor.isConnected,
+                    pendingCount: offlineQueue.pendingCount,
+                    failedCount: offlineQueue.failedRequests.count,
+                    onTapFailed: { showSyncIssues = true }
+                )
+            }
+        }
+        .alert("Sin conexión", isPresented: $networkMonitor.justWentOffline) {
+            Button("OK") {}
+        } message: {
+            Text("Tus cambios se guardarán en este dispositivo y se sincronizarán automáticamente en cuanto vuelva la conexión.")
+        }
+        .sheet(isPresented: $showSyncIssues) {
+            OfflineSyncIssuesView(items: offlineQueue.failedRequests, onDismiss: offlineQueue.dismissFailed)
         }
     }
 }

@@ -48,7 +48,10 @@ struct ProductDetailView: View {
     @State private var uploadedImageUrl: String? = nil
     @State private var showImageUploadError = false
     @State private var showImageViewer = false
-    
+    @State private var refreshErrorMessage: String?
+    @State private var showRefreshError = false
+    @State private var offlineQueue = OfflineQueueManager.shared
+
     private var displayProduct: Product {
         currentProduct ?? product
     }
@@ -116,14 +119,7 @@ struct ProductDetailView: View {
                 viewModel: inventoryViewModel,
                 preSelectedProduct: displayProduct,
                 onComplete: {
-                    Task {
-                        // Refresh product + dependent data after receiving
-                        await refreshProduct()
-                        async let activityLoad: () = loadActivity()
-                        async let batchLoad: () = loadBatchData()
-                        async let costSupplierLoad: () = loadCostSupplierData()
-                        _ = await (activityLoad, batchLoad, costSupplierLoad)
-                    }
+                    Task { await refreshDependentData() }
                 }
             )
             .task {
@@ -143,13 +139,7 @@ struct ProductDetailView: View {
                 viewModel: inventoryViewModel,
                 preSelectedProduct: displayProduct,
                 onComplete: {
-                    Task {
-                        await refreshProduct()
-                        async let activityLoad: () = loadActivity()
-                        async let batchLoad: () = loadBatchData()
-                        async let costSupplierLoad: () = loadCostSupplierData()
-                        _ = await (activityLoad, batchLoad, costSupplierLoad)
-                    }
+                    Task { await refreshDependentData() }
                 }
             )
             .task {
@@ -191,11 +181,15 @@ struct ProductDetailView: View {
             await loadActivity()
         }
         .refreshable {
-            async let productRefresh: () = refreshProduct()
-            async let costSupplierLoad: () = loadCostSupplierData()
-            async let batchLoad: () = loadBatchData()
-            async let activityLoad: () = loadActivity()
-            _ = await (productRefresh, costSupplierLoad, batchLoad, activityLoad)
+            await refreshDependentData()
+        }
+        .onChange(of: offlineQueue.pendingCount) { oldValue, newValue in
+            // A queued write for this product may have just synced (or been
+            // moved to failedRequests) — re-fetch so the screen can't keep
+            // showing pre-edit numbers after the edit actually landed.
+            if newValue < oldValue {
+                Task { await refreshDependentData() }
+            }
         }
         .alert("Error", isPresented: $inventoryViewModel.showError) {
             Button("OK") {}
@@ -211,6 +205,11 @@ struct ProductDetailView: View {
             Button("OK") {}
         } message: {
             Text("No se pudo subir la imagen del producto. Intenta de nuevo.")
+        }
+        .alert("Error al Actualizar", isPresented: $showRefreshError) {
+            Button("OK") {}
+        } message: {
+            Text(refreshErrorMessage ?? "No se pudieron cargar los datos más recientes del producto.")
         }
     }
     
@@ -717,7 +716,19 @@ struct ProductDetailView: View {
     }
     
     // MARK: - Actions
-    
+
+    /// Product detail + everything derived from it (activity, FIFO batches,
+    /// cost/supplier history) — the bundle every write on this screen needs
+    /// refreshed afterward, whether that write just completed live or was a
+    /// queued offline edit that synced since the screen last loaded.
+    private func refreshDependentData() async {
+        async let productRefresh: () = refreshProduct()
+        async let activityLoad: () = loadActivity()
+        async let batchLoad: () = loadBatchData()
+        async let costSupplierLoad: () = loadCostSupplierData()
+        _ = await (productRefresh, activityLoad, batchLoad, costSupplierLoad)
+    }
+
     private func refreshProduct() async {
         guard let locationId = authManager.currentLocation?.id else { return }
         isRefreshing = true
@@ -731,8 +742,12 @@ struct ProductDetailView: View {
             onProductUpdated?(response.data)
             // Write-through: update cache with fresh product data
             ProductCacheManager.shared.saveProduct(response.data)
+        } catch let error as NetworkError {
+            refreshErrorMessage = error.errorDescription
+            showRefreshError = true
         } catch {
-            // Silent fail - keep showing current data
+            refreshErrorMessage = "No se pudieron cargar los datos más recientes del producto."
+            showRefreshError = true
         }
         
         isRefreshing = false

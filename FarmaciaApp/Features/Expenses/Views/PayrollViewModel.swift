@@ -172,6 +172,11 @@ class PayrollViewModel: ObservableObject {
                 )
             }
             return true
+        } catch NetworkError.queuedForSync {
+            // No server response to patch the local summary with (workedMinutes/
+            // cost are server-computed) — leave the old time showing rather
+            // than guess, same call as inventory quantities.
+            return true
         } catch let error as NetworkError {
             errorMessage = error.errorDescription
             showError = true
@@ -193,25 +198,12 @@ class PayrollViewModel: ObservableObject {
 
         do {
             try await apiClient.requestVoid(endpoint: .laborDeleteShift(id: shiftId))
-
-            if let current = summary {
-                let patchedShifts = current.shifts.filter { $0.shiftId != shiftId }
-                let totalMinutes = patchedShifts.reduce(0) { $0 + $1.workedMinutes }
-                let workedDays = Set(patchedShifts.map { $0.date }).count
-                let cost = (Double(totalMinutes) / 60.0) * current.hourlyRate
-                summary = PayrollSummary(
-                    teamMemberId: current.teamMemberId,
-                    period: current.period,
-                    hourlyRate: current.hourlyRate,
-                    currency: current.currency,
-                    totalWorkedMinutes: totalMinutes,
-                    totalHours: totalMinutes / 60,
-                    totalMinutes: totalMinutes % 60,
-                    workedDays: workedDays,
-                    totalCost: (cost * 100).rounded() / 100,
-                    shifts: patchedShifts
-                )
-            }
+            patchSummaryAfterDelete(shiftId: shiftId)
+            return true
+        } catch NetworkError.queuedForSync {
+            // Deletion doesn't need a server response to apply locally —
+            // safe to reflect immediately, same reasoning as EditPriceView.
+            patchSummaryAfterDelete(shiftId: shiftId)
             return true
         } catch let error as NetworkError {
             errorMessage = error.errorDescription
@@ -222,5 +214,25 @@ class PayrollViewModel: ObservableObject {
             showError = true
             return false
         }
+    }
+
+    private func patchSummaryAfterDelete(shiftId: String) {
+        guard let current = summary else { return }
+        let patchedShifts = current.shifts.filter { $0.shiftId != shiftId }
+        let totalMinutes = patchedShifts.reduce(0) { $0 + $1.workedMinutes }
+        let workedDays = Set(patchedShifts.map { $0.date }).count
+        let cost = (Double(totalMinutes) / 60.0) * current.hourlyRate
+        summary = PayrollSummary(
+            teamMemberId: current.teamMemberId,
+            period: current.period,
+            hourlyRate: current.hourlyRate,
+            currency: current.currency,
+            totalWorkedMinutes: totalMinutes,
+            totalHours: totalMinutes / 60,
+            totalMinutes: totalMinutes % 60,
+            workedDays: workedDays,
+            totalCost: (cost * 100).rounded() / 100,
+            shifts: patchedShifts
+        )
     }
 }
