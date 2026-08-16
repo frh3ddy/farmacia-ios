@@ -31,14 +31,16 @@ struct AdjustmentImpactReportView: View {
                         )
 
                         ReportHeaderCard(
-                            title: "Ganancia Total",
+                            title: "Valor Repuesto",
                             value: formatCurrency(report.summary.totalGain),
+                            subtitle: "Se refleja al vender",
                             color: .green
                         )
 
                         ReportHeaderCard(
-                            title: "Impacto Neto",
+                            title: "Diferencia Neta",
                             value: formatCurrency(report.summary.netImpact),
+                            subtitle: "Referencia, no es Ganancia Neta",
                             color: Double(report.summary.netImpact) ?? 0 >= 0 ? .green : .red
                         )
 
@@ -49,6 +51,11 @@ struct AdjustmentImpactReportView: View {
                         )
                     }
                     .padding(.horizontal)
+
+                    Text("Solo la Pérdida Total se refleja de inmediato en la Ganancia Neta. El Valor Repuesto se refleja hasta que ese inventario se vende.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal)
 
                     // By Type
                     if !report.byType.isEmpty {
@@ -117,7 +124,7 @@ struct AdjustmentTypeRow: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text(impact.type.replacingOccurrences(of: "_", with: " ").capitalized)
+                Text(AdjustmentType(rawValue: impact.type)?.displayName ?? impact.type)
                     .font(.subheadline)
                     .fontWeight(.medium)
 

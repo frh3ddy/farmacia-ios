@@ -72,7 +72,7 @@ struct ReportsView: View {
                 } label: {
                     reportRow(
                         title: "Impacto de Ajustes",
-                        subtitle: "Merma y ganancias",
+                        subtitle: "Merma y valor repuesto",
                         icon: "exclamationmark.triangle",
                         color: .red
                     )

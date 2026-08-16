@@ -46,7 +46,7 @@ struct ProfitLossReportView: View {
                         // Operating Expenses
                         PLSection(title: "Gastos Operativos", color: .orange) {
                             ForEach(report.operatingExpenses.byType, id: \.type) { expense in
-                                PLRow(label: expense.type, value: expense.amount, isTotal: false, isNegative: true)
+                                PLRow(label: ExpenseType(rawValue: expense.type)?.displayName ?? expense.type, value: expense.amount, isTotal: false, isNegative: true)
                             }
                             PLRow(label: "Merma", value: report.operatingExpenses.shrinkage, isTotal: false, isNegative: true)
                             PLRow(label: "Total de Gastos", value: report.operatingExpenses.total, isTotal: true, isNegative: true)
