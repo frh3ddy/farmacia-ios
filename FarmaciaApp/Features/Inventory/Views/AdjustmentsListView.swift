@@ -40,7 +40,7 @@ struct AdjustmentsListView: View {
 
             Divider()
 
-            // Recent ajustes - always show List to prevent refresh control issues
+            // Recent adjustments - always show List to prevent refresh control issues
             List {
                 if viewModel.recentAdjustments.isEmpty {
                     Section {

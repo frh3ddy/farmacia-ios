@@ -13,7 +13,7 @@ struct InventoryView: View {
 
     enum InventorySegment: String, CaseIterable {
         case receive = "Recibir"
-        case ajustes = "Ajustes"
+        case adjustments = "Ajustes"
         case history = "Historial"
     }
 
@@ -37,7 +37,7 @@ struct InventoryView: View {
                     } else {
                         noPermissionView
                     }
-                case .ajustes:
+                case .adjustments:
                     if authManager.canManageInventory {
                         AdjustmentsListView(viewModel: viewModel)
                     } else {

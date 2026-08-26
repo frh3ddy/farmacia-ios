@@ -562,8 +562,8 @@ struct ProductDetailView: View {
                     NavigationLink {
                         ProductActivityFullView(
                             product: displayProduct,
-                            recepciones: activityViewModel.recepciones,
-                            ajustes: activityViewModel.ajustes
+                            receivings: activityViewModel.receivings,
+                            adjustments: activityViewModel.adjustments
                         )
                     } label: {
                         HStack {

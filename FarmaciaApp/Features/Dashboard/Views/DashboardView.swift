@@ -32,10 +32,10 @@ struct DashboardView: View {
                         inventorySummarySection(report: report)
                         
                         // Receivings Summary
-                        recepcionesSummarySection(report: report)
-                        
+                        receivingsSummarySection(report: report)
+
                         // Recent Adjustments
-                        ajustesSummarySection(report: report)
+                        adjustmentsSummarySection(report: report)
                         
                         // P&L Summary
                         if authManager.canViewReports {
@@ -255,41 +255,41 @@ struct DashboardView: View {
     
     // MARK: - Receivings Summary Section
     
-    private func recepcionesSummarySection(report: DashboardReport) -> some View {
+    private func receivingsSummarySection(report: DashboardReport) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             sectionHeader(title: "Recepciones", icon: "arrow.down.circle")
-            
+
             VStack(spacing: 8) {
-                summaryRow(label: "Total Recepciones", value: "\(report.recepciones.totalReceivings)")
-                summaryRow(label: "Unidades Recibidas", value: "\(report.recepciones.totalQuantity)")
-                summaryRow(label: "Costo Total", value: formatCurrency(report.recepciones.totalCost))
+                summaryRow(label: "Total Recepciones", value: "\(report.receivings.totalReceivings)")
+                summaryRow(label: "Unidades Recibidas", value: "\(report.receivings.totalQuantity)")
+                summaryRow(label: "Costo Total", value: formatCurrency(report.receivings.totalCost))
             }
             .padding()
             .background(Color(.systemGray6))
             .clipShape(.rect(cornerRadius: 12))
         }
     }
-    
+
     // MARK: - Adjustments Summary Section
-    
-    private func ajustesSummarySection(report: DashboardReport) -> some View {
+
+    private func adjustmentsSummarySection(report: DashboardReport) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             sectionHeader(title: "Ajustes", icon: "arrow.up.arrow.down")
-            
+
             VStack(spacing: 8) {
-                summaryRow(label: "Total Ajustes", value: "\(report.ajustes.totalAdjustments)")
-                summaryRow(label: "Pérdida Total", value: formatCurrency(report.ajustes.totalLoss), valueColor: .red)
-                summaryRow(label: "Ganancia Total", value: formatCurrency(report.ajustes.totalGain), valueColor: .green)
-                
+                summaryRow(label: "Total Ajustes", value: "\(report.adjustments.totalAdjustments)")
+                summaryRow(label: "Pérdida Total", value: formatCurrency(report.adjustments.totalLoss), valueColor: .red)
+                summaryRow(label: "Ganancia Total", value: formatCurrency(report.adjustments.totalGain), valueColor: .green)
+
                 Divider()
-                
+
                 HStack {
                     Text("Impacto Neto")
                         .fontWeight(.medium)
                     Spacer()
-                    Text(formatCurrency(report.ajustes.netImpact))
+                    Text(formatCurrency(report.adjustments.netImpact))
                         .fontWeight(.bold)
-                        .foregroundStyle((Double(report.ajustes.netImpact) ?? 0) >= 0 ? .green : .red)
+                        .foregroundStyle((Double(report.adjustments.netImpact) ?? 0) >= 0 ? .green : .red)
                 }
             }
             .padding()

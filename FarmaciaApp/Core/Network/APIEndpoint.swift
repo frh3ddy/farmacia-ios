@@ -58,8 +58,8 @@ enum APIEndpoint {
     case adjustmentCountCorrection
     case adjustmentWriteOff
     case getAdjustment(id: String)
-    case ajustesByProduct(productId: String)
-    case ajustesByLocation(locationId: String)
+    case adjustmentsByProduct(productId: String)
+    case adjustmentsByLocation(locationId: String)
     case adjustmentSummary(locationId: String)
     case adjustmentTypes
     
@@ -168,8 +168,8 @@ enum APIEndpoint {
         case .adjustmentCountCorrection: return "/inventory/adjustments/count-correction"
         case .adjustmentWriteOff: return "/inventory/adjustments/write-off"
         case .getAdjustment(let id): return "/inventory/adjustments/\(id)"
-        case .ajustesByProduct(let productId): return "/inventory/adjustments/product/\(productId)"
-        case .ajustesByLocation(let locationId): return "/inventory/adjustments/location/\(locationId)"
+        case .adjustmentsByProduct(let productId): return "/inventory/adjustments/product/\(productId)"
+        case .adjustmentsByLocation(let locationId): return "/inventory/adjustments/location/\(locationId)"
         case .adjustmentSummary(let locationId): return "/inventory/adjustments/location/\(locationId)/summary"
         case .adjustmentTypes: return "/inventory/adjustments/types/list"
             
@@ -266,7 +266,7 @@ enum APIEndpoint {
         case .createAdjustment, .adjustmentDamage, .adjustmentTheft, .adjustmentExpired,
              .adjustmentFound, .adjustmentReturn, .adjustmentCountCorrection, .adjustmentWriteOff:
             return .post
-        case .getAdjustment, .ajustesByProduct, .ajustesByLocation,
+        case .getAdjustment, .adjustmentsByProduct, .adjustmentsByLocation,
              .adjustmentSummary, .adjustmentTypes:
             return .get
             

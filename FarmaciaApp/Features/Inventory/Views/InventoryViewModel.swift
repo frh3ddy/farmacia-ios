@@ -105,7 +105,7 @@ class InventoryViewModel: ObservableObject {
 
         do {
             let response: AdjustmentListResponse = try await apiClient.request(
-                endpoint: .ajustesByLocation(locationId: locationId)
+                endpoint: .adjustmentsByLocation(locationId: locationId)
             )
             recentAdjustments = response.data
         } catch is CancellationError {
@@ -178,7 +178,7 @@ class InventoryViewModel: ObservableObject {
                 ProductCacheManager.shared.saveProduct(updatedProduct)
             }
 
-            // Reload recepciones
+            // Reload receivings
             await loadReceivings(locationId: locationId)
 
             return true

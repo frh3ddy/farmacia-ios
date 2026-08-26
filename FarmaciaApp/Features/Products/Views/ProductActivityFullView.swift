@@ -4,15 +4,15 @@ import SwiftUI
 
 struct ProductActivityFullView: View {
     let product: Product
-    let recepciones: [InventoryReceiving]
-    let ajustes: [InventoryAdjustment]
-    
+    let receivings: [InventoryReceiving]
+    let adjustments: [InventoryAdjustment]
+
     @State private var selectedSegment: ActivitySegment = .all
-    
+
     enum ActivitySegment: String, CaseIterable {
         case all = "Todos"
-        case recepciones = "Recepciones"
-        case ajustes = "Ajustes"
+        case receivings = "Recepciones"
+        case adjustments = "Ajustes"
     }
     
     var body: some View {
@@ -37,20 +37,20 @@ struct ProductActivityFullView: View {
                         }
                     }
                     
-                case .recepciones:
-                    if recepciones.isEmpty {
+                case .receivings:
+                    if receivings.isEmpty {
                         emptyState("Sin recepciones registradas")
                     } else {
-                        ForEach(recepciones) { receiving in
+                        ForEach(receivings) { receiving in
                             ReceivingRow(receiving: receiving)
                         }
                     }
-                    
-                case .ajustes:
-                    if ajustes.isEmpty {
+
+                case .adjustments:
+                    if adjustments.isEmpty {
                         emptyState("Sin ajustes registrados")
                     } else {
-                        ForEach(ajustes) { adjustment in
+                        ForEach(adjustments) { adjustment in
                             AdjustmentRow(adjustment: adjustment)
                         }
                     }
@@ -65,7 +65,7 @@ struct ProductActivityFullView: View {
     private var combinedItems: [ProductActivityItem] {
         var items: [ProductActivityItem] = []
         
-        for r in recepciones {
+        for r in receivings {
             items.append(ProductActivityItem(
                 id: "recv-\(r.id)",
                 kind: .receiving,
@@ -77,8 +77,8 @@ struct ProductActivityFullView: View {
                 iconColor: .blue
             ))
         }
-        
-        for a in ajustes {
+
+        for a in adjustments {
             let displayQty = a.type.isNegative ? -abs(a.quantity) : a.quantity
             items.append(ProductActivityItem(
                 id: "adj-\(a.id)",

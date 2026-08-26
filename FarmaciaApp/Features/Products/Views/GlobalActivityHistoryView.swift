@@ -11,8 +11,8 @@ struct GlobalActivityHistoryView: View {
     
     enum ActivitySegment: String, CaseIterable {
         case all = "Todos"
-        case recepciones = "Recepciones"
-        case ajustes = "Ajustes"
+        case receivings = "Recepciones"
+        case adjustments = "Ajustes"
     }
     
     var body: some View {
@@ -31,10 +31,10 @@ struct GlobalActivityHistoryView: View {
                 switch selectedSegment {
                 case .all:
                     allActivitySection
-                case .recepciones:
-                    recepcionesSection
-                case .ajustes:
-                    ajustesSection
+                case .receivings:
+                    receivingsSection
+                case .adjustments:
+                    adjustmentsSection
                 }
             }
             .listStyle(.insetGrouped)
@@ -94,8 +94,8 @@ struct GlobalActivityHistoryView: View {
     // MARK: - Receivings Section
     
     @ViewBuilder
-    private var recepcionesSection: some View {
-        if viewModel.isLoadingReceivings && viewModel.recepciones.isEmpty {
+    private var receivingsSection: some View {
+        if viewModel.isLoadingReceivings && viewModel.receivings.isEmpty {
             Section {
                 HStack {
                     Spacer()
@@ -104,7 +104,7 @@ struct GlobalActivityHistoryView: View {
                 }
                 .listRowBackground(Color.clear)
             }
-        } else if viewModel.recepciones.isEmpty {
+        } else if viewModel.receivings.isEmpty {
             Section {
                 emptyState(
                     icon: "shippingbox",
@@ -112,19 +112,19 @@ struct GlobalActivityHistoryView: View {
                 )
             }
         } else {
-            Section("Recent Receivings (\(viewModel.recepciones.count))") {
-                ForEach(viewModel.recepciones) { receiving in
+            Section("Recent Receivings (\(viewModel.receivings.count))") {
+                ForEach(viewModel.receivings) { receiving in
                     ReceivingRow(receiving: receiving)
                 }
             }
         }
     }
-    
+
     // MARK: - Adjustments Section
-    
+
     @ViewBuilder
-    private var ajustesSection: some View {
-        if viewModel.isLoadingAdjustments && viewModel.ajustes.isEmpty {
+    private var adjustmentsSection: some View {
+        if viewModel.isLoadingAdjustments && viewModel.adjustments.isEmpty {
             Section {
                 HStack {
                     Spacer()
@@ -133,7 +133,7 @@ struct GlobalActivityHistoryView: View {
                 }
                 .listRowBackground(Color.clear)
             }
-        } else if viewModel.ajustes.isEmpty {
+        } else if viewModel.adjustments.isEmpty {
             Section {
                 emptyState(
                     icon: "arrow.triangle.2.circlepath",
@@ -141,8 +141,8 @@ struct GlobalActivityHistoryView: View {
                 )
             }
         } else {
-            Section("Recent Adjustments (\(viewModel.ajustes.count))") {
-                ForEach(viewModel.ajustes) { adjustment in
+            Section("Recent Adjustments (\(viewModel.adjustments.count))") {
+                ForEach(viewModel.adjustments) { adjustment in
                     AdjustmentRow(adjustment: adjustment)
                 }
             }
@@ -271,8 +271,8 @@ struct GlobalActivityRow: View {
 
 @MainActor
 class GlobalActivityViewModel: ObservableObject {
-    @Published var recepciones: [InventoryReceiving] = []
-    @Published var ajustes: [InventoryAdjustment] = []
+    @Published var receivings: [InventoryReceiving] = []
+    @Published var adjustments: [InventoryAdjustment] = []
     @Published var isLoading = false
     @Published var isLoadingReceivings = false
     @Published var isLoadingAdjustments = false
@@ -284,7 +284,7 @@ class GlobalActivityViewModel: ObservableObject {
     var combinedActivity: [GlobalActivityItem] {
         var items: [GlobalActivityItem] = []
         
-        for r in recepciones {
+        for r in receivings {
             items.append(GlobalActivityItem(
                 id: "recv-\(r.id)",
                 productName: r.product?.displayName ?? "Unknown Product",
@@ -296,8 +296,8 @@ class GlobalActivityViewModel: ObservableObject {
                 iconColor: .blue
             ))
         }
-        
-        for a in ajustes {
+
+        for a in adjustments {
             let displayQty = a.type.isNegative ? -abs(a.quantity) : a.quantity
             items.append(GlobalActivityItem(
                 id: "adj-\(a.id)",
@@ -331,7 +331,7 @@ class GlobalActivityViewModel: ObservableObject {
             let response: ReceivingListResponse = try await apiClient.request(
                 endpoint: .listReceivingsByLocation(locationId: locationId)
             )
-            recepciones = response.data
+            receivings = response.data
         } catch is CancellationError {
             return
         } catch let error as NetworkError {
@@ -341,21 +341,21 @@ class GlobalActivityViewModel: ObservableObject {
             }
         } catch {
             if !error.localizedDescription.lowercased().contains("cancel") {
-                errorMessage = "Failed to load recepciones"
+                errorMessage = "Failed to load receivings"
                 showError = true
             }
         }
     }
-    
+
     private func loadAdjustments(locationId: String) async {
         isLoadingAdjustments = true
         defer { isLoadingAdjustments = false }
-        
+
         do {
             let response: AdjustmentListResponse = try await apiClient.request(
-                endpoint: .ajustesByLocation(locationId: locationId)
+                endpoint: .adjustmentsByLocation(locationId: locationId)
             )
-            ajustes = response.data
+            adjustments = response.data
         } catch is CancellationError {
             return
         } catch let error as NetworkError {
@@ -365,7 +365,7 @@ class GlobalActivityViewModel: ObservableObject {
             }
         } catch {
             if !error.localizedDescription.lowercased().contains("cancel") {
-                errorMessage = "Failed to load ajustes"
+                errorMessage = "Failed to load adjustments"
                 showError = true
             }
         }

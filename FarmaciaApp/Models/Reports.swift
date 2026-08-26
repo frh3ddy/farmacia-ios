@@ -7,15 +7,14 @@ struct DashboardReport: Decodable {
     let locationId: String?
     let sales: SalesSummary
     let inventory: InventorySummary
-    let ajustes: AdjustmentsSummary
-    let recepciones: ReceivingsSummary
+    let adjustments: AdjustmentsSummary
+    let receivings: ReceivingsSummary
     let operatingExpenses: OperatingExpensesSummary
     let netProfit: NetProfitSummary
-    
+
     enum CodingKeys: String, CodingKey {
         case period, locationId, sales, inventory
-        case ajustes = "adjustments"
-        case recepciones = "receivings"
+        case adjustments, receivings
         case operatingExpenses, netProfit
     }
 }

@@ -33,18 +33,18 @@ struct ProductActivityItem: Identifiable {
 
 @MainActor
 class ProductActivityViewModel: ObservableObject {
-    @Published var recepciones: [InventoryReceiving] = []
-    @Published var ajustes: [InventoryAdjustment] = []
+    @Published var receivings: [InventoryReceiving] = []
+    @Published var adjustments: [InventoryAdjustment] = []
     @Published var isLoading = false
-    
+
     private let apiClient = APIClient.shared
-    
+
     /// Combined and chronologically sorted activity for the product
     var combinedActivity: [ProductActivityItem] {
         var items: [ProductActivityItem] = []
-        
-        // Convert recepciones
-        for r in recepciones {
+
+        // Convert receivings
+        for r in receivings {
             items.append(ProductActivityItem(
                 id: "recv-\(r.id)",
                 kind: .receiving,
@@ -57,8 +57,8 @@ class ProductActivityViewModel: ObservableObject {
             ))
         }
         
-        // Convert ajustes
-        for a in ajustes {
+        // Convert adjustments
+        for a in adjustments {
             let displayQty = a.type.isNegative ? -abs(a.quantity) : a.quantity
             items.append(ProductActivityItem(
                 id: "adj-\(a.id)",
@@ -83,33 +83,33 @@ class ProductActivityViewModel: ObservableObject {
         guard !Task.isCancelled else { return }
         
         // Load both in parallel
-        async let recepcionesResult: () = loadReceivings(productId: productId)
-        async let ajustesResult: () = loadAdjustments(productId: productId)
-        
-        _ = await (recepcionesResult, ajustesResult)
+        async let receivingsResult: () = loadReceivings(productId: productId)
+        async let adjustmentsResult: () = loadAdjustments(productId: productId)
+
+        _ = await (receivingsResult, adjustmentsResult)
     }
-    
+
     private func loadReceivings(productId: String) async {
         do {
             let response: ReceivingListResponse = try await apiClient.request(
                 endpoint: .listReceivingsByProduct(productId: productId)
             )
-            recepciones = response.data
+            receivings = response.data
         } catch {
-            // Silent fail — recepciones are supplementary
-            print("Failed to load product recepciones: \(error)")
+            // Silent fail — receivings are supplementary
+            print("Failed to load product receivings: \(error)")
         }
     }
-    
+
     private func loadAdjustments(productId: String) async {
         do {
             let response: AdjustmentListResponse = try await apiClient.request(
-                endpoint: .ajustesByProduct(productId: productId)
+                endpoint: .adjustmentsByProduct(productId: productId)
             )
-            ajustes = response.data
+            adjustments = response.data
         } catch {
-            // Silent fail — ajustes are supplementary
-            print("Failed to load product ajustes: \(error)")
+            // Silent fail — adjustments are supplementary
+            print("Failed to load product adjustments: \(error)")
         }
     }
 }

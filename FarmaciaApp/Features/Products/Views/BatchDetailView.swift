@@ -291,7 +291,7 @@ struct BatchDetailView: View {
                     Text("No consumption records yet")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                    Text("This batch hasn't been consumed by any sales or ajustes")
+                    Text("This batch hasn't been consumed by any sales or adjustments")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)

@@ -29,7 +29,7 @@ struct ReceiveInventoryView: View {
 
             Divider()
 
-            // Recent recepciones - always show List to prevent refresh control issues
+            // Recent receivings - always show List to prevent refresh control issues
             List {
                 if viewModel.recentReceivings.isEmpty {
                     Section {
