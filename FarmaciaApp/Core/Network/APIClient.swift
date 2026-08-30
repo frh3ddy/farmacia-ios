@@ -241,6 +241,8 @@ final class APIClient {
                 throw NetworkError.networkUnavailable
             case .timedOut:
                 throw NetworkError.timeout
+            case .cancelled:
+                throw NetworkError.cancelled
             default:
                 throw NetworkError.unknown(error)
             }
@@ -339,7 +341,6 @@ struct DeviceActivationRequest: Encodable {
 
 struct PINLoginRequest: Encodable {
     let pin: String
-    let locationId: String
 }
 
 struct SwitchLocationRequest: Encodable {

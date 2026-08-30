@@ -232,39 +232,13 @@ struct LocationSwitchView: View {
     }
     
     // MARK: - Empty State
-    
+
     private var emptyStateView: some View {
-        VStack(spacing: 16) {
-            ZStack {
-                Circle()
-                    .fill(Color(.systemGray5))
-                    .frame(width: 80, height: 80)
-                
-                Image(systemName: "building.2")
-                    .font(.system(size: 40))
-                    .foregroundStyle(.secondary)
-            }
-            
-            Text("Sin Ubicaciones Disponibles")
-                .font(.headline)
-            
-            Text("No tienes acceso a ninguna ubicación.\nContacta a tu administrador para asistencia.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
-            
-            Button {
-                dismiss()
-            } label: {
-                Text("Cerrar")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.bordered)
-            .padding(.horizontal, 48)
-            .padding(.top, 8)
-        }
+        AppEmptyStateView(
+            title: "Sin Ubicaciones Disponibles",
+            systemImage: "building.2",
+            message: "No tienes acceso a ninguna ubicación.\nContacta a tu administrador para asistencia."
+        )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     

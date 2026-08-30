@@ -565,7 +565,7 @@ struct ProductsView: View {
 
     private func filterCount(for filter: ProductFilter) -> Int {
         switch filter {
-        case .all: return viewModel.counts.total
+        case .all: return viewModel.totalCount
         case .lowStock: return viewModel.counts.lowStock
         case .outOfStock: return viewModel.counts.outOfStock
         case .inStock: return viewModel.counts.inStock

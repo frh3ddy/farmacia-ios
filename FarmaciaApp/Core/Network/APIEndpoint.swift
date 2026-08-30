@@ -122,6 +122,7 @@ enum APIEndpoint {
     
     // MARK: - Supplier Endpoints
     case listSuppliers
+    case createSupplier
     
     // MARK: - Properties
     
@@ -228,7 +229,7 @@ enum APIEndpoint {
         case .productCounts: return "/products/counts"
             
         // Suppliers
-        case .listSuppliers: return "/admin/inventory/cutover/suppliers"
+        case .listSuppliers, .createSupplier: return "/admin/inventory/cutover/suppliers"
         }
     }
     
@@ -312,7 +313,7 @@ enum APIEndpoint {
         case .listProducts, .getProduct, .productSuppliers, .productCostHistory, .supplierCatalog,
              .productCounts:
             return .get
-        case .createProduct, .syncProductsToSquare:
+        case .createProduct, .syncProductsToSquare, .createSupplier:
             return .post
         case .updateProductPrice:
             return .patch

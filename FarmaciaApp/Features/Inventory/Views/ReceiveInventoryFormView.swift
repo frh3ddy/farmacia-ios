@@ -334,7 +334,7 @@ struct ReceiveInventoryFormView: View {
             }
             .sheet(isPresented: $showSupplierPicker) {
                 SupplierPickerView(
-                    suppliers: viewModel.suppliers,
+                    suppliers: $viewModel.suppliers,
                     selectedSupplier: $selectedSupplier
                 )
             }

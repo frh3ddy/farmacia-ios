@@ -48,6 +48,10 @@ struct ProductDetailView: View {
     @State private var uploadedImageUrl: String? = nil
     @State private var showImageUploadError = false
     @State private var showImageViewer = false
+    @State private var pendingOriginalImage: UIImage?
+    @State private var pendingLiftedImage: UIImage?
+    @State private var pendingBackgroundRemoved = true
+    @State private var showImagePreview = false
     @State private var refreshErrorMessage: String?
     @State private var showRefreshError = false
     @State private var offlineQueue = OfflineQueueManager.shared
@@ -260,16 +264,12 @@ struct ProductDetailView: View {
             .confirmationDialog("Cambiar Imagen del Producto", isPresented: $showImageSourcePicker) {
                 Button("Tomar Foto") {
                     ImagePickerPresenter.present(sourceType: .camera) { image in
-                        Task {
-                            await uploadProductImage(image)
-                        }
+                        stagePickedImage(image)
                     }
                 }
                 Button("Elegir de la Biblioteca") {
                     ImagePickerPresenter.present(sourceType: .photoLibrary) { image in
-                        Task {
-                            await uploadProductImage(image)
-                        }
+                        stagePickedImage(image)
                     }
                 }
                 Button("Cancelar", role: .cancel) {}
@@ -279,6 +279,30 @@ struct ProductDetailView: View {
                     ProductImageViewer(
                         imageUrl: imageUrl,
                         productName: displayProduct.displayName
+                    )
+                }
+            }
+            .fullScreenCover(isPresented: $showImagePreview) {
+                if let stagedImage = pendingOriginalImage {
+                    ProductPhotoPreviewView(
+                        liftedImage: pendingLiftedImage,
+                        originalImage: stagedImage,
+                        backgroundRemoved: $pendingBackgroundRemoved,
+                        onRetake: {
+                            showImagePreview = false
+                            showImageSourcePicker = true
+                        },
+                        onDone: {
+                            showImagePreview = false
+                            let finalImage = pendingBackgroundRemoved
+                                ? (pendingLiftedImage ?? stagedImage)
+                                : stagedImage
+                            pendingOriginalImage = nil
+                            pendingLiftedImage = nil
+                            Task {
+                                await uploadProductImage(finalImage)
+                            }
+                        }
                     )
                 }
             }
@@ -742,6 +766,9 @@ struct ProductDetailView: View {
             onProductUpdated?(response.data)
             // Write-through: update cache with fresh product data
             ProductCacheManager.shared.saveProduct(response.data)
+        } catch NetworkError.cancelled {
+            // A newer refresh (or the view going away) superseded this one —
+            // not a real failure, nothing to show the user.
         } catch let error as NetworkError {
             refreshErrorMessage = error.errorDescription
             showRefreshError = true
@@ -769,6 +796,26 @@ struct ProductDetailView: View {
         )
     }
     
+    /// Stages a freshly picked photo for review: runs subject lifting, then
+    /// opens the preview so the change can be inspected/retaken/toggled off
+    /// before it's actually uploaded.
+    private func stagePickedImage(_ image: UIImage) {
+        pendingOriginalImage = image
+        pendingLiftedImage = nil
+        pendingBackgroundRemoved = true
+        Task {
+            isUploadingImage = true
+            let lifted = await SubjectLifter.liftSubject(from: image)
+            // Reference-identical result means lifting had no effect (no
+            // clear subject, or it failed) — leave the toggle hidden.
+            if lifted !== image {
+                pendingLiftedImage = lifted
+            }
+            isUploadingImage = false
+            showImagePreview = true
+        }
+    }
+
     private func uploadProductImage(_ image: UIImage) async {
         // Resize to upload ceiling (1600px longest edge) + compress to JPEG.
         // Camera photos are 12+ MP — uploading them raw produces multi-MB payloads.

@@ -22,7 +22,9 @@ class ProductsViewModel: ObservableObject {
     @Published var showError = false
     @Published var errorMessage = ""
     
-    // Pre-computed counts — recalculated once when products array changes
+    // Filter/sync badge counts. Backed by the server aggregate (GET
+    // /products/counts, whole catalog) whenever it's available; falls back
+    // to a page-based estimate from `products` only if that request fails.
     @Published var counts = ProductCounts()
     
     // Background catalog warm-up state (for non-blocking progress indicator)
@@ -37,6 +39,7 @@ class ProductsViewModel: ObservableObject {
     
     // Search state (server-side)
     private var currentSearchQuery: String?
+    private var currentLocationId: String?
     
     // Filter/sort inputs — recompute filteredProducts only when these change
     private var activeFilter: ProductFilter = .all
@@ -110,6 +113,7 @@ class ProductsViewModel: ObservableObject {
         currentPage = 1
         hasMore = true
         currentSearchQuery = search
+        currentLocationId = locationId
         
         // STEP 1: If no search and cache has data, show it immediately
         if (search == nil || search?.isEmpty == true) && !cache.isEmpty {
@@ -132,25 +136,43 @@ class ProductsViewModel: ObservableObject {
         isWarmingCache = false
         
         do {
-            var params: [String: String] = [
-                "locationId": locationId,
-                "page": "1",
-                "limit": "\(pageSize)"
-            ]
-            if let search = search, !search.isEmpty {
-                params["search"] = search
-            }
-            
-            let response: ProductListResponse = try await apiClient.request(
+            let params: [String: String] = {
+                var p: [String: String] = [
+                    "locationId": locationId,
+                    "page": "1",
+                    "limit": "\(pageSize)"
+                ]
+                if let search = search, !search.isEmpty {
+                    p["search"] = search
+                }
+                return p
+            }()
+
+            // Counts come from the server aggregate (GET /products/counts) —
+            // a single query over the whole catalog, not just this page.
+            // Fetched alongside the page request rather than sequentially.
+            async let pageFetch: ProductListResponse = apiClient.request(
                 endpoint: .listProducts,
                 queryParams: params
             )
+            async let countsFetch: ProductCountsResponse? = try? apiClient.request(
+                endpoint: .productCounts,
+                queryParams: ["locationId": locationId]
+            )
+
+            let response = try await pageFetch
             products = response.data
             totalCount = response.totalCount ?? response.count
             hasMore = response.hasMore ?? false
             currentPage = 1
-            recalculateCounts()
             recomputeFilteredProducts()
+
+            if let serverCounts = await countsFetch {
+                applyServerCounts(serverCounts)
+            } else {
+                // Counts endpoint failed — fall back to a page-based estimate.
+                recalculateCounts()
+            }
             
             // STEP 3: Update cache with fresh data (skip search results)
             if search == nil || search?.isEmpty == true {
@@ -206,9 +228,11 @@ class ProductsViewModel: ObservableObject {
             totalCount = response.totalCount ?? totalCount
             hasMore = response.hasMore ?? false
             currentPage = nextPage
-            recalculateCounts()
+            // Counts already reflect the whole catalog via the server aggregate —
+            // recomputing from `products` here would regress them to a partial,
+            // page-based estimate.
             recomputeFilteredProducts()
-            
+
             // Update cache with new page
             cache.saveProducts(response.data)
         } catch {
@@ -276,29 +300,59 @@ class ProductsViewModel: ObservableObject {
     func updateProduct(_ product: Product) {
         if let index = products.firstIndex(where: { $0.id == product.id }) {
             products[index] = product
-            recalculateCounts()
             recomputeFilteredProducts()
         }
         // Write-through to cache
         cache.saveProduct(product)
+        refreshServerCounts()
     }
-    
+
     /// Insert a newly created product at the top of the list.
     /// Write-through: updates both in-memory array AND SwiftData cache.
     func insertProduct(_ product: Product) {
         products.insert(product, at: 0)
         totalCount += 1
-        recalculateCounts()
         recomputeFilteredProducts()
         // Write-through to cache
         cache.saveProduct(product)
+        refreshServerCounts()
+    }
+
+    /// Re-fetch the server-wide count aggregate after a single-product edit —
+    /// cheaper and more correct than patching `counts` from just the edited
+    /// item, since the old bucket it moved out of isn't known locally.
+    private func refreshServerCounts() {
+        guard let locationId = currentLocationId else { return }
+        Task {
+            if let serverCounts: ProductCountsResponse = try? await apiClient.request(
+                endpoint: .productCounts,
+                queryParams: ["locationId": locationId]
+            ) {
+                applyServerCounts(serverCounts)
+            }
+        }
+    }
+
+    private func applyServerCounts(_ response: ProductCountsResponse) {
+        var c = ProductCounts()
+        c.total = response.total
+        c.outOfStock = response.outOfStock
+        c.lowStock = response.lowStock
+        c.inStock = response.total - response.outOfStock - response.lowStock
+        c.lowMargin = response.lowMargin
+        c.synced = response.synced
+        c.local = response.local
+        counts = c
     }
     
-    /// Single-pass count calculation — called once when products change
-    private func recalculateCounts() {
+    /// Single-pass count calculation over a given product list. Only used as
+    /// a fallback (cache-first optimistic display, or if GET /products/counts
+    /// fails) — it necessarily undercounts against the whole catalog since
+    /// `products` only holds however many pages have loaded so far.
+    private func computeCounts(from source: [Product]) -> ProductCounts {
         var c = ProductCounts()
-        c.total = products.count
-        for product in products {
+        c.total = source.count
+        for product in source {
             let stock = product.totalInventory ?? 0
             if stock == 0 { c.outOfStock += 1 }
             else if stock < 10 { c.lowStock += 1 }
@@ -306,6 +360,10 @@ class ProductsViewModel: ObservableObject {
             if (product.profitMargin ?? 100) < 10 { c.lowMargin += 1 }
             if product.hasSquareSync == true { c.synced += 1 } else { c.local += 1 }
         }
-        counts = c
+        return c
+    }
+
+    private func recalculateCounts() {
+        counts = computeCounts(from: products)
     }
 }

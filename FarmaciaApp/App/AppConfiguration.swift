@@ -32,9 +32,9 @@ enum AppConfiguration {
         case .development:
             return "http://\(localServerIP):3000"
         case .staging:
-            return "https://farmacia-api-staging.railway.app"
+            return "https://api-staging-f44c.up.railway.app"
         case .production:
-            return "https://farmacia-api.railway.app"
+            return "https://api-production-243c.up.railway.app"
         }
     }
     

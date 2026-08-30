@@ -41,6 +41,8 @@
 		EE00000100000005 /* KeyboardHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000005 /* KeyboardHelpers.swift */; };
 		EE00000100000006 /* StateViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000006 /* StateViews.swift */; };
 		EE00000100000007 /* BackgroundTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000007 /* BackgroundTask.swift */; };
+		EE00000100000008 /* SubjectLifter.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000008 /* SubjectLifter.swift */; };
+		EE00000100000009 /* ProductPhotoPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000009 /* ProductPhotoPreviewView.swift */; };
 		F000000100000001 /* FarmaciaApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000001 /* FarmaciaApp.swift */; };
 		F000000100000002 /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000002 /* AppConfiguration.swift */; };
 		F000000100000003 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000003 /* APIClient.swift */; };
@@ -143,6 +145,8 @@
 		EE00000200000005 /* KeyboardHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardHelpers.swift; sourceTree = "<group>"; };
 		EE00000200000006 /* StateViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StateViews.swift; sourceTree = "<group>"; };
 		EE00000200000007 /* BackgroundTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTask.swift; sourceTree = "<group>"; };
+		EE00000200000008 /* SubjectLifter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubjectLifter.swift; sourceTree = "<group>"; };
+		EE00000200000009 /* ProductPhotoPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductPhotoPreviewView.swift; sourceTree = "<group>"; };
 		F100000000000000 /* FarmaciaApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FarmaciaApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F100000100000001 /* FarmaciaApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FarmaciaApp.swift; sourceTree = "<group>"; };
 		F100000100000002 /* AppConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfiguration.swift; sourceTree = "<group>"; };
@@ -295,6 +299,8 @@
 				EE00000200000005 /* KeyboardHelpers.swift */,
 				EE00000200000006 /* StateViews.swift */,
 				EE00000200000007 /* BackgroundTask.swift */,
+				EE00000200000008 /* SubjectLifter.swift */,
+				EE00000200000009 /* ProductPhotoPreviewView.swift */,
 				JJ00000200000005 /* OfflineSyncBanner.swift */,
 				JJ00000200000006 /* OfflineSyncIssuesView.swift */,
 			);
@@ -691,6 +697,8 @@
 				EE00000100000005 /* KeyboardHelpers.swift in Sources */,
 				EE00000100000006 /* StateViews.swift in Sources */,
 				EE00000100000007 /* BackgroundTask.swift in Sources */,
+				EE00000100000008 /* SubjectLifter.swift in Sources */,
+				EE00000100000009 /* ProductPhotoPreviewView.swift in Sources */,
 				GG00000100000001 /* Payroll.swift in Sources */,
 				GG00000100000002 /* PayrollView.swift in Sources */,
 				GG00000100000003 /* PayrollViewModel.swift in Sources */,
