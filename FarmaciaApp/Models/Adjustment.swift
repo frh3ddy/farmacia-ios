@@ -15,7 +15,10 @@ enum AdjustmentType: String, Codable, CaseIterable, Identifiable {
     case transferIn = "TRANSFER_IN"
     case writeOff = "WRITE_OFF"
     case other = "OTHER"
-    
+    case breakBulkOut = "BREAK_BULK_OUT"
+    case breakBulkIn = "BREAK_BULK_IN"
+    case autoSaleCover = "AUTO_SALE_COVER"
+
     var displayName: String {
         switch self {
         case .damage: return "Daño"
@@ -28,9 +31,12 @@ enum AdjustmentType: String, Codable, CaseIterable, Identifiable {
         case .transferIn: return "Transferencia Entrada"
         case .writeOff: return "Baja"
         case .other: return "Otro"
+        case .breakBulkOut: return "Desglose (Caja)"
+        case .breakBulkIn: return "Desglose (Piezas Sueltas)"
+        case .autoSaleCover: return "Cobertura Automática de Venta"
         }
     }
-    
+
     var icon: String {
         switch self {
         case .damage: return "exclamationmark.triangle"
@@ -43,21 +49,24 @@ enum AdjustmentType: String, Codable, CaseIterable, Identifiable {
         case .transferIn: return "arrow.left.square"
         case .writeOff: return "xmark.circle"
         case .other: return "ellipsis.circle"
+        case .breakBulkOut: return "shippingbox"
+        case .breakBulkIn: return "shippingbox.fill"
+        case .autoSaleCover: return "wand.and.stars"
         }
     }
-    
+
     var isPositive: Bool {
         switch self {
-        case .found, .returnType, .transferIn, .countCorrection:
+        case .found, .returnType, .transferIn, .countCorrection, .breakBulkIn, .autoSaleCover:
             return true
         default:
             return false
         }
     }
-    
+
     var isNegative: Bool {
         switch self {
-        case .damage, .theft, .expired, .transferOut, .writeOff:
+        case .damage, .theft, .expired, .transferOut, .writeOff, .breakBulkOut:
             return true
         default:
             return false
