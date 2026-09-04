@@ -67,7 +67,13 @@ struct AdjustmentsListView: View {
                 } else {
                     Section("Ajustes Recientes") {
                         ForEach(viewModel.recentAdjustments.prefix(10)) { adjustment in
-                            AdjustmentRow(adjustment: adjustment)
+                            AdjustmentRow(adjustment: adjustment) {
+                                let locationId = authManager.currentLocation?.id ?? adjustment.locationId
+                                await viewModel.retryAdjustmentSquareSync(
+                                    adjustmentId: adjustment.id,
+                                    locationId: locationId
+                                )
+                            }
                         }
                     }
                 }
@@ -100,6 +106,13 @@ struct AdjustmentsListView: View {
 
 struct AdjustmentRow: View {
     let adjustment: InventoryAdjustment
+    var onRetrySync: (() async -> Void)? = nil
+
+    @State private var isRetrying = false
+
+    private var syncFailed: Bool {
+        adjustment.squareSyncError != nil
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -138,6 +151,36 @@ struct AdjustmentRow: View {
                 Text(adjustment.adjustedAt, style: .date)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+            }
+
+            if syncFailed {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                    Text("No sincronizado con Square")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+
+                    Spacer()
+
+                    Button {
+                        guard let onRetrySync, !isRetrying else { return }
+                        isRetrying = true
+                        Task {
+                            await onRetrySync()
+                            isRetrying = false
+                        }
+                    } label: {
+                        if isRetrying {
+                            ProgressView()
+                        } else {
+                            Text("Reintentar")
+                        }
+                    }
+                    .font(.caption.weight(.semibold))
+                    .disabled(isRetrying || onRetrySync == nil)
+                }
+                .padding(.top, 2)
             }
         }
         .padding(.vertical, 4)

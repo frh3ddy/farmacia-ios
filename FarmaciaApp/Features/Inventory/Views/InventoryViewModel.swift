@@ -311,6 +311,29 @@ class InventoryViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Retry Adjustment Square Sync
+    func retryAdjustmentSquareSync(adjustmentId: String, locationId: String) async {
+        do {
+            let response: RetrySquareSyncResponse = try await apiClient.request(
+                endpoint: .retryAdjustmentSquareSync(adjustmentId: adjustmentId)
+            )
+            successMessage = response.message
+            showSuccess = true
+            await loadAdjustments(locationId: locationId)
+        } catch is CancellationError {
+            return
+        } catch let error as NetworkError {
+            if error.errorDescription?.lowercased().contains("cancel") == true {
+                return
+            }
+            errorMessage = error.errorDescription
+            showError = true
+        } catch {
+            errorMessage = "Error al reintentar la sincronización con Square"
+            showError = true
+        }
+    }
+
     // MARK: - Search Products
     func searchProducts(_ query: String) -> [Product] {
         guard !query.isEmpty else { return products }
