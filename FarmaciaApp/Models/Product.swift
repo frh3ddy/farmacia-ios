@@ -115,6 +115,7 @@ struct CreateProductRequest: Encodable {
     let sellingPrice: Double
     let costPrice: Double?
     let initialStock: Int?
+    let supplierId: String?
     let locationId: String?
     let syncToSquare: Bool
 }
@@ -214,6 +215,17 @@ struct SyncToSquareData: Decodable {
 struct SupplierListResponse: Decodable {
     let data: [Supplier]
     let count: Int
+}
+
+// MARK: - Create Supplier
+
+struct CreateSupplierRequest: Encodable {
+    let name: String
+}
+
+struct CreateSupplierResponse: Decodable {
+    let success: Bool
+    let supplier: Supplier
 }
 
 // MARK: - Product Supplier (from SupplierProduct table)

@@ -18,6 +18,7 @@ enum NetworkError: LocalizedError {
     case serverError(message: String)
     case unknown(Error)
     case queuedForSync
+    case cancelled
 
     var errorDescription: String? {
         switch self {
@@ -56,6 +57,8 @@ enum NetworkError: LocalizedError {
             return error.localizedDescription
         case .queuedForSync:
             return "Sin conexión. Este cambio se guardó y se sincronizará automáticamente."
+        case .cancelled:
+            return "Solicitud cancelada"
         }
     }
     

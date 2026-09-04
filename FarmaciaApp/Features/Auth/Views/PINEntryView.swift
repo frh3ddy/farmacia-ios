@@ -9,7 +9,6 @@ struct PINEntryView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Header with employee selection
                 headerSection
                 
                 Spacer()
@@ -39,12 +38,6 @@ struct PINEntryView: View {
                     }
                 }
             }
-            .sheet(isPresented: $viewModel.showLocationPicker) {
-                LocationPickerView(
-                    locations: viewModel.locations,
-                    selectedLocation: $viewModel.selectedLocation
-                )
-            }
             .alert("Error de Inicio", isPresented: $viewModel.showError) {
                 Button("OK", role: .cancel) {
                     viewModel.clearPIN()
@@ -60,43 +53,16 @@ struct PINEntryView: View {
             } message: {
                 Text("Esto eliminará este dispositivo de Farmacia. Necesitarás credenciales de dueño/gerente para reactivarlo.")
             }
-            .task {
-                await viewModel.loadLocations(authManager: authManager)
-            }
         }
     }
-    
+
     // MARK: - Header Section
-    
+
     private var headerSection: some View {
-        VStack(spacing: 16) {
-            // Location Selector
-            Button {
-                viewModel.showLocationPicker = true
-            } label: {
-                HStack {
-                    Image(systemName: "building.2")
-                        .foregroundStyle(.blue)
-                    
-                    Text(viewModel.selectedLocation?.name ?? "Seleccionar Ubicación")
-                        .fontWeight(.medium)
-                    
-                    Spacer()
-                    
-                    Image(systemName: "chevron.down")
-                        .font(.caption)
-                }
-                .padding()
-                .background(Color(.systemGray6))
-                .clipShape(.rect(cornerRadius: 12))
-            }
-            .buttonStyle(.plain)
-            
-            Text("Ingresa tu PIN para iniciar sesión")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        }
-        .padding(.top, 20)
+        Text("Ingresa tu PIN para iniciar sesión")
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .padding(.top, 20)
     }
     
     // MARK: - PIN Display Section
@@ -193,45 +159,11 @@ struct PINEntryView: View {
 @MainActor
 class PINEntryViewModel: ObservableObject {
     @Published var pin: String = ""
-    @Published var locations: [Location] = []
-    @Published var selectedLocation: Location?
     @Published var isLoading: Bool = false
-    @Published var showLocationPicker: Bool = false
     @Published var showDeactivateAlert: Bool = false
     @Published var showError: Bool = false
     @Published var errorMessage: String = ""
-    
-    private let apiClient = APIClient.shared
-    
-    func loadLocations(authManager: AuthManager) async {
-        do {
-            // Fetch locations from API
-            let response: [Location] = try await apiClient.request(endpoint: .listLocations)
-            locations = response
-            // Auto-select first location if only one
-            if locations.count == 1 {
-                selectedLocation = locations[0]
-            }
-        } catch let error as NetworkError {
-            // If device is not activated or unauthorized, go back to activation
-            if case .deviceNotActivated = error {
-                authManager.deactivateDevice()
-                return
-            }
-            if case .unauthorized = error {
-                authManager.deactivateDevice()
-                return
-            }
-            print("Failed to load locations: \(error)")
-            errorMessage = "No se pudieron cargar las ubicaciones"
-            showError = true
-        } catch {
-            print("Failed to load locations: \(error)")
-            errorMessage = "No se pudieron cargar las ubicaciones"
-            showError = true
-        }
-    }
-    
+
     func appendDigit(_ digit: Int, authManager: AuthManager) {
         guard pin.count < AppConfiguration.pinLength else { return }
         pin += "\(digit)"
@@ -254,17 +186,14 @@ class PINEntryViewModel: ObservableObject {
     }
     
     func login(authManager: AuthManager) async {
-        guard let location = selectedLocation else {
-            errorMessage = "Por favor selecciona una ubicación"
-            showError = true
-            clearPIN()
-            return
-        }
-        
         isLoading = true
-        
+
         do {
-            try await authManager.loginWithPIN(pin: pin, locationId: location.id)
+            // The device is bound to one location at activation — PIN login
+            // always grants access to that location. Employees assigned to
+            // more than one location switch between them after login via
+            // "Cambiar Ubicación" (LocationSwitchView), not here.
+            try await authManager.loginWithPIN(pin: pin)
         } catch let error as NetworkError {
             // If device is not activated or unauthorized, go back to activation
             if case .deviceNotActivated = error {
@@ -288,55 +217,6 @@ class PINEntryViewModel: ObservableObject {
         }
         
         isLoading = false
-    }
-}
-
-// MARK: - Location Picker View
-
-struct LocationPickerView: View {
-    let locations: [Location]
-    @Binding var selectedLocation: Location?
-    @Environment(\.dismiss) var dismiss
-    
-    var body: some View {
-        NavigationStack {
-            List(locations) { location in
-                Button {
-                    selectedLocation = location
-                    dismiss()
-                } label: {
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text(location.name)
-                                .font(.headline)
-                            
-                            if let address = location.address {
-                                Text(address)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        
-                        Spacer()
-                        
-                        if selectedLocation?.id == location.id {
-                            Image(systemName: "checkmark")
-                                .foregroundStyle(.blue)
-                        }
-                    }
-                }
-                .buttonStyle(.plain)
-            }
-            .navigationTitle("Seleccionar Ubicación")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancelar") {
-                        dismiss()
-                    }
-                }
-            }
-        }
     }
 }
 

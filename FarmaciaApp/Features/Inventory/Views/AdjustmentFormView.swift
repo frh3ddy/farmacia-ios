@@ -17,6 +17,7 @@ struct AdjustmentFormView: View {
     @State private var selectedProduct: Product?
     @State private var showProductPicker = false
     @State private var quantity: Int?
+    @State private var isNegativeEntry = false
     @State private var reason = ""
     @State private var notes = ""
     @FocusState private var isFieldFocused: Bool
@@ -100,9 +101,20 @@ struct AdjustmentFormView: View {
                 }
 
                 Section("Cantidad") {
+                    if adjustmentType.isVariable {
+                        Picker("Dirección", selection: $isNegativeEntry) {
+                            Text("Agregar (+)").tag(false)
+                            Text("Quitar (-)").tag(true)
+                        }
+                        .pickerStyle(.segmented)
+                    }
+
                     HStack {
                         Text("Cantidad")
                         Spacer()
+                        // The number pad has no minus key, so this always
+                        // holds a magnitude — the segmented control above
+                        // supplies the sign for variable adjustment types.
                         TextField("0", value: $quantity, format: .number)
                             .keyboardType(.numberPad)
                             .multilineTextAlignment(.trailing)
@@ -111,9 +123,9 @@ struct AdjustmentFormView: View {
                     }
 
                     if adjustmentType.isVariable {
-                        Text("Ingrese positivo para agregar, negativo para quitar")
+                        Text(isNegativeEntry ? "Esto eliminará \(quantity ?? 0) unidades del inventario" : "Esto agregará \(quantity ?? 0) unidades al inventario")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(isNegativeEntry ? .red : .green)
                     } else if adjustmentType.isNegative {
                         Text("Esto eliminará \(quantity ?? 0) unidades del inventario")
                             .font(.caption)
@@ -170,8 +182,15 @@ struct AdjustmentFormView: View {
               let qty = quantity,
               let locationId = authManager.currentLocation?.id else { return }
 
-        // For negative adjustment types, ensure quantity is positive (API handles sign)
-        let adjustedQty = adjustmentType.isNegative ? abs(qty) : qty
+        // For fixed-sign adjustment types, the field only ever holds a
+        // magnitude (API handles the sign). For variable types, the
+        // segmented control above the field supplies the sign.
+        let adjustedQty: Int
+        if adjustmentType.isVariable {
+            adjustedQty = isNegativeEntry ? -abs(qty) : abs(qty)
+        } else {
+            adjustedQty = adjustmentType.isNegative ? abs(qty) : qty
+        }
 
         let success = await viewModel.createAdjustment(
             type: adjustmentType,

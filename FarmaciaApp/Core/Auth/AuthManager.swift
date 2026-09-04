@@ -157,15 +157,16 @@ final class AuthManager: ObservableObject {
         }
     }
     
-    /// Login with PIN
-    func loginWithPIN(pin: String, locationId: String? = nil) async throws {
+    /// Login with PIN. The device's own registered location (set at
+    /// activation) always determines the session's starting location —
+    /// the backend has no concept of a client-chosen location here.
+    func loginWithPIN(pin: String) async throws {
         isLoading = true
         error = nil
-        
+
         defer { isLoading = false }
-        
-        // Backend only needs PIN - device token provides location context
-        let request = PINLoginRequest(pin: pin, locationId: locationId ?? "")
+
+        let request = PINLoginRequest(pin: pin)
         
         do {
             let response: PINLoginResponse = try await apiClient.request(

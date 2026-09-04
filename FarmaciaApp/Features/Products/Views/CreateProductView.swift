@@ -15,11 +15,17 @@ struct CreateProductView: View {
 
     // Image picker state
     @State private var selectedImage: UIImage?
+    @State private var originalCroppedImage: UIImage?
+    @State private var liftedImage: UIImage?
+    @State private var backgroundRemoved = true
     @State private var imageToCrop: ImageToCrop?
     @State private var showImageSourcePicker = false
+    @State private var showImagePreview = false
+    @State private var isLiftingSubject = false
     @State private var quantity: Int?
     @State private var unitCost: Double?
     @State private var sellingPrice: Double?
+    @State private var showSupplierPicker = false
 
     private enum Field: Hashable {
         case quantity, unitCost, sellingPrice
@@ -49,6 +55,9 @@ struct CreateProductView: View {
                                     .aspectRatio(contentMode: .fill)
                                     .frame(width: 100, height: 100)
                                     .clipShape(.rect(cornerRadius: 16))
+                                    .onTapGesture {
+                                        showImagePreview = true
+                                    }
                             } else {
                                 ZStack {
                                     RoundedRectangle(cornerRadius: 16)
@@ -63,16 +72,27 @@ struct CreateProductView: View {
                                             .foregroundStyle(.secondary)
                                     }
                                 }
+                                .onTapGesture {
+                                    showImageSourcePicker = true
+                                }
                             }
-                            
-                            Image(systemName: selectedImage != nil ? "pencil.circle.fill" : "plus.circle.fill")
-                                .font(.title3)
-                                .foregroundStyle(.white)
-                                .background(Circle().fill(Color.blue).frame(width: 28, height: 28))
-                                .offset(x: 4, y: 4)
-                        }
-                        .onTapGesture {
-                            showImageSourcePicker = true
+
+                            Button {
+                                showImageSourcePicker = true
+                            } label: {
+                                Image(systemName: selectedImage != nil ? "pencil.circle.fill" : "plus.circle.fill")
+                                    .font(.title3)
+                                    .foregroundStyle(.white)
+                                    .background(Circle().fill(Color.blue).frame(width: 28, height: 28))
+                            }
+                            .offset(x: 4, y: 4)
+
+                            if isLiftingSubject {
+                                ProgressView()
+                                    .frame(width: 100, height: 100)
+                                    .background(Color.black.opacity(0.3))
+                                    .clipShape(.rect(cornerRadius: 16))
+                            }
                         }
                         Spacer()
                     }
@@ -94,6 +114,9 @@ struct CreateProductView: View {
                     if selectedImage != nil {
                         Button("Eliminar Foto", role: .destructive) {
                             selectedImage = nil
+                            originalCroppedImage = nil
+                            liftedImage = nil
+                            backgroundRemoved = true
                         }
                     }
                     Button("Cancelar", role: .cancel) {}
@@ -109,13 +132,48 @@ struct CreateProductView: View {
                         configuration: SwiftyCropConfiguration(zoomSensitivity: 8),
                         onCancel: { imageToCrop = nil }
                     ) { croppedImage in
-                        if let croppedImage {
-                            selectedImage = croppedImage
-                        }
                         imageToCrop = nil
+                        guard let croppedImage else { return }
+                        originalCroppedImage = croppedImage
+                        liftedImage = nil
+                        backgroundRemoved = true
+                        selectedImage = croppedImage
+                        Task {
+                            isLiftingSubject = true
+                            let lifted = await SubjectLifter.liftSubject(from: croppedImage)
+                            // Reference-identical result means lifting had no
+                            // effect (no clear subject, or it failed) — leave
+                            // the toggle hidden rather than offering a no-op.
+                            if lifted !== croppedImage {
+                                liftedImage = lifted
+                                selectedImage = lifted
+                            }
+                            isLiftingSubject = false
+                            showImagePreview = true
+                        }
                     }
                 }
-                
+                .fullScreenCover(isPresented: $showImagePreview) {
+                    if let originalCroppedImage {
+                        ProductPhotoPreviewView(
+                            liftedImage: liftedImage,
+                            originalImage: originalCroppedImage,
+                            backgroundRemoved: $backgroundRemoved,
+                            onRetake: {
+                                showImagePreview = false
+                                showImageSourcePicker = true
+                            },
+                            onDone: {
+                                showImagePreview = false
+                            }
+                        )
+                    }
+                }
+                .onChange(of: backgroundRemoved) { _, removed in
+                    guard let originalCroppedImage else { return }
+                    selectedImage = removed ? (liftedImage ?? originalCroppedImage) : originalCroppedImage
+                }
+
                 // Product Info Section
                 Section {
                     TextField("Nombre del Producto", text: $viewModel.name)
@@ -181,6 +239,22 @@ struct CreateProductView: View {
                         }
                         .contentShape(Rectangle())
                         .onTapGesture { focusedField = .unitCost }
+
+                        HStack {
+                            Text("Proveedor")
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            Text(viewModel.selectedSupplier?.name ?? "Seleccionar (Opcional)")
+                                .foregroundStyle(.secondary)
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            focusedField = nil
+                            showSupplierPicker = true
+                        }
                     }
                 } header: {
                     Text("Inventario Inicial (Opcional)")
@@ -191,6 +265,13 @@ struct CreateProductView: View {
                         Text("Puedes recibir inventario después desde la pestaña de Inventario.")
                     }
                 }
+                // Toggling "Add Initial Stock" reveals these rows via the
+                // Form's implicit row-insertion animation. Tapping Proveedor
+                // while that animation is still in flight — e.g. toggling on
+                // and immediately tapping it — races the sheet presentation
+                // and UIKit cancels it on the first attempt. No animation on
+                // this reveal means no in-flight transaction to race.
+                .animation(nil, value: viewModel.hasInitialStock)
                 
                 // Margin Preview
                 if viewModel.showMarginPreview {
@@ -213,6 +294,15 @@ struct CreateProductView: View {
                         Text("Product will be tracked locally only. Not visible in Square POS.")
                     }
                 }
+            }
+            .sheet(isPresented: $showSupplierPicker) {
+                SupplierPickerView(
+                    suppliers: $viewModel.suppliers,
+                    selectedSupplier: $viewModel.selectedSupplier
+                )
+            }
+            .task {
+                await viewModel.loadSuppliers()
             }
             .navigationTitle("Nuevo Producto")
             .navigationBarTitleDisplayMode(.inline)
@@ -362,15 +452,27 @@ class CreateProductViewModel: ObservableObject {
     @Published var initialStock: Int?
     @Published var hasInitialStock = false
     @Published var syncToSquare = true
-    
+    @Published var selectedSupplier: Supplier?
+
     // State
     @Published var isSubmitting = false
     @Published var showError = false
     @Published var errorMessage = ""
     @Published var showSuccess = false
     @Published var successMessage = ""
-    
+    @Published var suppliers: [Supplier] = []
+
     private let apiClient = APIClient.shared
+
+    func loadSuppliers() async {
+        do {
+            let response: SupplierListResponse = try await apiClient.request(endpoint: .listSuppliers)
+            suppliers = response.data
+        } catch {
+            // Optional — the picker just shows empty if this fails.
+            print("Failed to load suppliers: \(error)")
+        }
+    }
 
     init(prefillSku: String? = nil) {
         if let prefillSku, !prefillSku.isEmpty {
@@ -423,6 +525,7 @@ class CreateProductViewModel: ObservableObject {
                 sellingPrice: sellingPrice ?? 0,
                 costPrice: hasInitialStock ? costPrice : nil,
                 initialStock: hasInitialStock ? initialStock : nil,
+                supplierId: hasInitialStock ? selectedSupplier?.id : nil,
                 locationId: locationId,
                 syncToSquare: syncToSquare
             )
