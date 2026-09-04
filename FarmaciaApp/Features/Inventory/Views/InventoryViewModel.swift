@@ -281,7 +281,7 @@ class InventoryViewModel: ObservableObject {
             let request = QuickAdjustmentRequest(
                 locationId: locationId,
                 productId: productId,
-                quantity: abs(quantity),
+                quantity: quantity,
                 reason: reason,
                 notes: notes,
                 syncToSquare: true,
