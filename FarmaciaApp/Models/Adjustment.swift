@@ -177,6 +177,12 @@ struct AdjustmentListResponse: Decodable {
     let data: [InventoryAdjustment]
 }
 
+struct RetrySquareSyncResponse: Decodable {
+    let success: Bool
+    let message: String
+    let data: SquareSyncResult?
+}
+
 struct AdjustmentSummaryResponse: Decodable {
     let summary: AdjustmentSummary
 }

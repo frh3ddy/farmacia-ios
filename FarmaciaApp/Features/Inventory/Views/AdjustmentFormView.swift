@@ -17,7 +17,7 @@ struct AdjustmentFormView: View {
     @State private var selectedProduct: Product?
     @State private var showProductPicker = false
     @State private var quantity: Int?
-    @State private var isNegativeEntry = false
+    @State private var newCount: Int?
     @State private var reason = ""
     @State private var notes = ""
     @FocusState private var isFieldFocused: Bool
@@ -42,9 +42,17 @@ struct AdjustmentFormView: View {
         preSelectedProduct != nil
     }
 
+    private var currentStock: Int {
+        selectedProduct?.totalInventory ?? 0
+    }
+
     private var isValid: Bool {
-        selectedProduct != nil &&
-        (quantity ?? 0) != 0
+        guard selectedProduct != nil else { return false }
+        if adjustmentType.isVariable {
+            guard let newCount else { return false }
+            return newCount != currentStock
+        }
+        return (quantity ?? 0) != 0
     }
 
     var body: some View {
@@ -102,38 +110,51 @@ struct AdjustmentFormView: View {
 
                 Section("Cantidad") {
                     if adjustmentType.isVariable {
-                        Picker("Dirección", selection: $isNegativeEntry) {
-                            Text("Agregar (+)").tag(false)
-                            Text("Quitar (-)").tag(true)
+                        HStack {
+                            Text("Cantidad Actual")
+                            Spacer()
+                            Text("\(currentStock)")
+                                .foregroundStyle(.secondary)
                         }
-                        .pickerStyle(.segmented)
-                    }
 
-                    HStack {
-                        Text("Cantidad")
-                        Spacer()
-                        // The number pad has no minus key, so this always
-                        // holds a magnitude — the segmented control above
-                        // supplies the sign for variable adjustment types.
-                        TextField("0", value: $quantity, format: .number)
-                            .keyboardType(.numberPad)
-                            .multilineTextAlignment(.trailing)
-                            .frame(width: 100)
-                            .focused($isFieldFocused)
-                    }
+                        HStack {
+                            Text("Nueva Cantidad")
+                            Spacer()
+                            TextField("0", value: $newCount, format: .number)
+                                .keyboardType(.numberPad)
+                                .multilineTextAlignment(.trailing)
+                                .frame(width: 100)
+                                .focused($isFieldFocused)
+                        }
 
-                    if adjustmentType.isVariable {
-                        Text(isNegativeEntry ? "Esto eliminará \(quantity ?? 0) unidades del inventario" : "Esto agregará \(quantity ?? 0) unidades al inventario")
-                            .font(.caption)
-                            .foregroundStyle(isNegativeEntry ? .red : .green)
-                    } else if adjustmentType.isNegative {
-                        Text("Esto eliminará \(quantity ?? 0) unidades del inventario")
-                            .font(.caption)
-                            .foregroundStyle(.red)
+                        if let newCount, newCount != currentStock {
+                            let delta = newCount - currentStock
+                            Text(delta > 0
+                                 ? "Esto agregará \(delta) unidades al inventario"
+                                 : "Esto eliminará \(abs(delta)) unidades del inventario")
+                                .font(.caption)
+                                .foregroundStyle(delta > 0 ? .green : .red)
+                        }
                     } else {
-                        Text("Esto agregará \(quantity ?? 0) unidades al inventario")
-                            .font(.caption)
-                            .foregroundStyle(.green)
+                        HStack {
+                            Text("Cantidad")
+                            Spacer()
+                            TextField("0", value: $quantity, format: .number)
+                                .keyboardType(.numberPad)
+                                .multilineTextAlignment(.trailing)
+                                .frame(width: 100)
+                                .focused($isFieldFocused)
+                        }
+
+                        if adjustmentType.isNegative {
+                            Text("Esto eliminará \(quantity ?? 0) unidades del inventario")
+                                .font(.caption)
+                                .foregroundStyle(.red)
+                        } else {
+                            Text("Esto agregará \(quantity ?? 0) unidades al inventario")
+                                .font(.caption)
+                                .foregroundStyle(.green)
+                        }
                     }
                 }
 
@@ -179,17 +200,19 @@ struct AdjustmentFormView: View {
 
     private func saveAdjustment() async {
         guard let product = selectedProduct,
-              let qty = quantity,
               let locationId = authManager.currentLocation?.id else { return }
 
-        // For fixed-sign adjustment types, the field only ever holds a
-        // magnitude (API handles the sign). For variable types, the
-        // segmented control above the field supplies the sign.
+        // Variable types (count correction) take the new total and derive
+        // the signed delta. Fixed-sign types only ever collect a magnitude —
+        // the server re-derives the correct sign for those regardless of
+        // what's sent, so plain abs() is enough.
         let adjustedQty: Int
         if adjustmentType.isVariable {
-            adjustedQty = isNegativeEntry ? -abs(qty) : abs(qty)
+            guard let newCount, newCount != currentStock else { return }
+            adjustedQty = newCount - currentStock
         } else {
-            adjustedQty = adjustmentType.isNegative ? abs(qty) : qty
+            guard let qty = quantity else { return }
+            adjustedQty = abs(qty)
         }
 
         let success = await viewModel.createAdjustment(

@@ -281,7 +281,7 @@ class InventoryViewModel: ObservableObject {
             let request = QuickAdjustmentRequest(
                 locationId: locationId,
                 productId: productId,
-                quantity: abs(quantity),
+                quantity: quantity,
                 reason: reason,
                 notes: notes,
                 syncToSquare: true,
@@ -308,6 +308,29 @@ class InventoryViewModel: ObservableObject {
                 showError = true
                 return false
             }
+        }
+    }
+
+    // MARK: - Retry Adjustment Square Sync
+    func retryAdjustmentSquareSync(adjustmentId: String, locationId: String) async {
+        do {
+            let response: RetrySquareSyncResponse = try await apiClient.request(
+                endpoint: .retryAdjustmentSquareSync(adjustmentId: adjustmentId)
+            )
+            successMessage = response.message
+            showSuccess = true
+            await loadAdjustments(locationId: locationId)
+        } catch is CancellationError {
+            return
+        } catch let error as NetworkError {
+            if error.errorDescription?.lowercased().contains("cancel") == true {
+                return
+            }
+            errorMessage = error.errorDescription
+            showError = true
+        } catch {
+            errorMessage = "Error al reintentar la sincronización con Square"
+            showError = true
         }
     }
 
