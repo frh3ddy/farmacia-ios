@@ -10,7 +10,7 @@ Xcode project: `FarmaciaApp.xcodeproj` (single `FarmaciaApp` target). Source und
 
 > Global rules live in `~/dev/CLAUDE.md` and `~/CLAUDE.md`. This file is project-specific only.
 
-## When working on X, read Y
+## Session checklist — if working on X, read Y
 
 - **Architecture / "where does X live" / data flow** → `graphify query "<question>"` (graph at `graphify-out/`). Don't browse `FarmaciaApp/` blind.
 - **README.md** has the full auth flow, API headers, and feature breakdown — read it before touching Auth or Network code.
@@ -36,7 +36,7 @@ xcodebuild -project FarmaciaApp.xcodeproj -scheme FarmaciaApp -destination 'plat
 
 ## Local test
 
-No test target exists yet. When one is added, run:
+No test target exists yet (see W3). When one is added, `xcodebuild test` is the command:
 
 ```
 xcodebuild -project FarmaciaApp.xcodeproj -scheme FarmaciaApp -destination 'platform=iOS Simulator,name=iPhone 15' test
@@ -44,6 +44,9 @@ xcodebuild -project FarmaciaApp.xcodeproj -scheme FarmaciaApp -destination 'plat
 
 ## Rules
 
-- Don't persist the session token to the Keychain. Instead keep it in memory only (4-hour expiry); only the device token goes to Keychain. Because sessions are short-lived and per-employee, and persisting them defeats the PIN gate.
-- Don't commit build output. Instead keep `build/` out of git. Because xcarchives and exports are large binaries that bloat history.
-- Don't hand-maintain an architecture doc. Instead update the graphify graph. Because prose docs drift; the graph regenerates from the AST.
+- Don't persist the session token to the Keychain. Instead keep it in memory only (4-hour expiry); only the device token goes to Keychain.
+  Because: sessions are short-lived and per-employee, and persisting them defeats the PIN gate.
+- Don't commit build output. Instead keep `build/` gitignored.
+  Because: xcarchives and exports are large binaries that bloat history.
+- Don't hand-maintain an architecture doc. Instead update the graphify graph (`graphify update .`).
+  Because: prose docs drift; the graph regenerates from the AST.
