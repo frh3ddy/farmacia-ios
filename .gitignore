@@ -107,3 +107,6 @@ graphify-out/
 
 # sourcekit-lsp / xcode-build-server (embeds machine-local DerivedData path)
 buildServer.json
+
+# Serena MCP local project data
+.serena/
