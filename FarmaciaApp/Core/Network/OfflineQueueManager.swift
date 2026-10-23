@@ -43,7 +43,10 @@ final class OfflineQueueManager {
     /// failure (validation rejected it, or transient retries exhausted) is
     /// moved to `failedRequests` instead of being retried forever.
     func flush() async {
-        guard let context = modelContext, !isFlushing else { return }
+        // Without a session every replay 401s and would be marked failed for
+        // good; wait for PIN login (RootView flushes on .authenticated).
+        guard let context = modelContext, !isFlushing,
+              APIClient.shared.sessionToken != nil else { return }
         isFlushing = true
         defer { isFlushing = false }
 
@@ -60,8 +63,9 @@ final class OfflineQueueManager {
                 context.delete(item)
             } catch let error as NetworkError {
                 switch error {
-                case .networkUnavailable, .timeout:
-                    // Offline again mid-flush — leave this and the rest queued.
+                case .networkUnavailable, .timeout, .sessionExpired, .pinRequired:
+                    // Offline again, or the session lapsed mid-flush — leave
+                    // this and the rest queued for the next flush.
                     try? context.save()
                     refresh()
                     return
@@ -77,6 +81,16 @@ final class OfflineQueueManager {
 
         try? context.save()
         refresh()
+    }
+
+    /// User has reviewed a failed sync and wants it replayed.
+    func retryFailed(_ item: QueuedRequest) {
+        guard let context = modelContext else { return }
+        item.status = "pending"
+        item.lastError = nil
+        try? context.save()
+        refresh()
+        Task { await flush() }
     }
 
     /// User has reviewed a failed sync and chosen to discard it.

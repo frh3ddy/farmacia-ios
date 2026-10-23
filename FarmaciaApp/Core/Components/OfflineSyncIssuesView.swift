@@ -8,6 +8,7 @@ import SwiftUI
 
 struct OfflineSyncIssuesView: View {
     let items: [QueuedRequest]
+    var onRetry: (QueuedRequest) -> Void
     var onDismiss: (QueuedRequest) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -35,11 +36,13 @@ struct OfflineSyncIssuesView: View {
                             Text(item.queuedAt, style: .relative)
                                 .font(.caption2)
                                 .foregroundStyle(.tertiary)
-                        }
-                        .swipeActions {
-                            Button("Descartar", role: .destructive) {
-                                onDismiss(item)
+                            HStack {
+                                Button("Reintentar") { onRetry(item) }
+                                    .buttonStyle(.bordered)
+                                Button("Descartar", role: .destructive) { onDismiss(item) }
+                                    .buttonStyle(.bordered)
                             }
+                            .padding(.top, 4)
                         }
                     }
                 }

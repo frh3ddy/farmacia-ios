@@ -76,6 +76,13 @@ struct RootView: View {
             }
         }
         .animation(.easeInOut, value: authManager.authState)
+        .onChange(of: authManager.authState) { _, state in
+            // Writes queued before the session expired replay once the user
+            // logs back in with their PIN.
+            if state == .authenticated {
+                Task { await OfflineQueueManager.shared.flush() }
+            }
+        }
         .onAppear {
             // WhatsApp-style: tapping anywhere outside a text input
             // dismisses the keyboard and resigns field focus globally.
@@ -97,7 +104,11 @@ struct RootView: View {
             Text("Tus cambios se guardarán en este dispositivo y se sincronizarán automáticamente en cuanto vuelva la conexión.")
         }
         .sheet(isPresented: $showSyncIssues) {
-            OfflineSyncIssuesView(items: offlineQueue.failedRequests, onDismiss: offlineQueue.dismissFailed)
+            OfflineSyncIssuesView(
+                items: offlineQueue.failedRequests,
+                onRetry: offlineQueue.retryFailed,
+                onDismiss: offlineQueue.dismissFailed
+            )
         }
     }
 }
