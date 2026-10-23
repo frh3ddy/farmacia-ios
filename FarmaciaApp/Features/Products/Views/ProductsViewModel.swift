@@ -249,10 +249,16 @@ class ProductsViewModel: ObservableObject {
     /// Server remains source of truth — this does not replace any GET.
     private func startWarmUp(locationId: String) {
         warmUpTask?.cancel()
+        // Always re-walk so the cache never goes stale, but only surface the
+        // banner on a cold cache — a silent refresh (e.g. after clearing a
+        // search) shouldn't flash the banner and jump the list.
+        let showsProgress = cache.cachedCount < totalCount
         let startPage = currentPage + 1
         warmUpTask = Task(priority: .utility) { [weak self] in
             guard let self else { return }
-            await MainActor.run { self.isWarmingCache = true }
+            if showsProgress {
+                await MainActor.run { self.isWarmingCache = true }
+            }
             var page = startPage
             var keepGoing = true
             while keepGoing {
