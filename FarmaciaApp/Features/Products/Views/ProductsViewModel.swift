@@ -120,8 +120,15 @@ class ProductsViewModel: ObservableObject {
             let cached = cache.loadAll()
             if !cached.isEmpty {
                 products = cached
-                totalCount = cached.count
-                recalculateCounts()
+                // Keep catalog-wide server counts when we already have them
+                // (e.g. clearing a search) — a page-based estimate here makes
+                // the stats/local-sync rows flicker until the server responds.
+                if counts.total > 0 {
+                    totalCount = counts.total
+                } else {
+                    totalCount = cached.count
+                    recalculateCounts()
+                }
                 recomputeFilteredProducts()
             }
         }
