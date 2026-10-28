@@ -9,8 +9,9 @@ struct DashboardReport: Decodable {
     let inventory: InventorySummary
     let adjustments: AdjustmentsSummary
     let receivings: ReceivingsSummary
-    let operatingExpenses: OperatingExpensesSummary
-    let netProfit: NetProfitSummary
+    // Sent only to OWNER and ACCOUNTANT, the roles that may open the P&L report.
+    let operatingExpenses: OperatingExpensesSummary?
+    let netProfit: NetProfitSummary?
 
     enum CodingKeys: String, CodingKey {
         case period, locationId, sales, inventory

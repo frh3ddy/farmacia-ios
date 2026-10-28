@@ -38,8 +38,8 @@ struct DashboardView: View {
                         adjustmentsSummarySection(report: report)
                         
                         // P&L Summary
-                        if authManager.canViewReports {
-                            profitLossSummarySection(report: report)
+                        if let expenses = report.operatingExpenses, let netProfit = report.netProfit {
+                            profitLossSummarySection(report: report, expenses: expenses, netProfit: netProfit)
                         }
                     } else if viewModel.isLoading {
                         loadingSection
@@ -170,12 +170,14 @@ struct DashboardView: View {
                 color: .orange
             )
             
-            StatCard(
-                title: "Ganancia Neta",
-                value: formatCurrency(report.netProfit.amount),
-                icon: "banknote.fill",
-                color: (Double(report.netProfit.amount) ?? 0) >= 0 ? .green : .red
-            )
+            if let netProfit = report.netProfit {
+                StatCard(
+                    title: "Ganancia Neta",
+                    value: formatCurrency(netProfit.amount),
+                    icon: "banknote.fill",
+                    color: (Double(netProfit.amount) ?? 0) >= 0 ? .green : .red
+                )
+            }
         }
     }
     
@@ -300,15 +302,15 @@ struct DashboardView: View {
     
     // MARK: - Profit & Loss Summary Section
     
-    private func profitLossSummarySection(report: DashboardReport) -> some View {
+    private func profitLossSummarySection(report: DashboardReport, expenses: OperatingExpensesSummary, netProfit: NetProfitSummary) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             sectionHeader(title: "Pérdidas y Ganancias", icon: "chart.pie.fill")
             
             VStack(spacing: 8) {
                 summaryRow(label: "Ingresos", value: formatCurrency(report.sales.totalRevenue), valueColor: .green)
                 summaryRow(label: "Costo de Ventas", value: "(\(formatCurrency(report.sales.totalCOGS)))", valueColor: .red)
-                summaryRow(label: "Gastos Operativos", value: "(\(formatCurrency(report.operatingExpenses.total)))", valueColor: .red)
-                summaryRow(label: "Merma", value: "(\(formatCurrency(report.operatingExpenses.shrinkage)))", valueColor: .orange)
+                summaryRow(label: "Gastos Operativos", value: "(\(formatCurrency(expenses.total)))", valueColor: .red)
+                summaryRow(label: "Merma", value: "(\(formatCurrency(expenses.shrinkage)))", valueColor: .orange)
                 
                 Divider()
                 
@@ -316,15 +318,15 @@ struct DashboardView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Ganancia Neta")
                             .fontWeight(.semibold)
-                        Text("\(report.netProfit.marginPercent)% margen")
+                        Text("\(netProfit.marginPercent)% margen")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
-                    Text(formatCurrency(report.netProfit.amount))
+                    Text(formatCurrency(netProfit.amount))
                         .font(.title3)
                         .fontWeight(.bold)
-                        .foregroundStyle((Double(report.netProfit.amount) ?? 0) >= 0 ? .green : .red)
+                        .foregroundStyle((Double(netProfit.amount) ?? 0) >= 0 ? .green : .red)
                 }
             }
             .padding()
