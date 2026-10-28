@@ -60,8 +60,6 @@ enum APIEndpoint {
     case getAdjustment(id: String)
     case adjustmentsByProduct(productId: String)
     case adjustmentsByLocation(locationId: String)
-    case adjustmentSummary(locationId: String)
-    case adjustmentTypes
     case retryAdjustmentSquareSync(adjustmentId: String)
     
     // MARK: - Reports Endpoints
@@ -172,8 +170,6 @@ enum APIEndpoint {
         case .getAdjustment(let id): return "/inventory/adjustments/\(id)"
         case .adjustmentsByProduct(let productId): return "/inventory/adjustments/product/\(productId)"
         case .adjustmentsByLocation(let locationId): return "/inventory/adjustments/location/\(locationId)"
-        case .adjustmentSummary(let locationId): return "/inventory/adjustments/location/\(locationId)/summary"
-        case .adjustmentTypes: return "/inventory/adjustments/types/list"
         case .retryAdjustmentSquareSync(let id): return "/inventory/adjustments/\(id)/retry-square-sync"
             
         // Reports
@@ -269,8 +265,7 @@ enum APIEndpoint {
         case .createAdjustment, .adjustmentDamage, .adjustmentTheft, .adjustmentExpired,
              .adjustmentFound, .adjustmentReturn, .adjustmentCountCorrection, .adjustmentWriteOff:
             return .post
-        case .getAdjustment, .adjustmentsByProduct, .adjustmentsByLocation,
-             .adjustmentSummary, .adjustmentTypes:
+        case .getAdjustment, .adjustmentsByProduct, .adjustmentsByLocation:
             return .get
         case .retryAdjustmentSquareSync:
             return .post
