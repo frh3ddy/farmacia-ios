@@ -25,7 +25,7 @@ struct AgingBucketSummaryItem: Decodable, Identifiable {
     var id: String { bucket.label }
     
     var formattedCashValue: String {
-        String(format: "$%.2f", cashValue)
+        ReportFormat.currency(cashValue)
     }
 }
 
@@ -37,7 +37,7 @@ struct AgingOverviewResponse: Decodable {
     let totalUnits: Int
     
     var formattedTotalCash: String {
-        String(format: "$%.2f", totalCashTiedUp)
+        ReportFormat.currency(totalCashTiedUp)
     }
 }
 
@@ -100,7 +100,7 @@ struct ProductAgingAnalysis: Decodable, Identifiable {
     var id: String { productId }
     
     var formattedCashTiedUp: String {
-        String(format: "$%.2f", totalCashTiedUp)
+        ReportFormat.currency(totalCashTiedUp)
     }
 }
 
@@ -124,7 +124,7 @@ struct LocationAgingAnalysis: Decodable, Identifiable {
     var id: String { locationId }
     
     var formattedCashTiedUp: String {
-        String(format: "$%.2f", totalCashTiedUp)
+        ReportFormat.currency(totalCashTiedUp)
     }
 }
 
@@ -145,7 +145,7 @@ struct CategoryAgingAnalysis: Decodable, Identifiable {
     var id: String { categoryId }
     
     var formattedCashTiedUp: String {
-        String(format: "$%.2f", totalCashTiedUp)
+        ReportFormat.currency(totalCashTiedUp)
     }
 }
 
@@ -205,7 +205,7 @@ struct ActionableSignal: Decodable, Identifiable {
     
     var formattedCashAtRisk: String? {
         guard let cash = cashAtRisk else { return nil }
-        return String(format: "$%.2f", cash)
+        return ReportFormat.currency(cash)
     }
 }
 
@@ -233,21 +233,15 @@ struct ExpiringBatchInfo: Decodable, Identifiable {
     var id: String { batchId }
     
     var formattedCashValue: String {
-        String(format: "$%.2f", cashValue)
+        ReportFormat.currency(cashValue)
     }
     
     var formattedUnitCost: String {
-        String(format: "$%.2f", unitCost)
+        ReportFormat.currency(unitCost)
     }
     
     var expiryLabel: String {
-        if isExpired {
-            return "Venció hace \(abs(daysUntilExpiry))d"
-        } else if daysUntilExpiry <= 30 {
-            return "Vence en \(daysUntilExpiry)d"
-        } else {
-            return Expiry.display(expiryDate)
-        }
+        Expiry.label(daysUntil: daysUntilExpiry, isExpired: isExpired, expiry: expiryDate)
     }
 }
 
@@ -267,17 +261,11 @@ struct ExpiringProduct: Decodable, Identifiable {
     var id: String { productId }
     
     var formattedCashAtRisk: String {
-        String(format: "$%.2f", totalCashAtRisk)
+        ReportFormat.currency(totalCashAtRisk)
     }
     
     var severityColor: Color {
-        switch severity {
-        case "CRITICAL": return .red
-        case "HIGH": return .orange
-        case "MEDIUM": return .yellow
-        case "LOW": return .green
-        default: return .secondary
-        }
+        InventoryRiskLevel(rawValue: severity)?.color ?? .secondary
     }
     
     var severityIcon: String {
@@ -357,10 +345,7 @@ struct BatchConsumption: Decodable, Identifiable {
     }
     
     var formattedTotalCost: String {
-        if let cost = Double(totalCost) {
-            return String(format: "$%.2f", cost)
-        }
-        return "$\(totalCost)"
+        ReportFormat.currency(totalCost)
     }
 }
 
@@ -410,26 +395,15 @@ struct BatchDetail: Decodable {
     let consumptionCount: Int
     
     var formattedUnitCost: String {
-        if let cost = Double(unitCost) {
-            return String(format: "$%.2f", cost)
-        }
-        return "$\(unitCost)"
+        ReportFormat.currency(unitCost)
     }
     
     var formattedCurrentValue: String {
-        if let val = Double(currentValue) {
-            return String(format: "$%.2f", val)
-        }
-        return "$\(currentValue)"
+        ReportFormat.currency(currentValue)
     }
     
     var sourceLabel: String {
-        switch source {
-        case "PURCHASE": return "Compra"
-        case "OPENING_BALANCE": return "Saldo Inicial"
-        case "ADJUSTMENT": return "Ajuste"
-        default: return source ?? "Desconocido"
-        }
+        BatchSource.label(source)
     }
 }
 
