@@ -73,10 +73,15 @@ final class AuthManager: ObservableObject {
     private let keychain = KeychainManager.shared
     private let apiClient = APIClient.shared
     private var sessionRefreshTimer: Timer?
+    // The server rotates the token on refresh; a second refresh racing with the old one would be refused and log the user out.
+    private let refreshFlight = SingleFlight<SessionRefreshResponse>()
     
     // MARK: - Initialization
     
     private init() {
+        apiClient.onAuthTransition = { [weak self] transition in
+            self?.handle(transition)
+        }
         Task {
             await checkAuthStatus()
         }
@@ -264,6 +269,8 @@ final class AuthManager: ObservableObject {
             isLoading = false
             // Clear session regardless of API result
             clearSession()
+            // The logout call itself may be refused as "session invalid"; a deliberate logout isn't "session expired"
+            error = nil
         }
         
         // Try to logout on server (non-blocking)
@@ -285,6 +292,19 @@ final class AuthManager: ObservableObject {
     }
     
     // MARK: - Session Management
+    
+    /// A request anywhere in the app was refused because the session ended or the device was revoked.
+    private func handle(_ transition: AuthTransition) {
+        switch transition {
+        case .endSession:
+            clearSession()
+            error = .sessionExpired
+        case .deactivateDevice:
+            deactivateDevice()
+        case .none:
+            break
+        }
+    }
     
     private func clearSession() {
         stopSessionRefreshTimer()
@@ -334,9 +354,9 @@ final class AuthManager: ObservableObject {
     /// Refresh the current session to extend expiry
     func refreshSession() async {
         do {
-            let response: SessionRefreshResponse = try await apiClient.request(
-                endpoint: .pinRefresh
-            )
+            let response = try await refreshFlight.run { [apiClient] in
+                try await apiClient.request(endpoint: .pinRefresh) as SessionRefreshResponse
+            }
             
             // Update session token and expiry
             apiClient.sessionToken = response.sessionToken

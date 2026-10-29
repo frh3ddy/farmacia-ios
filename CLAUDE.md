@@ -60,3 +60,5 @@ cd FarmaciaKit && swift test
   Because: `ISO8601DateFormatter` defaults to GMT and sent the wrong day to the API (1d7d355).
 - Don't compare or format lot expiry dates with `Date()` / `.formatted`. Instead use `Expiry.isExpired` / `expiresWithin` / `display`.
   Because: expiry is a calendar day stored as Mexico City noon or legacy UTC midnight; local-time math showed lots expired (and dated) a day early.
+- Don't branch on server error `message` text. Instead use `AuthErrorCode.resolve` / `NetworkError.from` (the API's stable `code`, exact-message fallback for old servers).
+  Because: substring matching mis-read "Session expired" (capital S) and "Account not set up for device activation" (says "device"), and dropped "PIN incorrecto".

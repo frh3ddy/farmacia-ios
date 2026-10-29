@@ -60,10 +60,25 @@ struct PINEntryView: View {
     // MARK: - Header Section
 
     private var headerSection: some View {
-        Text("Ingresa tu PIN para iniciar sesión")
-            .font(.subheadline)
-            .foregroundStyle(.secondary)
-            .padding(.top, 20)
+        VStack(spacing: 12) {
+            // The server ended the session while the app was in use
+            if case .sessionExpired = authManager.error {
+                Label {
+                    Text(NetworkError.sessionExpired.errorDescription ?? "")
+                } icon: {
+                    Image(systemName: "clock.badge.exclamationmark")
+                        .foregroundStyle(.orange)
+                }
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            }
+
+            Text("Ingresa tu PIN para iniciar sesión")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.top, 20)
     }
     
     // MARK: - PIN Display Section
@@ -196,19 +211,11 @@ class PINEntryViewModel: ObservableObject {
             // "Cambiar Ubicación" (LocationSwitchView), not here.
             try await authManager.loginWithPIN(pin: pin)
         } catch let error as NetworkError {
-            // If device is not activated or unauthorized, go back to activation
+            // Device revoked or unknown: go back to activation
             if case .deviceNotActivated = error {
                 authManager.deactivateDevice()
                 isLoading = false
                 return
-            }
-            if case .unauthorized = error {
-                // Check if it's a device issue vs wrong PIN
-                if error.errorDescription?.contains("device") == true {
-                    authManager.deactivateDevice()
-                    isLoading = false
-                    return
-                }
             }
             errorMessage = error.errorDescription ?? "Error de inicio de sesión"
             showError = true
