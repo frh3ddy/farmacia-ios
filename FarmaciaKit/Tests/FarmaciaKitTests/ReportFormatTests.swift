@@ -11,6 +11,11 @@ struct ReportFormatTests {
         #expect(ReportFormat.currency(value, locale: mx) == expected)
     }
 
+    @Test("given a cash value of 12345.678, should show $12,345.68")
+    func currencyDouble() {
+        #expect(ReportFormat.currency(12345.678, locale: mx) == "$12,345.68")
+    }
+
     @Test("given a non-numeric money string, should show it raw with a $ prefix")
     func currencyGarbage() {
         #expect(ReportFormat.currency("N/A", locale: mx) == "$N/A")

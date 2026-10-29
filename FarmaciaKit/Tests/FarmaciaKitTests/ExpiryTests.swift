@@ -53,6 +53,23 @@ struct ExpiryTests {
         #expect(Expiry.display(expiry, locale: Locale(identifier: "es_MX")) == "15 nov 2026")
     }
 
+    @Test("given an expired lot on its expiry day (0 days), should say 'Venció hoy'")
+    func labelExpiryDay() {
+        #expect(Expiry.label(daysUntil: 0, isExpired: true, expiry: expiry) == "Venció hoy")
+    }
+
+    @Test("given days until expiry, should label relative days up to 30, then the date",
+          arguments: [(-3, true, "Venció hace 3d"), (1, false, "Vence en 1d"), (30, false, "Vence en 30d")])
+    func labelRelative(days: Int, expired: Bool, expected: String) {
+        #expect(Expiry.label(daysUntil: days, isExpired: expired, expiry: expiry) == expected)
+    }
+
+    @Test("given 31+ days, should show the expiry date")
+    func labelDate() {
+        let es = Locale(identifier: "es_MX")
+        #expect(Expiry.label(daysUntil: 31, isExpired: false, expiry: expiry, locale: es) == "15 nov 2026")
+    }
+
     @Test("given a 90-day window, should include the 90th day and exclude the 91st",
           arguments: [("2026-08-17T12:00:00-06:00", true), ("2026-08-16T12:00:00-06:00", false)])
     func expiresWithin(now: String, expected: Bool) {
