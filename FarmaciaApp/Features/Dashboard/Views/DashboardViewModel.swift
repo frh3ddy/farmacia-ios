@@ -5,18 +5,33 @@ import FarmaciaKit
 
 @MainActor
 class DashboardViewModel: ObservableObject {
-    @Published var dashboardReport: DashboardReport?
+    @Published private(set) var dashboardReport: DashboardReport?
+    /// The selection `dashboardReport` was loaded for.
+    @Published private(set) var reportSelection: DashboardSelection?
     @Published var isLoading = false
     @Published var error: NetworkError?
     @Published var showLocationSwitcher = false
     @Published var selectedPeriod: DashboardPeriod = .default
     /// Changing this re-runs the view's load task (refresh button, Reintentar).
     @Published var reloadID = UUID()
+    /// Today's local day; updated when the app returns to the foreground so "Hoy" rolls over.
+    @Published var today = LocalDay.string(from: Date())
     
     private let apiClient = APIClient.shared
     
     func reload() {
         reloadID = UUID()
+    }
+    
+    /// What's on screen now: the period, the branch and the day.
+    var currentSelection: DashboardSelection {
+        DashboardSelection(period: selectedPeriod, locationId: AuthManager.shared.currentLocation?.id, day: today)
+    }
+    
+    /// The report, only while it belongs to the current selection — never another branch's
+    /// or period's numbers under this one's label.
+    var visibleReport: DashboardReport? {
+        reportSelection == currentSelection ? dashboardReport : nil
     }
     
     /// Runs inside the view's `.task(id:)` (a newer period, location or reload cancels it)
@@ -31,11 +46,11 @@ class DashboardViewModel: ObservableObject {
         isLoading = true
         error = nil
         
-        let period = selectedPeriod
+        let selection = currentSelection
         let isStillSelected = { [weak self] in
-            !Task.isCancelled && self?.selectedPeriod == period && AuthManager.shared.currentLocation?.id == locationId
+            !Task.isCancelled && self?.currentSelection == selection
         }
-        let (startDay, endDay) = period.days()
+        let (startDay, endDay) = selection.period.days()
         let queryParams = [
             "locationId": locationId,
             "startDate": startDay,
@@ -49,6 +64,7 @@ class DashboardViewModel: ObservableObject {
             )
             guard isStillSelected() else { return }
             dashboardReport = report
+            reportSelection = selection
         } catch NetworkError.cancelled {
             return
         } catch is CancellationError {
@@ -65,9 +81,15 @@ class DashboardViewModel: ObservableObject {
     }
 }
 
-/// What the dashboard's load task depends on; a change cancels the running load.
-struct DashboardLoadKey: Equatable {
+/// The period, branch and day a dashboard report answers.
+struct DashboardSelection: Equatable {
     let period: DashboardPeriod
     let locationId: String?
+    let day: String
+}
+
+/// What the dashboard's load task depends on; a change cancels the running load.
+struct DashboardLoadKey: Equatable {
+    let selection: DashboardSelection
     let reloadID: UUID
 }
