@@ -28,6 +28,21 @@ struct RetryPolicyTests {
         #expect(counter.calls == 3)
     }
 
+    @Test("given the caller is cancelled during the backoff, should stop retrying")
+    func stopsWhenCancelled() async {
+        let counter = Counter()
+        let task = Task {
+            try await RetryPolicy.withBackoff(baseDelay: 60) {
+                counter.calls += 1
+                throw NetworkError.serverError(message: "boom")
+            }
+        }
+        while counter.calls == 0 { await Task.yield() }
+        task.cancel()
+        _ = await task.result
+        #expect(counter.calls == 1)
+    }
+
     @Test("given no network, should not retry (offline queue handles it)")
     func doesNotRetryConnectivity() async {
         let counter = Counter()

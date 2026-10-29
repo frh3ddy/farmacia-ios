@@ -20,7 +20,7 @@ public enum RetryPolicy {
             } catch let error as NetworkError {
                 guard case .serverError = error, attempt < maxAttempts else { throw error }
                 let seconds = baseDelay * pow(2.0, Double(attempt - 1)) // 2s, 4s, ...
-                try? await Task.sleep(for: .seconds(seconds))
+                try await Task.sleep(for: .seconds(seconds)) // cancelled → CancellationError, no further attempts
                 attempt += 1
             }
         }
