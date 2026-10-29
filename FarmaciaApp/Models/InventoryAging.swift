@@ -1,4 +1,5 @@
 import Foundation
+import FarmaciaKit
 import SwiftUI
 
 // MARK: - Inventory Aging Models
@@ -245,7 +246,7 @@ struct ExpiringBatchInfo: Decodable, Identifiable {
         } else if daysUntilExpiry <= 30 {
             return "Vence en \(daysUntilExpiry)d"
         } else {
-            return expiryDate.formatted(date: .abbreviated, time: .omitted)
+            return Expiry.display(expiryDate)
         }
     }
 }

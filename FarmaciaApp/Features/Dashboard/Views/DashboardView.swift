@@ -176,7 +176,7 @@ struct DashboardView: View {
                     title: "Ganancia Neta",
                     value: formatCurrency(netProfit.amount),
                     icon: "banknote.fill",
-                    color: (Double(netProfit.amount) ?? 0) >= 0 ? .green : .red
+                    color: ReportFormat.isNonNegative(netProfit.amount) ? .green : .red
                 )
             }
         }
@@ -292,7 +292,7 @@ struct DashboardView: View {
                     Spacer()
                     Text(formatCurrency(report.adjustments.netImpact))
                         .fontWeight(.bold)
-                        .foregroundStyle((Double(report.adjustments.netImpact) ?? 0) >= 0 ? .green : .red)
+                        .foregroundStyle(ReportFormat.isNonNegative(report.adjustments.netImpact) ? .green : .red)
                 }
             }
             .padding()
@@ -327,7 +327,7 @@ struct DashboardView: View {
                     Text(formatCurrency(netProfit.amount))
                         .font(.title3)
                         .fontWeight(.bold)
-                        .foregroundStyle((Double(netProfit.amount) ?? 0) >= 0 ? .green : .red)
+                        .foregroundStyle(ReportFormat.isNonNegative(netProfit.amount) ? .green : .red)
                 }
             }
             .padding()

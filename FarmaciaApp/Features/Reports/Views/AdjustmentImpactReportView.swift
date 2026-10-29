@@ -1,4 +1,5 @@
 import SwiftUI
+import FarmaciaKit
 
 // MARK: - Adjustment Impact Report View
 
@@ -41,7 +42,7 @@ struct AdjustmentImpactReportView: View {
                             title: "Diferencia Neta",
                             value: formatCurrency(report.summary.netImpact),
                             subtitle: "Referencia, no es Ganancia Neta",
-                            color: Double(report.summary.netImpact) ?? 0 >= 0 ? .green : .red
+                            color: ReportFormat.isNonNegative(report.summary.netImpact) ? .green : .red
                         )
 
                         ReportHeaderCard(
@@ -177,7 +178,7 @@ struct ProductAdjustmentRow: View {
                 Text(formatCurrency(product.netImpact))
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                    .foregroundStyle(Double(product.netImpact) ?? 0 >= 0 ? .green : .red)
+                    .foregroundStyle(ReportFormat.isNonNegative(product.netImpact) ? .green : .red)
             }
         }
         .padding()

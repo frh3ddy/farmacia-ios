@@ -1,4 +1,5 @@
 import SwiftUI
+import FarmaciaKit
 
 // MARK: - Profit & Loss Report View
 
@@ -57,7 +58,7 @@ struct ProfitLossReportView: View {
                             label: "Ganancia Neta",
                             value: report.netProfit.amount,
                             subtitle: "\(formatPercent(report.netProfit.marginPercent)) margin",
-                            color: Double(report.netProfit.amount) ?? 0 >= 0 ? .green : .red
+                            color: ReportFormat.isNonNegative(report.netProfit.amount) ? .green : .red
                         )
                     }
                     .padding(.horizontal)

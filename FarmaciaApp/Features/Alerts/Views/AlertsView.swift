@@ -1,4 +1,5 @@
 import SwiftUI
+import FarmaciaKit
 
 // MARK: - Alerts View
 // Hosts all stock/inventory warnings (low stock, expiring products, actionable
@@ -285,7 +286,7 @@ struct AlertsView: View {
                                     .font(.caption2)
                                     .foregroundStyle(.red)
                             } else {
-                                Text("\u{2022} vence \(product.soonestExpiryDate.formatted(date: .abbreviated, time: .omitted))")
+                                Text("\u{2022} vence \(Expiry.display(product.soonestExpiryDate))")
                                     .font(.caption2)
                                     .foregroundStyle(.orange)
                             }

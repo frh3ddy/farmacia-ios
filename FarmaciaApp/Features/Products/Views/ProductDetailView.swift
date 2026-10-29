@@ -1183,7 +1183,7 @@ struct ProductDetailView: View {
         }
         
         if let expiry = batch.expiryDate {
-            let formatted = expiry.formatted(date: .abbreviated, time: .omitted)
+            let formatted = Expiry.display(expiry)
             if batch.isExpired {
                 pills.append(BatchPill(icon: "xmark.circle", label: "Vencido \(formatted)", color: .red))
             } else if batch.expiresWithin(days: 90) {

@@ -1,4 +1,5 @@
 import Foundation
+import FarmaciaKit
 
 // MARK: - Dashboard Report
 
@@ -193,20 +194,13 @@ struct BatchValuation: Decodable, Identifiable {
     /// True if batch has an expiry date that is within the given days threshold
     func expiresWithin(days: Int) -> Bool {
         guard let expiry = expiryDate else { return false }
-        let daysUntilExpiry = Calendar.current.dateComponents([.day], from: Date(), to: expiry).day ?? Int.max
-        return daysUntilExpiry <= days
+        return Expiry.expiresWithin(expiry, days: days)
     }
     
-    /// True if batch is already expired
+    /// True from the start of the expiry day (local time)
     var isExpired: Bool {
         guard let expiry = expiryDate else { return false }
-        return expiry < Date()
-    }
-    
-    /// Days until expiry (nil if no expiry date, negative if expired)
-    var daysUntilExpiry: Int? {
-        guard let expiry = expiryDate else { return nil }
-        return Calendar.current.dateComponents([.day], from: Date(), to: expiry).day
+        return Expiry.isExpired(expiry)
     }
     
     /// Human-readable source label
