@@ -21,6 +21,17 @@ public enum Expiry {
         return utc.dateComponents([.day], from: today, to: expiryDay).day ?? 0
     }
 
+    /// Short status for a lot, from the server's day count.
+    public static func label(daysUntil: Int, isExpired: Bool, expiry: Date, locale: Locale = .current) -> String {
+        if isExpired {
+            return daysUntil == 0 ? "Venció hoy" : "Venció hace \(abs(daysUntil))d"
+        } else if daysUntil <= 30 {
+            return "Vence en \(daysUntil)d"
+        } else {
+            return display(expiry, locale: locale)
+        }
+    }
+
     /// The expiry day as text, e.g. "15 nov 2026".
     public static func display(_ expiry: Date, locale: Locale = .current) -> String {
         expiry.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted, locale: locale, timeZone: TimeZone(identifier: "UTC")!))

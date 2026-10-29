@@ -205,12 +205,7 @@ struct BatchValuation: Decodable, Identifiable {
     
     /// Human-readable source label
     var sourceLabel: String {
-        switch source {
-        case "PURCHASE": return "Compra"
-        case "OPENING_BALANCE": return "Saldo Inicial"
-        case "ADJUSTMENT": return "Ajuste"
-        default: return source ?? "Desconocido"
-        }
+        BatchSource.label(source)
     }
 }
 
