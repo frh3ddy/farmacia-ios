@@ -1,4 +1,5 @@
 import SwiftUI
+import FarmaciaKit
 
 // MARK: - Batch Detail View
 // Tapped from a FIFO batch row in ProductDetailView
@@ -158,11 +159,11 @@ struct BatchDetailView: View {
                     infoRow(icon: "number", label: "Lot / Batch #", value: lot, color: .purple)
                 }
                 if let expiry = receiving.expiryDate {
-                    let isExpired = expiry < Date()
+                    let isExpired = Expiry.isExpired(expiry)
                     infoRow(
                         icon: isExpired ? "exclamationmark.triangle.fill" : "calendar",
                         label: "Expiry Date",
-                        value: expiry.formatted(date: .abbreviated, time: .omitted),
+                        value: Expiry.display(expiry),
                         color: isExpired ? .red : .orange
                     )
                 }

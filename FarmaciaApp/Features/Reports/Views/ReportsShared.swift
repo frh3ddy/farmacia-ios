@@ -1,4 +1,5 @@
 import SwiftUI
+import FarmaciaKit
 
 // MARK: - Date Range Picker
 
@@ -82,19 +83,8 @@ struct ReportHeaderCard: View {
 
 // MARK: - Currency Formatter
 
-func formatCurrency(_ value: String) -> String {
-    guard let doubleValue = Double(value) else { return "$\(value)" }
-    return formatCurrency(doubleValue)
-}
+func formatCurrency(_ value: String) -> String { ReportFormat.currency(value) }
 
-func formatCurrency(_ value: Double) -> String {
-    let formatter = NumberFormatter()
-    formatter.numberStyle = .currency
-    formatter.currencyCode = "MXN"
-    return formatter.string(from: NSNumber(value: value)) ?? "$\(value)"
-}
+func formatCurrency(_ value: Double) -> String { ReportFormat.currency(value) }
 
-func formatPercent(_ value: String) -> String {
-    guard let doubleValue = Double(value) else { return "\(value)%" }
-    return String(format: "%.1f%%", doubleValue)
-}
+func formatPercent(_ value: String) -> String { ReportFormat.percent(value) }

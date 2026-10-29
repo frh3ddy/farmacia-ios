@@ -58,3 +58,5 @@ cd FarmaciaKit && swift test
   Because: the package must build and test on macOS with `swift test` in seconds.
 - Don't hand-roll `yyyy-MM-dd` formatters. Instead use `LocalDay.string(from:)` / `LocalDay.date(from:)`.
   Because: `ISO8601DateFormatter` defaults to GMT and sent the wrong day to the API (1d7d355).
+- Don't compare or format lot expiry dates with `Date()` / `.formatted`. Instead use `Expiry.isExpired` / `expiresWithin` / `display`.
+  Because: expiry is a calendar day stored as Mexico City noon or legacy UTC midnight; local-time math showed lots expired (and dated) a day early.
