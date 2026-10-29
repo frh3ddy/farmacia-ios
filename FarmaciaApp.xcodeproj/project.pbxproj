@@ -47,7 +47,6 @@
 		F000000100000002 /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000002 /* AppConfiguration.swift */; };
 		F000000100000003 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000003 /* APIClient.swift */; };
 		F000000100000004 /* APIEndpoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000004 /* APIEndpoint.swift */; };
-		F000000100000005 /* NetworkError.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000005 /* NetworkError.swift */; };
 		F000000100000006 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000006 /* AuthManager.swift */; };
 		F000000100000007 /* KeychainManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000007 /* KeychainManager.swift */; };
 		F000000100000008 /* DeviceActivationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000008 /* DeviceActivationView.swift */; };
@@ -98,12 +97,12 @@
 		F54D97249C9261EDD5DE1FF9 /* ProductsAgingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F07F452947561CD91FFF44E /* ProductsAgingViewModel.swift */; };
 		FF00000100000001 /* CodeScanner in Frameworks */ = {isa = PBXBuildFile; productRef = FF00000200000001 /* CodeScanner */; };
 		FF00000100000002 /* SwiftyCrop in Frameworks */ = {isa = PBXBuildFile; productRef = FF00000200000002 /* SwiftyCrop */; };
+		FF00000100000003 /* FarmaciaKit in Frameworks */ = {isa = PBXBuildFile; productRef = FF00000200000003 /* FarmaciaKit */; };
 		GG00000100000001 /* Payroll.swift in Sources */ = {isa = PBXBuildFile; fileRef = GG00000200000001 /* Payroll.swift */; };
 		GG00000100000002 /* PayrollView.swift in Sources */ = {isa = PBXBuildFile; fileRef = GG00000200000002 /* PayrollView.swift */; };
 		GG00000100000003 /* PayrollViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = GG00000200000003 /* PayrollViewModel.swift */; };
 		JJ00000100000001 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = JJ00000200000001 /* NetworkMonitor.swift */; };
 		JJ00000100000002 /* OfflineQueueManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = JJ00000200000002 /* OfflineQueueManager.swift */; };
-		JJ00000100000003 /* RetryPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = JJ00000200000003 /* RetryPolicy.swift */; };
 		JJ00000100000004 /* QueuedRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = JJ00000200000004 /* QueuedRequest.swift */; };
 		JJ00000100000005 /* OfflineSyncBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = JJ00000200000005 /* OfflineSyncBanner.swift */; };
 		JJ00000100000006 /* OfflineSyncIssuesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = JJ00000200000006 /* OfflineSyncIssuesView.swift */; };
@@ -152,7 +151,6 @@
 		F100000100000002 /* AppConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfiguration.swift; sourceTree = "<group>"; };
 		F100000100000003 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		F100000100000004 /* APIEndpoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIEndpoint.swift; sourceTree = "<group>"; };
-		F100000100000005 /* NetworkError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkError.swift; sourceTree = "<group>"; };
 		F100000100000006 /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
 		F100000100000007 /* KeychainManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainManager.swift; sourceTree = "<group>"; };
 		F100000100000008 /* DeviceActivationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceActivationView.swift; sourceTree = "<group>"; };
@@ -206,7 +204,6 @@
 		GG00000200000003 /* PayrollViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PayrollViewModel.swift; sourceTree = "<group>"; };
 		JJ00000200000001 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		JJ00000200000002 /* OfflineQueueManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineQueueManager.swift; sourceTree = "<group>"; };
-		JJ00000200000003 /* RetryPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetryPolicy.swift; sourceTree = "<group>"; };
 		JJ00000200000004 /* QueuedRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueuedRequest.swift; sourceTree = "<group>"; };
 		JJ00000200000005 /* OfflineSyncBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineSyncBanner.swift; sourceTree = "<group>"; };
 		JJ00000200000006 /* OfflineSyncIssuesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineSyncIssuesView.swift; sourceTree = "<group>"; };
@@ -219,6 +216,7 @@
 			files = (
 				FF00000100000001 /* CodeScanner in Frameworks */,
 				FF00000100000002 /* SwiftyCrop in Frameworks */,
+				FF00000100000003 /* FarmaciaKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -395,10 +393,8 @@
 			children = (
 				F100000100000003 /* APIClient.swift */,
 				F100000100000004 /* APIEndpoint.swift */,
-				F100000100000005 /* NetworkError.swift */,
 				JJ00000200000001 /* NetworkMonitor.swift */,
 				JJ00000200000002 /* OfflineQueueManager.swift */,
-				JJ00000200000003 /* RetryPolicy.swift */,
 			);
 			path = Network;
 			sourceTree = "<group>";
@@ -565,6 +561,7 @@
 			packageProductDependencies = (
 				FF00000200000001 /* CodeScanner */,
 				FF00000200000002 /* SwiftyCrop */,
+				FF00000200000003 /* FarmaciaKit */,
 			);
 			productName = FarmaciaApp;
 			productReference = F100000000000000 /* FarmaciaApp.app */;
@@ -597,6 +594,7 @@
 			packageReferences = (
 				FF00000300000001 /* XCRemoteSwiftPackageReference "CodeScanner" */,
 				FF00000300000002 /* XCRemoteSwiftPackageReference "SwiftyCrop" */,
+				FF00000300000003 /* XCLocalSwiftPackageReference "FarmaciaKit" */,
 			);
 			productRefGroup = F300000000000099 /* Products */;
 			projectDirPath = "";
@@ -616,7 +614,6 @@
 				F000000100000002 /* AppConfiguration.swift in Sources */,
 				F000000100000003 /* APIClient.swift in Sources */,
 				F000000100000004 /* APIEndpoint.swift in Sources */,
-				F000000100000005 /* NetworkError.swift in Sources */,
 				F000000100000006 /* AuthManager.swift in Sources */,
 				F000000100000007 /* KeychainManager.swift in Sources */,
 				F000000100000008 /* DeviceActivationView.swift in Sources */,
@@ -706,7 +703,6 @@
 				CA00000100000002 /* ProductCacheManager.swift in Sources */,
 				JJ00000100000001 /* NetworkMonitor.swift in Sources */,
 				JJ00000100000002 /* OfflineQueueManager.swift in Sources */,
-				JJ00000100000003 /* RetryPolicy.swift in Sources */,
 				JJ00000100000004 /* QueuedRequest.swift in Sources */,
 				JJ00000100000005 /* OfflineSyncBanner.swift in Sources */,
 				JJ00000100000006 /* OfflineSyncIssuesView.swift in Sources */,
@@ -918,6 +914,13 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		FF00000300000003 /* XCLocalSwiftPackageReference "FarmaciaKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = FarmaciaKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		FF00000300000001 /* XCRemoteSwiftPackageReference "CodeScanner" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -947,6 +950,10 @@
 			isa = XCSwiftPackageProductDependency;
 			package = FF00000300000002 /* XCRemoteSwiftPackageReference "SwiftyCrop" */;
 			productName = SwiftyCrop;
+		};
+		FF00000200000003 /* FarmaciaKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = FarmaciaKit;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

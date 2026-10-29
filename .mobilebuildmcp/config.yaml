@@ -1,0 +1,7 @@
+schemaVersion: 1
+enabledWorkflows: ["simulator", "simulator-management", "swift-package", "ui-automation", "debugging"]
+sessionDefaults:
+  projectPath: "./FarmaciaApp.xcodeproj"
+  scheme: "FarmaciaApp"
+# Pharmacy app: keep tool telemetry off.
+sentryDisabled: true

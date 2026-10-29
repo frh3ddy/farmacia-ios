@@ -1,4 +1,5 @@
 import SwiftUI
+import FarmaciaKit
 
 // MARK: - Device Activation View
 

@@ -1,4 +1,5 @@
 import SwiftUI
+import FarmaciaKit
 
 // MARK: - Location Switch View
 

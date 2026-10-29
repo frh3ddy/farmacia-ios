@@ -1,4 +1,5 @@
 import SwiftUI
+import FarmaciaKit
 
 // MARK: - Purchase Order View (Shopping List)
 // Flow: Select Supplier → See their product catalog → Set quantities → Review → Batch Receive
@@ -1035,10 +1036,6 @@ class PurchaseOrderViewModel: ObservableObject {
         failedCount = 0
         failedItems = []
         
-        // Date formatter for expiry dates (YYYY-MM-DD)
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        
         // Submit each line item as a separate receiving. Sequential, one POST
         // per item — if the app is backgrounded mid-batch, iOS would otherwise
         // suspend the process and silently stop the loop with no error and no
@@ -1047,7 +1044,7 @@ class PurchaseOrderViewModel: ObservableObject {
         await withBackgroundTask(name: "SubmitPurchaseOrder") {
             for lineItem in lineItems {
                 do {
-                    let expiryDateString = lineItem.expiryDate.map { dateFormatter.string(from: $0) }
+                    let expiryDateString = lineItem.expiryDate.map { LocalDay.string(from: $0) }
 
                     let request = ReceiveInventoryRequest(
                         locationId: locationId,

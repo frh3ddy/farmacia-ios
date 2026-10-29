@@ -7,9 +7,10 @@ import Foundation
 // retried here — retrying instantly with no network is pointless. Those go
 // through OfflineQueueManager instead, replayed once the network returns.
 
-enum RetryPolicy {
-    static func withBackoff<T>(
+public enum RetryPolicy {
+    public static func withBackoff<T>(
         maxAttempts: Int = 3,
+        baseDelay: Double = 2,
         operation: () async throws -> T
     ) async throws -> T {
         var attempt = 1
@@ -18,7 +19,7 @@ enum RetryPolicy {
                 return try await operation()
             } catch let error as NetworkError {
                 guard case .serverError = error, attempt < maxAttempts else { throw error }
-                let seconds = pow(2.0, Double(attempt)) // 2s, 4s, ...
+                let seconds = baseDelay * pow(2.0, Double(attempt - 1)) // 2s, 4s, ...
                 try? await Task.sleep(for: .seconds(seconds))
                 attempt += 1
             }

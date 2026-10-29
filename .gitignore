@@ -110,3 +110,9 @@ buildServer.json
 
 # Serena MCP local project data
 .serena/
+
+# FarmaciaKit (local Swift package) build output
+FarmaciaKit/.build/
+
+# Claude Code per-user settings
+.claude/settings.local.json

@@ -1,4 +1,5 @@
 import SwiftUI
+import FarmaciaKit
 
 // MARK: - Payroll View
 // Shows a team member's shifts for the current week, a past week, or a custom
@@ -622,15 +623,6 @@ private struct ShiftEditorSheet: View {
 /// computed in the business timezone). We parse them as plain local dates with
 /// no time component, so the device timezone can never shift the displayed day.
 private enum PayrollDateFormatting {
-    static let input: DateFormatter = {
-        let f = DateFormatter()
-        f.calendar = Calendar(identifier: .gregorian)
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "yyyy-MM-dd"
-        f.timeZone = TimeZone.current
-        return f
-    }()
-    
     static let dayName: DateFormatter = {
         let f = DateFormatter()
         f.locale = Locale(identifier: "es_MX")
@@ -675,14 +667,14 @@ private enum PayrollDateFormatting {
 
     /// "Lunes" — capitalized Spanish weekday name
     static func shiftWeekday(from dateString: String) -> String {
-        guard let date = input.date(from: dateString) else { return dateString }
+        guard let date = LocalDay.date(from: dateString) else { return dateString }
         let name = dayName.string(from: date)
         return "\(name.prefix(1).uppercased())\(name.dropFirst())"
     }
 
     /// "10/08" — DD/MM, no year
     static func shiftDayMonth(from dateString: String) -> String {
-        guard let date = input.date(from: dateString) else { return dateString }
+        guard let date = LocalDay.date(from: dateString) else { return dateString }
         return dayMonth.string(from: date)
     }
 
@@ -728,8 +720,8 @@ private enum PayrollDateFormatting {
 
     /// String-date overload for the backend's `YYYY-MM-DD` period fields.
     static func periodLabel(start: String, end: String) -> String {
-        guard let startDate = input.date(from: start),
-              let endDate = input.date(from: end) else {
+        guard let startDate = LocalDay.date(from: start),
+              let endDate = LocalDay.date(from: end) else {
             return "\(start) – \(end)"
         }
         return periodLabel(start: startDate, end: endDate)
@@ -737,7 +729,7 @@ private enum PayrollDateFormatting {
     
     /// "Lunes, 10 de Agosto de 2026" — used in the shift editor for full context
     static func fullLabel(from dateString: String) -> String {
-        guard let date = input.date(from: dateString) else { return dateString }
+        guard let date = LocalDay.date(from: dateString) else { return dateString }
         let f = DateFormatter()
         f.locale = Locale(identifier: "es_MX")
         f.dateStyle = .full

@@ -1,4 +1,5 @@
 import SwiftUI
+import FarmaciaKit
 
 // MARK: - Receive Flow View
 // Per-item receive with quantity confirmation, batch/expiry entry per item,
@@ -327,9 +328,6 @@ struct ReceiveFlowView: View {
         failedCount = 0
         failedItems = []
         
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-
         // Submits are sequential, one POST per item — if the app is
         // backgrounded mid-batch, iOS would otherwise suspend the process
         // and silently stop the loop with no error and no record of which
@@ -345,7 +343,7 @@ struct ReceiveFlowView: View {
                 }()
                 let expiryDateStr: String? = {
                     guard let state = state, state.hasExpiry else { return nil }
-                    return dateFormatter.string(from: state.expiryDate)
+                    return LocalDay.string(from: state.expiryDate)
                 }()
 
                 do {

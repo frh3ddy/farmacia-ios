@@ -28,19 +28,23 @@ Xcode project: `FarmaciaApp.xcodeproj` (single `FarmaciaApp` target). Source und
 ## Build & test
 
 ```
-xcodebuild -project FarmaciaApp.xcodeproj -scheme FarmaciaApp -destination 'platform=iOS Simulator,name=iPhone 15' build
+xcodebuild -project FarmaciaApp.xcodeproj -scheme FarmaciaApp -destination 'generic/platform=iOS Simulator' -derivedDataPath build/DerivedData build
 ```
 
 - Release build + install: `scripts/release-build-install.sh`
 - Open in Xcode: `open FarmaciaApp.xcodeproj`
+- Simulator run / UI / logs / screenshots → the XcodeBuildMCP server (`.mcp.json`, config in `.mobilebuildmcp/config.yaml`).
 
 ## Local test
 
-No test target exists yet (see W3). When one is added, `xcodebuild test` is the command:
+Business logic lives in the local package `FarmaciaKit/` (Foundation only) and is tested with Swift Testing on the Mac host — no simulator:
 
 ```
-xcodebuild -project FarmaciaApp.xcodeproj -scheme FarmaciaApp -destination 'platform=iOS Simulator,name=iPhone 15' test
+cd FarmaciaKit && swift test
 ```
+
+- Any behavior change → follow the `swift-tdd` skill (red/green/refactor, migrate-as-touched). Commands: `/task` (plan), `/execute` (TDD steps), `/tdd-review`.
+- Simulator/UI checks only for critical flows (activation → PIN → location switch, receiving, report date ranges, expense create).
 
 ## Rules
 
@@ -50,3 +54,7 @@ xcodebuild -project FarmaciaApp.xcodeproj -scheme FarmaciaApp -destination 'plat
   Because: xcarchives and exports are large binaries that bloat history.
 - Don't hand-maintain an architecture doc. Instead update the graphify graph (`graphify update .`).
   Because: prose docs drift; the graph regenerates from the AST.
+- Don't import SwiftUI/UIKit/SwiftData in `FarmaciaKit`. Instead keep UI-only members (e.g. `Color`) as app-side extensions.
+  Because: the package must build and test on macOS with `swift test` in seconds.
+- Don't hand-roll `yyyy-MM-dd` formatters. Instead use `LocalDay.string(from:)` / `LocalDay.date(from:)`.
+  Because: `ISO8601DateFormatter` defaults to GMT and sent the wrong day to the API (1d7d355).

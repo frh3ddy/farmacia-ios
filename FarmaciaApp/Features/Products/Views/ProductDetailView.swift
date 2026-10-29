@@ -1,4 +1,5 @@
 import SwiftUI
+import FarmaciaKit
 
 // MARK: - Product Detail View
 // This is the unified product hub — catalog info, pricing, stock,

@@ -1,4 +1,5 @@
 import Foundation
+import FarmaciaKit
 
 // MARK: - Reports ViewModel
 
@@ -22,13 +23,6 @@ class ReportsViewModel: ObservableObject {
     @Published var startDate: Date = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
     @Published var endDate: Date = Date()
 
-    private var dateFormatter: ISO8601DateFormatter {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withFullDate]
-        formatter.timeZone = .current // the calendar day the user picked, not the GMT one
-        return formatter
-    }
-
     // MARK: - COGS Report
 
     func loadCOGSReport(locationId: String?) async {
@@ -36,8 +30,8 @@ class ReportsViewModel: ObservableObject {
         defer { isLoading = false }
 
         var params: [String: String] = [
-            "startDate": dateFormatter.string(from: startDate),
-            "endDate": dateFormatter.string(from: endDate)
+            "startDate": LocalDay.string(from: startDate),
+            "endDate": LocalDay.string(from: endDate)
         ]
         if let locationId = locationId {
             params["locationId"] = locationId
@@ -91,8 +85,8 @@ class ReportsViewModel: ObservableObject {
         defer { isLoading = false }
 
         var params: [String: String] = [
-            "startDate": dateFormatter.string(from: startDate),
-            "endDate": dateFormatter.string(from: endDate)
+            "startDate": LocalDay.string(from: startDate),
+            "endDate": LocalDay.string(from: endDate)
         ]
         if let locationId = locationId {
             params["locationId"] = locationId
@@ -120,8 +114,8 @@ class ReportsViewModel: ObservableObject {
         defer { isLoading = false }
 
         var params: [String: String] = [
-            "startDate": dateFormatter.string(from: startDate),
-            "endDate": dateFormatter.string(from: endDate)
+            "startDate": LocalDay.string(from: startDate),
+            "endDate": LocalDay.string(from: endDate)
         ]
         if let locationId = locationId {
             params["locationId"] = locationId
@@ -149,8 +143,8 @@ class ReportsViewModel: ObservableObject {
         defer { isLoading = false }
 
         var params: [String: String] = [
-            "startDate": dateFormatter.string(from: startDate),
-            "endDate": dateFormatter.string(from: endDate)
+            "startDate": LocalDay.string(from: startDate),
+            "endDate": LocalDay.string(from: endDate)
         ]
         if let locationId = locationId {
             params["locationId"] = locationId
@@ -178,8 +172,8 @@ class ReportsViewModel: ObservableObject {
         defer { isLoading = false }
 
         var params: [String: String] = [
-            "startDate": dateFormatter.string(from: startDate),
-            "endDate": dateFormatter.string(from: endDate)
+            "startDate": LocalDay.string(from: startDate),
+            "endDate": LocalDay.string(from: endDate)
         ]
         if let locationId = locationId {
             params["locationId"] = locationId
@@ -207,8 +201,8 @@ class ReportsViewModel: ObservableObject {
         defer { isLoading = false }
 
         var params: [String: String] = [
-            "startDate": dateFormatter.string(from: startDate),
-            "endDate": dateFormatter.string(from: endDate),
+            "startDate": LocalDay.string(from: startDate),
+            "endDate": LocalDay.string(from: endDate),
             "includeMonthly": "true"
         ]
         if let locationId = locationId {

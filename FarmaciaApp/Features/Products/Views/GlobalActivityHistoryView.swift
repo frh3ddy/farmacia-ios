@@ -1,4 +1,5 @@
 import SwiftUI
+import FarmaciaKit
 
 // MARK: - Global Activity History View
 // Accessible from the Products toolbar — shows combined receiving and adjustment

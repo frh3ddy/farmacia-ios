@@ -1,4 +1,5 @@
 import Foundation
+import FarmaciaKit
 
 // MARK: - Inventory ViewModel
 
@@ -22,14 +23,6 @@ class InventoryViewModel: ObservableObject {
 
     // MARK: - Dependencies
     private let apiClient = APIClient.shared
-
-    // MARK: - Date Formatter (for date-only fields)
-    private static let dateOnlyFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.timeZone = TimeZone.current
-        return formatter
-    }()
 
     // MARK: - Load Products
     func loadProducts() async {
@@ -144,7 +137,7 @@ class InventoryViewModel: ObservableObject {
         defer { isSubmitting = false }
 
         // Format date as YYYY-MM-DD string to avoid timezone issues
-        let expiryDateString = expiryDate.map { Self.dateOnlyFormatter.string(from: $0) }
+        let expiryDateString = expiryDate.map { LocalDay.string(from: $0) }
 
         let request = ReceiveInventoryRequest(
             locationId: locationId,

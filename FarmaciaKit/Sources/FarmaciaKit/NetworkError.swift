@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - Network Error
 
-enum NetworkError: LocalizedError {
+public enum NetworkError: LocalizedError {
     case invalidURL
     case noData
     case decodingError(Error)
@@ -20,7 +20,7 @@ enum NetworkError: LocalizedError {
     case queuedForSync
     case cancelled
 
-    var errorDescription: String? {
+    public var errorDescription: String? {
         switch self {
         case .invalidURL:
             return "URL inválida"
@@ -62,7 +62,7 @@ enum NetworkError: LocalizedError {
         }
     }
     
-    var isRecoverable: Bool {
+    public var isRecoverable: Bool {
         switch self {
         case .sessionExpired, .pinRequired, .deviceNotActivated:
             return true
@@ -78,25 +78,27 @@ enum NetworkError: LocalizedError {
 
 // MARK: - API Response
 
-struct APIResponse<T: Decodable>: Decodable {
-    let success: Bool
-    let data: T?
-    let error: String?
-    let message: String?
+public struct APIResponse<T: Decodable>: Decodable {
+    public let success: Bool
+    public let data: T?
+    public let error: String?
+    public let message: String?
 }
 
-struct EmptyResponse: Decodable {}
+public struct EmptyResponse: Decodable {
+    public init() {}
+}
 
 // MARK: - API Error Response
 
-struct APIErrorResponse: Decodable {
-    let success: Bool
-    let error: String?
-    let message: String?
-    let statusCode: Int?
-    let lockedUntil: String?
+public struct APIErrorResponse: Decodable {
+    public let success: Bool
+    public let error: String?
+    public let message: String?
+    public let statusCode: Int?
+    public let lockedUntil: String?
     
-    var displayMessage: String {
+    public var displayMessage: String {
         message ?? error ?? "Ocurrió un error desconocido"
     }
 }

@@ -1,4 +1,5 @@
 import Foundation
+import FarmaciaKit
 
 // MARK: - Payroll ViewModel
 
@@ -37,13 +38,6 @@ class PayrollViewModel: ObservableObject {
     @Published var customEnd = Date()
 
     private let apiClient = APIClient.shared
-
-    private static let dateOnlyFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd"
-        f.timeZone = TimeZone.current
-        return f
-    }()
 
     /// The day represented by `periodOffset` when granularity is `.day`.
     var selectedDay: Date {
@@ -100,15 +94,15 @@ class PayrollViewModel: ObservableObject {
         case .week:
             params["weekOffset"] = String(periodOffset)
         case .day:
-            let day = Self.dateOnlyFormatter.string(from: selectedDay)
+            let day = LocalDay.string(from: selectedDay)
             params["startDate"] = day
             params["endDate"] = day
         case .month:
-            params["startDate"] = Self.dateOnlyFormatter.string(from: selectedMonthStart)
-            params["endDate"] = Self.dateOnlyFormatter.string(from: selectedMonthEnd)
+            params["startDate"] = LocalDay.string(from: selectedMonthStart)
+            params["endDate"] = LocalDay.string(from: selectedMonthEnd)
         case .custom:
-            params["startDate"] = Self.dateOnlyFormatter.string(from: customStart)
-            params["endDate"] = Self.dateOnlyFormatter.string(from: customEnd)
+            params["startDate"] = LocalDay.string(from: customStart)
+            params["endDate"] = LocalDay.string(from: customEnd)
         }
         
         do {
