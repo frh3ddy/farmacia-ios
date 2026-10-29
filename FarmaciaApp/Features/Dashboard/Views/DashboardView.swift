@@ -5,6 +5,7 @@ import FarmaciaKit
 
 struct DashboardView: View {
     @EnvironmentObject var authManager: AuthManager
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var viewModel = DashboardViewModel()
 
     var body: some View {
@@ -22,13 +23,13 @@ struct DashboardView: View {
                     // Date Range Selector
                     dateRangeSelector
                     
-                    // A refresh failed but older numbers are still on screen
-                    if viewModel.dashboardReport != nil, let error = viewModel.error {
+                    // A refresh of this same selection failed; its earlier numbers are still on screen
+                    if viewModel.visibleReport != nil, let error = viewModel.error {
                         staleDataBanner(error: error)
                     }
                     
                     // Quick Stats
-                    if let report = viewModel.dashboardReport {
+                    if let report = viewModel.visibleReport {
                         quickStatsSection(report: report)
                         
                         // Sales Summary
@@ -77,11 +78,20 @@ struct DashboardView: View {
             // One load at a time: a new period, location or reload cancels the running
             // one, so a slow earlier response can't replace the newer selection.
             .task(id: DashboardLoadKey(
-                period: viewModel.selectedPeriod,
-                locationId: authManager.currentLocation?.id,
+                selection: DashboardSelection(
+                    period: viewModel.selectedPeriod,
+                    locationId: authManager.currentLocation?.id,
+                    day: viewModel.today
+                ),
                 reloadID: viewModel.reloadID
             )) {
                 await viewModel.loadDashboard()
+            }
+            // Back from the background on a new day: "Hoy" and the other periods move with it
+            .onChange(of: scenePhase) { _, phase in
+                guard phase == .active else { return }
+                let today = LocalDay.string(from: Date())
+                if viewModel.today != today { viewModel.today = today }
             }
         }
     }
