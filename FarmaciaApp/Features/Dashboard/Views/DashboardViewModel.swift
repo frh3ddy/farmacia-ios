@@ -85,6 +85,7 @@ class DashboardViewModel: ObservableObject {
             
             let dateFormatter = ISO8601DateFormatter()
             dateFormatter.formatOptions = [.withFullDate]
+            dateFormatter.timeZone = .current // the calendar day the user picked, not the GMT one
             
             let queryParams = [
                 "locationId": locationId,
