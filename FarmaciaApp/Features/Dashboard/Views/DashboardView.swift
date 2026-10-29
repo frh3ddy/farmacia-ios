@@ -22,6 +22,11 @@ struct DashboardView: View {
                     // Date Range Selector
                     dateRangeSelector
                     
+                    // A refresh failed but older numbers are still on screen
+                    if viewModel.dashboardReport != nil, let error = viewModel.error {
+                        staleDataBanner(error: error)
+                    }
+                    
                     // Quick Stats
                     if let report = viewModel.dashboardReport {
                         quickStatsSection(report: report)
@@ -69,15 +74,13 @@ struct DashboardView: View {
             .sheet(isPresented: $viewModel.showLocationSwitcher) {
                 LocationSwitchView()
             }
-            .onChange(of: authManager.currentLocation?.id) { oldId, newId in
-                // Refresh dashboard when location changes
-                if oldId != nil && newId != nil && oldId != newId {
-                    Task {
-                        await viewModel.loadDashboard()
-                    }
-                }
-            }
-            .task {
+            // One load at a time: a new period, location or reload cancels the running
+            // one, so a slow earlier response can't replace the newer selection.
+            .task(id: DashboardLoadKey(
+                period: viewModel.selectedPeriod,
+                locationId: authManager.currentLocation?.id,
+                reloadID: viewModel.reloadID
+            )) {
                 await viewModel.loadDashboard()
             }
         }
@@ -117,24 +120,17 @@ struct DashboardView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
             
-            Picker("Rango de Fechas", selection: $viewModel.selectedDateRange) {
-                ForEach(DashboardDateRange.allCases, id: \.self) { range in
-                    Text(range.displayName).tag(range)
+            Picker("Rango de Fechas", selection: $viewModel.selectedPeriod) {
+                ForEach(DashboardPeriod.allCases, id: \.self) { period in
+                    Text(period.displayName).tag(period)
                 }
             }
             .pickerStyle(.menu)
-            .onChange(of: viewModel.selectedDateRange) { _, _ in
-                Task {
-                    await viewModel.loadDashboard()
-                }
-            }
             
             Spacer()
             
             Button {
-                Task {
-                    await viewModel.loadDashboard()
-                }
+                viewModel.reload()
             } label: {
                 Image(systemName: "arrow.clockwise")
             }
@@ -192,7 +188,7 @@ struct DashboardView: View {
                 summaryRow(label: "Ingresos Totales", value: formatCurrency(report.sales.totalRevenue))
                 summaryRow(label: "Costo de Ventas", value: formatCurrency(report.sales.totalCOGS))
                 summaryRow(label: "Ganancia Bruta", value: formatCurrency(report.sales.grossProfit), valueColor: .green)
-                summaryRow(label: "Margen Bruto", value: "\(report.sales.grossMarginPercent)%")
+                summaryRow(label: "Margen Bruto", value: ReportFormat.percent(report.sales.grossMarginPercent))
                 
                 Divider()
                 
@@ -319,7 +315,7 @@ struct DashboardView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Ganancia Neta")
                             .fontWeight(.semibold)
-                        Text("\(netProfit.marginPercent)% margen")
+                        Text("\(ReportFormat.percent(netProfit.marginPercent)) margen")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -367,14 +363,42 @@ struct DashboardView: View {
                 .multilineTextAlignment(.center)
             
             Button("Reintentar") {
-                Task {
-                    await viewModel.loadDashboard()
-                }
+                viewModel.reload()
             }
             .buttonStyle(.borderedProminent)
         }
         .frame(maxWidth: .infinity)
         .padding(40)
+    }
+    
+    // MARK: - Stale Data Banner
+    
+    private func staleDataBanner(error: NetworkError) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text("No se pudo actualizar. Mostrando los datos anteriores.")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                Text(error.errorDescription ?? "Error desconocido")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                
+                // Under the text, not beside it, so large Dynamic Type sizes keep a readable width
+                Button("Reintentar") {
+                    viewModel.reload()
+                }
+                .font(.subheadline)
+                .padding(.top, 4)
+            }
+            
+            Spacer(minLength: 0)
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .clipShape(.rect(cornerRadius: 12))
     }
     
     // MARK: - Toolbar Buttons
@@ -413,7 +437,7 @@ struct DashboardView: View {
         Menu {
             Section {
                 Label(authManager.currentEmployee?.name ?? "Usuario", systemImage: "person")
-                Label(authManager.currentEmployee?.role.rawValue ?? "", systemImage: "briefcase")
+                Label(authManager.currentEmployee?.role.displayName ?? "", systemImage: "briefcase")
             }
             
             Divider()
@@ -426,7 +450,7 @@ struct DashboardView: View {
                 Label("Cerrar Sesión", systemImage: "rectangle.portrait.and.arrow.right")
             }
         } label: {
-            Text(String(authManager.currentEmployee?.name.prefix(2).uppercased() ?? "??"))
+            Text(authManager.currentEmployee?.initials ?? "??")
                 .font(.caption)
                 .fontWeight(.bold)
                 .frame(width: 32, height: 32)
@@ -434,6 +458,7 @@ struct DashboardView: View {
                 .foregroundStyle(.white)
                 .clipShape(Circle())
         }
+        .accessibilityLabel(authManager.currentEmployee?.name ?? "Usuario")
     }
     
     // MARK: - Helper Views

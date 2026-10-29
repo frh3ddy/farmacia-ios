@@ -1,62 +1,6 @@
 import Foundation
 import FarmaciaKit
 
-// MARK: - Date Range Enum
-
-enum DashboardDateRange: CaseIterable {
-    case today
-    case last7Days
-    case last30Days
-    case thisMonth
-    case lastMonth
-    case thisYear
-    
-    var displayName: String {
-        switch self {
-        case .today: return "Hoy"
-        case .last7Days: return "Últimos 7 Días"
-        case .last30Days: return "Últimos 30 Días"
-        case .thisMonth: return "Este Mes"
-        case .lastMonth: return "Mes Pasado"
-        case .thisYear: return "Este Año"
-        }
-    }
-    
-    var dateRange: (start: Date, end: Date) {
-        let calendar = Calendar.current
-        let now = Date()
-        
-        switch self {
-        case .today:
-            let start = calendar.startOfDay(for: now)
-            return (start, now)
-            
-        case .last7Days:
-            let start = calendar.date(byAdding: .day, value: -7, to: now)!
-            return (start, now)
-            
-        case .last30Days:
-            let start = calendar.date(byAdding: .day, value: -30, to: now)!
-            return (start, now)
-            
-        case .thisMonth:
-            let start = calendar.date(from: calendar.dateComponents([.year, .month], from: now))!
-            return (start, now)
-            
-        case .lastMonth:
-            let thisMonthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: now))!
-            let lastMonthStart = calendar.date(byAdding: .month, value: -1, to: thisMonthStart)!
-            let lastMonthEnd = calendar.date(byAdding: .day, value: -1, to: thisMonthStart)!
-            return (lastMonthStart, lastMonthEnd)
-            
-        case .thisYear:
-            let start = calendar.date(from: calendar.dateComponents([.year], from: now))!
-            return (start, now)
-        }
-    }
-}
-
-
 // MARK: - Dashboard View Model
 
 @MainActor
@@ -65,38 +9,55 @@ class DashboardViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var error: NetworkError?
     @Published var showLocationSwitcher = false
-    @Published var selectedDateRange: DashboardDateRange = .last30Days
+    @Published var selectedPeriod: DashboardPeriod = .default
+    /// Changing this re-runs the view's load task (refresh button, Reintentar).
+    @Published var reloadID = UUID()
     
     private let apiClient = APIClient.shared
     
+    func reload() {
+        reloadID = UUID()
+    }
+    
+    /// Runs inside the view's `.task(id:)` (a newer period, location or reload cancels it)
+    /// and from pull-to-refresh (which nothing cancels). Either way a load only writes its
+    /// result if it wasn't cancelled and still matches what's selected.
     func loadDashboard() async {
+        guard let locationId = AuthManager.shared.currentLocation?.id else {
+            error = NetworkError.serverError(message: "No se ha seleccionado ubicación")
+            return
+        }
+        
         isLoading = true
         error = nil
         
+        let period = selectedPeriod
+        let isStillSelected = { [weak self] in
+            !Task.isCancelled && self?.selectedPeriod == period && AuthManager.shared.currentLocation?.id == locationId
+        }
+        let (startDay, endDay) = period.days()
+        let queryParams = [
+            "locationId": locationId,
+            "startDate": startDay,
+            "endDate": endDay
+        ]
+        
         do {
-            // Get current location
-            guard let locationId = AuthManager.shared.currentLocation?.id else {
-                error = NetworkError.serverError(message: "No se ha seleccionado ubicación")
-                isLoading = false
-                return
-            }
-            
-            // Get date range
-            let (startDate, endDate) = selectedDateRange.dateRange
-            
-            let queryParams = [
-                "locationId": locationId,
-                "startDate": LocalDay.string(from: startDate),
-                "endDate": LocalDay.string(from: endDate)
-            ]
-            
-            dashboardReport = try await apiClient.request(
+            let report: DashboardReport = try await apiClient.request(
                 endpoint: .dashboardReport,
                 queryParams: queryParams
             )
+            guard isStillSelected() else { return }
+            dashboardReport = report
+        } catch NetworkError.cancelled {
+            return
+        } catch is CancellationError {
+            return
         } catch let networkError as NetworkError {
+            guard isStillSelected() else { return }
             error = networkError
         } catch {
+            guard isStillSelected() else { return }
             self.error = NetworkError.unknown(error)
         }
         
@@ -104,3 +65,9 @@ class DashboardViewModel: ObservableObject {
     }
 }
 
+/// What the dashboard's load task depends on; a change cancels the running load.
+struct DashboardLoadKey: Equatable {
+    let period: DashboardPeriod
+    let locationId: String?
+    let reloadID: UUID
+}

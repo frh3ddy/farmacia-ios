@@ -64,9 +64,9 @@ final class OfflineQueueManager {
                 context.delete(item)
             } catch let error as NetworkError {
                 switch error {
-                case .networkUnavailable, .timeout, .sessionExpired, .pinRequired:
-                    // Offline again, or the session lapsed mid-flush — leave
-                    // this and the rest queued for the next flush.
+                case .networkUnavailable, .timeout, .sessionExpired, .pinRequired, .cancelled:
+                    // Offline again, the session lapsed, or the flush was cancelled
+                    // mid-flight — leave this and the rest queued for the next flush.
                     try? context.save()
                     refresh()
                     return
@@ -74,6 +74,11 @@ final class OfflineQueueManager {
                     item.status = "failed"
                     item.lastError = error.errorDescription
                 }
+            } catch is CancellationError {
+                // Cancelled during a retry backoff: not rejected, just not sent yet.
+                try? context.save()
+                refresh()
+                return
             } catch {
                 item.status = "failed"
                 item.lastError = error.localizedDescription
