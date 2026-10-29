@@ -1,4 +1,5 @@
 import Foundation
+import FarmaciaKit
 
 // MARK: - Date Range Enum
 
@@ -83,14 +84,10 @@ class DashboardViewModel: ObservableObject {
             // Get date range
             let (startDate, endDate) = selectedDateRange.dateRange
             
-            let dateFormatter = ISO8601DateFormatter()
-            dateFormatter.formatOptions = [.withFullDate]
-            dateFormatter.timeZone = .current // the calendar day the user picked, not the GMT one
-            
             let queryParams = [
                 "locationId": locationId,
-                "startDate": dateFormatter.string(from: startDate),
-                "endDate": dateFormatter.string(from: endDate)
+                "startDate": LocalDay.string(from: startDate),
+                "endDate": LocalDay.string(from: endDate)
             ]
             
             dashboardReport = try await apiClient.request(

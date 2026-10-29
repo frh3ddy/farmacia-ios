@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(swift test:*)",
+      "Bash(swift build:*)",
+      "Bash(xcodebuild -project FarmaciaApp.xcodeproj -scheme FarmaciaApp:*)",
+      "Bash(graphify update:*)",
+      "mcp__XcodeBuildMCP"
+    ]
+  },
+  "enabledMcpjsonServers": ["XcodeBuildMCP"]
+}

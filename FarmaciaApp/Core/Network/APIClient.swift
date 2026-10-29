@@ -1,4 +1,5 @@
 import Foundation
+import FarmaciaKit
 
 // MARK: - API Client
 

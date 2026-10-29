@@ -1,4 +1,5 @@
 import Foundation
+import FarmaciaKit
 import SwiftData
 
 // MARK: - Offline Queue Manager

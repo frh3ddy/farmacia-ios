@@ -1,4 +1,5 @@
 import Foundation
+import FarmaciaKit
 import Combine
 #if canImport(UIKit)
 import UIKit

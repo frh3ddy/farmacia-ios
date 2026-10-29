@@ -1,4 +1,5 @@
 import SwiftUI
+import FarmaciaKit
 import SwiftyCrop
 
 // MARK: - Create Product View

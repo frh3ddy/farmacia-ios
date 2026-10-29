@@ -1,4 +1,5 @@
 import SwiftUI
+import FarmaciaKit
 
 // MARK: - Device Management View (OWNER only)
 // Lists active devices at the current location and lets an owner revoke one
