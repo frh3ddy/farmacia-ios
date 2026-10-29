@@ -92,12 +92,6 @@ struct ExpenseByType: Decodable {
     let percentage: String?
 }
 
-// MARK: - Net Profit Summary
-
-struct NetProfitSummary: Decodable {
-    let amount: String
-    let marginPercent: String
-}
 
 // MARK: - COGS Report
 // Backend returns: { period, locationId, summary: { totalCOGS, totalRevenue, grossProfit, grossMarginPercent, totalUnitsSold, totalSales }, byProduct, byCategory }

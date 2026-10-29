@@ -197,7 +197,8 @@ struct DashboardView: View {
             VStack(spacing: 8) {
                 summaryRow(label: "Ingresos Totales", value: formatCurrency(report.sales.totalRevenue))
                 summaryRow(label: "Costo de Ventas", value: formatCurrency(report.sales.totalCOGS))
-                summaryRow(label: "Ganancia Bruta", value: formatCurrency(report.sales.grossProfit), valueColor: .green)
+                summaryRow(label: "Ganancia Bruta", value: formatCurrency(report.sales.grossProfit),
+                           valueColor: ReportFormat.isNonNegative(report.sales.grossProfit) ? .green : .red)
                 summaryRow(label: "Margen Bruto", value: ReportFormat.percent(report.sales.grossMarginPercent))
                 
                 Divider()
@@ -214,7 +215,7 @@ struct DashboardView: View {
                     Spacer()
                     
                     VStack(alignment: .trailing) {
-                        Text("Total Ventas")
+                        Text("Núm. de Ventas")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         Text("\(report.sales.totalSales)")
@@ -232,7 +233,13 @@ struct DashboardView: View {
     
     private func inventorySummarySection(report: DashboardReport) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeader(title: "Inventario", icon: "shippingbox")
+            VStack(alignment: .leading, spacing: 2) {
+                sectionHeader(title: "Inventario actual", icon: "shippingbox")
+                // Valuation is always as of now; the period picker doesn't apply
+                Text("Valor al día de hoy, no del período")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             
             VStack(spacing: 8) {
                 summaryRow(label: "Unidades Totales", value: "\(report.inventory.totalUnits)")
@@ -313,11 +320,26 @@ struct DashboardView: View {
         VStack(alignment: .leading, spacing: 12) {
             sectionHeader(title: "Pérdidas y Ganancias", icon: "chart.pie.fill")
             
+            // Rows from the same P&L as net profit (merma once, Yastás shown), so they
+            // add up to it; item-summed sales are only the fallback for older servers.
+            let pl = ProfitLossLines(
+                netProfit: netProfit,
+                itemRevenue: report.sales.totalRevenue,
+                itemCost: report.sales.totalCOGS,
+                operatingExpensesTotal: expenses.total,
+                shrinkage: expenses.shrinkage
+            )
             VStack(spacing: 8) {
-                summaryRow(label: "Ingresos", value: formatCurrency(report.sales.totalRevenue), valueColor: .green)
-                summaryRow(label: "Costo de Ventas", value: "(\(formatCurrency(report.sales.totalCOGS)))", valueColor: .red)
-                summaryRow(label: "Gastos Operativos", value: "(\(formatCurrency(expenses.total)))", valueColor: .red)
-                summaryRow(label: "Merma", value: "(\(formatCurrency(expenses.shrinkage)))", valueColor: .orange)
+                ForEach(pl.lines.filter { $0.kind != .total }, id: \.label) { line in
+                    switch line.kind {
+                    case .income:
+                        summaryRow(label: line.label, value: formatCurrency(line.amount), valueColor: .green)
+                    case .shrinkage:
+                        summaryRow(label: line.label, value: "(\(formatCurrency(line.amount)))", valueColor: .orange)
+                    case .cost, .total:
+                        summaryRow(label: line.label, value: "(\(formatCurrency(line.amount)))", valueColor: .red)
+                    }
+                }
                 
                 Divider()
                 
@@ -339,6 +361,12 @@ struct DashboardView: View {
             .padding()
             .background(Color(.systemGray6))
             .clipShape(.rect(cornerRadius: 12))
+            #if DEBUG
+            .onAppear {
+                // The server's net profit is shown either way; this flags a contract drift.
+                if !pl.addsUp { print("[Dashboard] P&L rows don't add up to net profit \(netProfit.amount)") }
+            }
+            #endif
         }
     }
     

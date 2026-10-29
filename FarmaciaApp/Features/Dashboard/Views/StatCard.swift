@@ -14,6 +14,7 @@ struct StatCard: View {
                 Image(systemName: icon)
                     .font(.title2)
                     .foregroundStyle(color)
+                    .accessibilityHidden(true)
                 Spacer()
             }
             
@@ -30,5 +31,9 @@ struct StatCard: View {
         .padding()
         .background(Color(.systemGray6))
         .clipShape(.rect(cornerRadius: 12))
+        // One VoiceOver element, title first: "Ingresos, $12,345.00"
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(title)
+        .accessibilityValue(value)
     }
 }
