@@ -18,6 +18,9 @@ final class APIClient {
     // Auth tokens (managed by AuthManager)
     var deviceToken: String?
     var sessionToken: String?
+
+    /// Told when any refused request means the session ended or the device was revoked.
+    var onAuthTransition: (@MainActor (AuthTransition) -> Void)?
     
     // MARK: - Initialization
     
@@ -265,44 +268,16 @@ final class APIClient {
         #endif
         
         // Handle HTTP errors
-        switch httpResponse.statusCode {
-        case 200...299:
-            break
-        case 401:
-            // Try to parse error response for more details
-            if let errorResponse = try? decoder.decode(APIErrorResponse.self, from: data) {
-                if errorResponse.message?.contains("session") == true {
-                    throw NetworkError.sessionExpired
-                }
-                if errorResponse.message?.contains("device") == true {
-                    throw NetworkError.deviceNotActivated
-                }
+        if let error = NetworkError.from(statusCode: httpResponse.statusCode, body: data) {
+            let transition = AuthTransition.after(
+                AuthErrorCode.resolve(body: data),
+                requestSessionToken: request.value(forHTTPHeaderField: "X-Session-Token"),
+                currentSessionToken: sessionToken
+            )
+            if transition != .none, let onAuthTransition {
+                await onAuthTransition(transition)
             }
-            throw NetworkError.unauthorized
-        case 403:
-            if let errorResponse = try? decoder.decode(APIErrorResponse.self, from: data) {
-                if errorResponse.lockedUntil != nil {
-                    let formatter = ISO8601DateFormatter()
-                    let date = errorResponse.lockedUntil.flatMap { formatter.date(from: $0) }
-                    throw NetworkError.accountLocked(until: date)
-                }
-            }
-            throw NetworkError.unauthorized
-        case 400...499:
-            if let errorResponse = try? decoder.decode(APIErrorResponse.self, from: data) {
-                throw NetworkError.httpError(
-                    statusCode: httpResponse.statusCode,
-                    message: errorResponse.displayMessage
-                )
-            }
-            throw NetworkError.httpError(statusCode: httpResponse.statusCode, message: nil)
-        case 500...599:
-            if let errorResponse = try? decoder.decode(APIErrorResponse.self, from: data) {
-                throw NetworkError.serverError(message: errorResponse.displayMessage)
-            }
-            throw NetworkError.serverError(message: "Error interno del servidor")
-        default:
-            throw NetworkError.httpError(statusCode: httpResponse.statusCode, message: nil)
+            throw error
         }
         
         // Decode response
