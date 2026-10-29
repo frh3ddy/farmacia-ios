@@ -25,6 +25,7 @@ class ReportsViewModel: ObservableObject {
     private var dateFormatter: ISO8601DateFormatter {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withFullDate]
+        formatter.timeZone = .current // the calendar day the user picked, not the GMT one
         return formatter
     }
 
