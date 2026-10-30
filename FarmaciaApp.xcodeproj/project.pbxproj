@@ -22,17 +22,10 @@
 		A72617238F43931DC3C57629 /* EditPriceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 551F6878C658EA6406F8A5A7 /* EditPriceView.swift */; };
 		AA00000100000001 /* GlobalActivityHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000200000001 /* GlobalActivityHistoryView.swift */; };
 		B9E53ECCEE227AA469A1BEBC /* ProductBatchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C675966EAAE838142E37278B /* ProductBatchViewModel.swift */; };
-		BB00000100000001 /* PurchaseOrderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00000200000001 /* PurchaseOrderView.swift */; };
 		CA00000100000001 /* CachedProduct.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA00000200000001 /* CachedProduct.swift */; };
 		CA00000100000002 /* ProductCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA00000200000002 /* ProductCacheManager.swift */; };
 		CC00000100000001 /* BatchDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000200000001 /* BatchDetailView.swift */; };
 		D419F61DEDDF944288D2F152 /* CostSupplierViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B36C1CAC70495EFA1EEFDC2 /* CostSupplierViewModel.swift */; };
-		DD00000100000001 /* ShoppingListsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000001 /* ShoppingListsView.swift */; };
-		DD00000100000002 /* ShoppingListDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000002 /* ShoppingListDetailView.swift */; };
-		DD00000100000003 /* AddItemsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000003 /* AddItemsSheet.swift */; };
-		DD00000100000004 /* ReceiveFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000004 /* ReceiveFlowView.swift */; };
-		DD00000100000005 /* ShoppingList.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000005 /* ShoppingList.swift */; };
-		DD00000100000006 /* ShoppingListStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000006 /* ShoppingListStore.swift */; };
 		ED472745D3529AF20E11A7A3 /* ProductsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67DB948B9C5055D67639955A /* ProductsViewModel.swift */; };
 		EE00000100000001 /* ImagePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000001 /* ImagePicker.swift */; };
 		EE00000100000002 /* ProductImageViewer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000002 /* ProductImageViewer.swift */; };
@@ -125,18 +118,11 @@
 		67DB948B9C5055D67639955A /* ProductsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductsViewModel.swift; sourceTree = "<group>"; };
 		7AF0652B989018922F154F43 /* ProductActivityFullView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductActivityFullView.swift; sourceTree = "<group>"; };
 		AA00000200000001 /* GlobalActivityHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalActivityHistoryView.swift; sourceTree = "<group>"; };
-		BB00000200000001 /* PurchaseOrderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseOrderView.swift; sourceTree = "<group>"; };
 		BE1BABB646D2A0D186E009DB /* ProductActivityModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductActivityModels.swift; sourceTree = "<group>"; };
 		C675966EAAE838142E37278B /* ProductBatchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductBatchViewModel.swift; sourceTree = "<group>"; };
 		CA00000200000001 /* CachedProduct.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CachedProduct.swift; sourceTree = "<group>"; };
 		CA00000200000002 /* ProductCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductCacheManager.swift; sourceTree = "<group>"; };
 		CC00000200000001 /* BatchDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchDetailView.swift; sourceTree = "<group>"; };
-		DD00000200000001 /* ShoppingListsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingListsView.swift; sourceTree = "<group>"; };
-		DD00000200000002 /* ShoppingListDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingListDetailView.swift; sourceTree = "<group>"; };
-		DD00000200000003 /* AddItemsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddItemsSheet.swift; sourceTree = "<group>"; };
-		DD00000200000004 /* ReceiveFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiveFlowView.swift; sourceTree = "<group>"; };
-		DD00000200000005 /* ShoppingList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingList.swift; sourceTree = "<group>"; };
-		DD00000200000006 /* ShoppingListStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingListStore.swift; sourceTree = "<group>"; };
 		EE00000200000001 /* ImagePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImagePicker.swift; sourceTree = "<group>"; };
 		EE00000200000002 /* ProductImageViewer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductImageViewer.swift; sourceTree = "<group>"; };
 		EE00000200000003 /* CachedProductImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CachedProductImage.swift; sourceTree = "<group>"; };
@@ -259,12 +245,7 @@
 				2F07F452947561CD91FFF44E /* ProductsAgingViewModel.swift */,
 				0F15BF3D21F89E5EBF003160 /* ExpiringProductsViewModel.swift */,
 				AA00000200000001 /* GlobalActivityHistoryView.swift */,
-				BB00000200000001 /* PurchaseOrderView.swift */,
 				CC00000200000001 /* BatchDetailView.swift */,
-				DD00000200000001 /* ShoppingListsView.swift */,
-				DD00000200000002 /* ShoppingListDetailView.swift */,
-				DD00000200000003 /* AddItemsSheet.swift */,
-				DD00000200000004 /* ReceiveFlowView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -372,8 +353,6 @@
 				F100000100000023 /* Expense.swift */,
 				F100000100000024 /* Reports.swift */,
 				F100000100000030 /* InventoryAging.swift */,
-				DD00000200000005 /* ShoppingList.swift */,
-				DD00000200000006 /* ShoppingListStore.swift */,
 				37E697412F3408EF00F6CB5D /* Setup.swift */,
 				GG00000200000001 /* Payroll.swift */,
 			);
@@ -679,14 +658,7 @@
 				F000000100000024 /* Reports.swift in Sources */,
 				F000000100000030 /* InventoryAging.swift in Sources */,
 				AA00000100000001 /* GlobalActivityHistoryView.swift in Sources */,
-				BB00000100000001 /* PurchaseOrderView.swift in Sources */,
 				CC00000100000001 /* BatchDetailView.swift in Sources */,
-				DD00000100000001 /* ShoppingListsView.swift in Sources */,
-				DD00000100000002 /* ShoppingListDetailView.swift in Sources */,
-				DD00000100000003 /* AddItemsSheet.swift in Sources */,
-				DD00000100000004 /* ReceiveFlowView.swift in Sources */,
-				DD00000100000005 /* ShoppingList.swift in Sources */,
-				DD00000100000006 /* ShoppingListStore.swift in Sources */,
 				EE00000100000001 /* ImagePicker.swift in Sources */,
 				EE00000100000002 /* ProductImageViewer.swift in Sources */,
 				EE00000100000003 /* CachedProductImage.swift in Sources */,
