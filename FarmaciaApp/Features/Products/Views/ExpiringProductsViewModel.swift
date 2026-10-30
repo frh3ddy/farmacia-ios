@@ -1,21 +1,17 @@
 import Foundation
+import FarmaciaKit
 
 // MARK: - Expiring Products ViewModel (loads expiring product IDs from aging service)
 
 @MainActor
 class ExpiringProductsViewModel: ObservableObject {
-    @Published var expiringProductIds: Set<String> = []
-    @Published var expiringProducts: [ExpiringProduct] = []
-    @Published var summary: ExpiringProductsSummary?
-    @Published var isLoading = false
+    /// Products with a lot expiring within 90 days (or already expired); unavailable if the load failed.
+    @Published var expiring: RiskSet = .loading
     
     private let apiClient = APIClient.shared
     
     /// Load products with batches expiring within 90 days (or already expired)
     func loadExpiringProducts(locationId: String) async {
-        isLoading = true
-        defer { isLoading = false }
-        
         do {
             let response: ExpiringProductsResponse = try await apiClient.request(
                 endpoint: .agingExpiring,
@@ -26,15 +22,10 @@ class ExpiringProductsViewModel: ObservableObject {
                 ]
             )
             
-            expiringProducts = response.products
-            summary = response.summary
-            expiringProductIds = Set(response.products.map { $0.productId })
+            expiring = .loaded(Set(response.products.map { $0.productId }))
         } catch {
-            // Silent fail — expiry data is supplementary
-            print("Failed to load expiring products: \(error)")
-            expiringProducts = []
-            summary = nil
-            expiringProductIds = []
+            // Not "nothing expiring": the Por Vencer chip shows it couldn't load.
+            expiring = expiring.after(failure: error)
         }
     }
 }

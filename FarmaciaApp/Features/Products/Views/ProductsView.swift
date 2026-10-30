@@ -1,17 +1,11 @@
 import SwiftUI
 import CodeScanner
+import FarmaciaKit
 
 // MARK: - Filter / Sort enums (file scope — used by both the view and the view model)
 
-enum ProductFilter: String, CaseIterable {
-    case all = "Todos"
-    case lowStock = "Stock Bajo"
-    case outOfStock = "Sin Stock"
-    case inStock = "In Stock"
-    case atRisk = "En Riesgo"
-    case expiringSoon = "Por Vencer"
-    case lowMargin = "Margen Bajo"
-    
+// Cases, visibility per role and empty-state text live in FarmaciaKit.
+extension ProductFilter {
     var icon: String {
         switch self {
         case .all: return "square.grid.2x2"
@@ -70,8 +64,6 @@ struct ProductsView: View {
     @StateObject private var agingViewModel = ProductsAgingViewModel()
     @StateObject private var expiringViewModel = ExpiringProductsViewModel()
     @State private var createProductRequest: CreateProductSheetRequest?
-    @State private var showPurchaseOrder = false
-    @State private var showShoppingLists = false
     @State private var searchText = ""
     @State private var activeFilter: ProductFilter = .all
     @State private var sortOption: ProductSortOption = .name
@@ -84,17 +76,34 @@ struct ProductsView: View {
     
     /// Tab-switch refresh trigger (set by MainTabView)
     var refreshTrigger: UUID = UUID()
-    
-    // Debounced search — triggers server-side search after user stops typing
-    @State private var searchTask: Task<Void, Never>? = nil
+
+    /// What the list shows. Changing it (typing, clearing the search, switching location
+    /// or tab) cancels the previous load task and starts the next one.
+    private struct ListLoadKey: Equatable {
+        let query: ProductListQuery?
+        let refresh: UUID
+    }
+
+    private var listLoadKey: ListLoadKey {
+        ListLoadKey(
+            query: authManager.currentLocation.map { ProductListQuery(locationId: $0.id, search: searchText) },
+            refresh: refreshTrigger
+        )
+    }
     
     // MARK: - Computed products
     // Note: name/SKU filtering is handled server-side via the `search` query param.
     // Stock/risk/margin filtering + sorting live in ProductsViewModel — recomputed
     // only when inputs change, NOT on every SwiftUI render. Read viewModel.filteredProducts.
     
-    // Used by the atRisk filter chip's count badge.
-    private var atRiskCount: Int { agingViewModel.atRiskProductIds.count }
+    /// The ids behind the En Riesgo / Por Vencer chips (other filters don't use them).
+    private func riskSet(for filter: ProductFilter) -> RiskSet {
+        switch filter {
+        case .atRisk: return agingViewModel.atRisk
+        case .expiringSoon: return expiringViewModel.expiring
+        default: return .loading
+        }
+    }
 
     /// True while the user is typing a search — hides the filter chips
     /// and summary section so results get priority on screen.
@@ -164,38 +173,6 @@ struct ProductsView: View {
                     }
                     .accessibilityLabel("Ordenar")
 
-                    // Shopping Lists (primary path) — disabled for now, not fully ready.
-                    // if authManager.canManageInventory {
-                    //     Button {
-                    //         showShoppingLists = true
-                    //     } label: {
-                    //         let activeCount = ShoppingListStore.shared.activeLists.count
-                    //         Image(systemName: "list.clipboard")
-                    //             .overlay(alignment: .topTrailing) {
-                    //                 if activeCount > 0 {
-                    //                     Text("\(activeCount)")
-                    //                         .font(.system(size: 9, weight: .bold))
-                    //                         .foregroundStyle(.white)
-                    //                         .frame(minWidth: 14, minHeight: 14)
-                    //                         .background(Color.red)
-                    //                         .clipShape(Circle())
-                    //                         .offset(x: 6, y: -6)
-                    //                 }
-                    //             }
-                    //     }
-                    //     .accessibilityLabel("Listas de Compras, \(ShoppingListStore.shared.activeLists.count) activas")
-                    // }
-
-                    // Quick Receive (legacy fast path) — disabled for now, not fully ready.
-                    // if authManager.canManageInventory {
-                    //     Button {
-                    //         showPurchaseOrder = true
-                    //     } label: {
-                    //         Image(systemName: "cart.badge.plus")
-                    //     }
-                    //     .accessibilityLabel("Recepción Rápida")
-                    // }
-
                     // Add product
                     if authManager.isOwner || authManager.isManager {
                         Button {
@@ -208,30 +185,21 @@ struct ProductsView: View {
                 }
             }
             .searchable(text: $searchText, prompt: "Buscar productos...")
-            .onChange(of: searchText) { _, newValue in
-                // Debounce: cancel previous search, wait 400ms, then search server-side
-                searchTask?.cancel()
-                searchTask = Task {
-                    try? await Task.sleep(nanoseconds: 400_000_000) // 400ms
-                    guard !Task.isCancelled else { return }
-                    await loadProducts()
-                }
-            }
             .onChange(of: activeFilter) { _, newFilter in
-                viewModel.setFilter(newFilter, atRiskIds: agingViewModel.atRiskProductIds, expiringIds: expiringViewModel.expiringProductIds)
+                viewModel.setFilter(newFilter, atRiskIds: agingViewModel.atRisk.ids, expiringIds: expiringViewModel.expiring.ids)
             }
             .onChange(of: sortOption) { _, newSort in
                 viewModel.setSort(newSort)
             }
-            .onChange(of: agingViewModel.atRiskProductIds) { _, newIds in
+            .onChange(of: agingViewModel.atRisk) { _, atRisk in
                 // Re-apply filter when aging data arrives (atRisk filter depends on it)
                 if activeFilter == .atRisk {
-                    viewModel.setFilter(.atRisk, atRiskIds: newIds, expiringIds: expiringViewModel.expiringProductIds)
+                    viewModel.setFilter(.atRisk, atRiskIds: atRisk.ids, expiringIds: expiringViewModel.expiring.ids)
                 }
             }
-            .onChange(of: expiringViewModel.expiringProductIds) { _, newIds in
+            .onChange(of: expiringViewModel.expiring) { _, expiring in
                 if activeFilter == .expiringSoon {
-                    viewModel.setFilter(.expiringSoon, atRiskIds: agingViewModel.atRiskProductIds, expiringIds: newIds)
+                    viewModel.setFilter(.expiringSoon, atRiskIds: agingViewModel.atRisk.ids, expiringIds: expiring.ids)
                 }
             }
             .onChange(of: viewModel.isWarmingCache) { _, isWarming in
@@ -247,16 +215,12 @@ struct ProductsView: View {
                 }
             }
             .refreshable {
-                await loadProducts()
+                async let products: () = loadProducts()
+                async let aging: () = loadAgingData()
+                _ = await (products, aging)
             }
             .sheet(item: $createProductRequest) { request in
                 CreateProductView(prefillSku: request.prefillSku)
-            }
-            .sheet(isPresented: $showPurchaseOrder) {
-                PurchaseOrderView()
-            }
-            .fullScreenCover(isPresented: $showShoppingLists) {
-                ShoppingListsView(store: ShoppingListStore.shared)
             }
             .sheet(isPresented: $showBarcodeCandidates) {
                 BarcodeCandidatesSheet(
@@ -298,15 +262,16 @@ struct ProductsView: View {
                     )
                 }
             }
-            .task {
-                await loadProducts()
-                await loadAgingData()
-            }
-            .onChange(of: refreshTrigger) { _, _ in
-                // Tab was selected — reload fresh data
-                Task {
-                    await loadProducts()
+            .task(id: listLoadKey) {
+                guard let query = listLoadKey.query else { return }
+                if query.search != nil {
+                    // Debounce typing: the next keystroke cancels this task during the sleep.
+                    do { try await Task.sleep(for: .milliseconds(400)) } catch { return }
                 }
+                await viewModel.loadProducts(locationId: query.locationId, search: query.search)
+            }
+            .task(id: authManager.currentLocation?.id) {
+                await loadAgingData()
             }
             .alert("Error", isPresented: $viewModel.showError) {
                 Button("OK", role: .cancel) {}
@@ -395,11 +360,13 @@ struct ProductsView: View {
                 if viewModel.filteredProducts.isEmpty {
                     // Distinct from the catalog-wide empty state above this
                     // Group's other branch — this is "no results for the
-                    // current search/filter", not "no products at all".
+                    // current search/filter", not "no products at all" — and,
+                    // for En Riesgo / Por Vencer, not "couldn't load".
+                    let empty = activeFilter.emptyState(risk: riskSet(for: activeFilter))
                     AppEmptyStateView(
-                        title: "Sin Resultados",
+                        title: empty.title,
                         systemImage: "magnifyingglass",
-                        message: "Ningún producto coincide con tu búsqueda o filtro."
+                        message: empty.message
                     )
                     .frame(minHeight: 240)
                     .listRowInsets(EdgeInsets())
@@ -423,7 +390,7 @@ struct ProductsView: View {
                             // Infinite scroll: trigger load-more when near the end
                             if product.id == viewModel.filteredProducts.last?.id && viewModel.hasMore {
                                 Task {
-                                    await loadMoreProducts()
+                                    await viewModel.loadMoreProducts()
                                 }
                             }
                         }
@@ -519,7 +486,7 @@ struct ProductsView: View {
     private var filterChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
-                ForEach(ProductFilter.allCases, id: \.self) { filter in
+                ForEach(ProductFilter.visible(canViewCosts: authManager.canViewCosts), id: \.self) { filter in
                     filterChip(filter)
                 }
             }
@@ -544,7 +511,7 @@ struct ProductsView: View {
                     .fontWeight(.medium)
 
                 if filter != .all {
-                    Text("\(count)")
+                    Text(count.map(String.init) ?? "—")
                         .font(.system(size: 9, weight: .bold))
                         .padding(.horizontal, 4)
                         .padding(.vertical, 1)
@@ -563,14 +530,14 @@ struct ProductsView: View {
         .buttonStyle(.plain)
     }
 
-    private func filterCount(for filter: ProductFilter) -> Int {
+    /// nil while the chip's ids are loading or failed to load (shown as "—").
+    private func filterCount(for filter: ProductFilter) -> Int? {
         switch filter {
         case .all: return viewModel.totalCount
         case .lowStock: return viewModel.counts.lowStock
         case .outOfStock: return viewModel.counts.outOfStock
         case .inStock: return viewModel.counts.inStock
-        case .atRisk: return atRiskCount
-        case .expiringSoon: return expiringViewModel.expiringProductIds.count
+        case .atRisk, .expiringSoon: return riskSet(for: filter).count
         case .lowMargin: return viewModel.counts.lowMargin
         }
     }
@@ -637,15 +604,12 @@ struct ProductsView: View {
         await viewModel.loadProducts(locationId: locationId, search: search)
     }
     
-    private func loadMoreProducts() async {
-        guard let locationId = authManager.currentLocation?.id else { return }
-        await viewModel.loadMoreProducts(locationId: locationId)
-    }
-    
     private func loadAgingData() async {
         guard let locationId = authManager.currentLocation?.id else { return }
         // Independent loads — fire in parallel
-        async let atRiskLoad: () = agingViewModel.loadAtRiskProducts(locationId: locationId)
+        // En Riesgo is a cost view (cash tied up): cashiers neither get the chip nor the load.
+        let canViewCosts = authManager.canViewCosts
+        async let atRiskLoad: () = canViewCosts ? agingViewModel.loadAtRiskProducts(locationId: locationId) : ()
         async let expiringLoad: () = expiringViewModel.loadExpiringProducts(locationId: locationId)
         _ = await (atRiskLoad, expiringLoad)
     }

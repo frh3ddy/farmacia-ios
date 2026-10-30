@@ -32,14 +32,13 @@ class ProductsViewModel: ObservableObject {
     @Published var isWarmingCache = false
     @Published var warmUpProgress: Int = 0
     
-    // Pagination state
-    private(set) var currentPage = 1
-    private(set) var hasMore = true
+    // Pagination state: which query and page the list shows, and which load may land
+    private var load = ProductListLoad()
+    var hasMore: Bool { load.hasMore }
     private(set) var totalCount = 0
     private let pageSize = 50
-    
-    // Search state (server-side)
-    private var currentSearchQuery: String?
+
+    // Location of the last load (for count refreshes after an edit)
     private var currentLocationId: String?
     
     // Filter/sort inputs — recompute filteredProducts only when these change
@@ -109,15 +108,16 @@ class ProductsViewModel: ObservableObject {
     }
     
     /// Load first page: cache first → spinner → API → update cache.
-    /// Called on appear, pull-to-refresh, and tab switch.
+    /// Called on appear, pull-to-refresh, search and tab switch. Starting a new load makes
+    /// any load still in flight stale: its result is dropped (`ProductListLoad`).
     func loadProducts(locationId: String, search: String? = nil) async {
-        currentPage = 1
-        hasMore = true
-        currentSearchQuery = search
+        let ticket = load.beginFirstPage(ProductListQuery(locationId: locationId, search: search))
+        let query = ticket.query
         currentLocationId = locationId
-        
+        isLoadingMore = false // a pending load-more is stale now
+
         // STEP 1: If no search and cache has data, show it immediately
-        if (search == nil || search?.isEmpty == true) && !cache.isEmpty {
+        if query.search == nil && !cache.isEmpty {
             let cached = cache.loadAll()
             if !cached.isEmpty {
                 products = cached
@@ -133,28 +133,22 @@ class ProductsViewModel: ObservableObject {
                 recomputeFilteredProducts()
             }
         }
-        
+
         // STEP 2: Show loading indicator and fetch fresh data from server
         isLoading = true
-        currentPage = 1
-        hasMore = true
-        currentSearchQuery = search
         // Any explicit refresh invalidates the previous warm-up
         warmUpTask?.cancel()
         isWarmingCache = false
-        
+
         do {
-            let params: [String: String] = {
-                var p: [String: String] = [
-                    "locationId": locationId,
-                    "page": "1",
-                    "limit": "\(pageSize)"
-                ]
-                if let search = search, !search.isEmpty {
-                    p["search"] = search
-                }
-                return p
-            }()
+            var params: [String: String] = [
+                "locationId": locationId,
+                "page": "1",
+                "limit": "\(pageSize)"
+            ]
+            if let search = query.search {
+                params["search"] = search
+            }
 
             // Counts come from the server aggregate (GET /products/counts) —
             // a single query over the whole catalog, not just this page.
@@ -169,88 +163,92 @@ class ProductsViewModel: ObservableObject {
             )
 
             let response = try await pageFetch
+            let serverCounts = await countsFetch
+            guard load.accept(ticket, hasMore: response.hasMore ?? false) else { return }
+
             products = response.data
             totalCount = response.totalCount ?? response.count
-            hasMore = response.hasMore ?? false
-            currentPage = 1
             recomputeFilteredProducts()
 
-            if let serverCounts = await countsFetch {
+            if let serverCounts {
                 applyServerCounts(serverCounts)
             } else {
                 // Counts endpoint failed — fall back to a page-based estimate.
                 recalculateCounts()
             }
-            
+
             // STEP 3: Update cache with fresh data (skip search results)
-            if search == nil || search?.isEmpty == true {
+            if query.search == nil {
                 cache.saveProducts(response.data)
                 cache.markFresh()
                 // STEP 4: Warm up the full catalog in the background so the
                 // barcode scanner's level-1 cache lookup covers all products.
                 startWarmUp(locationId: locationId)
             }
-        } catch let error as NetworkError {
-            // If we already have cached data, don't show error — just use cache
-            if products.isEmpty {
-                errorMessage = error.errorDescription ?? "Error al cargar productos"
-                showError = true
-            }
         } catch {
-            if products.isEmpty {
+            guard load.fail(ticket) else { return }
+            isLoading = false
+            // Cancelled (search changed, view left): not an error. With cached
+            // data on screen, don't show one either — just use the cache.
+            if NetworkError.isCancellation(error) || !products.isEmpty { return }
+            if let error = error as? NetworkError {
+                errorMessage = error.errorDescription ?? "Error al cargar productos"
+            } else {
                 errorMessage = error.localizedDescription
-                showError = true
             }
+            showError = true
+            return
         }
-        
+
         isLoading = false
     }
-    
+
     /// Load next page (appends to existing products). Called by infinite scroll.
-    func loadMoreProducts(locationId: String) async {
-        guard hasMore, !isLoadingMore, !isLoading else { return }
-        
+    func loadMoreProducts() async {
+        guard let ticket = load.beginNextPage() else { return }
         isLoadingMore = true
-        let nextPage = currentPage + 1
-        
+
         do {
             var params: [String: String] = [
-                "locationId": locationId,
-                "page": "\(nextPage)",
+                "locationId": ticket.query.locationId,
+                "page": "\(ticket.page)",
                 "limit": "\(pageSize)"
             ]
-            if let search = currentSearchQuery, !search.isEmpty {
+            if let search = ticket.query.search {
                 params["search"] = search
             }
-            
+
             let response: ProductListResponse = try await apiClient.request(
                 endpoint: .listProducts,
                 queryParams: params
             )
-            
+            // A search or refresh started meanwhile: this page belongs to the old list.
+            guard load.accept(ticket, hasMore: response.hasMore ?? false) else { return }
+
             // Append new products, avoiding duplicates
             let existingIds = Set(products.map { $0.id })
             let newProducts = response.data.filter { !existingIds.contains($0.id) }
             products.append(contentsOf: newProducts)
-            
+
             totalCount = response.totalCount ?? totalCount
-            hasMore = response.hasMore ?? false
-            currentPage = nextPage
             // Counts already reflect the whole catalog via the server aggregate —
             // recomputing from `products` here would regress them to a partial,
             // page-based estimate.
             recomputeFilteredProducts()
 
-            // Update cache with new page
-            cache.saveProducts(response.data)
+            // Update cache with new page (catalog pages only, like page 1)
+            if ticket.query.search == nil {
+                cache.saveProducts(response.data)
+            }
         } catch {
             // Silent fail for load-more — user can scroll again to retry
-            print("Failed to load more products: \(error)")
+            guard load.fail(ticket) else { return }
+            if !NetworkError.isCancellation(error) { print("Failed to load more products: \(error)") }
         }
-        
+
         isLoadingMore = false
     }
-    
+
     /// Background full-catalog warm-up: paginates pages 2..N silently and writes
     /// ONLY to the SwiftData cache (never touches `products` or the UI).
     /// Purpose: make barcode level-1 (indexed cache lookup) cover the whole catalog.
@@ -261,7 +259,7 @@ class ProductsViewModel: ObservableObject {
         // banner on a cold cache — a silent refresh (e.g. after clearing a
         // search) shouldn't flash the banner and jump the list.
         let showsProgress = cache.cachedCount < totalCount
-        let startPage = currentPage + 1
+        let startPage = load.currentPage + 1
         warmUpTask = Task(priority: .utility) { [weak self] in
             guard let self else { return }
             if showsProgress {

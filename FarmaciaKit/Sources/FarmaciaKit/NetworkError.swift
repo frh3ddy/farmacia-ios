@@ -155,3 +155,12 @@ public struct APIErrorResponse: Decodable {
         message ?? error ?? "Ocurrió un error desconocido"
     }
 }
+
+extension NetworkError {
+    /// A task cancelled (view left, search changed) rather than a failure to show.
+    public static func isCancellation(_ error: Error) -> Bool {
+        if error is CancellationError { return true }
+        if case .cancelled? = error as? NetworkError { return true }
+        return false
+    }
+}

@@ -214,82 +214,12 @@ struct ActionableSignalsResponse: Decodable {
     let total: Int
 }
 
-// MARK: - Expiring Products Models
-// Maps to: GET /inventory/aging/expiring
+// MARK: - Expiring Products (models in FarmaciaKit; SwiftUI-only members here)
 
-struct ExpiringBatchInfo: Decodable, Identifiable {
-    let batchId: String
-    let receivingId: String
-    let quantity: Int
-    let unitCost: Double
-    let cashValue: Double
-    let expiryDate: Date
-    let daysUntilExpiry: Int
-    let isExpired: Bool
-    let batchNumber: String?
-    let supplierName: String?
-    let receivedAt: Date
-    
-    var id: String { batchId }
-    
-    var formattedCashValue: String {
-        ReportFormat.currency(cashValue)
-    }
-    
-    var formattedUnitCost: String {
-        ReportFormat.currency(unitCost)
-    }
-    
-    var expiryLabel: String {
-        Expiry.label(daysUntil: daysUntilExpiry, isExpired: isExpired, expiry: expiryDate)
-    }
-}
-
-struct ExpiringProduct: Decodable, Identifiable {
-    let productId: String
-    let productName: String
-    let sku: String?
-    let totalUnits: Int
-    let totalCashAtRisk: Double
-    let batchCount: Int
-    let expiredCount: Int
-    let soonestExpiryDate: Date
-    let soonestDaysUntilExpiry: Int
-    let severity: String  // "LOW", "MEDIUM", "HIGH", "CRITICAL"
-    let batches: [ExpiringBatchInfo]
-    
-    var id: String { productId }
-    
-    var formattedCashAtRisk: String {
-        ReportFormat.currency(totalCashAtRisk)
-    }
-    
+extension ExpiringProduct {
     var severityColor: Color {
         InventoryRiskLevel(rawValue: severity)?.color ?? .secondary
     }
-    
-    var severityIcon: String {
-        switch severity {
-        case "CRITICAL": return "exclamationmark.triangle.fill"
-        case "HIGH": return "exclamationmark.circle.fill"
-        case "MEDIUM": return "clock.badge.exclamationmark"
-        default: return "clock"
-        }
-    }
-}
-
-struct ExpiringProductsSummary: Decodable {
-    let totalProducts: Int
-    let totalExpiredBatches: Int
-    let totalCashAtRisk: Double
-    let criticalCount: Int
-    let highCount: Int
-}
-
-struct ExpiringProductsResponse: Decodable {
-    let products: [ExpiringProduct]
-    let total: Int
-    let summary: ExpiringProductsSummary
 }
 
 // MARK: - Batch Detail Models
