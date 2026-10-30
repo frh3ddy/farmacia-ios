@@ -57,6 +57,10 @@ struct ProductDetailView: View {
     @State private var showRefreshError = false
     @State private var offlineQueue = OfflineQueueManager.shared
 
+    private var canEditPrice: Bool {
+        PriceEditing.canEdit(isOwner: authManager.isOwner, isManager: authManager.isManager, tracksInventory: displayProduct.tracksInventory)
+    }
+
     private var displayProduct: Product {
         currentProduct ?? product
     }
@@ -94,7 +98,7 @@ struct ProductDetailView: View {
         .navigationTitle("Detalle de Producto")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if authManager.isOwner || authManager.isManager {
+            if canEditPrice {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Button {
@@ -470,7 +474,7 @@ struct ProductDetailView: View {
                 
                 Spacer()
                 
-                if authManager.isOwner || authManager.isManager {
+                if canEditPrice {
                     Button("Editar") {
                         showEditPrice = true
                     }
@@ -1464,7 +1468,8 @@ struct ProductDetailResponse: Decodable {
             currency: "MXN",
             totalInventory: 150,
             averageCost: 30.00,
-            hasSquareSync: true
+            hasSquareSync: true,
+            tracksInventory: true
         ))
         .environmentObject(AuthManager.shared)
     }

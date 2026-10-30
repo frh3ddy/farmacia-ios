@@ -61,7 +61,7 @@ struct EditPriceView: View {
                     Section {
                         Toggle("Actualizar en Square", isOn: $syncToSquare)
                         
-                        if syncToSquare {
+                        if syncToSquare && PriceEditing.canApplyToAllLocations(isOwner: authManager.isOwner) {
                             Toggle("Aplicar a todas las ubicaciones", isOn: $applyToAllLocations)
                         }
                     } footer: {

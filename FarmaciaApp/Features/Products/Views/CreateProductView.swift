@@ -283,6 +283,17 @@ struct CreateProductView: View {
                     }
                 }
                 
+                // Stores Section
+                Section {
+                    Toggle("Vender en todas las sucursales", isOn: $viewModel.soldAtAllLocations)
+                } header: {
+                    Text("Sucursales")
+                } footer: {
+                    if !viewModel.soldAtAllLocations {
+                        Text("Solo se venderá en esta sucursal y no aparecerá en las demás.")
+                    }
+                }
+
                 // Square Sync Section
                 Section {
                     Toggle("Sync to Square POS", isOn: $viewModel.syncToSquare)
@@ -453,7 +464,10 @@ class CreateProductViewModel: ObservableObject {
     @Published var initialStock: Int?
     @Published var hasInitialStock = false
     @Published var syncToSquare = true
+    @Published var soldAtAllLocations = true
     @Published var selectedSupplier: Supplier?
+    /// One per product being created: a retry (or the offline queue's replay) of this create reuses it.
+    let clientRequestId = UUID().uuidString
 
     // State
     @Published var isSubmitting = false
@@ -528,7 +542,9 @@ class CreateProductViewModel: ObservableObject {
                 initialStock: hasInitialStock ? initialStock : nil,
                 supplierId: hasInitialStock ? selectedSupplier?.id : nil,
                 locationId: locationId,
-                syncToSquare: syncToSquare
+                syncToSquare: syncToSquare,
+                soldAtAllLocations: soldAtAllLocations,
+                clientRequestId: clientRequestId
             )
             
             let response: APIResponse<CreateProductResponse> = try await apiClient.request(
@@ -564,10 +580,9 @@ class CreateProductViewModel: ObservableObject {
                 showSuccess = true
             }
         } catch NetworkError.queuedForSync {
-            // Creating a product is a POST, not an overwrite — no client
-            // dedup key exists for it (unlike adjustments/receiving/expenses),
-            // so a manual retry before this syncs could create a duplicate.
-            // No product id exists yet either, so image upload can't run.
+            // The queued replay carries this create's clientRequestId, so it
+            // can't duplicate itself; creating the product again from a new
+            // form would. No product id exists yet, so image upload can't run.
             successMessage = "Sin conexión. \"\(name)\" se creará automáticamente cuando vuelva la conexión — evita crearlo de nuevo mientras tanto."
             showSuccess = true
         } catch let error as NetworkError {
