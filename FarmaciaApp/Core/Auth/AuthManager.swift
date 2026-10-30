@@ -410,6 +410,12 @@ final class AuthManager: ObservableObject {
         currentEmployee?.role != .cashier
     }
     
+    /// Purchase costs, supplier costs and cost history: never a cashier (the API refuses them too).
+    var canViewCosts: Bool {
+        guard let role = currentEmployee?.role else { return false }
+        return role != .cashier
+    }
+    
     var canManageExpenses: Bool {
         currentEmployee?.role == .owner ||
         currentEmployee?.role == .manager ||
