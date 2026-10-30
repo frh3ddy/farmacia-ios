@@ -77,8 +77,8 @@ struct ProductsView: View {
     /// Tab-switch refresh trigger (set by MainTabView)
     var refreshTrigger: UUID = UUID()
 
-    /// What the list shows. Changing it (typing, clearing the search, switching location
-    /// or tab) cancels the previous load task and starts the next one.
+    /// What the list shows. Changing it (typing, clearing the search, picking a chip,
+    /// switching location or tab) cancels the previous load task and starts the next one.
     private struct ListLoadKey: Equatable {
         let query: ProductListQuery?
         let refresh: UUID
@@ -86,7 +86,12 @@ struct ProductsView: View {
 
     private var listLoadKey: ListLoadKey {
         ListLoadKey(
-            query: authManager.currentLocation.map { ProductListQuery(locationId: $0.id, search: searchText) },
+            // Coerced here too, so a store switch never sends a chip the new role can't use
+            // (the onChange below then moves the selection itself back to Todos).
+            query: authManager.currentLocation.map {
+                ProductListQuery(locationId: $0.id, search: searchText,
+                                 filter: .coerced(activeFilter, canViewCosts: authManager.canViewCosts))
+            },
             refresh: refreshTrigger
         )
     }
@@ -129,9 +134,11 @@ struct ProductsView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if viewModel.isLoading && viewModel.products.isEmpty {
+                // Whole-screen states are for the plain catalog; a search or chip
+                // with no matches keeps the list (and its chips) on screen.
+                if viewModel.isCatalog && viewModel.isLoading && viewModel.products.isEmpty {
                     loadingView
-                } else if viewModel.products.isEmpty {
+                } else if viewModel.isCatalog && viewModel.products.isEmpty && !viewModel.loadFailed {
                     emptyStateView
                 } else {
                     productsList
@@ -185,22 +192,12 @@ struct ProductsView: View {
                 }
             }
             .searchable(text: $searchText, prompt: "Buscar productos...")
-            .onChange(of: activeFilter) { _, newFilter in
-                viewModel.setFilter(newFilter, atRiskIds: agingViewModel.atRisk.ids, expiringIds: expiringViewModel.expiring.ids)
-            }
             .onChange(of: sortOption) { _, newSort in
                 viewModel.setSort(newSort)
             }
-            .onChange(of: agingViewModel.atRisk) { _, atRisk in
-                // Re-apply filter when aging data arrives (atRisk filter depends on it)
-                if activeFilter == .atRisk {
-                    viewModel.setFilter(.atRisk, atRiskIds: atRisk.ids, expiringIds: expiringViewModel.expiring.ids)
-                }
-            }
-            .onChange(of: expiringViewModel.expiring) { _, expiring in
-                if activeFilter == .expiringSoon {
-                    viewModel.setFilter(.expiringSoon, atRiskIds: agingViewModel.atRisk.ids, expiringIds: expiring.ids)
-                }
+            .onChange(of: authManager.canViewCosts) { _, canViewCosts in
+                // e.g. switched to a store where this employee is a cashier: no hidden chip stays active
+                activeFilter = .coerced(activeFilter, canViewCosts: canViewCosts)
             }
             .onChange(of: viewModel.isWarmingCache) { _, isWarming in
                 syncBannerDelayTask?.cancel()
@@ -268,7 +265,12 @@ struct ProductsView: View {
                     // Debounce typing: the next keystroke cancels this task during the sleep.
                     do { try await Task.sleep(for: .milliseconds(400)) } catch { return }
                 }
-                await viewModel.loadProducts(locationId: query.locationId, search: query.search)
+                await viewModel.loadProducts(query)
+            }
+            .onChange(of: authManager.currentLocation?.id) {
+                // Nothing from the previous store (or role) shows while this one loads.
+                agingViewModel.reset()
+                expiringViewModel.reset()
             }
             .task(id: authManager.currentLocation?.id) {
                 await loadAgingData()
@@ -357,16 +359,28 @@ struct ProductsView: View {
 
             // Products Section
             Section {
-                if viewModel.filteredProducts.isEmpty {
+                if viewModel.filteredProducts.isEmpty && viewModel.isLoading {
+                    ProgressView("Cargando productos...")
+                        .frame(maxWidth: .infinity, minHeight: 240)
+                        .listRowBackground(Color.clear)
+                } else if viewModel.filteredProducts.isEmpty && viewModel.loadFailed {
+                    // Not "no matches": this list didn't load.
+                    AppEmptyStateView(
+                        title: "No Disponible",
+                        systemImage: "wifi.exclamationmark",
+                        message: "No se pudo cargar esta lista. Desliza hacia abajo para reintentar."
+                    )
+                    .frame(minHeight: 240)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                } else if viewModel.filteredProducts.isEmpty {
                     // Distinct from the catalog-wide empty state above this
                     // Group's other branch — this is "no results for the
-                    // current search/filter", not "no products at all" — and,
-                    // for En Riesgo / Por Vencer, not "couldn't load".
-                    let empty = activeFilter.emptyState(risk: riskSet(for: activeFilter))
+                    // current search/filter", not "no products at all".
                     AppEmptyStateView(
-                        title: empty.title,
+                        title: "Sin Resultados",
                         systemImage: "magnifyingglass",
-                        message: empty.message
+                        message: "Ningún producto coincide con tu búsqueda o filtro."
                     )
                     .frame(minHeight: 240)
                     .listRowInsets(EdgeInsets())
@@ -599,9 +613,8 @@ struct ProductsView: View {
     // MARK: - Actions
     
     private func loadProducts() async {
-        guard let locationId = authManager.currentLocation?.id else { return }
-        let search = searchText.isEmpty ? nil : searchText
-        await viewModel.loadProducts(locationId: locationId, search: search)
+        guard let query = listLoadKey.query else { return }
+        await viewModel.loadProducts(query)
     }
     
     private func loadAgingData() async {

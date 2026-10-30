@@ -2,10 +2,11 @@ import Foundation
 
 // MARK: - Product Filter
 //
-// The chips over the product list. En Riesgo (cash tied up in old stock) and
-// Margen Bajo come from cost, so cashiers don't get them; Por Vencer they do.
-// En Riesgo / Por Vencer filter by ids loaded separately (`RiskSet`); when that
-// load failed, the empty list says so instead of "no results".
+// The chips over the product list; the server filters (GET /products?filter=),
+// so a filtered list holds every match, not just the pages already loaded.
+// En Riesgo (cash tied up in old stock) and Margen Bajo come from cost, so
+// cashiers don't get them; Por Vencer they do. The En Riesgo / Por Vencer chip
+// counts come from the aging ids (`RiskSet`), "—" when those failed to load.
 
 public enum ProductFilter: String, CaseIterable, Sendable {
     case all = "Todos"
@@ -16,16 +17,27 @@ public enum ProductFilter: String, CaseIterable, Sendable {
     case expiringSoon = "Por Vencer"
     case lowMargin = "Margen Bajo"
 
+    /// The `filter` query value for GET /products; nil for Todos.
+    public var apiValue: String? {
+        switch self {
+        case .all: return nil
+        case .lowStock: return "lowStock"
+        case .outOfStock: return "outOfStock"
+        case .inStock: return "inStock"
+        case .atRisk: return "atRisk"
+        case .expiringSoon: return "expiring"
+        case .lowMargin: return "lowMargin"
+        }
+    }
+
     public static func visible(canViewCosts: Bool) -> [ProductFilter] {
         canViewCosts ? allCases : allCases.filter { $0 != .atRisk && $0 != .lowMargin }
     }
 
-    /// The empty-list text for this filter, given the state of its risk ids.
-    public func emptyState(risk: RiskSet) -> (title: String, message: String) {
-        if (self == .atRisk || self == .expiringSoon) && risk == .unavailable {
-            return ("No Disponible", "No se pudo cargar qué productos están \(self == .atRisk ? "en riesgo" : "por vencer"). Desliza hacia abajo para reintentar.")
-        }
-        return ("Sin Resultados", "Ningún producto coincide con tu búsqueda o filtro.")
+    /// `filter` if the role may use it, else Todos (e.g. after switching to a store
+    /// where this employee is a cashier).
+    public static func coerced(_ filter: ProductFilter, canViewCosts: Bool) -> ProductFilter {
+        visible(canViewCosts: canViewCosts).contains(filter) ? filter : .all
     }
 }
 

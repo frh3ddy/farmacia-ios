@@ -9,6 +9,11 @@ class ExpiringProductsViewModel: ObservableObject {
     @Published var expiring: RiskSet = .loading
     
     private let apiClient = APIClient.shared
+
+    /// Back to loading, e.g. for another store.
+    func reset() {
+        expiring = .loading
+    }
     
     /// Load products with batches expiring within 90 days (or already expired)
     func loadExpiringProducts(locationId: String) async {
