@@ -10,6 +10,12 @@ class ProductsAgingViewModel: ObservableObject {
     @Published var productRiskLevels: [String: InventoryRiskLevel] = [:]
     
     private let apiClient = APIClient.shared
+
+    /// Back to loading, e.g. for another store.
+    func reset() {
+        atRisk = .loading
+        productRiskLevels = [:]
+    }
     
     /// Load products with HIGH or CRITICAL risk from the aging service
     func loadAtRiskProducts(locationId: String) async {

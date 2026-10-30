@@ -22,6 +22,8 @@ class ProductsViewModel: ObservableObject {
     @Published var isLoadingMore = false
     @Published var showError = false
     @Published var errorMessage = ""
+    /// The list's last load failed with nothing of it on screen (empty row says so).
+    @Published private(set) var loadFailed = false
     
     // Filter/sync badge counts. Backed by the server aggregate (GET
     // /products/counts, whole catalog) whenever it's available; falls back
@@ -41,11 +43,9 @@ class ProductsViewModel: ObservableObject {
     // Location of the last load (for count refreshes after an edit)
     private var currentLocationId: String?
     
-    // Filter/sort inputs — recompute filteredProducts only when these change
-    private var activeFilter: ProductFilter = .all
+    // Sort input — recompute filteredProducts only when it changes. Filtering is
+    // the server's (the filter is part of `ProductListQuery`).
     private var activeSort: ProductSortOption = .name
-    private var atRiskIds: Set<String> = []
-    private var expiringIds: Set<String> = []
     
     // Background warm-up task (cancelled on refresh/search)
     private var warmUpTask: Task<Void, Never>?
@@ -53,15 +53,12 @@ class ProductsViewModel: ObservableObject {
     private let apiClient = APIClient.shared
     private let cache = ProductCacheManager.shared
     
-    // MARK: - Filter / Sort (recomputed only on input change, NOT per render)
-    
-    func setFilter(_ filter: ProductFilter, atRiskIds: Set<String>, expiringIds: Set<String>) {
-        activeFilter = filter
-        self.atRiskIds = atRiskIds
-        self.expiringIds = expiringIds
-        recomputeFilteredProducts()
-    }
-    
+    // MARK: - Sort (recomputed only on input change, NOT per render)
+
+    /// The list shows the plain catalog (no search, no filter): the only one with
+    /// the big loading / "Sin Productos" states, and served from cache.
+    var isCatalog: Bool { load.query?.isCatalog ?? true }
+
     func setSort(_ sort: ProductSortOption) {
         activeSort = sort
         recomputeFilteredProducts()
@@ -69,26 +66,7 @@ class ProductsViewModel: ObservableObject {
     
     private func recomputeFilteredProducts() {
         var result = products
-        
-        switch activeFilter {
-        case .all:
-            break
-        case .lowStock:
-            result = result.filter { ($0.totalInventory ?? 0) > 0 && ($0.totalInventory ?? 0) < 10 }
-        case .outOfStock:
-            result = result.filter { ($0.totalInventory ?? 0) == 0 }
-        case .inStock:
-            result = result.filter { ($0.totalInventory ?? 0) >= 10 }
-        case .atRisk:
-            let ids = atRiskIds
-            result = result.filter { ids.contains($0.id) }
-        case .expiringSoon:
-            let ids = expiringIds
-            result = result.filter { ids.contains($0.id) }
-        case .lowMargin:
-            result = result.filter { ($0.profitMargin ?? 100) < 10 }
-        }
-        
+
         switch activeSort {
         case .name:
             result.sort { $0.displayName.localizedCompare($1.displayName) == .orderedAscending }
@@ -110,16 +88,25 @@ class ProductsViewModel: ObservableObject {
     /// Load first page: cache first → spinner → API → update cache.
     /// Called on appear, pull-to-refresh, search and tab switch. Starting a new load makes
     /// any load still in flight stale: its result is dropped (`ProductListLoad`).
-    func loadProducts(locationId: String, search: String? = nil) async {
-        let ticket = load.beginFirstPage(ProductListQuery(locationId: locationId, search: search))
-        let query = ticket.query
+    func loadProducts(_ query: ProductListQuery) async {
+        let ticket = load.beginFirstPage(query)
+        let locationId = query.locationId
         currentLocationId = locationId
         isLoadingMore = false // a pending load-more is stale now
+        loadFailed = false
 
-        // STEP 1: If no search and cache has data, show it immediately
-        if query.search == nil && !cache.isEmpty {
-            let cached = cache.loadAll()
-            if !cached.isEmpty {
+        // A reload of the list on screen (refresh, coming back from a product) keeps
+        // its rows and scroll position. Any other list must not show the previous
+        // one's rows while its own load: the catalog shows the cache, the rest start empty.
+        if load.shownQuery != query {
+            let cached = query.isCatalog && !cache.isEmpty ? cache.loadAll() : []
+            if cached.isEmpty {
+                products = []
+                recomputeFilteredProducts()
+                load.showRows(of: nil)
+            } else {
+                // STEP 1: plain catalog and the cache has data: show it immediately
+                load.showRows(of: query)
                 products = cached
                 // Keep catalog-wide server counts when we already have them
                 // (e.g. clearing a search) — a page-based estimate here makes
@@ -149,6 +136,9 @@ class ProductsViewModel: ObservableObject {
             if let search = query.search {
                 params["search"] = search
             }
+            if let filter = query.filter?.apiValue {
+                params["filter"] = filter
+            }
 
             // Counts come from the server aggregate (GET /products/counts) —
             // a single query over the whole catalog, not just this page.
@@ -167,18 +157,21 @@ class ProductsViewModel: ObservableObject {
             guard load.accept(ticket, hasMore: response.hasMore ?? false) else { return }
 
             products = response.data
-            totalCount = response.totalCount ?? response.count
+            // "Todos" counts the catalog (or the search), never a filtered list.
+            if query.filter == nil {
+                totalCount = response.totalCount ?? response.count
+            }
             recomputeFilteredProducts()
 
             if let serverCounts {
                 applyServerCounts(serverCounts)
-            } else {
+            } else if query.isCatalog {
                 // Counts endpoint failed — fall back to a page-based estimate.
                 recalculateCounts()
             }
 
-            // STEP 3: Update cache with fresh data (skip search results)
-            if query.search == nil {
+            // STEP 3: Update cache with fresh data (plain catalog only)
+            if query.isCatalog {
                 cache.saveProducts(response.data)
                 cache.markFresh()
                 // STEP 4: Warm up the full catalog in the background so the
@@ -188,9 +181,15 @@ class ProductsViewModel: ObservableObject {
         } catch {
             guard load.fail(ticket) else { return }
             isLoading = false
-            // Cancelled (search changed, view left): not an error. With cached
-            // data on screen, don't show one either — just use the cache.
-            if NetworkError.isCancellation(error) || !products.isEmpty { return }
+            // Cancelled (search changed, view left): not an error. Rows of this same
+            // list on screen (cache, or before a refresh) stay, without one either.
+            if NetworkError.isCancellation(error) || (load.shownQuery == query && !products.isEmpty) { return }
+            // Nothing on screen may look like this list's results — and its empty
+            // row says it couldn't load, not "no matches".
+            products = []
+            recomputeFilteredProducts()
+            load.showRows(of: nil)
+            loadFailed = true
             if let error = error as? NetworkError {
                 errorMessage = error.errorDescription ?? "Error al cargar productos"
             } else {
@@ -217,6 +216,9 @@ class ProductsViewModel: ObservableObject {
             if let search = ticket.query.search {
                 params["search"] = search
             }
+            if let filter = ticket.query.filter?.apiValue {
+                params["filter"] = filter
+            }
 
             let response: ProductListResponse = try await apiClient.request(
                 endpoint: .listProducts,
@@ -230,14 +232,16 @@ class ProductsViewModel: ObservableObject {
             let newProducts = response.data.filter { !existingIds.contains($0.id) }
             products.append(contentsOf: newProducts)
 
-            totalCount = response.totalCount ?? totalCount
+            if ticket.query.filter == nil {
+                totalCount = response.totalCount ?? totalCount
+            }
             // Counts already reflect the whole catalog via the server aggregate —
             // recomputing from `products` here would regress them to a partial,
             // page-based estimate.
             recomputeFilteredProducts()
 
             // Update cache with new page (catalog pages only, like page 1)
-            if ticket.query.search == nil {
+            if ticket.query.isCatalog {
                 cache.saveProducts(response.data)
             }
         } catch {

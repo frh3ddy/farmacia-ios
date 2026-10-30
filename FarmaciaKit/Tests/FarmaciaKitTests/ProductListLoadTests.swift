@@ -22,6 +22,28 @@ struct ProductListLoadTests {
         #expect(ProductListQuery(locationId: "norte", search: "ibup") != ibup)
     }
 
+    @Test("given the same search with a different filter, should be a different query; given Todos, the same as no filter")
+    func filterIsPartOfTheQuery() {
+        let expiring = ProductListQuery(locationId: "centro", search: "ibup", filter: .expiringSoon)
+        #expect(expiring != ibup)
+        #expect(expiring.filter == .expiringSoon)
+        #expect(ProductListQuery(locationId: "centro", search: "ibup", filter: .all) == ibup)
+    }
+
+    @Test("given each filter, should send its API value; given Todos, none",
+          arguments: [(ProductFilter.all, nil), (.lowStock, "lowStock"), (.outOfStock, "outOfStock"), (.inStock, "inStock"),
+                      (.atRisk, "atRisk"), (.expiringSoon, "expiring"), (.lowMargin, "lowMargin")] as [(ProductFilter, String?)])
+    func apiValue(filter: ProductFilter, expected: String?) {
+        #expect(filter.apiValue == expected)
+    }
+
+    @Test("given a search or a filter, isCatalog should be false; given neither, true")
+    func isCatalog() {
+        #expect(catalog.isCatalog)
+        #expect(!ibup.isCatalog)
+        #expect(!ProductListQuery(locationId: "centro", search: nil, filter: .lowStock).isCatalog)
+    }
+
     @Test("given a page-2 load started for the full catalog, when a search begins before it returns, should reject the page-2 result")
     func stalePageTwo() throws {
         var state = loaded(catalog)
@@ -112,5 +134,40 @@ struct ProductListLoadTests {
         let loadMore = state.beginNextPage()
         #expect(!wasCurrent) // so the caller leaves the newer load's spinner alone
         #expect(loadMore == nil) // the search's page 1 is still in flight
+    }
+
+    // Which query the rows on screen belong to: a reload of that same list keeps
+    // them (no flash to empty, scroll kept); any other list starts empty.
+
+    @Test("given page 1 of a query accepted, should report that query's rows as shown")
+    func shownAfterAccept() {
+        let state = loaded(ibup)
+        #expect(state.shownQuery == ibup)
+    }
+
+    @Test("given a reload of the shown query in flight, should still report its rows as shown")
+    func shownDuringReload() {
+        var state = loaded(ibup)
+        _ = state.beginFirstPage(ibup)
+        #expect(state.shownQuery == ibup)
+    }
+
+    @Test("given a stale page 1 for another query, should not mark it shown")
+    func staleNotShown() {
+        var state = loaded(catalog)
+        let old = state.beginFirstPage(ibup)
+        _ = state.beginFirstPage(catalog)
+        _ = state.accept(old, hasMore: false)
+        #expect(state.shownQuery == catalog)
+    }
+
+    @Test("given cached rows shown, then rows cleared, should report each")
+    func showRows() {
+        var state = ProductListLoad()
+        state.showRows(of: catalog)
+        let afterCache = state.shownQuery
+        state.showRows(of: nil)
+        #expect(afterCache == catalog)
+        #expect(state.shownQuery == nil)
     }
 }

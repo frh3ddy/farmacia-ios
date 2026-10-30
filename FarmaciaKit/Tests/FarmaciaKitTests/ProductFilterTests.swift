@@ -42,16 +42,15 @@ struct ProductFilterTests {
         #expect(ProductFilter.visible(canViewCosts: true) == ProductFilter.allCases)
     }
 
-    @Test("given the Por Vencer filter while its data is unavailable, should say it couldn't load rather than \"no results\"")
-    func unavailableEmptyState() {
-        let empty = ProductFilter.expiringSoon.emptyState(risk: .unavailable)
-        #expect(empty.title == "No Disponible")
-        #expect(empty.message.contains("No se pudo cargar"))
+    @Test("given En Riesgo or Margen Bajo active and the role becomes cashier, should fall back to Todos",
+          arguments: [ProductFilter.atRisk, .lowMargin])
+    func coercedForCashier(filter: ProductFilter) {
+        #expect(ProductFilter.coerced(filter, canViewCosts: false) == .all)
     }
 
-    @Test("given the Por Vencer filter with its data loaded and no matches, or any other filter, should say no results",
-          arguments: [(ProductFilter.expiringSoon, RiskSet.loaded([])), (.lowStock, .unavailable), (.all, .loading)])
-    func noResults(filter: ProductFilter, risk: RiskSet) {
-        #expect(filter.emptyState(risk: risk).title == "Sin Resultados")
+    @Test("given a filter the role can see, should keep it",
+          arguments: [(ProductFilter.expiringSoon, false), (.lowStock, false), (.atRisk, true), (.lowMargin, true)])
+    func coercedKeeps(filter: ProductFilter, canViewCosts: Bool) {
+        #expect(ProductFilter.coerced(filter, canViewCosts: canViewCosts) == filter)
     }
 }

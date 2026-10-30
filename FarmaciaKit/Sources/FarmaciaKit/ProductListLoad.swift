@@ -11,12 +11,19 @@ public struct ProductListQuery: Hashable, Sendable {
     public let locationId: String
     /// Trimmed; empty means no search (the full catalog).
     public let search: String?
+    /// The chip the server filters by (GET /products?filter=); nil for Todos.
+    public let filter: ProductFilter?
 
-    public init(locationId: String, search: String?) {
+    public init(locationId: String, search: String?, filter: ProductFilter? = nil) {
         self.locationId = locationId
         let trimmed = search?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         self.search = trimmed.isEmpty ? nil : trimmed
+        self.filter = filter == .all ? nil : filter
     }
+
+    /// The plain catalog: the only list that is cached, shown from cache first,
+    /// and kept on screen (from cache) when a reload fails.
+    public var isCatalog: Bool { search == nil && filter == nil }
 }
 
 public struct ProductListLoad: Sendable {
@@ -29,6 +36,9 @@ public struct ProductListLoad: Sendable {
     public private(set) var query: ProductListQuery?
     public private(set) var currentPage = 0
     public private(set) var hasMore = false
+    /// The query the rows on screen belong to (nil: none, or cleared). A reload of
+    /// this same list keeps them; any other list starts empty.
+    public private(set) var shownQuery: ProductListQuery?
     private var generation = 0
     private var inFlight: Ticket?
 
@@ -60,7 +70,13 @@ public struct ProductListLoad: Sendable {
         inFlight = nil
         currentPage = ticket.page
         self.hasMore = hasMore
+        if ticket.page == 1 { shownQuery = ticket.query }
         return true
+    }
+
+    /// The caller put other rows on screen: cached ones for `query`, or none (nil).
+    public mutating func showRows(of query: ProductListQuery?) {
+        shownQuery = query
     }
 
     /// The load for `ticket` failed or was cancelled; the same page can be retried.
