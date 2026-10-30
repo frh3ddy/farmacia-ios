@@ -10,11 +10,6 @@ struct AlertsView: View {
     @StateObject private var stockAlertViewModel = StockAlertViewModel()
     @StateObject private var signalsViewModel = ActionableSignalsViewModel()
     @StateObject private var expiringViewModel = DashboardExpiringViewModel()
-    // Create Shopping List action — disabled for now, not fully ready.
-    // @State private var showShoppingListCreated = false
-    // @State private var createdListName = ""
-    //
-    // private var shoppingListStore: ShoppingListStore { ShoppingListStore.shared }
 
     var body: some View {
         NavigationStack {
@@ -153,27 +148,6 @@ struct AlertsView: View {
 
                 Spacer()
             }
-
-            // Create Shopping List action — disabled for now, not fully ready.
-            // Divider()
-            //
-            // Button {
-            //     createRestockShoppingList()
-            // } label: {
-            //     HStack {
-            //         Image(systemName: "list.clipboard")
-            //         Text("Crear Lista de Reabasto")
-            //         Spacer()
-            //         Text("\(stockAlertViewModel.outOfStockCount + stockAlertViewModel.lowStockCount) artículos")
-            //             .foregroundStyle(.secondary)
-            //         Image(systemName: "chevron.right")
-            //             .font(.caption2)
-            //             .foregroundStyle(.secondary)
-            //     }
-            //     .font(.caption)
-            //     .fontWeight(.medium)
-            //     .foregroundStyle(.blue)
-            // }
         }
         .padding()
         .background(
@@ -184,11 +158,6 @@ struct AlertsView: View {
                         .stroke(Color.orange.opacity(0.3), lineWidth: 1)
                 )
         )
-        // .alert("Lista de Compras Creada", isPresented: $showShoppingListCreated) {
-        //     Button("OK") {}
-        // } message: {
-        //     Text("\"\(createdListName)\" ha sido creada con artículos que necesitan reabasto. Abre Listas de Compras desde la pestaña de Productos para revisar.")
-        // }
     }
 
     private func alertMetric(value: String, label: String, color: Color) -> some View {
@@ -218,8 +187,8 @@ struct AlertsView: View {
 
                 Spacer()
 
-                if let summary = expiringViewModel.summary {
-                    Text("$\(String(format: "%.0f", summary.totalCashAtRisk)) en riesgo")
+                if let cashAtRisk = expiringViewModel.summary?.totalCashAtRisk {
+                    Text("$\(String(format: "%.0f", cashAtRisk)) en riesgo")
                         .font(.caption)
                         .fontWeight(.semibold)
                         .padding(.horizontal, 8)
@@ -295,10 +264,12 @@ struct AlertsView: View {
 
                     Spacer()
 
-                    Text(product.formattedCashAtRisk)
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.secondary)
+                    if let cashAtRisk = product.formattedCashAtRisk {
+                        Text(cashAtRisk)
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
         }
@@ -431,56 +402,6 @@ struct AlertsView: View {
         }
         .padding(.vertical, 4)
     }
-
-    // MARK: - Shopping List Creation Helpers — disabled for now, not fully ready.
-
-    // private func createRestockShoppingList() {
-    //     let outOfStock = stockAlertViewModel.products.filter { ($0.totalInventory ?? 0) == 0 }
-    //     let lowStock = stockAlertViewModel.products.filter {
-    //         let inv = $0.totalInventory ?? 0
-    //         return inv > 0 && inv < 10
-    //     }
-    //
-    //     let dateSuffix = Date().formatted(date: .abbreviated, time: .omitted)
-    //     let name = "Reabasto \(dateSuffix)"
-    //
-    //     var list = ShoppingList(
-    //         name: name,
-    //         locationId: authManager.currentLocation?.id,
-    //         locationName: authManager.currentLocation?.name
-    //     )
-    //
-    //     for product in outOfStock {
-    //         let reorderTarget = 10
-    //         let item = ShoppingListItem(
-    //             productId: product.id,
-    //             productName: product.displayName,
-    //             sku: product.sku,
-    //             plannedQuantity: reorderTarget,
-    //             unitCost: product.averageCost ?? 0,
-    //             previousCost: product.averageCost
-    //         )
-    //         list.addItem(item)
-    //     }
-    //     for product in lowStock {
-    //         let stock = product.totalInventory ?? 0
-    //         let reorderTarget = 10
-    //         let suggestedQty = max(1, reorderTarget - stock)
-    //         let item = ShoppingListItem(
-    //             productId: product.id,
-    //             productName: product.displayName,
-    //             sku: product.sku,
-    //             plannedQuantity: suggestedQty,
-    //             unitCost: product.averageCost ?? 0,
-    //             previousCost: product.averageCost
-    //         )
-    //         list.addItem(item)
-    //     }
-    //
-    //     shoppingListStore.save(list)
-    //     createdListName = name
-    //     showShoppingListCreated = true
-    // }
 }
 
 // MARK: - Preview

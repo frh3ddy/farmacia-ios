@@ -1,20 +1,18 @@
 import Foundation
+import FarmaciaKit
 
 // MARK: - Products Aging ViewModel (loads at-risk product IDs from aging service)
 
 @MainActor
 class ProductsAgingViewModel: ObservableObject {
-    @Published var atRiskProductIds: Set<String> = []
+    /// HIGH or CRITICAL products; unavailable if the load failed.
+    @Published var atRisk: RiskSet = .loading
     @Published var productRiskLevels: [String: InventoryRiskLevel] = [:]
-    @Published var isLoading = false
     
     private let apiClient = APIClient.shared
     
     /// Load products with HIGH or CRITICAL risk from the aging service
     func loadAtRiskProducts(locationId: String) async {
-        isLoading = true
-        defer { isLoading = false }
-        
         do {
             let response: ProductAgingResponse = try await apiClient.request(
                 endpoint: .agingProducts,
@@ -34,13 +32,12 @@ class ProductsAgingViewModel: ObservableObject {
                 }
             }
             
-            atRiskProductIds = riskIds
+            atRisk = .loaded(riskIds)
             productRiskLevels = riskMap
         } catch {
-            // Silent fail — aging data is supplementary
-            print("Failed to load aging data for products: \(error)")
-            atRiskProductIds = []
-            productRiskLevels = [:]
+            // Not "nothing at risk": the En Riesgo chip shows it couldn't load.
+            atRisk = atRisk.after(failure: error)
+            if atRisk == .unavailable { productRiskLevels = [:] }
         }
     }
 }
