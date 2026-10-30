@@ -163,19 +163,44 @@ struct DashboardView: View {
                 color: .green
             )
             
-            StatCard(
-                title: "Ganancia Bruta",
-                value: formatCurrency(report.sales.grossProfit),
-                icon: "chart.line.uptrend.xyaxis",
-                color: .blue
-            )
+            // Cost-based cards only when the server sent costs (never to a cashier)
+            if let grossProfit = report.sales.grossProfit {
+                StatCard(
+                    title: "Ganancia Bruta",
+                    value: formatCurrency(grossProfit),
+                    icon: "chart.line.uptrend.xyaxis",
+                    color: .blue
+                )
+            } else {
+                StatCard(
+                    title: "Núm. de Ventas",
+                    value: report.sales.totalSales.formatted(),
+                    icon: "cart.fill",
+                    color: .blue
+                )
+            }
             
-            StatCard(
-                title: "Valor de Inventario",
-                value: formatCurrency(report.inventory.totalValue),
-                icon: "shippingbox.fill",
-                color: .orange
-            )
+            if let totalValue = report.inventory.totalValue {
+                StatCard(
+                    title: "Valor de Inventario",
+                    value: formatCurrency(totalValue),
+                    icon: "shippingbox.fill",
+                    color: .orange
+                )
+            } else {
+                StatCard(
+                    title: "Unidades Vendidas",
+                    value: report.sales.totalUnitsSold.formatted(),
+                    icon: "bag.fill",
+                    color: .orange
+                )
+                StatCard(
+                    title: "Unidades en Inventario",
+                    value: report.inventory.totalUnits.formatted(),
+                    icon: "shippingbox.fill",
+                    color: .purple
+                )
+            }
             
             if let netProfit = report.netProfit {
                 StatCard(
@@ -196,10 +221,16 @@ struct DashboardView: View {
             
             VStack(spacing: 8) {
                 summaryRow(label: "Ingresos Totales", value: formatCurrency(report.sales.totalRevenue))
-                summaryRow(label: "Costo de Ventas", value: formatCurrency(report.sales.totalCOGS))
-                summaryRow(label: "Ganancia Bruta", value: formatCurrency(report.sales.grossProfit),
-                           valueColor: ReportFormat.isNonNegative(report.sales.grossProfit) ? .green : .red)
-                summaryRow(label: "Margen Bruto", value: ReportFormat.percent(report.sales.grossMarginPercent))
+                if let cost = report.sales.totalCOGS {
+                    summaryRow(label: "Costo de Ventas", value: formatCurrency(cost))
+                }
+                if let grossProfit = report.sales.grossProfit {
+                    summaryRow(label: "Ganancia Bruta", value: formatCurrency(grossProfit),
+                               valueColor: ReportFormat.isNonNegative(grossProfit) ? .green : .red)
+                }
+                if let margin = report.sales.grossMarginPercent {
+                    summaryRow(label: "Margen Bruto", value: ReportFormat.percent(margin))
+                }
                 
                 Divider()
                 
@@ -235,17 +266,21 @@ struct DashboardView: View {
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
                 sectionHeader(title: "Inventario actual", icon: "shippingbox")
-                // Valuation is always as of now; the period picker doesn't apply
-                Text("Valor al día de hoy, no del período")
+                // Inventory is always as of now; the period picker doesn't apply
+                Text("Al día de hoy, no del período")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
             
             VStack(spacing: 8) {
                 summaryRow(label: "Unidades Totales", value: "\(report.inventory.totalUnits)")
-                summaryRow(label: "Valor Total", value: formatCurrency(report.inventory.totalValue))
+                if let totalValue = report.inventory.totalValue {
+                    summaryRow(label: "Valor Total", value: formatCurrency(totalValue))
+                }
                 summaryRow(label: "Productos", value: "\(report.inventory.totalProducts)")
-                summaryRow(label: "Costo Prom/Unidad", value: formatCurrency(report.inventory.averageCostPerUnit))
+                if let averageCost = report.inventory.averageCostPerUnit {
+                    summaryRow(label: "Costo Prom/Unidad", value: formatCurrency(averageCost))
+                }
                 
                 // Aging breakdown if available
                 if let aging = report.inventory.aging {
@@ -278,7 +313,9 @@ struct DashboardView: View {
             VStack(spacing: 8) {
                 summaryRow(label: "Total Recepciones", value: "\(report.receivings.totalReceivings)")
                 summaryRow(label: "Unidades Recibidas", value: "\(report.receivings.totalQuantity)")
-                summaryRow(label: "Costo Total", value: formatCurrency(report.receivings.totalCost))
+                if let totalCost = report.receivings.totalCost {
+                    summaryRow(label: "Costo Total", value: formatCurrency(totalCost))
+                }
             }
             .padding()
             .background(Color(.systemGray6))
@@ -294,18 +331,25 @@ struct DashboardView: View {
 
             VStack(spacing: 8) {
                 summaryRow(label: "Total Ajustes", value: "\(report.adjustments.totalAdjustments)")
-                summaryRow(label: "Pérdida Total", value: formatCurrency(report.adjustments.totalLoss), valueColor: .red)
-                summaryRow(label: "Ganancia Total", value: formatCurrency(report.adjustments.totalGain), valueColor: .green)
+                // Losses and gains are valued at cost: not sent to a cashier
+                if let totalLoss = report.adjustments.totalLoss {
+                    summaryRow(label: "Pérdida Total", value: formatCurrency(totalLoss), valueColor: .red)
+                }
+                if let totalGain = report.adjustments.totalGain {
+                    summaryRow(label: "Ganancia Total", value: formatCurrency(totalGain), valueColor: .green)
+                }
 
-                Divider()
+                if let netImpact = report.adjustments.netImpact {
+                    Divider()
 
-                HStack {
-                    Text("Impacto Neto")
-                        .fontWeight(.medium)
-                    Spacer()
-                    Text(formatCurrency(report.adjustments.netImpact))
-                        .fontWeight(.bold)
-                        .foregroundStyle(ReportFormat.isNonNegative(report.adjustments.netImpact) ? .green : .red)
+                    HStack {
+                        Text("Impacto Neto")
+                            .fontWeight(.medium)
+                        Spacer()
+                        Text(formatCurrency(netImpact))
+                            .fontWeight(.bold)
+                            .foregroundStyle(ReportFormat.isNonNegative(netImpact) ? .green : .red)
+                    }
                 }
             }
             .padding()
@@ -325,7 +369,7 @@ struct DashboardView: View {
             let pl = ProfitLossLines(
                 netProfit: netProfit,
                 itemRevenue: report.sales.totalRevenue,
-                itemCost: report.sales.totalCOGS,
+                itemCost: report.sales.totalCOGS ?? "",
                 operatingExpensesTotal: expenses.total,
                 shrinkage: expenses.shrinkage
             )

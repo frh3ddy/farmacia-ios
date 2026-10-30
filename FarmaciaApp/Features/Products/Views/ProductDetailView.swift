@@ -70,8 +70,10 @@ struct ProductDetailView: View {
                 // Price Card
                 priceCard
                 
-                // Cost & Supplier History
-                costSupplierHistorySection
+                // Cost & Supplier History (not for cashiers)
+                if authManager.canViewCosts {
+                    costSupplierHistorySection
+                }
                 
                 // FIFO Batch Breakdown
                 if authManager.isOwner || authManager.isManager {
@@ -786,11 +788,15 @@ struct ProductDetailView: View {
     }
     
     private func loadCostSupplierData() async {
+        // Every caller (first load, refresh after a write) goes through here: the API refuses cashiers
+        guard authManager.canViewCosts else { return }
         await costSupplierViewModel.loadData(productId: displayProduct.id)
     }
     
     private func loadBatchData() async {
-        guard let locationId = authManager.currentLocation?.id else { return }
+        // Same rule as the section: owners and managers (refresh after a write called it for everyone)
+        guard authManager.isOwner || authManager.isManager,
+              let locationId = authManager.currentLocation?.id else { return }
         await batchViewModel.loadBatches(
             productId: displayProduct.id,
             locationId: locationId
