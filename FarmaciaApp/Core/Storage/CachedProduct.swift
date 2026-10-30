@@ -28,6 +28,7 @@ final class CachedProduct {
     // Inventory (denormalized)
     var totalInventory: Int
     var hasSquareSync: Bool
+    var tracksInventory: Bool?
     
     // Supplier count
     var supplierCount: Int?
@@ -53,6 +54,7 @@ final class CachedProduct {
         self.averageCost = product.averageCost
         self.totalInventory = product.totalInventory ?? 0
         self.hasSquareSync = product.hasSquareSync ?? false
+        self.tracksInventory = product.tracksInventory
         self.supplierCount = product.supplierCount
         self.lastFetchedAt = Date()
         self.serverCreatedAt = product.createdAt
@@ -75,6 +77,7 @@ final class CachedProduct {
         averageCost = product.averageCost
         totalInventory = product.totalInventory ?? 0
         hasSquareSync = product.hasSquareSync ?? false
+        tracksInventory = product.tracksInventory
         supplierCount = product.supplierCount
         lastFetchedAt = Date()
         serverCreatedAt = product.createdAt
@@ -101,7 +104,8 @@ final class CachedProduct {
             currency: currency,
             totalInventory: totalInventory,
             averageCost: averageCost,
-            hasSquareSync: hasSquareSync
+            hasSquareSync: hasSquareSync,
+            tracksInventory: tracksInventory
         )
     }
 }

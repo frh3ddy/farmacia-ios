@@ -22,6 +22,8 @@ struct Product: Codable, Identifiable, Equatable, Hashable {
     let totalInventory: Int?
     let averageCost: Double?
     let hasSquareSync: Bool?
+    // false only for Yastás service items (no stock, no set price)
+    let tracksInventory: Bool?
     
     var displayName: String {
         // Use Square product name, then variation name, then fallback to name
@@ -92,7 +94,7 @@ struct Product: Codable, Identifiable, Equatable, Hashable {
             squareDataSyncedAt: squareDataSyncedAt, category: category,
             supplierCount: supplierCount, createdAt: createdAt,
             sellingPrice: newPrice, currency: currency, totalInventory: totalInventory,
-            averageCost: averageCost, hasSquareSync: hasSquareSync
+            averageCost: averageCost, hasSquareSync: hasSquareSync, tracksInventory: tracksInventory
         )
     }
 
@@ -104,20 +106,6 @@ struct Product: Codable, Identifiable, Equatable, Hashable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
-}
-
-// MARK: - Create Product Request
-
-struct CreateProductRequest: Encodable {
-    let name: String
-    let sku: String?
-    let description: String?
-    let sellingPrice: Double
-    let costPrice: Double?
-    let initialStock: Int?
-    let supplierId: String?
-    let locationId: String?
-    let syncToSquare: Bool
 }
 
 // MARK: - Create Product Response
