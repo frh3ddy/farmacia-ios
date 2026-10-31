@@ -371,7 +371,9 @@ struct DashboardView: View {
                 itemRevenue: report.sales.totalRevenue,
                 itemCost: report.sales.totalCOGS ?? "",
                 operatingExpensesTotal: expenses.total,
-                shrinkage: expenses.shrinkage
+                shrinkage: expenses.shrinkage,
+                shrinkageLosses: expenses.shrinkageLosses,
+                shrinkageRecovered: expenses.shrinkageRecovered
             )
             VStack(spacing: 8) {
                 ForEach(pl.lines.filter { $0.kind != .total }, id: \.label) { line in

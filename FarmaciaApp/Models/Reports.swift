@@ -176,6 +176,9 @@ struct PLGrossProfit: Decodable {
 struct PLOperatingExpenses: Decodable {
     let byType: [ExpenseBreakdown]
     let shrinkage: String
+    /// Merma split into its parts; nil from older servers.
+    let shrinkageLosses: String?
+    let shrinkageRecovered: String?
     let total: String
 }
 

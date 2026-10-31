@@ -49,7 +49,11 @@ struct ProfitLossReportView: View {
                             ForEach(report.operatingExpenses.byType, id: \.type) { expense in
                                 PLRow(label: ExpenseType(rawValue: expense.type)?.displayName ?? expense.type, value: expense.amount, isTotal: false, isNegative: true)
                             }
-                            PLRow(label: "Merma", value: report.operatingExpenses.shrinkage, isTotal: false, isNegative: true)
+                            // Losses and recoveries apart, so merma never shows as a negative number.
+                            PLRow(label: "Merma", value: report.operatingExpenses.shrinkageLosses ?? report.operatingExpenses.shrinkage, isTotal: false, isNegative: true)
+                            if let recovered = report.operatingExpenses.shrinkageRecovered, (Double(recovered) ?? 0) > 0 {
+                                PLRow(label: "Mercancía recuperada", value: recovered, isTotal: false)
+                            }
                             PLRow(label: "Total de Gastos", value: report.operatingExpenses.total, isTotal: true, isNegative: true)
                         }
 
