@@ -19,6 +19,8 @@ public enum NetworkError: LocalizedError {
     case unknown(Error)
     case queuedForSync
     case cancelled
+    /// A positive adjustment for a product with no cost on record (UNIT_COST_REQUIRED).
+    case unitCostRequired(message: String)
 
     public var errorDescription: String? {
         switch self {
@@ -52,6 +54,8 @@ public enum NetworkError: LocalizedError {
         case .timeout:
             return "La solicitud expiró"
         case .serverError(let message):
+            return message
+        case .unitCostRequired(let message):
             return message
         case .unknown(let error):
             return error.localizedDescription
@@ -106,6 +110,11 @@ extension NetworkError {
             return .unauthorized
         case 400...499:
             if let errorResponse = try? decoder.decode(APIErrorResponse.self, from: body) {
+                // Code first; the exact message is what APIs before the code send
+                if errorResponse.code == "UNIT_COST_REQUIRED"
+                    || errorResponse.message == "Indica el costo unitario: este producto no tiene un costo anterior registrado." {
+                    return .unitCostRequired(message: errorResponse.displayMessage)
+                }
                 return .httpError(statusCode: statusCode, message: errorResponse.displayMessage)
             }
             return .httpError(statusCode: statusCode, message: nil)
@@ -143,7 +152,8 @@ public struct EmptyResponse: Decodable {
 // MARK: - API Error Response
 
 public struct APIErrorResponse: Decodable {
-    public let success: Bool
+    /// Only on errors the API builds by hand; NestJS's default exceptions omit it.
+    public let success: Bool?
     public let error: String?
     public let message: String?
     public let statusCode: Int?
@@ -162,5 +172,14 @@ extension NetworkError {
         if error is CancellationError { return true }
         if case .cancelled? = error as? NetworkError { return true }
         return false
+    }
+}
+
+extension APIResponse {
+    /// The payload of a 2xx response; throws `.noData` when it's missing, so a
+    /// caller can't silently skip its success handling (or its error).
+    public func requireData() throws -> T {
+        guard let data else { throw NetworkError.noData }
+        return data
     }
 }

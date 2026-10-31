@@ -18,8 +18,27 @@ struct NetworkErrorMappingTests {
         case .sessionExpired: return "sessionExpired"
         case .deviceNotActivated: return "deviceNotActivated"
         case .unauthorized: return "unauthorized"
+        case .unitCostRequired(let message): return "unitCostRequired(\(message))"
         default: return "other"
         }
+    }
+
+    @Test("given NestJS's default 400 body (no success field), should show its message")
+    func nestDefaultBadRequest() {
+        let body = #"{"message":"La cantidad debe ser un número entero distinto de cero","error":"Bad Request","statusCode":400}"#
+        #expect(describe(from(400, body)) == "httpError(400, La cantidad debe ser un número entero distinto de cero)")
+    }
+
+    @Test("given 400 with code UNIT_COST_REQUIRED, should ask for the unit cost")
+    func unitCostRequired() {
+        let body = #"{"success":false,"code":"UNIT_COST_REQUIRED","message":"Indica el costo unitario"}"#
+        #expect(describe(from(400, body)) == "unitCostRequired(Indica el costo unitario)")
+    }
+
+    @Test("given an older API's exact cost message with no code, should still ask for the unit cost")
+    func unitCostRequiredLegacy() {
+        let body = #"{"message":"Indica el costo unitario: este producto no tiene un costo anterior registrado.","error":"Bad Request","statusCode":400}"#
+        #expect(describe(from(400, body)) == "unitCostRequired(Indica el costo unitario: este producto no tiene un costo anterior registrado.)")
     }
 
     @Test("given 401 'PIN incorrecto', should keep the server message")

@@ -552,33 +552,32 @@ class CreateProductViewModel: ObservableObject {
                 body: request
             )
             
-            if let data = response.data {
-                var message = "Producto \"\(name)\" creado exitosamente!"
-                if data.squareSynced {
-                    message += "\n✓ Synced to Square POS"
-                }
-                if data.inventoryCreated {
-                    message += "\n✓ Initial inventory added"
-                }
-                
-                // Upload image if one was selected (resized to 1600px ceiling first)
-                if let image = image, let imageData = image.jpegDataForUpload() {
-                    do {
-                        let _: ImageUploadResponse = try await apiClient.uploadImage(
-                            endpoint: .uploadProductImage(id: data.product.id),
-                            imageData: imageData,
-                            filename: "product_\(data.product.id).jpg"
-                        )
-                        message += "\n✓ Product image uploaded"
-                    } catch {
-                        message += "\n⚠ Image upload failed (product was created)"
-                        print("Failed to upload product image: \(error)")
-                    }
-                }
-                
-                successMessage = message
-                showSuccess = true
+            let data = try response.requireData()
+            var message = "Producto \"\(name)\" creado exitosamente!"
+            if data.squareSynced {
+                message += "\n✓ Synced to Square POS"
             }
+            if data.inventoryCreated {
+                message += "\n✓ Initial inventory added"
+            }
+            
+            // Upload image if one was selected (resized to 1600px ceiling first)
+            if let image = image, let imageData = image.jpegDataForUpload() {
+                do {
+                    let _: ImageUploadResponse = try await apiClient.uploadImage(
+                        endpoint: .uploadProductImage(id: data.product.id),
+                        imageData: imageData,
+                        filename: "product_\(data.product.id).jpg"
+                    )
+                    message += "\n✓ Product image uploaded"
+                } catch {
+                    message += "\n⚠ Image upload failed (product was created)"
+                    print("Failed to upload product image: \(error)")
+                }
+            }
+            
+            successMessage = message
+            showSuccess = true
         } catch NetworkError.queuedForSync {
             // The queued replay carries this create's clientRequestId, so it
             // can't duplicate itself; creating the product again from a new

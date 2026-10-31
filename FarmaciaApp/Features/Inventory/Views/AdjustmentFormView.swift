@@ -18,6 +18,8 @@ struct AdjustmentFormView: View {
     @State private var quantity: Int?
     @State private var newCount: Int?
     @State private var unitCost: Double?
+    /// Set when the API refused for lack of a cost on record; reveals the cost field.
+    @State private var costRequired = false
     @State private var reason = ""
     @State private var notes = ""
     @FocusState private var isFieldFocused: Bool
@@ -37,7 +39,8 @@ struct AdjustmentFormView: View {
         AdjustmentCost.asksForCost(
             isNegative: adjustmentType.isNegative,
             isVariable: adjustmentType.isVariable,
-            countChange: countChange
+            countChange: countChange,
+            costRequired: costRequired
         )
     }
 
@@ -146,7 +149,7 @@ struct AdjustmentFormView: View {
                                 .foregroundStyle(.secondary)
                         }
                     } footer: {
-                        Text("Opcional. Si lo dejas vacío se usa el último costo del producto.")
+                        Text("Este producto no tiene un costo anterior registrado.")
                     }
                 }
 
@@ -227,7 +230,7 @@ struct AdjustmentFormView: View {
             return
         }
 
-        let success = await viewModel.createAdjustment(
+        let outcome = await viewModel.createAdjustment(
             type: adjustmentType,
             productId: product.id,
             quantity: adjustedQty,
@@ -240,9 +243,14 @@ struct AdjustmentFormView: View {
             clientRequestId: clientRequestId
         )
 
-        if success {
+        switch outcome {
+        case .saved:
             onComplete?()
             dismiss()
+        case .costRequired:
+            costRequired = true
+        case .failed:
+            break
         }
     }
 }
