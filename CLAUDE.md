@@ -5,9 +5,6 @@ pharmacy system — mobile front end to the `farmacia-ops` NestJS API. Device
 (deviceToken) + employee-PIN (sessionToken) auth, inventory receiving/adjustments,
 reports (COGS, margin, valuation, P&L), expenses, Square sync visibility.
 
-Xcode project: `FarmaciaApp.xcodeproj` (single `FarmaciaApp` target). Source under
-`FarmaciaApp/` — `App/`, `Core/` (Network, Auth, Storage, Extensions), `Features/*/Views`, `Models/`.
-
 > Global rules live in `~/dev/CLAUDE.md` and `~/CLAUDE.md`. This file is project-specific only.
 
 ## Session checklist — if working on X, read Y
@@ -33,7 +30,6 @@ xcodebuild -project FarmaciaApp.xcodeproj -scheme FarmaciaApp -destination 'gene
 ```
 
 - Release build + install: `scripts/release-build-install.sh`
-- Open in Xcode: `open FarmaciaApp.xcodeproj`
 - Simulator run / UI / logs / screenshots → the XcodeBuildMCP server (`.mcp.json`, config in `.mobilebuildmcp/config.yaml`).
 
 ## Local test
