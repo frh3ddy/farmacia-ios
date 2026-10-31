@@ -376,30 +376,40 @@ struct ProductDetailView: View {
             
             // Action buttons (Receive + Adjust Stock)
             if authManager.canManageInventory {
+                if !canAddStock {
+                    Label("Este producto se vende solo en otra tienda", systemImage: "info.circle")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 HStack(spacing: 12) {
-                    Button {
-                        showReceiveSheet = true
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.subheadline)
-                            Text("Recibir Inventario")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
+                    if canAddStock {
+                        Button {
+                            showReceiveSheet = true
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.subheadline)
+                                Text("Recibir Inventario")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(Color.blue)
+                            .foregroundStyle(.white)
+                            .clipShape(.rect(cornerRadius: 10))
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(Color.blue)
-                        .foregroundStyle(.white)
-                        .clipShape(.rect(cornerRadius: 10))
                     }
-                    
+
                     Menu {
                         // Static buttons — avoids SwiftUI Menu+ForEach first-item bug (FB13164795)
                         Button { selectAdjustment(.damage) } label: { Label("Daño", systemImage: "exclamationmark.triangle") }
                         Button { selectAdjustment(.expired) } label: { Label("Vencido", systemImage: "calendar.badge.exclamationmark") }
-                        Button { selectAdjustment(.found) } label: { Label("Encontrado", systemImage: "magnifyingglass") }
-                        Button { selectAdjustment(.returnType) } label: { Label("Devolución", systemImage: "arrow.uturn.backward") }
+                        // Adding stock only where the product is sold; removals stay available
+                        if canAddStock {
+                            Button { selectAdjustment(.found) } label: { Label("Encontrado", systemImage: "magnifyingglass") }
+                            Button { selectAdjustment(.returnType) } label: { Label("Devolución", systemImage: "arrow.uturn.backward") }
+                        }
                         Button { selectAdjustment(.countCorrection) } label: { Label("Corrección de Conteo", systemImage: "number") }
                         Button { selectAdjustment(.theft) } label: { Label("Robo", systemImage: "lock.slash") }
                         Button { selectAdjustment(.writeOff) } label: { Label("Baja", systemImage: "xmark.circle") }
@@ -779,6 +789,12 @@ struct ProductDetailView: View {
     
     private func loadActivity() async {
         await activityViewModel.loadActivity(productId: displayProduct.id)
+    }
+
+    /// Receiving and found/return adjustments only where the product is sold (the API refuses the rest).
+    private var canAddStock: Bool {
+        StockEntry.canAdd(soldOnlyAtLocationId: displayProduct.soldOnlyAtLocationId,
+                          currentLocationId: authManager.currentLocation?.id)
     }
 
     private var canRetrySync: Bool {

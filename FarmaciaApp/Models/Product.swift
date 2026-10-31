@@ -24,6 +24,8 @@ struct Product: Codable, Identifiable, Equatable, Hashable {
     let hasSquareSync: Bool?
     // false only for Yastás service items (no stock, no set price)
     let tracksInventory: Bool?
+    /// Set: sold only at this store (hidden at the others); nil: every store.
+    var soldOnlyAtLocationId: String? = nil
     
     var displayName: String {
         // Use Square product name, then variation name, then fallback to name

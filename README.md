@@ -110,6 +110,7 @@ X-Session-Token: <sessionToken>
 
 ### Inventory Management
 Opened from a product (Productos → product → Recibir Inventario / Ajustar Inventario).
+- Stock is added only at a store that sells the product: a product sold only at another store shows no Recibir / Encontrado / Devolución there (removals stay available)
 - Receive new inventory with cost tracking
 - Quick adjustments (damage, theft, expired, found, etc.); an adjustment that adds stock uses the product's last cost, and asks for a unit cost only when the product has none on record
 - Count correction by counted total against the store's live stock (needs a connection)
