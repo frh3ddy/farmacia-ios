@@ -39,8 +39,12 @@ struct ReceiveInventoryFormView: View {
     @State private var supplierCostNote: String?
 
     private var isValid: Bool {
-        (quantity ?? 0) > 0 &&
-        (receivingCost.value ?? -1) >= 0
+        ReceivingForm.canSave(
+            quantity: quantity,
+            unitCost: receivingCost.value,
+            updatesPrice: updateSellingPrice,
+            newPrice: newSellingPrice
+        )
     }
 
     var body: some View {

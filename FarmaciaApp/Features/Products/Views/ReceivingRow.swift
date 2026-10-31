@@ -1,4 +1,5 @@
 import SwiftUI
+import FarmaciaKit
 
 // MARK: - Receiving Row
 
@@ -23,7 +24,7 @@ struct ReceivingRow: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
-                Text("$\(receiving.unitCost)/unit")
+                Text("\(ReportFormat.currency(receiving.unitCost))/unidad")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -33,7 +34,7 @@ struct ReceivingRow: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Text("Total: $\(receiving.totalCost)")
+                Text("Total: \(ReportFormat.currency(receiving.totalCost))")
                     .font(.caption)
                     .fontWeight(.medium)
             }

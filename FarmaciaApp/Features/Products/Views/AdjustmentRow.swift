@@ -1,4 +1,5 @@
 import SwiftUI
+import FarmaciaKit
 
 // MARK: - Adjustment Row
 
@@ -85,11 +86,10 @@ struct AdjustmentRow: View {
     }
 
     private var typeColor: Color {
-        if adjustment.type.isPositive {
-            return .green
-        } else if adjustment.type.isNegative {
-            return .red
+        switch StockChange(quantity: adjustment.quantity) {
+        case .added: .green
+        case .removed: .red
+        case .none: .orange
         }
-        return .orange
     }
 }
