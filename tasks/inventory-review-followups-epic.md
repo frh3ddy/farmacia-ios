@@ -7,7 +7,7 @@
 
 The receive and adjustment forms are reached only from a product's detail screen (Productos → product → Recibir Inventario / Ajustar Inventario), with the product fixed. The standalone Inventory screen (Recibir / Ajustes / Historial segments, product picker) had been unreachable since the Products hub replaced the Inventory tab (`bc7f68c`) and is now removed — so findings that needed it (Inventory tab reload, product switch in a form, picker limited to 50 products) never affected users.
 
-The first review found three critical bugs: count correction computed its change from a stale or other-store stock snapshot, the Inventory tab didn't reload on a location switch, and every save tap made a new `clientRequestId`. A second review, focused on the post-cutover workflow, found two more that affect stock and cost. Those and the items marked ✅ below are merged to `main` (not yet pushed or deployed); the 📋 items are still open, highest severity first.
+The first review found three critical bugs: count correction computed its change from a stale or other-store stock snapshot, the Inventory tab didn't reload on a location switch, and every save tap made a new `clientRequestId`. A second review, focused on the post-cutover workflow, found two more that affect stock and cost. Those and the items marked ✅ below are merged to `main` (not yet pushed or deployed) and were checked on a device on 2026-10-30 (receiving, adjustments, product activity and global history); the 📋 items are still open, highest severity first.
 
 ---
 
