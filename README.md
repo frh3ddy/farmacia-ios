@@ -111,7 +111,7 @@ X-Session-Token: <sessionToken>
 ### Inventory Management
 Opened from a product (Productos → product → Recibir Inventario / Ajustar Inventario).
 - Receive new inventory with cost tracking
-- Quick adjustments (damage, theft, expired, found, etc.); an adjustment that adds stock takes an optional unit cost (empty uses the product's last cost)
+- Quick adjustments (damage, theft, expired, found, etc.); an adjustment that adds stock uses the product's last cost, and asks for a unit cost only when the product has none on record
 - Count correction by counted total against the store's live stock (needs a connection)
 - Receiving and adjustment history (product activity and global history)
 - Square sync status on each receiving and adjustment; the owner can retry a failed sync from product activity or global history
