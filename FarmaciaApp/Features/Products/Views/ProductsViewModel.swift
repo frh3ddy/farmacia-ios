@@ -172,11 +172,13 @@ class ProductsViewModel: ObservableObject {
 
             // STEP 3: Update cache with fresh data (plain catalog only)
             if query.isCatalog {
+                // Rows this walk doesn't save by its end are no longer listed (sweep).
+                let walkStartedAt = Date()
                 cache.saveProducts(response.data)
                 cache.markFresh()
                 // STEP 4: Warm up the full catalog in the background so the
                 // barcode scanner's level-1 cache lookup covers all products.
-                startWarmUp(locationId: locationId)
+                startWarmUp(locationId: locationId, walkStartedAt: walkStartedAt)
             }
         } catch {
             guard load.fail(ticket) else { return }
@@ -257,7 +259,9 @@ class ProductsViewModel: ObservableObject {
     /// ONLY to the SwiftData cache (never touches `products` or the UI).
     /// Purpose: make barcode level-1 (indexed cache lookup) cover the whole catalog.
     /// Server remains source of truth — this does not replace any GET.
-    private func startWarmUp(locationId: String) {
+    /// After the last page, rows not saved since `walkStartedAt` are swept (CacheSweep):
+    /// deleted on the server, or another store's one-store product.
+    private func startWarmUp(locationId: String, walkStartedAt: Date) {
         warmUpTask?.cancel()
         // Always re-walk so the cache never goes stale, but only surface the
         // banner on a cold cache — a silent refresh (e.g. after clearing a
@@ -271,6 +275,7 @@ class ProductsViewModel: ObservableObject {
             }
             var page = startPage
             var keepGoing = true
+            var reachedLastPage = false
             while keepGoing {
                 if Task.isCancelled { break }
                 do {
@@ -286,11 +291,16 @@ class ProductsViewModel: ObservableObject {
                     self.cache.saveProducts(response.data)
                     await MainActor.run { self.warmUpProgress = self.cache.cachedCount }
                     keepGoing = response.hasMore ?? false
+                    reachedLastPage = !keepGoing
                     page += 1
                 } catch {
                     // Silent fail — warm-up is best-effort; level-2 server search covers gaps
                     keepGoing = false
                 }
+            }
+            // A walk cut short (error, cancelled by a refresh) never touched the rest.
+            if reachedLastPage && !Task.isCancelled {
+                self.cache.sweep(fetchedBefore: walkStartedAt)
             }
             await MainActor.run { self.isWarmingCache = false }
         }

@@ -362,30 +362,33 @@ struct ProductDetailView: View {
                 }
                 .frame(maxWidth: .infinity)
                 
-                Divider()
-                    .frame(height: 36)
+                // Cost: never for a cashier, even if a cached row still carries one.
+                if authManager.canViewCosts {
+                    Divider()
+                        .frame(height: 36)
                 
-                // Latest Cost (from preferred supplier or most recent cost)
-                VStack(spacing: 4) {
-                    Text("COSTO")
-                        .font(.caption2)
-                        .fontWeight(.medium)
-                        .foregroundStyle(.secondary)
-                    if let latestCost = latestSupplierCost {
-                        Text(String(format: "$%.2f", latestCost))
-                            .font(.title3)
-                            .fontWeight(.bold)
-                    } else if let avgCost = displayProduct.averageCost {
-                        Text(String(format: "$%.2f", avgCost))
-                            .font(.title3)
-                            .fontWeight(.bold)
-                    } else {
-                        Text("—")
-                            .font(.title3)
+                    // Latest Cost (from preferred supplier or most recent cost)
+                    VStack(spacing: 4) {
+                        Text("COSTO")
+                            .font(.caption2)
+                            .fontWeight(.medium)
                             .foregroundStyle(.secondary)
+                        if let latestCost = latestSupplierCost {
+                            Text(String(format: "$%.2f", latestCost))
+                                .font(.title3)
+                                .fontWeight(.bold)
+                        } else if let avgCost = displayProduct.averageCost {
+                            Text(String(format: "$%.2f", avgCost))
+                                .font(.title3)
+                                .fontWeight(.bold)
+                        } else {
+                            Text("—")
+                                .font(.title3)
+                                .foregroundStyle(.secondary)
+                        }
                     }
+                    .frame(maxWidth: .infinity)
                 }
-                .frame(maxWidth: .infinity)
             }
             .padding(.vertical, 8)
             .background(Color(.systemGray5))
@@ -522,7 +525,8 @@ struct ProductDetailView: View {
             }
             
             // Margin
-            if let margin = displayProduct.profitMargin {
+            // Margin comes from cost: same rule as the COSTO column.
+            if authManager.canViewCosts, let margin = displayProduct.profitMargin {
                 HStack {
                     Text("Margen de Ganancia")
                         .font(.subheadline)

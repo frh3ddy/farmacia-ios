@@ -3,6 +3,7 @@ import SwiftUI
 // MARK: - Stock Alert Products View (linked from Dashboard)
 
 struct StockAlertProductsView: View {
+    @EnvironmentObject var authManager: AuthManager
     let products: [Product]
     @State private var selectedFilter: AlertFilter = .outOfStock
     
@@ -50,7 +51,7 @@ struct StockAlertProductsView: View {
                         NavigationLink {
                             ProductDetailView(product: product)
                         } label: {
-                            ProductRow(product: product)
+                            ProductRow(product: product, showsMargin: authManager.canViewCosts)
                         }
                     }
                 }

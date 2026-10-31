@@ -20,10 +20,11 @@ final class CachedProduct {
     var squareVariationName: String?
     var squareDataSyncedAt: Date?
     
-    // Pricing (denormalized for fast list display)
+    // Pricing (denormalized for fast list display). No cost: it's role-dependent
+    // and shouldn't sit on the device; cached rows show it as unknown, and screens
+    // that need it (detail) refresh from the server. See ProductCacheScope.
     var sellingPrice: Double?
     var currency: String?
-    var averageCost: Double?
     
     // Inventory (denormalized)
     var totalInventory: Int
@@ -51,7 +52,6 @@ final class CachedProduct {
         self.squareDataSyncedAt = product.squareDataSyncedAt
         self.sellingPrice = product.sellingPrice
         self.currency = product.currency
-        self.averageCost = product.averageCost
         self.totalInventory = product.totalInventory ?? 0
         self.hasSquareSync = product.hasSquareSync ?? false
         self.tracksInventory = product.tracksInventory
@@ -74,7 +74,6 @@ final class CachedProduct {
         squareDataSyncedAt = product.squareDataSyncedAt
         sellingPrice = product.sellingPrice
         currency = product.currency
-        averageCost = product.averageCost
         totalInventory = product.totalInventory ?? 0
         hasSquareSync = product.hasSquareSync ?? false
         tracksInventory = product.tracksInventory
@@ -103,7 +102,7 @@ final class CachedProduct {
             sellingPrice: sellingPrice,
             currency: currency,
             totalInventory: totalInventory,
-            averageCost: averageCost,
+            averageCost: nil,
             hasSquareSync: hasSquareSync,
             tracksInventory: tracksInventory
         )
