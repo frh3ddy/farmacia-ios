@@ -55,6 +55,7 @@ public struct QuickAdjustmentRequest: Encodable, Equatable, Sendable {
     public let productId: String
     public let quantity: Int
     public let countedQuantity: Int?
+    public let unitCost: Double?
     public let reason: String?
     public let notes: String?
     public let syncToSquare: Bool?
@@ -65,6 +66,7 @@ public struct QuickAdjustmentRequest: Encodable, Equatable, Sendable {
         productId: String,
         quantity: Int,
         countedQuantity: Int? = nil,
+        unitCost: Double? = nil,
         reason: String?,
         notes: String?,
         syncToSquare: Bool?,
@@ -74,6 +76,7 @@ public struct QuickAdjustmentRequest: Encodable, Equatable, Sendable {
         self.productId = productId
         self.quantity = quantity
         self.countedQuantity = countedQuantity
+        self.unitCost = unitCost
         self.reason = reason
         self.notes = notes
         self.syncToSquare = syncToSquare

@@ -9,12 +9,13 @@ struct AdjustmentRequestTests {
         return try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
     }
 
-    private func quick(quantity: Int, countedQuantity: Int? = nil) -> QuickAdjustmentRequest {
+    private func quick(quantity: Int, countedQuantity: Int? = nil, unitCost: Double? = nil) -> QuickAdjustmentRequest {
         QuickAdjustmentRequest(
             locationId: "centro",
             productId: "p1",
             quantity: quantity,
             countedQuantity: countedQuantity,
+            unitCost: unitCost,
             reason: nil,
             notes: nil,
             syncToSquare: true,
@@ -33,6 +34,11 @@ struct AdjustmentRequestTests {
     @Test("given a damage adjustment, should leave countedQuantity out of the JSON")
     func noCountedTotal() throws {
         #expect(try json(quick(quantity: 2))["countedQuantity"] == nil)
+    }
+
+    @Test("given found stock with a cost of 12.5 entered, should send unitCost")
+    func sendsUnitCost() throws {
+        #expect(try json(quick(quantity: 3, unitCost: 12.5))["unitCost"] as? Double == 12.5)
     }
 
     @Test("given a generic adjustment, should send its type and clientRequestId")
