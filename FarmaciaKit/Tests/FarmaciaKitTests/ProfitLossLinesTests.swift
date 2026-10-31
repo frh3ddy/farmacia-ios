@@ -81,6 +81,27 @@ struct ProfitLossLinesTests {
         #expect(pl.addsUp)
     }
 
+    @Test("given net merma -300 from losses 200 and stock recovered 500, should show Merma 200 and Mercancía recuperada 500, never a negative merma")
+    func recoveredLine() {
+        let pl = ProfitLossLines(revenue: "100000", costOfSales: "60000", operatingExpensesTotal: "19700",
+                                 shrinkage: "-300", shrinkageLosses: "200", shrinkageRecovered: "500",
+                                 yastasServiceRevenue: nil, netProfit: "20300")
+        #expect(pl.lines.map(\.label) == ["Ingresos", "Costo de Ventas", "Gastos Operativos", "Merma", "Mercancía recuperada", "Ganancia Neta"])
+        #expect(row("Gastos Operativos", in: pl) == "20000")
+        #expect(row("Merma", in: pl) == "200")
+        #expect(row("Mercancía recuperada", in: pl) == "500")
+        #expect(pl.addsUp)
+    }
+
+    @Test("given nothing recovered, should omit the Mercancía recuperada row")
+    func nothingRecovered() {
+        let pl = ProfitLossLines(revenue: "100000", costOfSales: "60000", operatingExpensesTotal: "22000",
+                                 shrinkage: "2000", shrinkageLosses: "2000", shrinkageRecovered: "0",
+                                 yastasServiceRevenue: nil, netProfit: "18000")
+        #expect(row("Mercancía recuperada", in: pl) == nil)
+        #expect(pl.addsUp)
+    }
+
     @Test("given a row, should say whether it adds to or subtracts from the result")
     func kinds() {
         #expect(lines().lines.map(\.kind) == [.income, .cost, .cost, .shrinkage, .income, .total])
