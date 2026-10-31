@@ -344,6 +344,11 @@ struct ReceiveInventoryFormView: View {
                     selectedSupplier: $selectedSupplier
                 )
             }
+            .alert("No se pudo guardar", isPresented: $viewModel.showSaveError) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(viewModel.saveError ?? "")
+            }
             .onAppear {
                 // Pre-select product if provided (from ProductDetailView context)
                 if let product = preSelectedProduct, selectedProduct == nil {
