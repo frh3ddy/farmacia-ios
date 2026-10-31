@@ -21,7 +21,8 @@ Xcode project: `FarmaciaApp.xcodeproj` (single `FarmaciaApp` target). Source und
 
 ## Workflow
 
-- Branch: `feature/{desc}` or `fix/{desc}` — never develop on `main`.
+- Branch: `feature/{desc}`, `fix/{desc}`, or `docs/{desc}` (docs/epics only) — never develop on `main`.
+- Review follow-ups and out-of-scope items go in `tasks/{area}-review-followups-epic.md`.
 - Commit: `{type}: {description}` (feat/fix/refactor/test/docs/chore).
 - Commit or push only when asked.
 
