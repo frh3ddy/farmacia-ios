@@ -24,6 +24,14 @@ public struct ProductListQuery: Hashable, Sendable {
     /// The plain catalog: the only list that is cached, shown from cache first,
     /// and kept on screen (from cache) when a reload fails.
     public var isCatalog: Bool { search == nil && filter == nil }
+
+    /// The GET /products query for one page of this list.
+    public func params(page: Int, limit: Int) -> [String: String] {
+        var params = ["locationId": locationId, "page": "\(page)", "limit": "\(limit)"]
+        params["search"] = search
+        params["filter"] = filter?.apiValue
+        return params
+    }
 }
 
 public struct ProductListLoad: Sendable {

@@ -128,17 +128,13 @@ struct ProductDetailView: View {
         .sheet(isPresented: $showReceiveSheet) {
             ReceiveInventoryFormView(
                 viewModel: inventoryViewModel,
-                preSelectedProduct: displayProduct,
+                product: displayProduct,
                 onComplete: {
                     Task { await refreshDependentData() }
                 }
             )
             .task {
-                // Load form data only when sheet opens — and only if the
-                // parent's initial load didn't already populate it
-                if inventoryViewModel.products.isEmpty {
-                    await inventoryViewModel.loadProducts()
-                }
+                // Only if the parent's initial load didn't already populate it
                 if inventoryViewModel.suppliers.isEmpty {
                     await inventoryViewModel.loadSuppliers()
                 }
@@ -148,20 +144,11 @@ struct ProductDetailView: View {
             AdjustmentFormView(
                 adjustmentType: type,
                 viewModel: inventoryViewModel,
-                preSelectedProduct: displayProduct,
+                product: displayProduct,
                 onComplete: {
                     Task { await refreshDependentData() }
                 }
             )
-            .task {
-                // Load form data only when sheet opens — skip if already loaded
-                if inventoryViewModel.products.isEmpty {
-                    await inventoryViewModel.loadProducts()
-                }
-                if inventoryViewModel.suppliers.isEmpty {
-                    await inventoryViewModel.loadSuppliers()
-                }
-            }
         }
         .sheet(isPresented: Binding(
             get: { selectedBatchId != nil },
@@ -172,14 +159,12 @@ struct ProductDetailView: View {
             }
         }
         .task {
-            // All four loads are independent — fire in parallel.
-            // The form data (products list + suppliers) is fetched here so the
-            // receive/adjustment sheets don't need to re-fetch when they open.
+            // All three loads are independent — fire in parallel.
+            // Suppliers are fetched here so the receive sheet doesn't need to re-fetch.
             async let productRefresh: () = refreshProduct()
-            async let productsLoad: () = inventoryViewModel.loadProducts()
             async let suppliersLoad: () = inventoryViewModel.loadSuppliers()
             async let costSupplierLoad: () = loadCostSupplierData()
-            _ = await (productRefresh, productsLoad, suppliersLoad, costSupplierLoad)
+            _ = await (productRefresh, suppliersLoad, costSupplierLoad)
         }
         .task(id: "fifo-batches") {
             // Lazy: load FIFO batches only for owners/managers
@@ -201,11 +186,6 @@ struct ProductDetailView: View {
             if newValue < oldValue {
                 Task { await refreshDependentData() }
             }
-        }
-        .alert("Error", isPresented: $inventoryViewModel.showError) {
-            Button("OK") {}
-        } message: {
-            Text(inventoryViewModel.errorMessage ?? "Ocurrió un error")
         }
         .alert("Éxito", isPresented: $inventoryViewModel.showSuccess) {
             Button("OK") {}

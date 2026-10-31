@@ -7,16 +7,14 @@ struct AdjustmentFormView: View {
     let adjustmentType: AdjustmentType
     @ObservedObject var viewModel: InventoryViewModel
 
-    /// When set, the product is pre-selected and locked (coming from ProductDetailView).
-    let preSelectedProduct: Product?
+    /// The product being adjusted (the form opens from its detail screen).
+    let product: Product
     /// Called after a successful adjustment so the parent can refresh data
     var onComplete: (() -> Void)?
 
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var authManager: AuthManager
 
-    @State private var selectedProduct: Product?
-    @State private var showProductPicker = false
     @State private var quantity: Int?
     @State private var newCount: Int?
     @State private var unitCost: Double?
@@ -31,26 +29,6 @@ struct AdjustmentFormView: View {
     @State private var liveStockFailed = false
     private let network = NetworkMonitor.shared
 
-    /// Convenience initializer for standalone use (no pre-selected product)
-    init(adjustmentType: AdjustmentType, viewModel: InventoryViewModel) {
-        self.adjustmentType = adjustmentType
-        self.viewModel = viewModel
-        self.preSelectedProduct = nil
-        self.onComplete = nil
-    }
-
-    /// Initializer for use from ProductDetailView with a pre-selected product
-    init(adjustmentType: AdjustmentType, viewModel: InventoryViewModel, preSelectedProduct: Product, onComplete: (() -> Void)? = nil) {
-        self.adjustmentType = adjustmentType
-        self.viewModel = viewModel
-        self.preSelectedProduct = preSelectedProduct
-        self.onComplete = onComplete
-    }
-
-    private var isProductLocked: Bool {
-        preSelectedProduct != nil
-    }
-
     private var countChange: Int? {
         CountCorrection.preview(counted: newCount, current: liveStock)
     }
@@ -64,7 +42,6 @@ struct AdjustmentFormView: View {
     }
 
     private var isValid: Bool {
-        guard selectedProduct != nil else { return false }
         if adjustmentType.isVariable {
             return network.isConnected && countChange != nil
         }
@@ -75,52 +52,25 @@ struct AdjustmentFormView: View {
         NavigationStack {
             Form {
                 Section("Producto") {
-                    if isProductLocked {
-                        // Product is pre-selected and locked — show as info, not a button
-                        HStack {
-                            VStack(alignment: .leading) {
-                                Text(selectedProduct?.displayName ?? "")
-                                    .foregroundStyle(.primary)
-                                if let sku = selectedProduct?.sku {
-                                    Text("SKU: \(sku)")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                                if !adjustmentType.isVariable, let stock = selectedProduct?.totalInventory {
-                                    Text("Stock actual: \(stock) unidades")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
+                    HStack {
+                        VStack(alignment: .leading) {
+                            Text(product.displayName)
+                                .foregroundStyle(.primary)
+                            if let sku = product.sku {
+                                Text("SKU: \(sku)")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
                             }
-                            Spacer()
-                            Image(systemName: "lock.fill")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    } else {
-                        Button {
-                            showProductPicker = true
-                        } label: {
-                            HStack {
-                                if let product = selectedProduct {
-                                    VStack(alignment: .leading) {
-                                        Text(product.displayName)
-                                            .foregroundStyle(.primary)
-                                        if let sku = product.sku {
-                                            Text("SKU: \(sku)")
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                        }
-                                    }
-                                } else {
-                                    Text("Seleccionar Producto")
-                                        .foregroundStyle(.secondary)
-                                }
-                                Spacer()
-                                Image(systemName: "chevron.right")
+                            if !adjustmentType.isVariable, let stock = product.totalInventory {
+                                Text("Stock actual: \(stock) unidades")
+                                    .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
                         }
+                        Spacer()
+                        Image(systemName: "lock.fill")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                 }
 
@@ -139,7 +89,7 @@ struct AdjustmentFormView: View {
                                 Button("Reintentar") {
                                     Task { await loadLiveStock() }
                                 }
-                            } else if selectedProduct != nil {
+                            } else {
                                 ProgressView()
                             }
                         }
@@ -227,26 +177,13 @@ struct AdjustmentFormView: View {
                     .disabled(!isValid || viewModel.isSubmitting)
                 }
             }
-            .sheet(isPresented: $showProductPicker) {
-                ProductPickerView(
-                    products: viewModel.products,
-                    selectedProduct: $selectedProduct,
-                    isLoading: viewModel.isLoadingProducts
-                )
-            }
             .alert("No se pudo guardar", isPresented: $viewModel.showSaveError) {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(viewModel.saveError ?? "")
             }
-            .onAppear {
-                // Pre-select product if provided (from ProductDetailView context)
-                if let product = preSelectedProduct, selectedProduct == nil {
-                    selectedProduct = product
-                }
-            }
-            // Reloads when the product or location changes, or the connection comes back
-            .task(id: [selectedProduct?.id, authManager.currentLocation?.id, String(network.isConnected)]) {
+            // Reloads when the location changes or the connection comes back
+            .task(id: [authManager.currentLocation?.id, String(network.isConnected)]) {
                 await loadLiveStock()
             }
         }
@@ -256,7 +193,6 @@ struct AdjustmentFormView: View {
         liveStock = nil
         liveStockFailed = false
         guard adjustmentType.isVariable, network.isConnected,
-              let product = selectedProduct,
               let locationId = authManager.currentLocation?.id else { return }
 
         do {
@@ -264,7 +200,7 @@ struct AdjustmentFormView: View {
                 endpoint: .getProduct(id: product.id),
                 queryParams: ["locationId": locationId]
             )
-            // A superseded load (product, location or connection changed) must not
+            // A superseded load (location or connection changed) must not
             // overwrite the newer one's state — URLSession may finish or fail anyway.
             guard !Task.isCancelled else { return }
             liveStock = response.data.totalInventory ?? 0
@@ -285,8 +221,7 @@ struct AdjustmentFormView: View {
         } else {
             adjustedQty = quantity.map(abs)
         }
-        guard let product = selectedProduct,
-              let locationId = authManager.currentLocation?.id,
+        guard let locationId = authManager.currentLocation?.id,
               let adjustedQty else {
             viewModel.isSubmitting = false
             return

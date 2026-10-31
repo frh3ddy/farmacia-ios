@@ -53,8 +53,10 @@ FarmaciaApp/
 │   │       └── SettingsView.swift
 │   │
 │   ├── Inventory/
-│   │   └── Views/
-│   │       └── InventoryView.swift
+│   │   └── Views/                  # receive/adjust forms, opened from product detail
+│   │       ├── ReceiveInventoryFormView.swift
+│   │       ├── AdjustmentFormView.swift
+│   │       └── InventoryViewModel.swift
 │   │
 │   ├── Reports/
 │   │   └── Views/
@@ -107,10 +109,11 @@ X-Session-Token: <sessionToken>
 - P&L snapshot
 
 ### Inventory Management
+Opened from a product (Productos → product → Recibir Inventario / Ajustar Inventario).
 - Receive new inventory with cost tracking
 - Quick adjustments (damage, theft, expired, found, etc.); an adjustment that adds stock takes an optional unit cost (empty uses the product's last cost)
 - Count correction by counted total against the store's live stock (needs a connection)
-- View receiving history
+- Receiving and adjustment history (product activity and global history)
 - Square sync status
 
 ### Reports

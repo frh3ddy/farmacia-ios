@@ -128,17 +128,7 @@ class ProductsViewModel: ObservableObject {
         isWarmingCache = false
 
         do {
-            var params: [String: String] = [
-                "locationId": locationId,
-                "page": "1",
-                "limit": "\(pageSize)"
-            ]
-            if let search = query.search {
-                params["search"] = search
-            }
-            if let filter = query.filter?.apiValue {
-                params["filter"] = filter
-            }
+            let params = query.params(page: 1, limit: pageSize)
 
             // Counts come from the server aggregate (GET /products/counts) —
             // a single query over the whole catalog, not just this page.
@@ -210,17 +200,7 @@ class ProductsViewModel: ObservableObject {
         isLoadingMore = true
 
         do {
-            var params: [String: String] = [
-                "locationId": ticket.query.locationId,
-                "page": "\(ticket.page)",
-                "limit": "\(pageSize)"
-            ]
-            if let search = ticket.query.search {
-                params["search"] = search
-            }
-            if let filter = ticket.query.filter?.apiValue {
-                params["filter"] = filter
-            }
+            let params = ticket.query.params(page: ticket.page, limit: pageSize)
 
             let response: ProductListResponse = try await apiClient.request(
                 endpoint: .listProducts,
