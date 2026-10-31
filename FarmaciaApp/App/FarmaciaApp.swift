@@ -77,6 +77,8 @@ struct RootView: View {
         }
         .animation(.easeInOut, value: authManager.authState)
         .onChange(of: authManager.authState) { _, state in
+            // Which queued writes are "pending" depends on who's logged in.
+            OfflineQueueManager.shared.refresh()
             // Writes queued before the session expired replay once the user
             // logs back in with their PIN.
             if state == .authenticated {
@@ -94,6 +96,7 @@ struct RootView: View {
                     isOffline: !networkMonitor.isConnected,
                     pendingCount: offlineQueue.pendingCount,
                     failedCount: offlineQueue.failedRequests.count,
+                    othersWaiting: offlineQueue.pendingForOthers,
                     onTapFailed: { showSyncIssues = true }
                 )
             }
@@ -101,7 +104,8 @@ struct RootView: View {
         .alert("Sin conexión", isPresented: $networkMonitor.justWentOffline) {
             Button("OK") {}
         } message: {
-            Text("Tus cambios se guardarán en este dispositivo y se sincronizarán automáticamente en cuanto vuelva la conexión.")
+            // Must match OfflineReplay.isReplaySafe: only these writes queue offline.
+            Text("Recepciones, ajustes de inventario, gastos y productos nuevos se guardarán en este dispositivo y se sincronizarán al volver la conexión. Otros cambios necesitan conexión.")
         }
         .sheet(isPresented: $showSyncIssues) {
             OfflineSyncIssuesView(

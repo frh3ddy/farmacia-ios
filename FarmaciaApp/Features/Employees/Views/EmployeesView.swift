@@ -657,10 +657,6 @@ class EmployeesViewModel: ObservableObject {
             // Reload the list
             await loadEmployees()
             return true
-        } catch NetworkError.queuedForSync {
-            // POST, not an overwrite — same duplicate-on-manual-retry caveat
-            // as CreateProductView (no client dedup key for this endpoint).
-            return true
         } catch let error as NetworkError {
             errorMessage = error.errorDescription
             showError = true
@@ -682,8 +678,6 @@ class EmployeesViewModel: ObservableObject {
                 body: request
             )
             return true
-        } catch NetworkError.queuedForSync {
-            return true
         } catch let error as NetworkError {
             errorMessage = error.localizedDescription
             showError = true
@@ -703,8 +697,6 @@ class EmployeesViewModel: ObservableObject {
                 endpoint: .deleteEmployee(id: id)
             )
             return true
-        } catch NetworkError.queuedForSync {
-            return true
         } catch let error as NetworkError {
             errorMessage = error.localizedDescription
             showError = true
@@ -723,8 +715,6 @@ class EmployeesViewModel: ObservableObject {
             let _: EmployeeActionResponse = try await apiClient.request(
                 endpoint: .resetPINLockout(employeeId: employeeId)
             )
-            return true
-        } catch NetworkError.queuedForSync {
             return true
         } catch let error as NetworkError {
             errorMessage = error.localizedDescription

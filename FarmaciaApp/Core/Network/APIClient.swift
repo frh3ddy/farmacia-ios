@@ -200,8 +200,9 @@ final class APIClient {
                 try await self.executeOnce(request)
             }
         } catch let error as NetworkError {
-            if isConnectivityFailure(error), isQueueableWrite(request) {
-                await enqueueForSync(request)
+            // Only replay-safe writes queue (OfflineReplay); if storing fails, the
+            // caller gets the real error rather than "saved, will sync".
+            if isConnectivityFailure(error), await enqueueForSync(request) {
                 throw NetworkError.queuedForSync
             }
             throw error
@@ -217,20 +218,12 @@ final class APIClient {
         }
     }
 
-    /// Only JSON-bodied mutations are queueable — GETs have nothing to
-    /// replay, and multipart image uploads are excluded to avoid persisting
-    /// large blobs offline (image edits aren't part of the numbers being
-    /// reconciled).
-    private func isQueueableWrite(_ request: URLRequest) -> Bool {
-        guard let method = request.httpMethod, method != "GET" else { return false }
-        return request.value(forHTTPHeaderField: "Content-Type") == "application/json"
-    }
-
-    private func enqueueForSync(_ request: URLRequest) async {
-        guard let method = request.httpMethod else { return }
-        let path = request.url?.path ?? ""
-        let summary = "\(method) \(path)"
-        await OfflineQueueManager.shared.enqueue(method: method, path: path, bodyData: request.httpBody, summary: summary)
+    /// Queues the write if it's replay-safe (OfflineReplay: creates the server dedups
+    /// by clientRequestId — never auth, employee, edit or delete calls). True if stored.
+    private func enqueueForSync(_ request: URLRequest) async -> Bool {
+        guard let method = request.httpMethod, let path = request.url?.path,
+              OfflineReplay.isReplaySafe(method: method, path: path) else { return false }
+        return await OfflineQueueManager.shared.enqueue(method: method, path: path, bodyData: request.httpBody)
     }
 
     private func executeOnce<T: Decodable>(_ request: URLRequest) async throws -> T {

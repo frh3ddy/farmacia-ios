@@ -4,12 +4,14 @@ import SwiftUI
 //
 // Thin status bar pinned under the navigation bar (via .safeAreaInset) so it
 // never covers content. Shows at most one thing at a time, in priority order:
-// sync problems that need a decision > actively syncing > offline.
+// sync problems that need a decision > offline > actively syncing > another
+// employee's writes waiting for them to log in (they sync only under their session).
 
 struct OfflineSyncBanner: View {
     let isOffline: Bool
     let pendingCount: Int
     let failedCount: Int
+    var othersWaiting: [String] = []
     var onTapFailed: () -> Void
 
     var body: some View {
@@ -26,6 +28,8 @@ struct OfflineSyncBanner: View {
             row(systemImage: "wifi.slash", text: offlineText, tint: .orange)
         } else if pendingCount > 0 {
             row(systemImage: "arrow.triangle.2.circlepath", text: syncingText, tint: .blue)
+        } else if !othersWaiting.isEmpty {
+            row(systemImage: "person.crop.circle.badge.clock", text: othersText, tint: .gray)
         }
     }
 
@@ -37,6 +41,10 @@ struct OfflineSyncBanner: View {
 
     private var syncingText: String {
         "Sincronizando \(pendingCount) cambio\(pendingCount == 1 ? "" : "s")…"
+    }
+
+    private var othersText: String {
+        "Cambios de \(othersWaiting.joined(separator: ", ")) se sincronizan cuando inicien sesión"
     }
 
     private var failedText: String {
