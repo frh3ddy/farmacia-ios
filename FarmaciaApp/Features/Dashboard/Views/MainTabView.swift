@@ -1,4 +1,5 @@
 import SwiftUI
+import FarmaciaKit
 
 // MARK: - Main Tab View
 // Architecture: Products tab is the unified hub for product catalog + inventory operations.
@@ -11,6 +12,10 @@ struct MainTabView: View {
     
     /// Bumped every time a tab is selected; observed by child views to trigger a re-fetch.
     @State private var refreshTrigger: UUID = UUID()
+
+    /// Each tab's identity. A new token rebuilds that tab at its root with fresh
+    /// view models, so nothing loaded for the previous store or role survives a switch.
+    @State private var tabTokens: [Tab: UUID] = [:]
     
     /// At most 4 direct tabs, always — Expenses/Payroll/Reports/Employees/
     /// Settings live inside `.more` instead of being individual tags. Beyond
@@ -18,7 +23,7 @@ struct MainTabView: View {
     /// own UINavigationController), which double-nests navigation bars for
     /// any pushed view that also owns a NavigationStack. Keeping a hand-built
     /// "Más" tab avoids that entirely, regardless of permission combination.
-    enum Tab: Hashable {
+    enum Tab: Hashable, CaseIterable {
         case dashboard
         case products
         case alerts
@@ -29,6 +34,7 @@ struct MainTabView: View {
         TabView(selection: $selectedTab) {
             // Dashboard
             DashboardView()
+                .id(tabTokens[.dashboard])
                 .tabItem {
                     Label("Inicio", systemImage: "chart.bar.xaxis")
                 }
@@ -36,6 +42,7 @@ struct MainTabView: View {
 
             // Products (unified: catalog + inventory operations)
             ProductsView(refreshTrigger: refreshTrigger)
+                .id(tabTokens[.products])
                 .tabItem {
                     Label("Productos", systemImage: "shippingbox.fill")
                 }
@@ -43,6 +50,7 @@ struct MainTabView: View {
 
             // Alerts (stock warnings, expiring products, actionable signals)
             AlertsView()
+                .id(tabTokens[.alerts])
                 .tabItem {
                     Label("Alertas", systemImage: "exclamationmark.triangle.fill")
                 }
@@ -50,6 +58,7 @@ struct MainTabView: View {
 
             // Gastos, Nómina, Reportes, Empleados, Ajustes
             MoreView()
+                .id(tabTokens[.more])
                 .tabItem {
                     Label("Más", systemImage: "ellipsis")
                 }
@@ -59,6 +68,12 @@ struct MainTabView: View {
         .onChange(of: selectedTab) { _, _ in
             // Bump trigger so the newly-selected tab re-fetches fresh data
             refreshTrigger = UUID()
+        }
+        .onChange(of: authManager.currentLocation?.id) {
+            // The selected tab hosts the switch screen; the rest may hold the old store's screens
+            for tab in TabReset.tabsToReset(all: Tab.allCases, selected: selectedTab) {
+                tabTokens[tab] = UUID()
+            }
         }
     }
 }
