@@ -166,11 +166,6 @@ class PayrollViewModel: ObservableObject {
                 )
             }
             return true
-        } catch NetworkError.queuedForSync {
-            // No server response to patch the local summary with (workedMinutes/
-            // cost are server-computed) — leave the old time showing rather
-            // than guess, same call as inventory quantities.
-            return true
         } catch let error as NetworkError {
             errorMessage = error.errorDescription
             showError = true
@@ -192,11 +187,6 @@ class PayrollViewModel: ObservableObject {
 
         do {
             try await apiClient.requestVoid(endpoint: .laborDeleteShift(id: shiftId))
-            patchSummaryAfterDelete(shiftId: shiftId)
-            return true
-        } catch NetworkError.queuedForSync {
-            // Deletion doesn't need a server response to apply locally —
-            // safe to reflect immediately, same reasoning as EditPriceView.
             patchSummaryAfterDelete(shiftId: shiftId)
             return true
         } catch let error as NetworkError {

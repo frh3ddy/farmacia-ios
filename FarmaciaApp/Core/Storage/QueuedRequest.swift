@@ -20,8 +20,12 @@ final class QueuedRequest: Identifiable {
     var queuedAt: Date
     var status: String // "pending" | "failed"
     var lastError: String?
+    /// Who queued it: replayed only under their own session (OfflineReplay.shouldReplay).
+    /// Optional so items from before this field load (they have none).
+    var employeeId: String?
+    var employeeName: String?
 
-    init(method: String, path: String, bodyData: Data?, summary: String) {
+    init(method: String, path: String, bodyData: Data?, summary: String, employeeId: String?, employeeName: String?) {
         self.id = UUID()
         self.method = method
         self.path = path
@@ -29,5 +33,7 @@ final class QueuedRequest: Identifiable {
         self.summary = summary
         self.queuedAt = Date()
         self.status = "pending"
+        self.employeeId = employeeId
+        self.employeeName = employeeName
     }
 }
