@@ -120,43 +120,10 @@ class InventoryViewModel: ObservableObject {
     }
 
     // MARK: - Receive Inventory
-    func receiveInventory(
-        productId: String,
-        quantity: Int,
-        unitCost: Double,
-        locationId: String,
-        supplierId: String?,
-        invoiceNumber: String?,
-        batchNumber: String?,
-        expiryDate: Date?,
-        notes: String?,
-        sellingPrice: Double? = nil,
-        syncPriceToSquare: Bool = true
-    ) async -> Bool {
+    /// The form builds `request` once per receiving, so a retry reuses its clientRequestId.
+    func receiveInventory(_ request: ReceiveInventoryRequest) async -> Bool {
         isSubmitting = true
         defer { isSubmitting = false }
-
-        // Format date as YYYY-MM-DD string to avoid timezone issues
-        let expiryDateString = expiryDate.map { LocalDay.string(from: $0) }
-
-        let request = ReceiveInventoryRequest(
-            locationId: locationId,
-            productId: productId,
-            quantity: quantity,
-            unitCost: unitCost,
-            supplierId: supplierId,
-            invoiceNumber: invoiceNumber?.isEmpty == true ? nil : invoiceNumber,
-            purchaseOrderId: nil,
-            batchNumber: batchNumber?.isEmpty == true ? nil : batchNumber,
-            expiryDate: expiryDateString,
-            manufacturingDate: nil,
-            receivedBy: nil,
-            notes: notes?.isEmpty == true ? nil : notes,
-            syncToSquare: true,
-            sellingPrice: sellingPrice,
-            syncPriceToSquare: sellingPrice != nil ? syncPriceToSquare : nil,
-            clientRequestId: UUID().uuidString
-        )
 
         do {
             let response: ReceivingCreateResponse = try await apiClient.request(
@@ -172,7 +139,7 @@ class InventoryViewModel: ObservableObject {
             }
 
             // Reload receivings
-            await loadReceivings(locationId: locationId)
+            await loadReceivings(locationId: request.locationId)
 
             return true
         } catch NetworkError.queuedForSync {
@@ -191,51 +158,46 @@ class InventoryViewModel: ObservableObject {
     }
 
     // MARK: - Create Adjustment
+    /// `clientRequestId` is the form's, kept across retries. `countedQuantity`
+    /// (count correction only) lets the API derive the change from its own stock.
     func createAdjustment(
         type: AdjustmentType,
         productId: String,
         quantity: Int,
+        countedQuantity: Int? = nil,
         locationId: String,
         reason: String?,
-        notes: String?
+        notes: String?,
+        clientRequestId: String
     ) async -> Bool {
         isSubmitting = true
         defer { isSubmitting = false }
 
-        // Check if this type has a quick endpoint
-        let useQuickEndpoint: Bool
-        let endpoint: APIEndpoint
-
-        switch type {
-        case .damage:
-            endpoint = .adjustmentDamage
-            useQuickEndpoint = true
-        case .theft:
-            endpoint = .adjustmentTheft
-            useQuickEndpoint = true
-        case .expired:
-            endpoint = .adjustmentExpired
-            useQuickEndpoint = true
-        case .found:
-            endpoint = .adjustmentFound
-            useQuickEndpoint = true
-        case .returnType:
-            endpoint = .adjustmentReturn
-            useQuickEndpoint = true
-        case .countCorrection:
-            endpoint = .adjustmentCountCorrection
-            useQuickEndpoint = true
-        case .writeOff:
-            endpoint = .adjustmentWriteOff
-            useQuickEndpoint = true
-        default:
-            endpoint = .createAdjustment
-            useQuickEndpoint = false
+        // Specific types have a quick endpoint that forces the sign; the rest go generic
+        let quickEndpoint: APIEndpoint? = switch type {
+        case .damage: .adjustmentDamage
+        case .theft: .adjustmentTheft
+        case .expired: .adjustmentExpired
+        case .found: .adjustmentFound
+        case .returnType: .adjustmentReturn
+        case .countCorrection: .adjustmentCountCorrection
+        case .writeOff: .adjustmentWriteOff
+        default: nil
         }
 
-        // Use quick adjustment for specific types, full adjustment for generic
-        if !useQuickEndpoint {
-            let request = CreateAdjustmentRequest(
+        let body: Encodable = if quickEndpoint != nil {
+            QuickAdjustmentRequest(
+                locationId: locationId,
+                productId: productId,
+                quantity: quantity,
+                countedQuantity: countedQuantity,
+                reason: reason,
+                notes: notes,
+                syncToSquare: true,
+                clientRequestId: clientRequestId
+            )
+        } else {
+            CreateAdjustmentRequest(
                 locationId: locationId,
                 productId: productId,
                 type: type.rawValue,
@@ -246,61 +208,29 @@ class InventoryViewModel: ObservableObject {
                 effectiveDate: nil,
                 adjustedBy: nil,
                 syncToSquare: true,
-                clientRequestId: UUID().uuidString
+                clientRequestId: clientRequestId
             )
+        }
 
-            do {
-                let response: AdjustmentResponse = try await apiClient.request(
-                    endpoint: endpoint,
-                    body: request
-                )
-                successMessage = response.message
-                showSuccess = true
-                await loadAdjustments(locationId: locationId)
-                return true
-            } catch NetworkError.queuedForSync {
-                return true
-            } catch let error as NetworkError {
-                errorMessage = error.errorDescription
-                showError = true
-                return false
-            } catch {
-                errorMessage = "Error al crear ajuste"
-                showError = true
-                return false
-            }
-        } else {
-            // Quick adjustment endpoints
-            let request = QuickAdjustmentRequest(
-                locationId: locationId,
-                productId: productId,
-                quantity: quantity,
-                reason: reason,
-                notes: notes,
-                syncToSquare: true,
-                clientRequestId: UUID().uuidString
+        do {
+            let response: AdjustmentResponse = try await apiClient.request(
+                endpoint: quickEndpoint ?? .createAdjustment,
+                body: body
             )
-
-            do {
-                let response: AdjustmentResponse = try await apiClient.request(
-                    endpoint: endpoint,
-                    body: request
-                )
-                successMessage = response.message
-                showSuccess = true
-                await loadAdjustments(locationId: locationId)
-                return true
-            } catch NetworkError.queuedForSync {
-                return true
-            } catch let error as NetworkError {
-                errorMessage = error.errorDescription
-                showError = true
-                return false
-            } catch {
-                errorMessage = "Error al crear ajuste"
-                showError = true
-                return false
-            }
+            successMessage = response.message
+            showSuccess = true
+            await loadAdjustments(locationId: locationId)
+            return true
+        } catch NetworkError.queuedForSync {
+            return true
+        } catch let error as NetworkError {
+            errorMessage = error.errorDescription
+            showError = true
+            return false
+        } catch {
+            errorMessage = "Error al crear ajuste"
+            showError = true
+            return false
         }
     }
 

@@ -1,4 +1,5 @@
 import SwiftUI
+import FarmaciaKit
 
 // MARK: - Adjustment Form View
 
@@ -21,6 +22,13 @@ struct AdjustmentFormView: View {
     @State private var reason = ""
     @State private var notes = ""
     @FocusState private var isFieldFocused: Bool
+    /// One per adjustment being entered: a retry (or the offline queue's replay) reuses it.
+    @State private var clientRequestId = UUID().uuidString
+    /// Count types compare against stock loaded for the current location when the form opens,
+    /// never the product snapshot the form was handed.
+    @State private var liveStock: Int?
+    @State private var liveStockFailed = false
+    private let network = NetworkMonitor.shared
 
     /// Convenience initializer for standalone use (no pre-selected product)
     init(adjustmentType: AdjustmentType, viewModel: InventoryViewModel) {
@@ -42,15 +50,14 @@ struct AdjustmentFormView: View {
         preSelectedProduct != nil
     }
 
-    private var currentStock: Int {
-        selectedProduct?.totalInventory ?? 0
+    private var countChange: Int? {
+        CountCorrection.preview(counted: newCount, current: liveStock)
     }
 
     private var isValid: Bool {
         guard selectedProduct != nil else { return false }
         if adjustmentType.isVariable {
-            guard let newCount else { return false }
-            return newCount != currentStock
+            return network.isConnected && countChange != nil
         }
         return (quantity ?? 0) != 0
     }
@@ -70,7 +77,7 @@ struct AdjustmentFormView: View {
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 }
-                                if let stock = selectedProduct?.totalInventory {
+                                if !adjustmentType.isVariable, let stock = selectedProduct?.totalInventory {
                                     Text("Stock actual: \(stock) unidades")
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
@@ -113,8 +120,19 @@ struct AdjustmentFormView: View {
                         HStack {
                             Text("Cantidad Actual")
                             Spacer()
-                            Text("\(currentStock)")
-                                .foregroundStyle(.secondary)
+                            if let liveStock {
+                                Text("\(liveStock)")
+                                    .foregroundStyle(.secondary)
+                            } else if !network.isConnected {
+                                Text("Requiere conexión")
+                                    .foregroundStyle(.orange)
+                            } else if liveStockFailed {
+                                Button("Reintentar") {
+                                    Task { await loadLiveStock() }
+                                }
+                            } else if selectedProduct != nil {
+                                ProgressView()
+                            }
                         }
 
                         HStack {
@@ -127,8 +145,7 @@ struct AdjustmentFormView: View {
                                 .focused($isFieldFocused)
                         }
 
-                        if let newCount, newCount != currentStock {
-                            let delta = newCount - currentStock
+                        if let delta = countChange {
                             Text(delta > 0
                                  ? "Esto agregará \(delta) unidades al inventario"
                                  : "Esto eliminará \(abs(delta)) unidades del inventario")
@@ -177,6 +194,9 @@ struct AdjustmentFormView: View {
 
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Guardar") {
+                        // Set before the Task runs, so a second tap can't slip in first
+                        guard !viewModel.isSubmitting else { return }
+                        viewModel.isSubmitting = true
                         Task { await saveAdjustment() }
                     }
                     .disabled(!isValid || viewModel.isSubmitting)
@@ -195,33 +215,62 @@ struct AdjustmentFormView: View {
                     selectedProduct = product
                 }
             }
+            // Reloads when the product or location changes, or the connection comes back
+            .task(id: [selectedProduct?.id, authManager.currentLocation?.id, String(network.isConnected)]) {
+                await loadLiveStock()
+            }
+        }
+    }
+
+    private func loadLiveStock() async {
+        liveStock = nil
+        liveStockFailed = false
+        guard adjustmentType.isVariable, network.isConnected,
+              let product = selectedProduct,
+              let locationId = authManager.currentLocation?.id else { return }
+
+        do {
+            let response: ProductDetailResponse = try await APIClient.shared.request(
+                endpoint: .getProduct(id: product.id),
+                queryParams: ["locationId": locationId]
+            )
+            // A superseded load (product, location or connection changed) must not
+            // overwrite the newer one's state — URLSession may finish or fail anyway.
+            guard !Task.isCancelled else { return }
+            liveStock = response.data.totalInventory ?? 0
+        } catch {
+            guard !Task.isCancelled else { return }
+            liveStockFailed = true
         }
     }
 
     private func saveAdjustment() async {
-        guard let product = selectedProduct,
-              let locationId = authManager.currentLocation?.id else { return }
-
-        // Variable types (count correction) take the new total and derive
-        // the signed delta. Fixed-sign types only ever collect a magnitude —
-        // the server re-derives the correct sign for those regardless of
-        // what's sent, so plain abs() is enough.
-        let adjustedQty: Int
+        // Variable types (count correction) send the counted total and the
+        // previewed change; the API derives the real change from its own stock.
+        // Fixed-sign types only ever collect a magnitude — the server
+        // re-derives the correct sign for those, so plain abs() is enough.
+        let adjustedQty: Int?
         if adjustmentType.isVariable {
-            guard let newCount, newCount != currentStock else { return }
-            adjustedQty = newCount - currentStock
+            adjustedQty = countChange
         } else {
-            guard let qty = quantity else { return }
-            adjustedQty = abs(qty)
+            adjustedQty = quantity.map(abs)
+        }
+        guard let product = selectedProduct,
+              let locationId = authManager.currentLocation?.id,
+              let adjustedQty else {
+            viewModel.isSubmitting = false
+            return
         }
 
         let success = await viewModel.createAdjustment(
             type: adjustmentType,
             productId: product.id,
             quantity: adjustedQty,
+            countedQuantity: adjustmentType == .countCorrection ? newCount : nil,
             locationId: locationId,
             reason: reason.isEmpty ? nil : reason,
-            notes: notes.isEmpty ? nil : notes
+            notes: notes.isEmpty ? nil : notes,
+            clientRequestId: clientRequestId
         )
 
         if success {
