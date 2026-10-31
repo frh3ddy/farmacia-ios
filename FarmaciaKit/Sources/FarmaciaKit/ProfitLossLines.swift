@@ -8,6 +8,8 @@ import Foundation
 // total next to a Merma row counted merma twice, and Yastás had no row. The rows
 // here show merma once and Yastás when there is any; net profit is always the
 // server's figure, and `addsUp` checks the rows reach it (Decimal, never Double).
+// Merma is net (losses − stock found or recounted up), so it can be negative; when the
+// server sends both parts, Merma shows the losses and "Mercancía recuperada" the rest.
 
 public struct ProfitLossLines: Sendable {
     public struct Line: Equatable, Sendable {
@@ -22,7 +24,8 @@ public struct ProfitLossLines: Sendable {
     public let addsUp: Bool
 
     public init(revenue: String, costOfSales: String, operatingExpensesTotal: String,
-                shrinkage: String, yastasServiceRevenue: String?, netProfit: String) {
+                shrinkage: String, shrinkageLosses: String? = nil, shrinkageRecovered: String? = nil,
+                yastasServiceRevenue: String?, netProfit: String) {
         let yastas = yastasServiceRevenue.flatMap(Self.decimal)
         let yastasLine = yastas.flatMap { $0 > 0 ? Line(label: "Yastás", amount: "\($0)", kind: .income) : nil }
 
@@ -35,8 +38,14 @@ public struct ProfitLossLines: Sendable {
            let expensesTotal = Self.decimal(operatingExpensesTotal), let merma = Self.decimal(shrinkage) {
             let expenses = expensesTotal - merma
             lines.append(Line(label: "Gastos Operativos", amount: "\(expenses)", kind: .cost))
-            lines.append(Line(label: "Merma", amount: shrinkage, kind: .shrinkage))
-            let sum = revenue - cost - expenses - merma + (yastas ?? 0)
+            // Older servers send only the net figure: one Merma row, as before.
+            let losses = shrinkageLosses.flatMap(Self.decimal)
+            let recovered = losses == nil ? 0 : shrinkageRecovered.flatMap(Self.decimal) ?? 0
+            lines.append(Line(label: "Merma", amount: losses.map { "\($0)" } ?? shrinkage, kind: .shrinkage))
+            if recovered > 0 {
+                lines.append(Line(label: "Mercancía recuperada", amount: "\(recovered)", kind: .income))
+            }
+            let sum = revenue - cost - expenses - (losses ?? merma) + recovered + (yastas ?? 0)
             addsUp = Self.decimal(netProfit) == sum
         } else {
             // Can't split merma out of a total we can't read: one row, as the server sent it.
@@ -52,11 +61,14 @@ public struct ProfitLossLines: Sendable {
     /// The dashboard card: revenue and cost from the same P&L as net profit when the server
     /// sends them, else the item-summed figures (older servers).
     public init(netProfit: NetProfitSummary, itemRevenue: String, itemCost: String,
-                operatingExpensesTotal: String, shrinkage: String) {
+                operatingExpensesTotal: String, shrinkage: String,
+                shrinkageLosses: String? = nil, shrinkageRecovered: String? = nil) {
         self.init(revenue: netProfit.salesRevenue ?? itemRevenue,
                   costOfSales: netProfit.costOfSales ?? itemCost,
                   operatingExpensesTotal: operatingExpensesTotal,
                   shrinkage: shrinkage,
+                  shrinkageLosses: shrinkageLosses,
+                  shrinkageRecovered: shrinkageRecovered,
                   yastasServiceRevenue: netProfit.yastasServiceRevenue,
                   netProfit: netProfit.amount)
     }

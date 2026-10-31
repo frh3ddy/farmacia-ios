@@ -88,6 +88,9 @@ public struct OperatingExpensesSummary: Decodable {
     public let total: String
     public let byType: [ExpenseByType]
     public let shrinkage: String
+    /// Merma split into its parts; nil from older servers.
+    public let shrinkageLosses: String?
+    public let shrinkageRecovered: String?
 }
 
 public struct ExpenseByType: Decodable {
