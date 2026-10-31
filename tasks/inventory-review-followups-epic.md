@@ -72,7 +72,7 @@ The adjustment cost field shows for every adjustment that adds stock, because th
 
 ## ✅ History rows and receive price check
 
-Branch `fix/history-rows-and-price`.
+Merged: `f580589` (merge `9fcbfc2`).
 - Receiving history shows costs as currency (`$12.50/unidad`, `ReportFormat.currency`), not the API's raw `$12.5000/unit`.
 - An adjustment row's color follows its signed quantity (`StockChange`), so a count correction that removed stock is red.
 - With "Actualizar Precio de Venta" on, Guardar needs a positive price (`ReceivingForm.canSave`).
