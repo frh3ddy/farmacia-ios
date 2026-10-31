@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		02991013D48CA916CD28FB6C /* ProductActivityFullView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AF0652B989018922F154F43 /* ProductActivityFullView.swift */; };
+		EF2BA2F01F33EBE2E9F5403D /* AdjustmentRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 383E46FC29408F8852C796C3 /* AdjustmentRow.swift */; };
+		7BBE7156191797A1D07BEAE3 /* ReceivingRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D0C57A4A003A2A20B5377FE /* ReceivingRow.swift */; };
 		37E697342F32AC3200F6CB5D /* ExpenseFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E697302F32AC3200F6CB5D /* ExpenseFormView.swift */; };
 		37E697352F32AC3200F6CB5D /* ExpensesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E697312F32AC3200F6CB5D /* ExpensesView.swift */; };
 		37E697362F32AC3200F6CB5D /* ExpenseDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E6972F2F32AC3200F6CB5D /* ExpenseDetailView.swift */; };
@@ -48,7 +50,6 @@
 		F000000100000011 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000011 /* MainTabView.swift */; };
 		F000000100000012 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000012 /* DashboardView.swift */; };
 		F000000100000013 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000013 /* SettingsView.swift */; };
-		F000000100000014 /* InventoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000014 /* InventoryView.swift */; };
 		F000000100000015 /* ReportsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000015 /* ReportsView.swift */; };
 		F000000100000016 /* EmployeesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000016 /* EmployeesView.swift */; };
 		F000000100000017 /* Employee.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000017 /* Employee.swift */; };
@@ -70,13 +71,9 @@
 		F000000100000038 /* ReceivingSummaryReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000038 /* ReceivingSummaryReportView.swift */; };
 		F000000100000039 /* ExpenseSummaryReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000039 /* ExpenseSummaryReportView.swift */; };
 		F000000100000040 /* InventoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000040 /* InventoryViewModel.swift */; };
-		F000000100000041 /* ReceiveInventoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000041 /* ReceiveInventoryView.swift */; };
 		F000000100000042 /* ReceiveInventoryFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000042 /* ReceiveInventoryFormView.swift */; };
-		F000000100000043 /* ProductPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000043 /* ProductPickerView.swift */; };
 		F000000100000044 /* SupplierPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000044 /* SupplierPickerView.swift */; };
-		F000000100000045 /* AdjustmentsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000045 /* AdjustmentsListView.swift */; };
 		F000000100000046 /* AdjustmentFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000046 /* AdjustmentFormView.swift */; };
-		F000000100000047 /* ReceivingHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000047 /* ReceivingHistoryView.swift */; };
 		F000000100000048 /* StatCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000048 /* StatCard.swift */; };
 		F000000100000049 /* DashboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000049 /* DashboardViewModel.swift */; };
 		F000000100000050 /* StockAlertViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000050 /* StockAlertViewModel.swift */; };
@@ -117,6 +114,8 @@
 		5B36C1CAC70495EFA1EEFDC2 /* CostSupplierViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CostSupplierViewModel.swift; sourceTree = "<group>"; };
 		67DB948B9C5055D67639955A /* ProductsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductsViewModel.swift; sourceTree = "<group>"; };
 		7AF0652B989018922F154F43 /* ProductActivityFullView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductActivityFullView.swift; sourceTree = "<group>"; };
+		383E46FC29408F8852C796C3 /* AdjustmentRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdjustmentRow.swift; sourceTree = "<group>"; };
+		6D0C57A4A003A2A20B5377FE /* ReceivingRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceivingRow.swift; sourceTree = "<group>"; };
 		AA00000200000001 /* GlobalActivityHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalActivityHistoryView.swift; sourceTree = "<group>"; };
 		BE1BABB646D2A0D186E009DB /* ProductActivityModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductActivityModels.swift; sourceTree = "<group>"; };
 		C675966EAAE838142E37278B /* ProductBatchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductBatchViewModel.swift; sourceTree = "<group>"; };
@@ -145,7 +144,6 @@
 		F100000100000011 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		F100000100000012 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		F100000100000013 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		F100000100000014 /* InventoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryView.swift; sourceTree = "<group>"; };
 		F100000100000015 /* ReportsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportsView.swift; sourceTree = "<group>"; };
 		F100000100000016 /* EmployeesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmployeesView.swift; sourceTree = "<group>"; };
 		F100000100000017 /* Employee.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Employee.swift; sourceTree = "<group>"; };
@@ -168,13 +166,9 @@
 		F100000100000038 /* ReceivingSummaryReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceivingSummaryReportView.swift; sourceTree = "<group>"; };
 		F100000100000039 /* ExpenseSummaryReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseSummaryReportView.swift; sourceTree = "<group>"; };
 		F100000100000040 /* InventoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryViewModel.swift; sourceTree = "<group>"; };
-		F100000100000041 /* ReceiveInventoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiveInventoryView.swift; sourceTree = "<group>"; };
 		F100000100000042 /* ReceiveInventoryFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiveInventoryFormView.swift; sourceTree = "<group>"; };
-		F100000100000043 /* ProductPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductPickerView.swift; sourceTree = "<group>"; };
 		F100000100000044 /* SupplierPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupplierPickerView.swift; sourceTree = "<group>"; };
-		F100000100000045 /* AdjustmentsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdjustmentsListView.swift; sourceTree = "<group>"; };
 		F100000100000046 /* AdjustmentFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdjustmentFormView.swift; sourceTree = "<group>"; };
-		F100000100000047 /* ReceivingHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceivingHistoryView.swift; sourceTree = "<group>"; };
 		F100000100000048 /* StatCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatCard.swift; sourceTree = "<group>"; };
 		F100000100000049 /* DashboardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardViewModel.swift; sourceTree = "<group>"; };
 		F100000100000050 /* StockAlertViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StockAlertViewModel.swift; sourceTree = "<group>"; };
@@ -236,6 +230,8 @@
 				37E697382F32F2A400F6CB5D /* ProductDetailView.swift */,
 				BE1BABB646D2A0D186E009DB /* ProductActivityModels.swift */,
 				7AF0652B989018922F154F43 /* ProductActivityFullView.swift */,
+				383E46FC29408F8852C796C3 /* AdjustmentRow.swift */,
+				6D0C57A4A003A2A20B5377FE /* ReceivingRow.swift */,
 				C675966EAAE838142E37278B /* ProductBatchViewModel.swift */,
 				551F6878C658EA6406F8A5A7 /* EditPriceView.swift */,
 				5B36C1CAC70495EFA1EEFDC2 /* CostSupplierViewModel.swift */,
@@ -455,15 +451,10 @@
 		F300000000000016 /* Views */ = {
 			isa = PBXGroup;
 			children = (
-				F100000100000014 /* InventoryView.swift */,
 				F100000100000040 /* InventoryViewModel.swift */,
-				F100000100000041 /* ReceiveInventoryView.swift */,
 				F100000100000042 /* ReceiveInventoryFormView.swift */,
-				F100000100000043 /* ProductPickerView.swift */,
 				F100000100000044 /* SupplierPickerView.swift */,
-				F100000100000045 /* AdjustmentsListView.swift */,
 				F100000100000046 /* AdjustmentFormView.swift */,
-				F100000100000047 /* ReceivingHistoryView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -602,6 +593,8 @@
 				37E6973C2F32F2A400F6CB5D /* ProductDetailView.swift in Sources */,
 				60F1A074105F42A169FD4F72 /* ProductActivityModels.swift in Sources */,
 				02991013D48CA916CD28FB6C /* ProductActivityFullView.swift in Sources */,
+				EF2BA2F01F33EBE2E9F5403D /* AdjustmentRow.swift in Sources */,
+				7BBE7156191797A1D07BEAE3 /* ReceivingRow.swift in Sources */,
 				B9E53ECCEE227AA469A1BEBC /* ProductBatchViewModel.swift in Sources */,
 				A72617238F43931DC3C57629 /* EditPriceView.swift in Sources */,
 				D419F61DEDDF944288D2F152 /* CostSupplierViewModel.swift in Sources */,
@@ -623,15 +616,10 @@
 				F000000100000013 /* SettingsView.swift in Sources */,
 				F000000100000057 /* DeviceManagementView.swift in Sources */,
 				F000000100000056 /* MoreView.swift in Sources */,
-				F000000100000014 /* InventoryView.swift in Sources */,
 				F000000100000040 /* InventoryViewModel.swift in Sources */,
-				F000000100000041 /* ReceiveInventoryView.swift in Sources */,
 				F000000100000042 /* ReceiveInventoryFormView.swift in Sources */,
-				F000000100000043 /* ProductPickerView.swift in Sources */,
 				F000000100000044 /* SupplierPickerView.swift in Sources */,
-				F000000100000045 /* AdjustmentsListView.swift in Sources */,
 				F000000100000046 /* AdjustmentFormView.swift in Sources */,
-				F000000100000047 /* ReceivingHistoryView.swift in Sources */,
 				F000000100000015 /* ReportsView.swift in Sources */,
 				F000000100000031 /* ReportsViewModel.swift in Sources */,
 				F000000100000032 /* ReportsShared.swift in Sources */,

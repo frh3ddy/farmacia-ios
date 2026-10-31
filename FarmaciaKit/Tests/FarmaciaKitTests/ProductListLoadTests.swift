@@ -37,6 +37,17 @@ struct ProductListLoadTests {
         #expect(filter.apiValue == expected)
     }
 
+    @Test("given a search for \"ibup\", should send the store, page, limit and search term")
+    func searchParams() {
+        #expect(ibup.params(page: 1, limit: 50) == ["locationId": "centro", "page": "1", "limit": "50", "search": "ibup"])
+    }
+
+    @Test("given the low-stock chip on page 2, should send filter=lowStock and no search")
+    func filterParams() {
+        let lowStock = ProductListQuery(locationId: "centro", search: nil, filter: .lowStock)
+        #expect(lowStock.params(page: 2, limit: 50) == ["locationId": "centro", "page": "2", "limit": "50", "filter": "lowStock"])
+    }
+
     @Test("given a search or a filter, isCatalog should be false; given neither, true")
     func isCatalog() {
         #expect(catalog.isCatalog)

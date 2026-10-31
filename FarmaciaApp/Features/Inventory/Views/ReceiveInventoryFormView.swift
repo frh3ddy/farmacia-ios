@@ -8,14 +8,11 @@ struct ReceiveInventoryFormView: View {
     @EnvironmentObject var authManager: AuthManager
     @ObservedObject var viewModel: InventoryViewModel
 
-    /// When set, the product is pre-selected and locked (coming from ProductDetailView).
-    /// When nil, the user picks a product from the full list (standalone inventory flow).
-    let preSelectedProduct: Product?
+    /// The product being received (the form opens from its detail screen).
+    let product: Product
     /// Called after a successful receive so the parent can refresh data
     var onComplete: (() -> Void)?
 
-    @State private var selectedProduct: Product?
-    @State private var showProductPicker = false
     @State private var quantity: Int?
     @State private var receivingCost = ReceivingCost()
     @State private var updateSellingPrice = false
@@ -41,26 +38,7 @@ struct ReceiveInventoryFormView: View {
     @State private var supplierLastCost: Double?
     @State private var supplierCostNote: String?
 
-    /// Convenience initializer for standalone use (no pre-selected product)
-    init(viewModel: InventoryViewModel) {
-        self.viewModel = viewModel
-        self.preSelectedProduct = nil
-        self.onComplete = nil
-    }
-
-    /// Initializer for use from ProductDetailView with a pre-selected product
-    init(viewModel: InventoryViewModel, preSelectedProduct: Product, onComplete: (() -> Void)? = nil) {
-        self.viewModel = viewModel
-        self.preSelectedProduct = preSelectedProduct
-        self.onComplete = onComplete
-    }
-
-    private var isProductLocked: Bool {
-        preSelectedProduct != nil
-    }
-
     private var isValid: Bool {
-        selectedProduct != nil &&
         (quantity ?? 0) > 0 &&
         (receivingCost.value ?? -1) >= 0
     }
@@ -70,48 +48,20 @@ struct ReceiveInventoryFormView: View {
             Form {
                 // Product Selection
                 Section("Producto") {
-                    if isProductLocked {
-                        // Product is pre-selected and locked — show as info, not a button
-                        HStack {
-                            VStack(alignment: .leading) {
-                                Text(selectedProduct?.displayName ?? "")
-                                    .foregroundStyle(.primary)
-                                if let sku = selectedProduct?.sku {
-                                    Text("SKU: \(sku)")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                            Spacer()
-                            Image(systemName: "lock.fill")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    } else {
-                        // Standard product picker button
-                        Button {
-                            showProductPicker = true
-                        } label: {
-                            HStack {
-                                if let product = selectedProduct {
-                                    VStack(alignment: .leading) {
-                                        Text(product.displayName)
-                                            .foregroundStyle(.primary)
-                                        if let sku = product.sku {
-                                            Text("SKU: \(sku)")
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                        }
-                                    }
-                                } else {
-                                    Text("Seleccionar Producto")
-                                        .foregroundStyle(.secondary)
-                                }
-                                Spacer()
-                                Image(systemName: "chevron.right")
+                    HStack {
+                        VStack(alignment: .leading) {
+                            Text(product.displayName)
+                                .foregroundStyle(.primary)
+                            if let sku = product.sku {
+                                Text("SKU: \(sku)")
+                                    .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
                         }
+                        Spacer()
+                        Image(systemName: "lock.fill")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                 }
 
@@ -170,7 +120,7 @@ struct ReceiveInventoryFormView: View {
                         .onTapGesture { focusedField = .sellingPrice }
 
                         // Show current price if available
-                        if let currentPrice = selectedProduct?.sellingPrice {
+                        if let currentPrice = product.sellingPrice {
                             HStack {
                                 Text("Precio Actual")
                                     .foregroundStyle(.secondary)
@@ -331,13 +281,6 @@ struct ReceiveInventoryFormView: View {
                     .disabled(!isValid || viewModel.isSubmitting)
                 }
             }
-            .sheet(isPresented: $showProductPicker) {
-                ProductPickerView(
-                    products: viewModel.products,
-                    selectedProduct: $selectedProduct,
-                    isLoading: viewModel.isLoadingProducts
-                )
-            }
             .sheet(isPresented: $showSupplierPicker) {
                 SupplierPickerView(
                     suppliers: $viewModel.suppliers,
@@ -349,26 +292,10 @@ struct ReceiveInventoryFormView: View {
             } message: {
                 Text(viewModel.saveError ?? "")
             }
-            .onAppear {
-                // Pre-select product if provided (from ProductDetailView context)
-                if let product = preSelectedProduct, selectedProduct == nil {
-                    selectedProduct = product
-                    receivingCost.productChanged(to: product.id)
-                    // Fetch suppliers for the pre-selected product
-                    Task { await loadProductSuppliers(for: product.id) }
-                }
-            }
-            .onChange(of: selectedProduct) { oldValue, newValue in
-                // When product changes, fetch its suppliers to find preferred one
-                if let product = newValue, product.id != oldValue?.id {
-                    // Reset supplier state; the cost was the previous product's
-                    receivingCost.productChanged(to: product.id)
-                    productSuppliers = []
-                    selectedSupplier = nil
-                    supplierLastCost = nil
-                    supplierCostNote = nil
-                    Task { await loadProductSuppliers(for: product.id) }
-                }
+            .task {
+                // Fetch the product's suppliers to auto-pick the preferred one
+                receivingCost.productChanged(to: product.id)
+                await loadProductSuppliers(for: product.id)
             }
             .onChange(of: selectedSupplier) { oldValue, newValue in
                 // When supplier changes, update last cost display
@@ -376,8 +303,7 @@ struct ReceiveInventoryFormView: View {
                     if let ps = productSuppliers.first(where: { $0.id == supplier.id }) {
                         supplierLastCost = ps.costDouble
                         // Auto-fill unit cost if empty
-                        if let productId = selectedProduct?.id,
-                           receivingCost.offerSupplierCost(ps.costDouble, forProductId: productId) {
+                        if receivingCost.offerSupplierCost(ps.costDouble, forProductId: product.id) {
                             supplierCostNote = "Costo auto-completado del último precio del proveedor"
                         } else {
                             supplierCostNote = nil
@@ -404,8 +330,6 @@ struct ReceiveInventoryFormView: View {
             let response: ProductSuppliersResponse = try await APIClient.shared.request(
                 endpoint: .productSuppliers(productId: productId)
             )
-            // The user picked another product while this loaded
-            guard selectedProduct?.id == productId else { return }
             productSuppliers = response.suppliers
 
             // Auto-select preferred supplier if user hasn't picked one yet
@@ -427,8 +351,7 @@ struct ReceiveInventoryFormView: View {
     }
 
     private func saveReceiving() async {
-        guard let product = selectedProduct,
-              let qty = quantity,
+        guard let qty = quantity,
               let cost = receivingCost.value,
               let locationId = authManager.currentLocation?.id else {
             viewModel.isSubmitting = false

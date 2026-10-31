@@ -5,6 +5,8 @@
 
 ## Overview
 
+The receive and adjustment forms are reached only from a product's detail screen (Productos → product → Recibir Inventario / Ajustar Inventario), with the product fixed. The standalone Inventory screen (Recibir / Ajustes / Historial segments, product picker) had been unreachable since the Products hub replaced the Inventory tab (`bc7f68c`) and is now removed — so findings that needed it (Inventory tab reload, product switch in a form, picker limited to 50 products) never affected users.
+
 The first review found three critical bugs: count correction computed its change from a stale or other-store stock snapshot, the Inventory tab didn't reload on a location switch, and every save tap made a new `clientRequestId`. A second review, focused on the post-cutover workflow, found two more that affect stock and cost. Those and the items marked ✅ below are merged to `main` (not yet pushed or deployed); the 📋 items are still open, highest severity first.
 
 ---
@@ -17,7 +19,7 @@ Merged: iOS `b3c0918` (merge `9262a24`), farmacia-ops `9b40232` (merge `9b21958`
 
 ## ✅ Receiving cost belongs to the selected product
 
-Merged: `c2e3630` (merge `d046810`). Picking another product in the receive form kept the previous product's auto-filled `unitCost`, recording the receiving at the wrong cost (wrong FIFO batch → COGS, margin, valuation). `ReceivingCost` clears the cost on a product change and ignores a supplier response for a product no longer selected.
+Merged: `c2e3630` (merge `d046810`). Picking another product in the receive form kept the previous product's auto-filled `unitCost`, recording the receiving at the wrong cost. `ReceivingCost` clears the cost on a product change and ignores a supplier response for a product no longer selected. **Correction:** switching product was only possible through the unreachable picker, so this never happened in the app; `ReceivingCost` now only applies its fill rules (empty field, positive cost).
 
 ---
 
@@ -33,13 +35,9 @@ Merged: `18bc267` (merge `9dcaf1a`). An adjustment that adds stock on a product 
 
 ---
 
-## 📋 Product picker sees only the first 50 products
+## ✅ Unreachable Inventory screens removed
 
-`InventoryViewModel.loadProducts` calls `GET /products` with no `page`/`limit`; the API defaults to 50, newest first. `ProductPickerView` filters only those on the device, so older products can't be received or adjusted from the Inventory tab (the product-detail path is unaffected).
-
-**Requirements**:
-- Given a store with more than 50 products, should let the picker find any of them (server-side `search`, or page through `hasMore`)
-- Given a search typed in the picker, should query the API rather than filter a partial list
+Branch `fix/remove-unreachable-inventory`. Reported as "product picker sees only the first 50 products", but nothing opened the picker: `InventoryView` had no caller. Removed `InventoryView`, `ReceiveInventoryView`, `AdjustmentsListView`, `ReceivingHistoryView` and `ProductPickerView`; the forms now take a required `product`. `ReceivingRow` and `AdjustmentRow` (used by product activity and global history) moved to their own files in `Products/Views`. Product detail no longer fetches 50 products (and could no longer raise a spurious "Error al cargar productos") for the unused picker. `ProductListQuery.params(page:limit:)` now builds the Products tab's list query (also clears its Swift 6 capture warning).
 
 ---
 
@@ -74,12 +72,11 @@ The adjustment cost field shows for every adjustment that adds stock, because th
 
 ## 📋 Small fixes
 
-- Given a receiving in history, should show formatted costs, not raw decimal strings like `$12.5000/unit` (`ReceivingRow`; formatted helpers exist in `Models/Inventory.swift`)
-- Given a count correction that removed stock, should color it red, not green (`AdjustmentRow` treats `.countCorrection` as positive)
+- Given a receiving in history, should show formatted costs, not raw decimal strings like `$12.5000/unit` (`Products/Views/ReceivingRow.swift`; formatted helpers exist in `Models/Inventory.swift`)
+- Given a count correction that removed stock, should color it red, not green (`Products/Views/AdjustmentRow.swift` treats `.countCorrection` as positive)
 - Given "Actualizar Precio de Venta" on with an empty price, should disable Guardar rather than save without the price
-- Given a cancelled load, should detect it by error type, not by "cancel" in `errorDescription` (`InventoryViewModel` load functions)
 - Given a create-product response with no `data`, should show an error rather than nothing (`CreateProductView.swift`)
-- Given `ProductsViewModel` building the list request, should not capture the `var params` in `async let` (Swift 6 error)
+- Given an adjustment whose Square sync failed, should offer a retry somewhere reachable (`AdjustmentRow`'s retry button only had a handler on the removed adjustments list; `POST /inventory/adjustments/:id/retry-square-sync` exists)
 
 ---
 

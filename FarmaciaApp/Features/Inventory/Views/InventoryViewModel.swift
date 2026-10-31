@@ -6,18 +6,9 @@ import FarmaciaKit
 @MainActor
 class InventoryViewModel: ObservableObject {
     // MARK: - Published Properties
-    @Published var products: [Product] = []
     @Published var suppliers: [Supplier] = []
-    @Published var recentReceivings: [InventoryReceiving] = []
-    @Published var recentAdjustments: [InventoryAdjustment] = []
-
-    @Published var isLoadingProducts = false
-    @Published var isLoadingReceivings = false
-    @Published var isLoadingAdjustments = false
     @Published var isSubmitting = false
 
-    @Published var errorMessage: String?
-    @Published var showError = false
     /// A failed receive or adjustment, shown inside its form (an alert on the
     /// screen behind can't present over the open sheet).
     @Published var saveError: String?
@@ -31,32 +22,6 @@ class InventoryViewModel: ObservableObject {
     // MARK: - Dependencies
     private let apiClient = APIClient.shared
 
-    // MARK: - Load Products
-    func loadProducts() async {
-        isLoadingProducts = true
-        defer { isLoadingProducts = false }
-
-        do {
-            let response: ProductListResponse = try await apiClient.request(endpoint: .listProducts)
-            products = response.data
-        } catch is CancellationError {
-            // Request was cancelled, don't show error
-            return
-        } catch let error as NetworkError {
-            if error.errorDescription?.lowercased().contains("cancel") == true {
-                return
-            }
-            errorMessage = error.errorDescription
-            showError = true
-        } catch {
-            if error.localizedDescription.lowercased().contains("cancel") {
-                return
-            }
-            errorMessage = "Error al cargar productos"
-            showError = true
-        }
-    }
-
     // MARK: - Load Suppliers
     func loadSuppliers() async {
         do {
@@ -65,64 +30,6 @@ class InventoryViewModel: ObservableObject {
         } catch {
             // Suppliers are optional, don't show error
             print("Failed to load suppliers: \(error)")
-        }
-    }
-
-    // MARK: - Load Receivings
-    func loadReceivings(locationId: String) async {
-        isLoadingReceivings = true
-        defer { isLoadingReceivings = false }
-
-        do {
-            let response: ReceivingListResponse = try await apiClient.request(
-                endpoint: .listReceivingsByLocation(locationId: locationId)
-            )
-            recentReceivings = response.data
-        } catch is CancellationError {
-            // Request was cancelled, don't show error
-            return
-        } catch let error as NetworkError {
-            // Don't show cancelled errors
-            if error.errorDescription?.lowercased().contains("cancel") == true {
-                return
-            }
-            errorMessage = error.errorDescription
-            showError = true
-        } catch {
-            // Don't show cancelled errors
-            if error.localizedDescription.lowercased().contains("cancel") {
-                return
-            }
-            errorMessage = "Error al cargar recepciones"
-            showError = true
-        }
-    }
-
-    // MARK: - Load Adjustments
-    func loadAdjustments(locationId: String) async {
-        isLoadingAdjustments = true
-        defer { isLoadingAdjustments = false }
-
-        do {
-            let response: AdjustmentListResponse = try await apiClient.request(
-                endpoint: .adjustmentsByLocation(locationId: locationId)
-            )
-            recentAdjustments = response.data
-        } catch is CancellationError {
-            // Request was cancelled, don't show error
-            return
-        } catch let error as NetworkError {
-            if error.errorDescription?.lowercased().contains("cancel") == true {
-                return
-            }
-            errorMessage = error.errorDescription
-            showError = true
-        } catch {
-            if error.localizedDescription.lowercased().contains("cancel") {
-                return
-            }
-            errorMessage = "Error al cargar ajustes"
-            showError = true
         }
     }
 
@@ -144,10 +51,6 @@ class InventoryViewModel: ObservableObject {
             if let updatedProduct = response.data.product {
                 ProductCacheManager.shared.saveProduct(updatedProduct)
             }
-
-            // Reload receivings
-            await loadReceivings(locationId: request.locationId)
-
             return true
         } catch {
             return saved(SaveOutcome(error: error, fallback: "Error al recibir inventario"))
@@ -218,7 +121,6 @@ class InventoryViewModel: ObservableObject {
             )
             successMessage = response.message
             showSuccess = true
-            await loadAdjustments(locationId: locationId)
             return true
         } catch {
             return saved(SaveOutcome(error: error, fallback: "Error al crear ajuste"))
@@ -229,40 +131,6 @@ class InventoryViewModel: ObservableObject {
         guard case .failed(let message) = outcome else { return true }
         saveError = message
         return false
-    }
-
-    // MARK: - Retry Adjustment Square Sync
-    func retryAdjustmentSquareSync(adjustmentId: String, locationId: String) async {
-        do {
-            let response: RetrySquareSyncResponse = try await apiClient.request(
-                endpoint: .retryAdjustmentSquareSync(adjustmentId: adjustmentId)
-            )
-            successMessage = response.message
-            showSuccess = true
-            await loadAdjustments(locationId: locationId)
-        } catch is CancellationError {
-            return
-        } catch let error as NetworkError {
-            if error.errorDescription?.lowercased().contains("cancel") == true {
-                return
-            }
-            errorMessage = error.errorDescription
-            showError = true
-        } catch {
-            errorMessage = "Error al reintentar la sincronización con Square"
-            showError = true
-        }
-    }
-
-    // MARK: - Search Products
-    func searchProducts(_ query: String) -> [Product] {
-        guard !query.isEmpty else { return products }
-        let lowercased = query.lowercased()
-        return products.filter { product in
-            product.displayName.lowercased().contains(lowercased) ||
-            product.sku?.lowercased().contains(lowercased) == true ||
-            product.name.lowercased().contains(lowercased)
-        }
     }
 }
 
