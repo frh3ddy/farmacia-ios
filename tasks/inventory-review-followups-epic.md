@@ -37,7 +37,7 @@ Merged: `18bc267` (merge `9dcaf1a`). An adjustment that adds stock on a product 
 
 ## ✅ Unreachable Inventory screens removed
 
-Branch `fix/remove-unreachable-inventory`. Reported as "product picker sees only the first 50 products", but nothing opened the picker: `InventoryView` had no caller. Removed `InventoryView`, `ReceiveInventoryView`, `AdjustmentsListView`, `ReceivingHistoryView` and `ProductPickerView`; the forms now take a required `product`. `ReceivingRow` and `AdjustmentRow` (used by product activity and global history) moved to their own files in `Products/Views`. Product detail no longer fetches 50 products (and could no longer raise a spurious "Error al cargar productos") for the unused picker. `ProductListQuery.params(page:limit:)` now builds the Products tab's list query (also clears its Swift 6 capture warning).
+Merged: `789cc0f` (merge `e77976e`). Reported as "product picker sees only the first 50 products", but nothing opened the picker: `InventoryView` had no caller. Removed `InventoryView`, `ReceiveInventoryView`, `AdjustmentsListView`, `ReceivingHistoryView` and `ProductPickerView`; the forms now take a required `product`. `ReceivingRow` and `AdjustmentRow` (used by product activity and global history) moved to their own files in `Products/Views`. Product detail no longer fetches 50 products (and could no longer raise a spurious "Error al cargar productos") for the unused picker. `ProductListQuery.params(page:limit:)` now builds the Products tab's list query (also clears its Swift 6 capture warning).
 
 ---
 
