@@ -57,6 +57,18 @@ struct GlobalActivityHistoryView: View {
         } message: {
             Text(viewModel.errorMessage ?? "Ocurrió un error")
         }
+        .alert("Square", isPresented: $viewModel.showSyncRetryMessage) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(viewModel.syncRetryMessage ?? "")
+        }
+    }
+
+    /// The owner's retry for a row, or nil (no button) for everyone else.
+    private func retry(_ action: @escaping (String) async -> Void) -> (() async -> Void)? {
+        guard SquareSync.canRetry(isOwner: authManager.isOwner),
+              let locationId = authManager.currentLocation?.id else { return nil }
+        return { await action(locationId) }
     }
     
     // MARK: - All Activity
@@ -115,7 +127,10 @@ struct GlobalActivityHistoryView: View {
         } else {
             Section("Recent Receivings (\(viewModel.receivings.count))") {
                 ForEach(viewModel.receivings) { receiving in
-                    ReceivingRow(receiving: receiving)
+                    ReceivingRow(
+                        receiving: receiving,
+                        onRetrySync: retry { await viewModel.retrySync(receiving: receiving, locationId: $0) }
+                    )
                 }
             }
         }
@@ -144,7 +159,10 @@ struct GlobalActivityHistoryView: View {
         } else {
             Section("Recent Adjustments (\(viewModel.adjustments.count))") {
                 ForEach(viewModel.adjustments) { adjustment in
-                    AdjustmentRow(adjustment: adjustment)
+                    AdjustmentRow(
+                        adjustment: adjustment,
+                        onRetrySync: retry { await viewModel.retrySync(adjustment: adjustment, locationId: $0) }
+                    )
                 }
             }
         }
@@ -279,8 +297,26 @@ class GlobalActivityViewModel: ObservableObject {
     @Published var isLoadingAdjustments = false
     @Published var errorMessage: String?
     @Published var showError = false
-    
+    /// The outcome of the last Square sync retry, shown in an alert.
+    @Published var syncRetryMessage: String?
+    var showSyncRetryMessage: Bool {
+        get { syncRetryMessage != nil }
+        set { if !newValue { syncRetryMessage = nil } }
+    }
+
     private let apiClient = APIClient.shared
+
+    // MARK: - Square Sync Retry (owner only)
+
+    func retrySync(receiving: InventoryReceiving, locationId: String) async {
+        syncRetryMessage = await SquareSyncRetry.run(.retrySquareSync(receivingId: receiving.id))
+        await loadReceivings(locationId: locationId)
+    }
+
+    func retrySync(adjustment: InventoryAdjustment, locationId: String) async {
+        syncRetryMessage = await SquareSyncRetry.run(.retryAdjustmentSquareSync(adjustmentId: adjustment.id))
+        await loadAdjustments(locationId: locationId)
+    }
     
     var combinedActivity: [GlobalActivityItem] {
         var items: [GlobalActivityItem] = []
@@ -299,16 +335,15 @@ class GlobalActivityViewModel: ObservableObject {
         }
 
         for a in adjustments {
-            let displayQty = a.type.isNegative ? -abs(a.quantity) : a.quantity
             items.append(GlobalActivityItem(
                 id: "adj-\(a.id)",
                 productName: a.product?.displayName ?? "Unknown Product",
                 title: a.type.displayName,
                 subtitle: a.reason ?? a.notes ?? "",
                 date: a.adjustedAt,
-                quantity: displayQty,
+                quantity: a.quantity,
                 icon: a.type.icon,
-                iconColor: a.type.isPositive ? .green : (a.type.isNegative ? .red : .orange)
+                iconColor: StockChange(quantity: a.quantity).color
             ))
         }
         

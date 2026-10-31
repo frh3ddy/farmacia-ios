@@ -1,4 +1,5 @@
 import SwiftUI
+import FarmaciaKit
 
 // MARK: - Product Activity Item (unified timeline model)
 
@@ -59,16 +60,15 @@ class ProductActivityViewModel: ObservableObject {
         
         // Convert adjustments
         for a in adjustments {
-            let displayQty = a.type.isNegative ? -abs(a.quantity) : a.quantity
             items.append(ProductActivityItem(
                 id: "adj-\(a.id)",
                 kind: .adjustment(a.type),
                 title: "\(a.type.displayName)",
                 subtitle: a.reason ?? a.notes ?? a.adjustedAt.formatted(date: .abbreviated, time: .shortened),
                 date: a.adjustedAt,
-                quantity: displayQty,
+                quantity: a.quantity,
                 icon: a.type.icon,
-                iconColor: a.type.isPositive ? .green : (a.type.isNegative ? .red : .orange)
+                iconColor: StockChange(quantity: a.quantity).color
             ))
         }
         

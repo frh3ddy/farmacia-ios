@@ -578,7 +578,13 @@ struct ProductDetailView: View {
                         ProductActivityFullView(
                             product: displayProduct,
                             receivings: activityViewModel.receivings,
-                            adjustments: activityViewModel.adjustments
+                            adjustments: activityViewModel.adjustments,
+                            retryReceiving: canRetrySync ? { receiving in
+                                await retrySync(.retrySquareSync(receivingId: receiving.id))
+                            } : nil,
+                            retryAdjustment: canRetrySync ? { adjustment in
+                                await retrySync(.retryAdjustmentSquareSync(adjustmentId: adjustment.id))
+                            } : nil
                         )
                     } label: {
                         HStack {
@@ -773,6 +779,17 @@ struct ProductDetailView: View {
     
     private func loadActivity() async {
         await activityViewModel.loadActivity(productId: displayProduct.id)
+    }
+
+    private var canRetrySync: Bool {
+        SquareSync.canRetry(isOwner: authManager.isOwner)
+    }
+
+    /// Retries one record's Square sync, then reloads the activity so its warning clears.
+    private func retrySync(_ endpoint: APIEndpoint) async -> String {
+        let message = await SquareSyncRetry.run(endpoint)
+        await loadActivity()
+        return message
     }
     
     private func loadCostSupplierData() async {

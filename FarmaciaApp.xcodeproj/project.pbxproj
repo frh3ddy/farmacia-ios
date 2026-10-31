@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		02991013D48CA916CD28FB6C /* ProductActivityFullView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AF0652B989018922F154F43 /* ProductActivityFullView.swift */; };
+		81F1A65B432049666628D345 /* SquareSyncRetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F9FC2FE062800625B91B0BC /* SquareSyncRetry.swift */; };
+		1BF65B9A5EE3C1F2071746E1 /* SquareSyncStatusLine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53CFC80EDDE3F38D515DD6D0 /* SquareSyncStatusLine.swift */; };
 		EF2BA2F01F33EBE2E9F5403D /* AdjustmentRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 383E46FC29408F8852C796C3 /* AdjustmentRow.swift */; };
 		7BBE7156191797A1D07BEAE3 /* ReceivingRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D0C57A4A003A2A20B5377FE /* ReceivingRow.swift */; };
 		37E697342F32AC3200F6CB5D /* ExpenseFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E697302F32AC3200F6CB5D /* ExpenseFormView.swift */; };
@@ -114,6 +116,8 @@
 		5B36C1CAC70495EFA1EEFDC2 /* CostSupplierViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CostSupplierViewModel.swift; sourceTree = "<group>"; };
 		67DB948B9C5055D67639955A /* ProductsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductsViewModel.swift; sourceTree = "<group>"; };
 		7AF0652B989018922F154F43 /* ProductActivityFullView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductActivityFullView.swift; sourceTree = "<group>"; };
+		3F9FC2FE062800625B91B0BC /* SquareSyncRetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SquareSyncRetry.swift; sourceTree = "<group>"; };
+		53CFC80EDDE3F38D515DD6D0 /* SquareSyncStatusLine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SquareSyncStatusLine.swift; sourceTree = "<group>"; };
 		383E46FC29408F8852C796C3 /* AdjustmentRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdjustmentRow.swift; sourceTree = "<group>"; };
 		6D0C57A4A003A2A20B5377FE /* ReceivingRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceivingRow.swift; sourceTree = "<group>"; };
 		AA00000200000001 /* GlobalActivityHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalActivityHistoryView.swift; sourceTree = "<group>"; };
@@ -230,6 +234,8 @@
 				37E697382F32F2A400F6CB5D /* ProductDetailView.swift */,
 				BE1BABB646D2A0D186E009DB /* ProductActivityModels.swift */,
 				7AF0652B989018922F154F43 /* ProductActivityFullView.swift */,
+				3F9FC2FE062800625B91B0BC /* SquareSyncRetry.swift */,
+				53CFC80EDDE3F38D515DD6D0 /* SquareSyncStatusLine.swift */,
 				383E46FC29408F8852C796C3 /* AdjustmentRow.swift */,
 				6D0C57A4A003A2A20B5377FE /* ReceivingRow.swift */,
 				C675966EAAE838142E37278B /* ProductBatchViewModel.swift */,
@@ -593,6 +599,8 @@
 				37E6973C2F32F2A400F6CB5D /* ProductDetailView.swift in Sources */,
 				60F1A074105F42A169FD4F72 /* ProductActivityModels.swift in Sources */,
 				02991013D48CA916CD28FB6C /* ProductActivityFullView.swift in Sources */,
+				81F1A65B432049666628D345 /* SquareSyncRetry.swift in Sources */,
+				1BF65B9A5EE3C1F2071746E1 /* SquareSyncStatusLine.swift in Sources */,
 				EF2BA2F01F33EBE2E9F5403D /* AdjustmentRow.swift in Sources */,
 				7BBE7156191797A1D07BEAE3 /* ReceivingRow.swift in Sources */,
 				B9E53ECCEE227AA469A1BEBC /* ProductBatchViewModel.swift in Sources */,

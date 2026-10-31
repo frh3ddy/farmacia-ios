@@ -1,4 +1,5 @@
 import SwiftUI
+import FarmaciaKit
 
 // MARK: - Product Activity Full View (all history for a product)
 
@@ -6,8 +7,13 @@ struct ProductActivityFullView: View {
     let product: Product
     let receivings: [InventoryReceiving]
     let adjustments: [InventoryAdjustment]
+    /// Owner-only Square sync retries; each returns the message to show. Nil hides Reintentar.
+    var retryReceiving: ((InventoryReceiving) async -> String)? = nil
+    var retryAdjustment: ((InventoryAdjustment) async -> String)? = nil
 
     @State private var selectedSegment: ActivitySegment = .all
+    @State private var syncRetryMessage = ""
+    @State private var showSyncRetryMessage = false
 
     enum ActivitySegment: String, CaseIterable {
         case all = "Todos"
@@ -42,7 +48,10 @@ struct ProductActivityFullView: View {
                         emptyState("Sin recepciones registradas")
                     } else {
                         ForEach(receivings) { receiving in
-                            ReceivingRow(receiving: receiving)
+                            ReceivingRow(
+                                receiving: receiving,
+                                onRetrySync: retryReceiving.map { retry in { await showRetryResult(retry(receiving)) } }
+                            )
                         }
                     }
 
@@ -51,7 +60,10 @@ struct ProductActivityFullView: View {
                         emptyState("Sin ajustes registrados")
                     } else {
                         ForEach(adjustments) { adjustment in
-                            AdjustmentRow(adjustment: adjustment)
+                            AdjustmentRow(
+                                adjustment: adjustment,
+                                onRetrySync: retryAdjustment.map { retry in { await showRetryResult(retry(adjustment)) } }
+                            )
                         }
                     }
                 }
@@ -60,6 +72,16 @@ struct ProductActivityFullView: View {
         }
         .navigationTitle("\(product.displayName) Activity")
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Square", isPresented: $showSyncRetryMessage) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(syncRetryMessage)
+        }
+    }
+
+    private func showRetryResult(_ message: String) {
+        syncRetryMessage = message
+        showSyncRetryMessage = true
     }
     
     private var combinedItems: [ProductActivityItem] {
@@ -79,16 +101,15 @@ struct ProductActivityFullView: View {
         }
 
         for a in adjustments {
-            let displayQty = a.type.isNegative ? -abs(a.quantity) : a.quantity
             items.append(ProductActivityItem(
                 id: "adj-\(a.id)",
                 kind: .adjustment(a.type),
                 title: "\(a.type.displayName)",
                 subtitle: a.reason ?? a.notes ?? a.adjustedAt.formatted(date: .abbreviated, time: .shortened),
                 date: a.adjustedAt,
-                quantity: displayQty,
+                quantity: a.quantity,
                 icon: a.type.icon,
-                iconColor: a.type.isPositive ? .green : (a.type.isNegative ? .red : .orange)
+                iconColor: StockChange(quantity: a.quantity).color
             ))
         }
         
