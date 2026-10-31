@@ -73,6 +73,49 @@ struct OfflineReplayTests {
         #expect(OfflineReplay.shouldReplay(itemEmployeeId: owner, currentEmployeeId: "b"))
     }
 
+    // MARK: What the banner and the failed list show
+
+    @Test("given pending items of B, of A twice and of Carla, with B logged in, should count B's and name the others once, sorted")
+    func pendingSplit() {
+        let items: [OfflineReplay.Owner] = [.init(id: "b", name: "Beto"), .init(id: "a", name: "Ana"),
+                                            .init(id: "a", name: "Ana"), .init(id: "c", name: "Carla")]
+        let split = OfflineReplay.splitPending(items, currentEmployeeId: "b")
+        #expect(split.mine == 1)
+        #expect(split.others == ["Ana", "Carla"])
+    }
+
+    @Test("given a pending item with no owner, should be neither mine nor waiting for someone (cleanup sends it to review)")
+    func pendingOwnerless() {
+        let split = OfflineReplay.splitPending([.init(id: nil, name: nil)], currentEmployeeId: "b")
+        #expect(split.mine == 0)
+        #expect(split.others.isEmpty)
+        #expect(OfflineReplay.cleanup(method: "POST", path: "/expenses", employeeId: nil, status: "pending") != .keep)
+    }
+
+    @Test("given one or several employees waiting, should word the banner in singular or plural",
+          arguments: [(["Ana"], "Cambios de Ana se sincronizan cuando inicie sesión"),
+                      (["Ana", "Carla"], "Cambios de Ana y Carla se sincronizan cuando inicien sesión"),
+                      (["Ana", "Beto", "Carla"], "Cambios de Ana, Beto y Carla se sincronizan cuando inicien sesión")])
+    func othersWaitingText(names: [String], expected: String) {
+        #expect(OfflineReplay.othersWaitingText(names) == expected)
+    }
+
+    @Test("given failed items, should show the logged-in employee their own and ownerless ones, not another employee's")
+    func failedVisibility() {
+        #expect(OfflineReplay.showsFailed(itemEmployeeId: "b", currentEmployeeId: "b"))
+        #expect(OfflineReplay.showsFailed(itemEmployeeId: nil, currentEmployeeId: "b"))
+        #expect(!OfflineReplay.showsFailed(itemEmployeeId: "a", currentEmployeeId: "b"))
+    }
+
+    @Test("given the offline notice, should name every kind of write that queues and say the rest need a connection")
+    func offlineNotice() {
+        let notice = OfflineReplay.offlineNotice
+        for label in ["Recepción de inventario", "Ajuste de inventario", "Gasto", "Producto nuevo"] {
+            #expect(notice.localizedCaseInsensitiveContains(label), "missing \(label)")
+        }
+        #expect(notice.contains("necesitan conexión"))
+    }
+
     // MARK: A replay that failed
 
     @Test("given offline, a timeout, a lapsed session or a cancellation while flushing, should stop and keep the item pending",

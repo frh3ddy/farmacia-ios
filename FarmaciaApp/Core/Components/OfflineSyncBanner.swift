@@ -1,4 +1,5 @@
 import SwiftUI
+import FarmaciaKit
 
 // MARK: - Offline Sync Banner
 //
@@ -29,7 +30,7 @@ struct OfflineSyncBanner: View {
         } else if pendingCount > 0 {
             row(systemImage: "arrow.triangle.2.circlepath", text: syncingText, tint: .blue)
         } else if !othersWaiting.isEmpty {
-            row(systemImage: "person.crop.circle.badge.clock", text: othersText, tint: .gray)
+            row(systemImage: "person.crop.circle.badge.clock", text: OfflineReplay.othersWaitingText(othersWaiting), tint: .gray)
         }
     }
 
@@ -41,10 +42,6 @@ struct OfflineSyncBanner: View {
 
     private var syncingText: String {
         "Sincronizando \(pendingCount) cambio\(pendingCount == 1 ? "" : "s")…"
-    }
-
-    private var othersText: String {
-        "Cambios de \(othersWaiting.joined(separator: ", ")) se sincronizan cuando inicien sesión"
     }
 
     private var failedText: String {

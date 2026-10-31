@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import FarmaciaKit
 
 @main
 struct FarmaciaApp: App {
@@ -104,8 +105,7 @@ struct RootView: View {
         .alert("Sin conexión", isPresented: $networkMonitor.justWentOffline) {
             Button("OK") {}
         } message: {
-            // Must match OfflineReplay.isReplaySafe: only these writes queue offline.
-            Text("Recepciones, ajustes de inventario, gastos y productos nuevos se guardarán en este dispositivo y se sincronizarán al volver la conexión. Otros cambios necesitan conexión.")
+            Text(OfflineReplay.offlineNotice)
         }
         .sheet(isPresented: $showSyncIssues) {
             OfflineSyncIssuesView(

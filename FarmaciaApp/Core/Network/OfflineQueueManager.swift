@@ -32,8 +32,7 @@ final class OfflineQueueManager {
         let context = ModelContext(container)
         context.autosaveEnabled = false
         modelContext = context
-        cleanUpStoredItems()
-        refresh()
+        refresh() // also cleans up what an older version queued
     }
 
     /// Called by APIClient when a replay-safe write fails due to connectivity.
@@ -100,9 +99,12 @@ final class OfflineQueueManager {
         // Checked per item: the employee can change during the awaits of a long flush.
         for item in items {
             guard OfflineReplay.shouldReplay(itemEmployeeId: item.employeeId,
-                                             currentEmployeeId: AuthManager.shared.currentEmployee?.id) else { continue }
+                                             currentEmployeeId: AuthManager.shared.currentEmployee?.id),
+                  // Taken in the same main-actor step as the check, so the request goes
+                  // out under this employee's session even if someone logs in meanwhile.
+                  let sessionToken = APIClient.shared.sessionToken else { continue }
             do {
-                try await APIClient.shared.replay(method: item.method, path: item.path, bodyData: item.bodyData)
+                try await APIClient.shared.replay(method: item.method, path: item.path, bodyData: item.bodyData, sessionToken: sessionToken)
                 context.delete(item)
             } catch {
                 switch OfflineReplay.afterFailure(error) {
@@ -146,20 +148,27 @@ final class OfflineQueueManager {
     /// Recount after the logged-in employee changes (whose writes are "pending" depends on it).
     func refresh() {
         guard let context = modelContext else { return }
+        // Anything pending that nobody may replay (no owner) goes to review, never limbo.
+        cleanUpStoredItems()
         let pendingStatus = "pending"
         let pending = (try? context.fetch(
             FetchDescriptor<QueuedRequest>(predicate: #Predicate { $0.status == pendingStatus })
         )) ?? []
         let currentEmployeeId = AuthManager.shared.currentEmployee?.id
-        let mine = pending.filter { OfflineReplay.shouldReplay(itemEmployeeId: $0.employeeId, currentEmployeeId: currentEmployeeId) }
-        pendingCount = mine.count
-        pendingForOthers = Array(Set(pending.filter { $0.employeeId != currentEmployeeId }.compactMap(\.employeeName))).sorted()
+        let split = OfflineReplay.splitPending(
+            pending.map { OfflineReplay.Owner(id: $0.employeeId, name: $0.employeeName) },
+            currentEmployeeId: currentEmployeeId
+        )
+        pendingCount = split.mine
+        pendingForOthers = split.others
 
         let failedStatus = "failed"
         let failedDescriptor = FetchDescriptor<QueuedRequest>(
             predicate: #Predicate { $0.status == failedStatus },
             sortBy: [SortDescriptor(\.queuedAt)]
         )
-        failedRequests = (try? context.fetch(failedDescriptor)) ?? []
+        // Own failures and ownerless ones; another employee's wait for them to log in.
+        failedRequests = ((try? context.fetch(failedDescriptor)) ?? [])
+            .filter { OfflineReplay.showsFailed(itemEmployeeId: $0.employeeId, currentEmployeeId: currentEmployeeId) }
     }
 }
