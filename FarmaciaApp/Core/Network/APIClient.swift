@@ -318,52 +318,7 @@ struct SwitchLocationRequest: Encodable {
 
 // Employee request types are defined in Employee.swift
 
-struct ReceiveInventoryRequest: Encodable {
-    let locationId: String
-    let productId: String
-    let quantity: Int
-    let unitCost: Double
-    let supplierId: String?
-    let invoiceNumber: String?
-    let purchaseOrderId: String?
-    let batchNumber: String?
-    let expiryDate: String?  // Date-only string in YYYY-MM-DD format
-    let manufacturingDate: String?  // Date-only string in YYYY-MM-DD format
-    let receivedBy: String?
-    let notes: String?
-    let syncToSquare: Bool?
-    // Optional selling price update
-    let sellingPrice: Double?
-    let syncPriceToSquare: Bool?
-    // Dedup key for safe offline-queue replay — see OfflineQueueManager.
-    let clientRequestId: String
-}
-
-struct CreateAdjustmentRequest: Encodable {
-    let locationId: String
-    let productId: String
-    let type: String
-    let quantity: Int
-    let reason: String?
-    let notes: String?
-    let unitCost: Double?
-    let effectiveDate: String?  // Date-only string in YYYY-MM-DD format
-    let adjustedBy: String?
-    let syncToSquare: Bool?
-    // Dedup key for safe offline-queue replay — see OfflineQueueManager.
-    let clientRequestId: String
-}
-
-struct QuickAdjustmentRequest: Encodable {
-    let locationId: String
-    let productId: String
-    let quantity: Int
-    let reason: String?
-    let notes: String?
-    let syncToSquare: Bool?
-    // Dedup key for safe offline-queue replay — see OfflineQueueManager.
-    let clientRequestId: String
-}
+// Receive and adjustment request types live in FarmaciaKit
 
 struct CreateExpenseRequest: Encodable {
     let locationId: String

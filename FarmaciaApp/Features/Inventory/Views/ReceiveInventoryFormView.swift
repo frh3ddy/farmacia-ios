@@ -1,4 +1,5 @@
 import SwiftUI
+import FarmaciaKit
 
 // MARK: - Receive Inventory Form View
 
@@ -26,6 +27,8 @@ struct ReceiveInventoryFormView: View {
     @State private var selectedSupplier: Supplier?
     @State private var showSupplierPicker = false
     @State private var notes = ""
+    /// One per receiving being entered: a retry (or the offline queue's replay) reuses it.
+    @State private var clientRequestId = UUID().uuidString
 
     private enum Field: Hashable {
         case quantity, unitCost, sellingPrice
@@ -320,6 +323,9 @@ struct ReceiveInventoryFormView: View {
 
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Guardar") {
+                        // Set before the Task runs, so a second tap can't slip in first
+                        guard !viewModel.isSubmitting else { return }
+                        viewModel.isSubmitting = true
                         Task { await saveReceiving() }
                     }
                     .disabled(!isValid || viewModel.isSubmitting)
@@ -416,23 +422,24 @@ struct ReceiveInventoryFormView: View {
         guard let product = selectedProduct,
               let qty = quantity,
               let cost = unitCost,
-              let locationId = authManager.currentLocation?.id else { return }
+              let locationId = authManager.currentLocation?.id else {
+            viewModel.isSubmitting = false
+            return
+        }
 
-        let priceToUpdate: Double? = updateSellingPrice ? newSellingPrice : nil
-
-        let success = await viewModel.receiveInventory(
+        let success = await viewModel.receiveInventory(ReceiveInventoryRequest(
+            locationId: locationId,
             productId: product.id,
             quantity: qty,
             unitCost: cost,
-            locationId: locationId,
             supplierId: selectedSupplier?.id,
             invoiceNumber: invoiceNumber,
             batchNumber: batchNumber,
             expiryDate: hasExpiry ? expiryDate : nil,
             notes: notes,
-            sellingPrice: priceToUpdate,
-            syncPriceToSquare: true
-        )
+            sellingPrice: updateSellingPrice ? newSellingPrice : nil,
+            clientRequestId: clientRequestId
+        ))
 
         if success {
             onComplete?()
