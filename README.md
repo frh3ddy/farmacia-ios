@@ -108,7 +108,8 @@ X-Session-Token: <sessionToken>
 
 ### Inventory Management
 - Receive new inventory with cost tracking
-- Quick adjustments (damage, theft, expired, found, etc.)
+- Quick adjustments (damage, theft, expired, found, etc.); an adjustment that adds stock takes an optional unit cost (empty uses the product's last cost)
+- Count correction by counted total against the store's live stock (needs a connection)
 - View receiving history
 - Square sync status
 
