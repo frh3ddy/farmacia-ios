@@ -70,11 +70,17 @@ The adjustment cost field shows for every adjustment that adds stock, because th
 
 ---
 
+## ✅ History rows and receive price check
+
+Branch `fix/history-rows-and-price`.
+- Receiving history shows costs as currency (`$12.50/unidad`, `ReportFormat.currency`), not the API's raw `$12.5000/unit`.
+- An adjustment row's color follows its signed quantity (`StockChange`), so a count correction that removed stock is red.
+- With "Actualizar Precio de Venta" on, Guardar needs a positive price (`ReceivingForm.canSave`).
+
+---
+
 ## 📋 Small fixes
 
-- Given a receiving in history, should show formatted costs, not raw decimal strings like `$12.5000/unit` (`Products/Views/ReceivingRow.swift`; formatted helpers exist in `Models/Inventory.swift`)
-- Given a count correction that removed stock, should color it red, not green (`Products/Views/AdjustmentRow.swift` treats `.countCorrection` as positive)
-- Given "Actualizar Precio de Venta" on with an empty price, should disable Guardar rather than save without the price
 - Given a create-product response with no `data`, should show an error rather than nothing (`CreateProductView.swift`)
 - Given an adjustment whose Square sync failed, should offer a retry somewhere reachable (`AdjustmentRow`'s retry button only had a handler on the removed adjustments list; `POST /inventory/adjustments/:id/retry-square-sync` exists)
 

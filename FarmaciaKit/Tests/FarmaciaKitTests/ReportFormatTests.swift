@@ -6,7 +6,7 @@ struct ReportFormatTests {
     let mx = Locale(identifier: "es_MX")
 
     @Test("given an API money string, should format as MXN currency",
-          arguments: [("1234.5", "$1,234.50"), ("0", "$0.00"), ("-89.999", "-$90.00")])
+          arguments: [("1234.5", "$1,234.50"), ("0", "$0.00"), ("-89.999", "-$90.00"), ("12.5000", "$12.50")])
     func currency(value: String, expected: String) {
         #expect(ReportFormat.currency(value, locale: mx) == expected)
     }
