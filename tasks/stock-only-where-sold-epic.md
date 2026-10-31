@@ -1,6 +1,6 @@
 # Stock Only Where Sold, Readable Square Errors Epic
 
-**Status**: ✅ DONE — farmacia-ops `83acfb3` (merge `bbbc36b`); iOS hashes below. Deploy farmacia-ops first, then run the step 10 production check.
+**Status**: ✅ DONE — farmacia-ops `83acfb3` (merge `bbbc36b`); iOS `1dce389` (merge `c051b30`). Deploy farmacia-ops first, then run the step 10 production check.
 **Branch**: `fix/stock-only-where-sold` in both farmacia-ops and farmacia-ios
 **Goal**: Stock can only be added at a store that sells the product, and Square sync problems reach the user as a short Spanish reason, never Square's raw error.
 
