@@ -7,12 +7,6 @@ struct AdjustmentRow: View {
     let adjustment: InventoryAdjustment
     var onRetrySync: (() async -> Void)? = nil
 
-    @State private var isRetrying = false
-
-    private var syncFailed: Bool {
-        adjustment.squareSyncError != nil
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
@@ -52,41 +46,24 @@ struct AdjustmentRow: View {
                     .foregroundStyle(.secondary)
             }
 
-            if syncFailed {
-                HStack(spacing: 6) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
-                    Text("No sincronizado con Square")
-                        .font(.caption)
-                        .foregroundStyle(.orange)
-
-                    Spacer()
-
-                    Button {
-                        guard let onRetrySync, !isRetrying else { return }
-                        isRetrying = true
-                        Task {
-                            await onRetrySync()
-                            isRetrying = false
-                        }
-                    } label: {
-                        if isRetrying {
-                            ProgressView()
-                        } else {
-                            Text("Reintentar")
-                        }
-                    }
-                    .font(.caption.weight(.semibold))
-                    .disabled(isRetrying || onRetrySync == nil)
-                }
-                .padding(.top, 2)
-            }
+            SquareSyncStatusLine(
+                synced: adjustment.squareSynced,
+                error: adjustment.squareSyncError,
+                onRetry: onRetrySync
+            )
         }
         .padding(.vertical, 4)
     }
 
     private var typeColor: Color {
-        switch StockChange(quantity: adjustment.quantity) {
+        StockChange(quantity: adjustment.quantity).color
+    }
+}
+
+extension StockChange {
+    /// Green for stock added, red for removed, orange for no change.
+    var color: Color {
+        switch self {
         case .added: .green
         case .removed: .red
         case .none: .orange

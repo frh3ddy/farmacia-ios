@@ -82,7 +82,7 @@ Merged: `f580589` (merge `9fcbfc2`).
 ## 📋 Small fixes
 
 - Given a create-product response with no `data`, should show an error rather than nothing (`CreateProductView.swift`)
-- Given an adjustment whose Square sync failed, should offer a retry somewhere reachable (`AdjustmentRow`'s retry button only had a handler on the removed adjustments list; `POST /inventory/adjustments/:id/retry-square-sync` exists)
+- ✅ Given an adjustment whose Square sync failed, should offer a retry somewhere reachable — see `tasks/square-sync-retry-epic.md` (also covers receivings)
 
 ---
 

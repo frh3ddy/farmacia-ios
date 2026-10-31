@@ -5,6 +5,7 @@ import FarmaciaKit
 
 struct ReceivingRow: View {
     let receiving: InventoryReceiving
+    var onRetrySync: (() async -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -38,6 +39,12 @@ struct ReceivingRow: View {
                     .font(.caption)
                     .fontWeight(.medium)
             }
+
+            SquareSyncStatusLine(
+                synced: receiving.squareSynced,
+                error: receiving.squareSyncError,
+                onRetry: onRetrySync
+            )
         }
         .padding(.vertical, 4)
     }
