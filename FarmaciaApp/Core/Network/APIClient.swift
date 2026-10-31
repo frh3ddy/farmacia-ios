@@ -119,7 +119,9 @@ final class APIClient {
     /// re-queues on a connectivity failure; OfflineQueueManager owns that
     /// decision (stop flushing, leave the rest queued) to avoid double-queuing
     /// the item it's already replaying.
-    func replay(method: String, path: String, bodyData: Data?) async throws {
+    /// `sessionToken` is the queued item's author's, taken when the flush checked
+    /// who's logged in (never whatever session is current by the time it's sent).
+    func replay(method: String, path: String, bodyData: Data?, sessionToken: String) async throws {
         let urlString = AppConfiguration.apiBaseURL + path
         guard let url = URL(string: urlString) else { throw NetworkError.invalidURL }
 
@@ -131,9 +133,7 @@ final class APIClient {
         if let deviceToken {
             request.setValue("Bearer \(deviceToken)", forHTTPHeaderField: "Authorization")
         }
-        if let sessionToken {
-            request.setValue(sessionToken, forHTTPHeaderField: "X-Session-Token")
-        }
+        request.setValue(sessionToken, forHTTPHeaderField: "X-Session-Token")
         request.httpBody = bodyData
 
         let _: EmptyResponse = try await RetryPolicy.withBackoff {

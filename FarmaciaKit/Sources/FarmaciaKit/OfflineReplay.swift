@@ -11,8 +11,8 @@ import Foundation
 // newer data, or find the record gone).
 
 public enum OfflineReplay {
-    /// Creates whose body carries a clientRequestId the server matches on.
-    private static let replaySafePOSTs: Set<String> = [
+    /// Creates whose body carries a clientRequestId the server matches on (in notice order).
+    private static let replaySafePaths: [String] = [
         "/inventory/receive",
         "/inventory/adjustments",
         "/inventory/adjustments/damage",
@@ -25,6 +25,7 @@ public enum OfflineReplay {
         "/expenses",
         "/products",
     ]
+    private static let replaySafePOSTs = Set(replaySafePaths)
 
     public static func isReplaySafe(method: String, path: String) -> Bool {
         method == "POST" && replaySafePOSTs.contains(path)
@@ -95,5 +96,53 @@ public enum OfflineReplay {
             return .markFailed(reason: "Pendiente de una versión anterior de la app: revísalo y reintenta o descarta.")
         }
         return .keep
+    }
+
+    /// The "Sin conexión" alert: built from the allowlist, so it can't promise more than queues.
+    public static let offlineNotice: String = {
+        var kinds: [String] = []
+        for path in replaySafePaths {
+            let kind = label(method: "POST", path: path).lowercased()
+            if !kinds.contains(kind) { kinds.append(kind) }
+        }
+        return "Se guardan en este dispositivo y se sincronizan al volver la conexión: \(spanishList(kinds)). Los demás cambios necesitan conexión."
+    }()
+
+    /// The banner for other employees' writes waiting on this device ("inicie" for one, "inicien" for several).
+    public static func othersWaitingText(_ names: [String]) -> String {
+        "Cambios de \(spanishList(names)) se sincronizan cuando \(names.count == 1 ? "inicie" : "inicien") sesión"
+    }
+
+    /// "a", "a y b", "a, b y c".
+    private static func spanishList(_ items: [String]) -> String {
+        guard items.count > 1 else { return items.first ?? "" }
+        return items.dropLast().joined(separator: ", ") + " y " + items[items.count - 1]
+    }
+
+    /// Who a queued item belongs to, as the banner needs it.
+    public struct Owner: Equatable, Sendable {
+        public let id: String?
+        public let name: String?
+        public init(id: String?, name: String?) {
+            self.id = id
+            self.name = name
+        }
+    }
+
+    /// Pending items: how many the logged-in employee's next flush sends, and who
+    /// else has writes waiting on this device (each name once). An item with no owner
+    /// waits for nobody: `cleanup` moves it to the failed list for review instead.
+    public static func splitPending(_ owners: [Owner], currentEmployeeId: String?) -> (mine: Int, others: [String]) {
+        let mine = owners.filter { shouldReplay(itemEmployeeId: $0.id, currentEmployeeId: currentEmployeeId) }.count
+        let others = owners
+            .filter { $0.id != nil && !shouldReplay(itemEmployeeId: $0.id, currentEmployeeId: currentEmployeeId) }
+            .map { $0.name ?? "otro empleado" }
+        return (mine, Array(Set(others)).sorted())
+    }
+
+    /// The failed list shows an employee their own items, plus ones with no owner
+    /// (anyone may review those); another employee's wait for them.
+    public static func showsFailed(itemEmployeeId: String?, currentEmployeeId: String?) -> Bool {
+        itemEmployeeId == nil || itemEmployeeId == currentEmployeeId
     }
 }
