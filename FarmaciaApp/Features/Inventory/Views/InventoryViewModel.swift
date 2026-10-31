@@ -18,6 +18,13 @@ class InventoryViewModel: ObservableObject {
 
     @Published var errorMessage: String?
     @Published var showError = false
+    /// A failed receive or adjustment, shown inside its form (an alert on the
+    /// screen behind can't present over the open sheet).
+    @Published var saveError: String?
+    var showSaveError: Bool {
+        get { saveError != nil }
+        set { if !newValue { saveError = nil } }
+    }
     @Published var successMessage: String?
     @Published var showSuccess = false
 
@@ -142,18 +149,8 @@ class InventoryViewModel: ObservableObject {
             await loadReceivings(locationId: request.locationId)
 
             return true
-        } catch NetworkError.queuedForSync {
-            // Accepted offline — the global connectivity banner already tells
-            // the user it'll sync, so the form can close as if it succeeded.
-            return true
-        } catch let error as NetworkError {
-            errorMessage = error.errorDescription
-            showError = true
-            return false
         } catch {
-            errorMessage = "Error al recibir inventario"
-            showError = true
-            return false
+            return saved(SaveOutcome(error: error, fallback: "Error al recibir inventario"))
         }
     }
 
@@ -221,17 +218,15 @@ class InventoryViewModel: ObservableObject {
             showSuccess = true
             await loadAdjustments(locationId: locationId)
             return true
-        } catch NetworkError.queuedForSync {
-            return true
-        } catch let error as NetworkError {
-            errorMessage = error.errorDescription
-            showError = true
-            return false
         } catch {
-            errorMessage = "Error al crear ajuste"
-            showError = true
-            return false
+            return saved(SaveOutcome(error: error, fallback: "Error al crear ajuste"))
         }
+    }
+
+    private func saved(_ outcome: SaveOutcome) -> Bool {
+        guard case .failed(let message) = outcome else { return true }
+        saveError = message
+        return false
     }
 
     // MARK: - Retry Adjustment Square Sync
