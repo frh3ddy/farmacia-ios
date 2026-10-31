@@ -19,6 +19,7 @@ struct AdjustmentFormView: View {
     @State private var showProductPicker = false
     @State private var quantity: Int?
     @State private var newCount: Int?
+    @State private var unitCost: Double?
     @State private var reason = ""
     @State private var notes = ""
     @FocusState private var isFieldFocused: Bool
@@ -52,6 +53,14 @@ struct AdjustmentFormView: View {
 
     private var countChange: Int? {
         CountCorrection.preview(counted: newCount, current: liveStock)
+    }
+
+    private var asksForCost: Bool {
+        AdjustmentCost.asksForCost(
+            isNegative: adjustmentType.isNegative,
+            isVariable: adjustmentType.isVariable,
+            countChange: countChange
+        )
     }
 
     private var isValid: Bool {
@@ -175,6 +184,22 @@ struct AdjustmentFormView: View {
                     }
                 }
 
+                if asksForCost {
+                    Section {
+                        HStack {
+                            Text("Costo Unitario")
+                            TextField("0.00", value: $unitCost, format: .number)
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.trailing)
+                                .focused($isFieldFocused)
+                            Text("MXN")
+                                .foregroundStyle(.secondary)
+                        }
+                    } footer: {
+                        Text("Opcional. Si lo dejas vacío se usa el último costo del producto.")
+                    }
+                }
+
                 Section("Detalles") {
                     TextField("Razón", text: $reason)
                         .focused($isFieldFocused)
@@ -272,6 +297,8 @@ struct AdjustmentFormView: View {
             productId: product.id,
             quantity: adjustedQty,
             countedQuantity: adjustmentType == .countCorrection ? newCount : nil,
+            // A cost typed before the count turned into a removal isn't sent
+            unitCost: asksForCost ? unitCost : nil,
             locationId: locationId,
             reason: reason.isEmpty ? nil : reason,
             notes: notes.isEmpty ? nil : notes,
