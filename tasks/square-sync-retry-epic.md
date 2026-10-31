@@ -1,6 +1,6 @@
 # Square Sync Retry Epic
 
-**Status**: ✅ DONE (uncommitted on the branch; device check pending)
+**Status**: ✅ DONE — merged `604abdc` (merge `cccecb0`); device check pending
 **Branch**: `fix/square-sync-retry`
 **Goal**: An owner can see and retry a receiving or adjustment that didn't sync to Square, from the screens that list them; activity lists color adjustments by the stock change they made.
 
