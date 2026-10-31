@@ -18,4 +18,10 @@ struct SaveOutcomeTests {
         struct Boom: Error {}
         #expect(SaveOutcome(error: Boom(), fallback: "Error al crear ajuste") == .failed("Error al crear ajuste"))
     }
+
+    @Test("given the API asking for a unit cost, should say so (the form then shows its cost field)")
+    func costRequired() {
+        let error = NetworkError.unitCostRequired(message: "Indica el costo unitario")
+        #expect(SaveOutcome(error: error, fallback: "x") == .costRequired("Indica el costo unitario"))
+    }
 }

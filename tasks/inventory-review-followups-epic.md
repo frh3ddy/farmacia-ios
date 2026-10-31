@@ -25,13 +25,13 @@ Merged: `c2e3630` (merge `d046810`). Picking another product in the receive form
 
 ## ✅ Save errors shown inside the form
 
-Merged: `c02f3ab` (merge `5dfd3ea`). Receive and adjustment save errors now show in an alert inside the open form, with the API's reason (`SaveOutcome`); the form stays open with its input. Not yet seen in the simulator.
+Merged: `c02f3ab` (merge `5dfd3ea`). Receive and adjustment save errors now show in an alert inside the open form, with the API's reason (`SaveOutcome`); the form stays open with its input. Not yet seen in the simulator. **Correction:** until `fix/inventory-small-followups`, NestJS's plain exceptions (no `success` field) failed to decode and showed "Error HTTP: 400" instead of the reason — see below.
 
 ---
 
 ## ✅ Positive adjustments can carry a unit cost
 
-Merged: `18bc267` (merge `9dcaf1a`). An adjustment that adds stock on a product with no cost on record (created without initial stock) was rejected — "Indica el costo unitario…" — and the form had no cost field. The form now shows an optional unit cost whenever the adjustment adds stock (`AdjustmentCost`).
+Merged: `18bc267` (merge `9dcaf1a`). An adjustment that adds stock on a product with no cost on record (created without initial stock) was rejected — "Indica el costo unitario…" — and the form had no cost field. The form now shows an optional unit cost whenever the adjustment adds stock (`AdjustmentCost`). Narrowed below: it now appears only when the API asks.
 
 ---
 
@@ -41,32 +41,21 @@ Merged: `789cc0f` (merge `e77976e`). Reported as "product picker sees only the f
 
 ---
 
-## 📋 Money as `Decimal`
+## ✅ API error reasons reach the user
 
-`unitCost` and `sellingPrice` are `Double` from the form fields through `ReceiveInventoryRequest`, and form totals are computed in `Double`. The adjustment unit cost added above is `Double` too. A wider change: the API models across the app use `Double`/`String` today.
-
-**Requirements**:
-- Given a cost or price entered, should keep it as `Decimal` through to the request body
-- Given totals and margins on screen, should compute them in `Decimal`
+Branch `fix/inventory-small-followups`. `APIErrorResponse.success` was a required `Bool`, but NestJS's own exceptions (`BadRequestException('…')`, `ConflictException`, `NotFoundException` — about 115 throw sites in the API) send `{message, error, statusCode}` with no `success`. Decoding failed, so every one of them reached the user as "Error HTTP: 400/404/409" instead of its Spanish reason (e.g. "Las existencias cambiaron…"). `success` is now optional.
 
 ---
 
-## 📋 Preferred supplier not picked when the supplier list loads late
+## ✅ Preferred supplier picked when the supplier list loads late
 
-The wrong-product half of this item is fixed (see above). Still open: auto-picking the preferred supplier does nothing if `viewModel.suppliers` hasn't loaded yet (the product-detail path loads it in parallel).
-
-**Requirements**:
-- Given the supplier list loading after the product's suppliers, should still auto-pick the preferred supplier
+Branch `fix/inventory-small-followups`. `PreferredSupplier.pick` (FarmaciaKit) runs when either list arrives — the product's suppliers or all suppliers — and never overrides the user's choice; the existing supplier `onChange` fills the cost.
 
 ---
 
-## 📋 Ask for the adjustment cost only when the API needs it
+## ✅ Adjustment cost asked only when the API needs it
 
-The adjustment cost field shows for every adjustment that adds stock, because the API's "no previous cost" error has no stable `code` and the app doesn't branch on message text. With a code from farmacia-ops, the form could show the field only when the product has no cost on record.
-
-**Requirements**:
-- Given a positive adjustment rejected for a missing cost, should return a stable `code` (farmacia-ops)
-- Given that code, should reveal the cost field instead of showing it up front
+Branch `fix/inventory-small-followups` (iOS) and farmacia-ops `fix/unit-cost-required-code`. The API's no-previous-cost refusal now carries `code: 'UNIT_COST_REQUIRED'`; the app maps it (or the exact message, from an API without the code) to `NetworkError.unitCostRequired` → `SaveOutcome.costRequired`, and the adjustment form reveals its cost field only then (`AdjustmentCost.asksForCost(… costRequired:)`). Otherwise the API uses the last cost, as before.
 
 ---
 
@@ -81,12 +70,16 @@ Merged: `f580589` (merge `9fcbfc2`).
 
 ## 📋 Small fixes
 
-- Given a create-product response with no `data`, should show an error rather than nothing (`CreateProductView.swift`)
+- ✅ Given a create-product (or edit-price) response with no `data`, should show an error rather than nothing — `APIResponse.requireData()`, branch `fix/inventory-small-followups`
 - ✅ Given an adjustment whose Square sync failed, should offer a retry somewhere reachable — see `tasks/square-sync-retry-epic.md` (also covers receivings)
 
 ---
 
 ## Decided not to do
 
+- **Money as `Decimal` (2026-10-30).** Measured before planning:
+  - Request bodies gain nothing. A typed amount (19.99, 12.35) encodes the same from `Double` as from `Decimal`, and the API requires JSON numbers (`typeof … === 'number'`) that it parses into JS doubles before `Prisma.Decimal`. No request sends a computed amount.
+  - The only visible difference is on-screen math: with 4-decimal costs, a total or margin can round a half cent differently (3 × $0.335 shows `$1.00` with `Double`, `$1.01` with `Decimal`). This is display only; the server computes stored totals itself.
+  - If this is ever revisited, build every `Decimal` from text (the field's format style or `Decimal(string:)`), never from a `Double`: `Decimal(19.99)` encodes as `19.98999999999999488`, worse than the `Double`.
 - **Lock stock during a count correction (farmacia-ops).** The server reads stock just before writing, not under `SELECT … FOR UPDATE`. A sale of that product at that store would have to land within milliseconds; the human count already spans minutes of possible sales, which no lock fixes, and the next count corrects any error. Revisit only if counts drift during busy hours (see the `ponytail:` comment in `inventory-adjustment.service.ts`).
 - **Key the product-detail inventory sheets on location.** Not needed: the count-correction form fetches stock for the current location itself.

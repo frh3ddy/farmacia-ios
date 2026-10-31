@@ -53,13 +53,14 @@ class InventoryViewModel: ObservableObject {
             }
             return true
         } catch {
-            return saved(SaveOutcome(error: error, fallback: "Error al recibir inventario"))
+            return report(SaveOutcome(error: error, fallback: "Error al recibir inventario")) == .saved
         }
     }
 
     // MARK: - Create Adjustment
     /// `clientRequestId` is the form's, kept across retries. `countedQuantity`
     /// (count correction only) lets the API derive the change from its own stock.
+    /// `.costRequired` means the product has no cost on record: the form asks for one.
     func createAdjustment(
         type: AdjustmentType,
         productId: String,
@@ -70,7 +71,7 @@ class InventoryViewModel: ObservableObject {
         reason: String?,
         notes: String?,
         clientRequestId: String
-    ) async -> Bool {
+    ) async -> SaveOutcome {
         isSubmitting = true
         defer { isSubmitting = false }
 
@@ -121,16 +122,19 @@ class InventoryViewModel: ObservableObject {
             )
             successMessage = response.message
             showSuccess = true
-            return true
+            return .saved
         } catch {
-            return saved(SaveOutcome(error: error, fallback: "Error al crear ajuste"))
+            return report(SaveOutcome(error: error, fallback: "Error al crear ajuste"))
         }
     }
 
-    private func saved(_ outcome: SaveOutcome) -> Bool {
-        guard case .failed(let message) = outcome else { return true }
-        saveError = message
-        return false
+    /// Shows a failed save's reason inside its form, and hands the outcome back.
+    private func report(_ outcome: SaveOutcome) -> SaveOutcome {
+        switch outcome {
+        case .saved: break
+        case .failed(let message), .costRequired(let message): saveError = message
+        }
+        return outcome
     }
 }
 

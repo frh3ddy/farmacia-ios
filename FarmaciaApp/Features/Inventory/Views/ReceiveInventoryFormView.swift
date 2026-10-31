@@ -301,6 +301,10 @@ struct ReceiveInventoryFormView: View {
                 receivingCost.productChanged(to: product.id)
                 await loadProductSuppliers(for: product.id)
             }
+            // The full supplier list can arrive after the product's suppliers
+            .onChange(of: viewModel.suppliers.map(\.id)) {
+                applyPreferredSupplier()
+            }
             .onChange(of: selectedSupplier) { oldValue, newValue in
                 // When supplier changes, update last cost display
                 if let supplier = newValue {
@@ -335,23 +339,23 @@ struct ReceiveInventoryFormView: View {
                 endpoint: .productSuppliers(productId: productId)
             )
             productSuppliers = response.suppliers
-
-            // Auto-select preferred supplier if user hasn't picked one yet
-            if selectedSupplier == nil,
-               let preferred = response.suppliers.first(where: { $0.isPreferred }) {
-                // Find matching Supplier from the viewModel's supplier list
-                if let matchingSupplier = viewModel.suppliers.first(where: { $0.id == preferred.id }) {
-                    selectedSupplier = matchingSupplier
-                    supplierLastCost = preferred.costDouble
-                    if receivingCost.offerSupplierCost(preferred.costDouble, forProductId: productId) {
-                        supplierCostNote = "Costo auto-completado del proveedor preferido"
-                    }
-                }
-            }
+            applyPreferredSupplier()
         } catch {
             // Supplier loading is optional, don't block the form
             print("Failed to load product suppliers: \(error)")
         }
+    }
+
+    /// Selects the product's preferred supplier once both lists are in. Runs when
+    /// either loads; onChange(of: selectedSupplier) then fills its last cost.
+    private func applyPreferredSupplier() {
+        let preferredId = productSuppliers.first(where: { $0.isPreferred })?.id
+        guard let id = PreferredSupplier.pick(
+            preferredId: preferredId,
+            selectedId: selectedSupplier?.id,
+            available: viewModel.suppliers.map(\.id)
+        ) else { return }
+        selectedSupplier = viewModel.suppliers.first { $0.id == id }
     }
 
     private func saveReceiving() async {

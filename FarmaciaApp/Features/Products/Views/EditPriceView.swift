@@ -157,11 +157,10 @@ struct EditPriceView: View {
                 body: request
             )
             
-            if let data = response.data {
-                onUpdate?(data.product)
-                // Write-through: update cache with new price
-                ProductCacheManager.shared.saveProduct(data.product)
-            }
+            let data = try response.requireData()
+            onUpdate?(data.product)
+            // Write-through: update cache with new price
+            ProductCacheManager.shared.saveProduct(data.product)
             
             dismiss()
         } catch let error as NetworkError {
