@@ -1,7 +1,14 @@
 schemaVersion: 1
-enabledWorkflows: ["simulator", "simulator-management", "swift-package", "ui-automation", "debugging"]
-sessionDefaults:
-  projectPath: "./FarmaciaApp.xcodeproj"
-  scheme: "FarmaciaApp"
-# Pharmacy app: keep tool telemetry off.
+enabledWorkflows:
+  - simulator
+  - simulator-management
+  - swift-package
+  - ui-automation
+  - debugging
 sentryDisabled: true
+sessionDefaults:
+  projectPath: ./FarmaciaApp.xcodeproj
+  scheme: FarmaciaApp
+  simulatorName: iPhone 17
+  simulatorId: 09EE513F-AACD-4389-A234-8260F76E2E9E
+  simulatorPlatform: iOS Simulator
