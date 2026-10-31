@@ -17,7 +17,7 @@ struct ReceiveInventoryFormView: View {
     @State private var selectedProduct: Product?
     @State private var showProductPicker = false
     @State private var quantity: Int?
-    @State private var unitCost: Double?
+    @State private var receivingCost = ReceivingCost()
     @State private var updateSellingPrice = false
     @State private var newSellingPrice: Double?
     @State private var invoiceNumber = ""
@@ -62,7 +62,7 @@ struct ReceiveInventoryFormView: View {
     private var isValid: Bool {
         selectedProduct != nil &&
         (quantity ?? 0) > 0 &&
-        (unitCost ?? -1) >= 0
+        (receivingCost.value ?? -1) >= 0
     }
 
     var body: some View {
@@ -131,7 +131,7 @@ struct ReceiveInventoryFormView: View {
 
                     HStack {
                         Text("Costo Unitario")
-                        TextField("0.00", value: $unitCost, format: .number)
+                        TextField("0.00", value: $receivingCost.value, format: .number)
                             .keyboardType(.decimalPad)
                             .multilineTextAlignment(.trailing)
                             .focused($focusedField, equals: .unitCost)
@@ -142,7 +142,7 @@ struct ReceiveInventoryFormView: View {
                     .onTapGesture { focusedField = .unitCost }
 
                     if let qty = quantity, qty > 0,
-                       let cost = unitCost, cost > 0 {
+                       let cost = receivingCost.value, cost > 0 {
                         HStack {
                             Text("Costo Total")
                             Spacer()
@@ -182,7 +182,7 @@ struct ReceiveInventoryFormView: View {
                         }
 
                         // Margin preview
-                        if let cost = unitCost, cost > 0,
+                        if let cost = receivingCost.value, cost > 0,
                            let newPrice = newSellingPrice, newPrice > 0 {
                             let margin = ((newPrice - cost) / newPrice) * 100
                             HStack {
@@ -237,7 +237,7 @@ struct ReceiveInventoryFormView: View {
                                                 .font(.caption)
                                                 .foregroundStyle(.secondary)
                                             // Show comparison with current unit cost entry
-                                            if let currentCost = unitCost, currentCost > 0 {
+                                            if let currentCost = receivingCost.value, currentCost > 0 {
                                                 let diff = currentCost - lastCost
                                                 let pct = lastCost > 0 ? (diff / lastCost) * 100 : 0
                                                 if abs(diff) > 0.01 {
@@ -348,6 +348,7 @@ struct ReceiveInventoryFormView: View {
                 // Pre-select product if provided (from ProductDetailView context)
                 if let product = preSelectedProduct, selectedProduct == nil {
                     selectedProduct = product
+                    receivingCost.productChanged(to: product.id)
                     // Fetch suppliers for the pre-selected product
                     Task { await loadProductSuppliers(for: product.id) }
                 }
@@ -355,7 +356,8 @@ struct ReceiveInventoryFormView: View {
             .onChange(of: selectedProduct) { oldValue, newValue in
                 // When product changes, fetch its suppliers to find preferred one
                 if let product = newValue, product.id != oldValue?.id {
-                    // Reset supplier state
+                    // Reset supplier state; the cost was the previous product's
+                    receivingCost.productChanged(to: product.id)
                     productSuppliers = []
                     selectedSupplier = nil
                     supplierLastCost = nil
@@ -369,8 +371,8 @@ struct ReceiveInventoryFormView: View {
                     if let ps = productSuppliers.first(where: { $0.id == supplier.id }) {
                         supplierLastCost = ps.costDouble
                         // Auto-fill unit cost if empty
-                        if unitCost == nil && ps.costDouble > 0 {
-                            unitCost = ps.costDouble
+                        if let productId = selectedProduct?.id,
+                           receivingCost.offerSupplierCost(ps.costDouble, forProductId: productId) {
                             supplierCostNote = "Costo auto-completado del último precio del proveedor"
                         } else {
                             supplierCostNote = nil
@@ -397,6 +399,8 @@ struct ReceiveInventoryFormView: View {
             let response: ProductSuppliersResponse = try await APIClient.shared.request(
                 endpoint: .productSuppliers(productId: productId)
             )
+            // The user picked another product while this loaded
+            guard selectedProduct?.id == productId else { return }
             productSuppliers = response.suppliers
 
             // Auto-select preferred supplier if user hasn't picked one yet
@@ -406,8 +410,7 @@ struct ReceiveInventoryFormView: View {
                 if let matchingSupplier = viewModel.suppliers.first(where: { $0.id == preferred.id }) {
                     selectedSupplier = matchingSupplier
                     supplierLastCost = preferred.costDouble
-                    if unitCost == nil && preferred.costDouble > 0 {
-                        unitCost = preferred.costDouble
+                    if receivingCost.offerSupplierCost(preferred.costDouble, forProductId: productId) {
                         supplierCostNote = "Costo auto-completado del proveedor preferido"
                     }
                 }
@@ -421,7 +424,7 @@ struct ReceiveInventoryFormView: View {
     private func saveReceiving() async {
         guard let product = selectedProduct,
               let qty = quantity,
-              let cost = unitCost,
+              let cost = receivingCost.value,
               let locationId = authManager.currentLocation?.id else {
             viewModel.isSubmitting = false
             return
