@@ -397,7 +397,8 @@ struct ProductsView: View {
                         } label: {
                             ProductRow(
                                 product: product,
-                                riskLevel: agingViewModel.productRiskLevels[product.id]
+                                riskLevel: agingViewModel.productRiskLevels[product.id],
+                                showsMargin: authManager.canViewCosts
                             )
                         }
                         .onAppear {
@@ -652,16 +653,16 @@ struct ProductsView: View {
         lastScannedCode = code
         let cache = ProductCacheManager.shared
         
-        // LEVEL 1a: Check loaded products in memory (instant)
-        if let match = viewModel.products.first(where: { $0.sku?.lowercased() == code.lowercased() }) {
+        // LEVEL 1a: loaded products in memory (instant), then LEVEL 1b: the SwiftData
+        // cache (whole catalog, indexed). Open a product only if it's the one match:
+        // a barcode shared by several goes to the server, which lists them all.
+        let lowered = code.lowercased()
+        let inMemory = viewModel.products.filter { $0.sku?.lowercased() == lowered }
+        let cached = cache.findBySku(code)
+        // The cache can know a second product with this barcode that isn't loaded yet.
+        let matches = cached.count > inMemory.count ? cached : inMemory
+        if BarcodeLookup.cacheDecision(matchCount: matches.count) == .open, let match = matches.first {
             scannedProduct = match
-            navigateToScannedProduct = true
-            return
-        }
-        
-        // LEVEL 1b: Check SwiftData cache (all 3000+ products, indexed)
-        if let cached = cache.findBySku(code) {
-            scannedProduct = cached
             navigateToScannedProduct = true
             return
         }

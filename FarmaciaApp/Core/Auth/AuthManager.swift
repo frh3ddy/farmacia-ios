@@ -209,7 +209,11 @@ final class AuthManager: ObservableObject {
             
             // Start session refresh timer
             startSessionRefreshTimer()
-            
+
+            // Before anything reads it: the cache may hold another store's rows
+            // (or an older version's, with costs) from before an app restart.
+            prepareProductCache()
+
             authState = .authenticated
         } catch let networkError as NetworkError {
             error = networkError
@@ -239,10 +243,6 @@ final class AuthManager: ObservableObject {
             // Update state with new location
             currentLocation = SessionLocation(from: response.currentLocation)
             
-            // Clear product cache — cached totalInventory values belong to the
-            // previous location. The next Products load repopulates via warm-up.
-            ProductCacheManager.shared.clearAll()
-            
             // Update employee role if it changed for this location
             if let employee = currentEmployee {
                 currentEmployee = SessionEmployee(
@@ -251,6 +251,10 @@ final class AuthManager: ObservableObject {
                     role: currentLocation?.role ?? employee.role
                 )
             }
+
+            // Cached stock and price belong to the previous store: clear and
+            // re-scope. The next Products load repopulates.
+            prepareProductCache()
         } catch let networkError as NetworkError {
             error = networkError
             throw networkError
@@ -306,6 +310,11 @@ final class AuthManager: ObservableObject {
         }
     }
     
+    private func prepareProductCache() {
+        guard let locationId = currentLocation?.id else { return }
+        ProductCacheManager.shared.prepare(for: ProductCacheScope(locationId: locationId))
+    }
+
     private func clearSession() {
         stopSessionRefreshTimer()
         apiClient.sessionToken = nil

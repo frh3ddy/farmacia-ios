@@ -1,4 +1,5 @@
 import Foundation
+import FarmaciaKit
 import SwiftData
 
 // MARK: - ProductCacheManager
@@ -23,6 +24,24 @@ final class ProductCacheManager {
         self.modelContext?.autosaveEnabled = false
     }
     
+    // MARK: - Scope
+
+    private static let scopeKey = "products_scope"
+
+    /// Call on every login and store switch, before anything reads the cache: rows
+    /// saved for another store (e.g. before an app restart) are dropped; a role
+    /// change at the same store keeps them (no cost is cached). See ProductCacheScope.
+    func prepare(for scope: ProductCacheScope) {
+        guard let context = modelContext else { return }
+        let key = Self.scopeKey
+        let descriptor = FetchDescriptor<SyncMetadata>(predicate: #Predicate<SyncMetadata> { $0.key == key })
+        let stored = try? context.fetch(descriptor).first
+        guard scope.needsClear(storedKey: stored?.value) else { return }
+        clearAll() // also drops the stored scope
+        context.insert(SyncMetadata(key: Self.scopeKey, value: scope.key))
+        try? context.save()
+    }
+
     // MARK: - Read Operations
     
     /// Load cached products for list display on cold start.
@@ -37,20 +56,21 @@ final class ProductCacheManager {
         return (try? context.fetch(descriptor))?.map { $0.toProduct() } ?? []
     }
     
-    /// Find a product by exact SKU match (for barcode scanner).
+    /// Products with this exact SKU (for barcode scanner), up to `limit`: enough to
+    /// tell one match from several (BarcodeLookup.cacheDecision).
     /// Indexed lookup on normalizedSku — no full-table scan, no in-memory filtering.
     /// NOTE: rows cached before normalizedSku existed have nil and are missed;
     /// the server exact-search (level 2) covers them, and warm-up repopulates.
-    func findBySku(_ sku: String) -> Product? {
-        guard let context = modelContext else { return nil }
+    func findBySku(_ sku: String, limit: Int = 2) -> [Product] {
+        guard let context = modelContext else { return [] }
         let lowered = sku.lowercased()
         var descriptor = FetchDescriptor<CachedProduct>(
             predicate: #Predicate<CachedProduct> { cached in
                 cached.normalizedSku == lowered
             }
         )
-        descriptor.fetchLimit = 1
-        return try? context.fetch(descriptor).first?.toProduct()
+        descriptor.fetchLimit = limit
+        return ((try? context.fetch(descriptor)) ?? []).map { $0.toProduct() }
     }
     
     /// Check if cache has any data
@@ -124,6 +144,20 @@ final class ProductCacheManager {
         try? context.save()
     }
     
+    /// After a warm-up walked the whole catalog: drop rows it didn't fetch (deleted on
+    /// the server, or another store's one-store product). See CacheSweep.
+    func sweep(fetchedBefore walkStartedAt: Date) {
+        guard let context = modelContext else { return }
+        let descriptor = FetchDescriptor<CachedProduct>(
+            predicate: #Predicate<CachedProduct> { $0.lastFetchedAt < walkStartedAt }
+        )
+        for row in (try? context.fetch(descriptor)) ?? []
+        where CacheSweep.isStale(lastFetchedAt: row.lastFetchedAt, walkStartedAt: walkStartedAt, walkCompleted: true) {
+            context.delete(row)
+        }
+        try? context.save()
+    }
+
     /// Clear all cached products (e.g., on location switch or logout)
     func clearAll() {
         guard let context = modelContext else { return }

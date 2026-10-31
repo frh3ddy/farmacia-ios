@@ -5,6 +5,9 @@ import SwiftUI
 struct ProductRow: View {
     let product: Product
     var riskLevel: InventoryRiskLevel? = nil
+    /// Margin comes from cost: pass `authManager.canViewCosts`. Off unless asked, so a
+    /// list that forgets can't show a cashier margins (e.g. from a cached owner row).
+    var showsMargin = false
     
     var body: some View {
         HStack(spacing: 12) {
@@ -65,7 +68,7 @@ struct ProductRow: View {
                 }
                 
                 // Margin indicator
-                if let margin = product.profitMargin {
+                if showsMargin, let margin = product.profitMargin {
                     Text(String(format: "%.0f%%", margin))
                         .font(.caption2)
                         .fontWeight(.semibold)
