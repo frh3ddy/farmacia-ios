@@ -1,6 +1,6 @@
 # Reset Tabs on Store Switch Epic
 
-**Status**: ✅ DONE (uncommitted on the branch)
+**Status**: ✅ DONE — `93f6f03`, Ajustes role `ebbedbb` (merge `5912fdd`)
 **Branch**: `fix/reset-tabs-on-store-switch` (farmacia-ios only; no API change)
 **Goal**: After a store switch, no tab still shows a screen loaded for the previous store or role.
 
