@@ -112,5 +112,5 @@ Deploy farmacia-ops first. The app's gating is a convenience; the API guard is w
 
 ## Out of scope (separate items)
 
-- **Más screens left open after a role drop** (review finding #2): an app-only fix that closes the Más and Productos stacks on a store change and clears a report's data when its reload is refused. Plan it separately.
+- **Más screens left open after a role drop** (review finding #2): done in `tasks/reset-tabs-on-store-switch-epic.md`.
 - **"USD" prices:** first check whether production Square locations are MXN.
