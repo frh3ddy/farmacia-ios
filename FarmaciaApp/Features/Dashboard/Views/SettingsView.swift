@@ -24,7 +24,7 @@ struct SettingsView: View {
                         Text(authManager.currentEmployee?.name ?? "Usuario")
                             .font(.headline)
 
-                        Text(authManager.currentEmployee?.role.rawValue.capitalized ?? "")
+                        Text(authManager.currentEmployee?.role.displayName ?? "")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
