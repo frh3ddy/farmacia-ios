@@ -25,7 +25,7 @@ Merged: `c2e3630` (merge `d046810`). Picking another product in the receive form
 
 ## ✅ Save errors shown inside the form
 
-Merged: `c02f3ab` (merge `5dfd3ea`). Receive and adjustment save errors now show in an alert inside the open form, with the API's reason (`SaveOutcome`); the form stays open with its input. Not yet seen in the simulator. **Correction:** until `fix/inventory-small-followups`, NestJS's plain exceptions (no `success` field) failed to decode and showed "Error HTTP: 400" instead of the reason — see below.
+Merged: `c02f3ab` (merge `5dfd3ea`). Receive and adjustment save errors now show in an alert inside the open form, with the API's reason (`SaveOutcome`); the form stays open with its input. Not yet seen in the simulator. **Correction:** until `4a4c45e`, NestJS's plain exceptions (no `success` field) failed to decode and showed "Error HTTP: 400" instead of the reason — see below.
 
 ---
 
@@ -43,19 +43,19 @@ Merged: `789cc0f` (merge `e77976e`). Reported as "product picker sees only the f
 
 ## ✅ API error reasons reach the user
 
-Branch `fix/inventory-small-followups`. `APIErrorResponse.success` was a required `Bool`, but NestJS's own exceptions (`BadRequestException('…')`, `ConflictException`, `NotFoundException` — about 115 throw sites in the API) send `{message, error, statusCode}` with no `success`. Decoding failed, so every one of them reached the user as "Error HTTP: 400/404/409" instead of its Spanish reason (e.g. "Las existencias cambiaron…"). `success` is now optional.
+Merged: `4a4c45e` (merge `21f3d68`). `APIErrorResponse.success` was a required `Bool`, but NestJS's own exceptions (`BadRequestException('…')`, `ConflictException`, `NotFoundException` — about 115 throw sites in the API) send `{message, error, statusCode}` with no `success`. Decoding failed, so every one of them reached the user as "Error HTTP: 400/404/409" instead of its Spanish reason (e.g. "Las existencias cambiaron…"). `success` is now optional.
 
 ---
 
 ## ✅ Preferred supplier picked when the supplier list loads late
 
-Branch `fix/inventory-small-followups`. `PreferredSupplier.pick` (FarmaciaKit) runs when either list arrives — the product's suppliers or all suppliers — and never overrides the user's choice; the existing supplier `onChange` fills the cost.
+Merged: `fc2efde` (merge `21f3d68`). `PreferredSupplier.pick` (FarmaciaKit) runs when either list arrives — the product's suppliers or all suppliers — and never overrides the user's choice; the existing supplier `onChange` fills the cost.
 
 ---
 
 ## ✅ Adjustment cost asked only when the API needs it
 
-Branch `fix/inventory-small-followups` (iOS) and farmacia-ops `fix/unit-cost-required-code`. The API's no-previous-cost refusal now carries `code: 'UNIT_COST_REQUIRED'`; the app maps it (or the exact message, from an API without the code) to `NetworkError.unitCostRequired` → `SaveOutcome.costRequired`, and the adjustment form reveals its cost field only then (`AdjustmentCost.asksForCost(… costRequired:)`). Otherwise the API uses the last cost, as before.
+Merged: iOS `4a4c45e` (merge `21f3d68`), farmacia-ops `74ff3e0` (merge `d44c7b7`). The API's no-previous-cost refusal now carries `code: 'UNIT_COST_REQUIRED'`; the app maps it (or the exact message, from an API without the code) to `NetworkError.unitCostRequired` → `SaveOutcome.costRequired`, and the adjustment form reveals its cost field only then (`AdjustmentCost.asksForCost(… costRequired:)`). Otherwise the API uses the last cost, as before.
 
 ---
 
@@ -70,7 +70,7 @@ Merged: `f580589` (merge `9fcbfc2`).
 
 ## 📋 Small fixes
 
-- ✅ Given a create-product (or edit-price) response with no `data`, should show an error rather than nothing — `APIResponse.requireData()`, branch `fix/inventory-small-followups`
+- ✅ Given a create-product (or edit-price) response with no `data`, should show an error rather than nothing — `APIResponse.requireData()`, `4a4c45e`
 - ✅ Given an adjustment whose Square sync failed, should offer a retry somewhere reachable — see `tasks/square-sync-retry-epic.md` (also covers receivings)
 
 ---
