@@ -48,7 +48,12 @@ struct InventoryView: View {
                 }
             }
             .navigationTitle("Inventario")
-            .task {
+            // Keyed on location: a switch reloads everything, and the previous
+            // store's lists are cleared first so they never show under the new one.
+            .task(id: authManager.currentLocation?.id) {
+                viewModel.products = []
+                viewModel.recentReceivings = []
+                viewModel.recentAdjustments = []
                 await viewModel.loadProducts()
                 await viewModel.loadSuppliers()
                 if let locationId = authManager.currentLocation?.id {
