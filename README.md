@@ -125,6 +125,7 @@ Opened from a product (Productos → product → Recibir Inventario / Ajustar In
 - Adjustment Impact
 - Receiving Summary
 - Profit & Loss statement
+- Merma in the P&L (dashboard card and statement) is losses; stock that came back (Encontrado, a count corrected up) shows apart as "Mercancía recuperada" and lowers the expense total
 
 ### Employee Management (Owner only)
 - Add/edit employees
