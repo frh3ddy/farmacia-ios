@@ -14,13 +14,12 @@ The API's merma is now net: losses minus recovered stock (farmacia-ops `tasks/ne
 ## What the app shows
 
 - **Dashboard card** (`ProfitLossLines`): Gastos Operativos = total − net merma; Merma = losses; "Mercancía recuperada" (green) when above 0. `addsUp` checks revenue − cost − expenses − losses + recovered + Yastás = net profit (Decimal).
-- **Full P&L report** (`ProfitLossReportView`): Merma = losses; "Mercancía recuperada" when above 0; Total de Gastos = the server's net total.
+- **Full P&L report** (`ProfitLossReportView`): the same merma rows (`ProfitLossLines.shrinkageLines`), "Mercancía recuperada" in green; Total de Gastos = the server's net total.
 - **Older servers** (no `shrinkageLosses`): one Merma row with the net figure, as before.
 
-## Open
+## Review follow-ups (2026-10-31 `/tdd-review`) — `05f54ae`
 
-From the 2026-10-31 `/tdd-review`:
-- The full P&L report builds its merma rows inline (Double, untested) instead of from `ProfitLossLines`. With a server that sends `shrinkageRecovered` but no `shrinkageLosses` it would count the recovery twice; today's API always sends both.
-- No test for `ProfitLossLines` given recovered but no losses (the older-server fallback).
-- In the full report "Mercancía recuperada" sits in Gastos Operativos as a plain number, so it doesn't read as a deduction.
-- The full report's margin subtitles say "margin" in English.
+- ✅ The full P&L report builds its merma rows from `ProfitLossLines.shrinkageLines` (Decimal, tested), the same rows as the dashboard card, so a server that sends `shrinkageRecovered` without `shrinkageLosses` no longer counts the recovery twice.
+- ✅ Tests for the older-server fallback: recovered but no losses shows one net Merma row, on the card and the statement.
+- ✅ In the full report "Mercancía recuperada" shows green, as on the dashboard, so it reads as a deduction.
+- ✅ The full report's margin subtitles say "margen".
