@@ -38,14 +38,14 @@ public struct ProfitLossLines: Sendable {
            let expensesTotal = Self.decimal(operatingExpensesTotal), let merma = Self.decimal(shrinkage) {
             let expenses = expensesTotal - merma
             lines.append(Line(label: "Gastos Operativos", amount: "\(expenses)", kind: .cost))
-            // Older servers send only the net figure: one Merma row, as before.
-            let losses = shrinkageLosses.flatMap(Self.decimal)
-            let recovered = losses == nil ? 0 : shrinkageRecovered.flatMap(Self.decimal) ?? 0
-            lines.append(Line(label: "Merma", amount: losses.map { "\($0)" } ?? shrinkage, kind: .shrinkage))
-            if recovered > 0 {
-                lines.append(Line(label: "Mercancía recuperada", amount: "\(recovered)", kind: .income))
+            let mermaLines = Self.shrinkageLines(shrinkage: shrinkage, losses: shrinkageLosses, recovered: shrinkageRecovered)
+            lines += mermaLines
+            // Merma rows subtract, a recovery adds back (every amount here is readable).
+            let mermaNet = mermaLines.reduce(Decimal(0)) { sum, line in
+                let amount = Self.decimal(line.amount) ?? 0
+                return line.kind == .income ? sum - amount : sum + amount
             }
-            let sum = revenue - cost - expenses - (losses ?? merma) + recovered + (yastas ?? 0)
+            let sum = revenue - cost - expenses - mermaNet + (yastas ?? 0)
             addsUp = Self.decimal(netProfit) == sum
         } else {
             // Can't split merma out of a total we can't read: one row, as the server sent it.
@@ -71,6 +71,20 @@ public struct ProfitLossLines: Sendable {
                   shrinkageRecovered: shrinkageRecovered,
                   yastasServiceRevenue: netProfit.yastasServiceRevenue,
                   netProfit: netProfit.amount)
+    }
+
+    /// The merma rows, shared by the dashboard card and the P&L statement: Merma (losses) and
+    /// "Mercancía recuperada" when above 0. Older servers send only the net figure: one Merma row.
+    public static func shrinkageLines(shrinkage: String, losses: String?, recovered: String?) -> [Line] {
+        guard let losses = losses.flatMap(decimal) else {
+            return [Line(label: "Merma", amount: shrinkage, kind: .shrinkage)]
+        }
+        let recovered = recovered.flatMap(decimal) ?? 0
+        var lines = [Line(label: "Merma", amount: "\(losses)", kind: .shrinkage)]
+        if recovered > 0 {
+            lines.append(Line(label: "Mercancía recuperada", amount: "\(recovered)", kind: .income))
+        }
+        return lines
     }
 
     /// Server money strings are plain decimals ("1234.56"); anything else is unreadable.

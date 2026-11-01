@@ -102,6 +102,31 @@ struct ProfitLossLinesTests {
         #expect(pl.addsUp)
     }
 
+    @Test("given an older server that sends recovered 500 but no losses, should show only the net Merma row and still add up")
+    func recoveredWithoutLosses() {
+        let pl = ProfitLossLines(revenue: "100000", costOfSales: "60000", operatingExpensesTotal: "19700",
+                                 shrinkage: "-300", shrinkageRecovered: "500",
+                                 yastasServiceRevenue: nil, netProfit: "20300")
+        #expect(pl.lines.map(\.label) == ["Ingresos", "Costo de Ventas", "Gastos Operativos", "Merma", "Ganancia Neta"])
+        #expect(row("Merma", in: pl) == "-300")
+        #expect(pl.addsUp)
+    }
+
+    @Test("given net merma -300 from losses 200 and recovered 500, the statement's merma rows should be Merma 200 and Mercancía recuperada 500")
+    func shrinkageRowsSplit() {
+        #expect(ProfitLossLines.shrinkageLines(shrinkage: "-300", losses: "200", recovered: "500") == [
+            .init(label: "Merma", amount: "200", kind: .shrinkage),
+            .init(label: "Mercancía recuperada", amount: "500", kind: .income),
+        ])
+    }
+
+    @Test("given recovered 500 but no losses (older server), the statement should show one Merma row with the net -300, not count the recovery twice")
+    func shrinkageRowsWithoutLosses() {
+        #expect(ProfitLossLines.shrinkageLines(shrinkage: "-300", losses: nil, recovered: "500") == [
+            .init(label: "Merma", amount: "-300", kind: .shrinkage),
+        ])
+    }
+
     @Test("given a row, should say whether it adds to or subtracts from the result")
     func kinds() {
         #expect(lines().lines.map(\.kind) == [.income, .cost, .cost, .shrinkage, .income, .total])

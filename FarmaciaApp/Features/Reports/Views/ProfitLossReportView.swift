@@ -40,7 +40,7 @@ struct ProfitLossReportView: View {
                         PLSummaryRow(
                             label: "Ganancia Bruta",
                             value: report.grossProfit.amount,
-                            subtitle: "\(formatPercent(report.grossProfit.marginPercent)) margin",
+                            subtitle: "\(formatPercent(report.grossProfit.marginPercent)) margen",
                             color: .blue
                         )
 
@@ -50,9 +50,13 @@ struct ProfitLossReportView: View {
                                 PLRow(label: ExpenseType(rawValue: expense.type)?.displayName ?? expense.type, value: expense.amount, isTotal: false, isNegative: true)
                             }
                             // Losses and recoveries apart, so merma never shows as a negative number.
-                            PLRow(label: "Merma", value: report.operatingExpenses.shrinkageLosses ?? report.operatingExpenses.shrinkage, isTotal: false, isNegative: true)
-                            if let recovered = report.operatingExpenses.shrinkageRecovered, (Double(recovered) ?? 0) > 0 {
-                                PLRow(label: "Mercancía recuperada", value: recovered, isTotal: false)
+                            ForEach(ProfitLossLines.shrinkageLines(
+                                shrinkage: report.operatingExpenses.shrinkage,
+                                losses: report.operatingExpenses.shrinkageLosses,
+                                recovered: report.operatingExpenses.shrinkageRecovered
+                            ), id: \.label) { line in
+                                PLRow(label: line.label, value: line.amount, isTotal: false,
+                                      isNegative: line.kind != .income, isGain: line.kind == .income)
                             }
                             PLRow(label: "Total de Gastos", value: report.operatingExpenses.total, isTotal: true, isNegative: true)
                         }
@@ -61,7 +65,7 @@ struct ProfitLossReportView: View {
                         PLSummaryRow(
                             label: "Ganancia Neta",
                             value: report.netProfit.amount,
-                            subtitle: "\(formatPercent(report.netProfit.marginPercent)) margin",
+                            subtitle: "\(formatPercent(report.netProfit.marginPercent)) margen",
                             color: ReportFormat.isNonNegative(report.netProfit.amount) ? .green : .red
                         )
                     }
@@ -125,6 +129,8 @@ struct PLRow: View {
     let value: String
     let isTotal: Bool
     var isNegative: Bool = false
+    /// A deduction inside a cost section (stock recovered), shown green as on the dashboard.
+    var isGain: Bool = false
 
     var body: some View {
         HStack {
@@ -135,7 +141,7 @@ struct PLRow: View {
 
             Text(isNegative ? "(\(formatCurrency(value)))" : formatCurrency(value))
                 .font(isTotal ? .subheadline.bold() : .subheadline)
-                .foregroundStyle(isNegative ? Color.red : Color.primary)
+                .foregroundStyle(isNegative ? Color.red : isGain ? Color.green : Color.primary)
         }
         .padding(.vertical, 4)
     }
