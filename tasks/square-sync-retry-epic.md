@@ -18,6 +18,7 @@ Separately, the combined activity lists still color adjustments by type, so a co
 - `POST /inventory/adjustments/:id/retry-square-sync` and `POST /inventory/receive/:id/retry-square-sync`, both `@Roles('OWNER')`.
 - Response is **HTTP 200 even when the retry fails**: `{ success: synced, message: "Successfully synced to Square" | "Square sync failed: <error>", data: { synced, error? } }`. The app must read `data.synced`, not the status code.
 - Safe to repeat: an already-synced record returns `{ synced: true }` without calling Square, and the Square call uses the record id as its idempotency key, so a double tap or a retry racing another can't apply the change to Square twice.
+- Since 2026-10-31 (farmacia-ops `717df0f`, `tasks/square-sync-retry-recorded-failures-epic.md`) the adjustment and receiving retries refuse (400) a record with no recorded failure, as the transfer retry does. The app already offers the retry only for a recorded failure (`SquareSync.failed`), so nothing changes in the app.
 - Transfer adjustments are rejected (400). The app never creates them, but the error message must still show.
 - The retry isn't in the offline queue's allowlist (`OfflineReplay`). Offline, it fails with `networkUnavailable`, which is correct: it needs Square.
 
