@@ -1,6 +1,6 @@
 # Inventory Review Follow-ups Epic
 
-**Status**: 🔄 IN PROGRESS
+**Status**: ✅ DONE (2026-10-31)
 **Goal**: Fix what the 2026-10-30 reviews of `FarmaciaApp/Features/Inventory/` found, so that after cutover a user can adjust inventory, add products and see accurate money numbers.
 
 ## Overview
@@ -25,7 +25,7 @@ Merged: `c2e3630` (merge `d046810`). Picking another product in the receive form
 
 ## ✅ Save errors shown inside the form
 
-Merged: `c02f3ab` (merge `5dfd3ea`). Receive and adjustment save errors now show in an alert inside the open form, with the API's reason (`SaveOutcome`); the form stays open with its input. Not yet seen in the simulator. **Correction:** until `4a4c45e`, NestJS's plain exceptions (no `success` field) failed to decode and showed "Error HTTP: 400" instead of the reason — see below.
+Merged: `c02f3ab` (merge `5dfd3ea`). Receive and adjustment save errors now show in an alert inside the open form, with the API's reason (`SaveOutcome`); the form stays open with its input. Seen in the 2026-10-31 simulator review: an Encontrado adjustment on a product with no cost asked for the unit cost inside the form, and the save showed its result in the form's alert. **Correction:** until `4a4c45e`, NestJS's plain exceptions (no `success` field) failed to decode and showed "Error HTTP: 400" instead of the reason — see below.
 
 ---
 
@@ -81,5 +81,5 @@ Merged: `f580589` (merge `9fcbfc2`).
   - Request bodies gain nothing. A typed amount (19.99, 12.35) encodes the same from `Double` as from `Decimal`, and the API requires JSON numbers (`typeof … === 'number'`) that it parses into JS doubles before `Prisma.Decimal`. No request sends a computed amount.
   - The only visible difference is on-screen math: with 4-decimal costs, a total or margin can round a half cent differently (3 × $0.335 shows `$1.00` with `Double`, `$1.01` with `Decimal`). This is display only; the server computes stored totals itself.
   - If this is ever revisited, build every `Decimal` from text (the field's format style or `Decimal(string:)`), never from a `Double`: `Decimal(19.99)` encodes as `19.98999999999999488`, worse than the `Double`.
-- **Lock stock during a count correction (farmacia-ops).** The server reads stock just before writing, not under `SELECT … FOR UPDATE`. A sale of that product at that store would have to land within milliseconds; the human count already spans minutes of possible sales, which no lock fixes, and the next count corrects any error. Revisit only if counts drift during busy hours (see the `ponytail:` comment in `inventory-adjustment.service.ts`).
+- ~~**Lock stock during a count correction (farmacia-ops).**~~ Decided against here on 2026-10-30, then done in farmacia-ops on 2026-10-31: `e9786dc` locks a product's batches while a count is applied (merge `fa37f23`).
 - **Key the product-detail inventory sheets on location.** Not needed: the count-correction form fetches stock for the current location itself.
