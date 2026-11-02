@@ -164,6 +164,20 @@ open FarmaciaApp.xcodeproj
 xcodebuild -scheme FarmaciaApp -destination 'platform=iOS Simulator,name=iPhone 15'
 ```
 
+### Dev and production side by side
+The two builds are separate apps, so both can be installed on the same phone:
+
+| | Debug | Release |
+|---|---|---|
+| Name on home screen | Farmacia Dev (amber **DEV** icon) | Farmacia |
+| Bundle ID | `com.farmacia.ios.dev` | `com.farmacia.ios` |
+| API | local (`AppConfiguration` `.development`) | production |
+| Install | Run from Xcode / XcodeBuildMCP | `scripts/release-build-install.sh` |
+
+Each keeps its own Keychain entries, so each app is activated once against its own server.
+On a free Apple account, the two count as 2 of the 3 sideloaded apps a device allows.
+Brand art (icon, logo lockups) comes from `scripts/brand/render-brand.swift`; see `docs/brand-guidelines.md`.
+
 ### Testing
 ```bash
 xcodebuild test -scheme FarmaciaApp -destination 'platform=iOS Simulator,name=iPhone 15'
