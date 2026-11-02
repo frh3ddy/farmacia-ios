@@ -37,6 +37,8 @@
 		EE00000100000004 /* UIImage+Resize.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000004 /* UIImage+Resize.swift */; };
 		EE00000100000005 /* KeyboardHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000005 /* KeyboardHelpers.swift */; };
 		EE00000100000006 /* StateViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000006 /* StateViews.swift */; };
+		DD00000100000002 /* AmountField.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000002 /* AmountField.swift */; };
+		DD00000100000001 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000001 /* DesignSystem.swift */; };
 		EE00000100000007 /* BackgroundTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000007 /* BackgroundTask.swift */; };
 		EE00000100000008 /* SubjectLifter.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000008 /* SubjectLifter.swift */; };
 		EE00000100000009 /* ProductPhotoPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000009 /* ProductPhotoPreviewView.swift */; };
@@ -132,6 +134,8 @@
 		EE00000200000004 /* UIImage+Resize.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIImage+Resize.swift"; sourceTree = "<group>"; };
 		EE00000200000005 /* KeyboardHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardHelpers.swift; sourceTree = "<group>"; };
 		EE00000200000006 /* StateViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StateViews.swift; sourceTree = "<group>"; };
+		DD00000200000002 /* AmountField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmountField.swift; sourceTree = "<group>"; };
+		DD00000200000001 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
 		EE00000200000007 /* BackgroundTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTask.swift; sourceTree = "<group>"; };
 		EE00000200000008 /* SubjectLifter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubjectLifter.swift; sourceTree = "<group>"; };
 		EE00000200000009 /* ProductPhotoPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductPhotoPreviewView.swift; sourceTree = "<group>"; };
@@ -317,10 +321,20 @@
 			path = App;
 			sourceTree = "<group>";
 		};
+		DD00000300000001 /* DesignSystem */ = {
+			isa = PBXGroup;
+			children = (
+				DD00000200000002 /* AmountField.swift */,
+				DD00000200000001 /* DesignSystem.swift */,
+			);
+			path = DesignSystem;
+			sourceTree = "<group>";
+		};
 		F300000000000003 /* Core */ = {
 			isa = PBXGroup;
 			children = (
 				EE00000300000001 /* Components */,
+				DD00000300000001 /* DesignSystem */,
 				F300000000000007 /* Network */,
 				F300000000000008 /* Auth */,
 				CA00000300000001 /* Storage */,
@@ -661,6 +675,8 @@
 				EE00000100000004 /* UIImage+Resize.swift in Sources */,
 				EE00000100000005 /* KeyboardHelpers.swift in Sources */,
 				EE00000100000006 /* StateViews.swift in Sources */,
+				DD00000100000002 /* AmountField.swift in Sources */,
+				DD00000100000001 /* DesignSystem.swift in Sources */,
 				EE00000100000007 /* BackgroundTask.swift in Sources */,
 				EE00000100000008 /* SubjectLifter.swift in Sources */,
 				EE00000100000009 /* ProductPhotoPreviewView.swift in Sources */,

@@ -3,16 +3,27 @@ import FarmaciaKit
 import SwiftyCrop
 
 // MARK: - Create Product View
+//
+// Design-system pilot (tasks/design-system-epic.md): DS tokens, AmountField,
+// Margin/Tone, .formKeyboard. Presentation rules:
+//   - Everything full-screen in the photo flow is one destination
+//     (`photoDestination`) on one `fullScreenCover(item:)`. Moving between steps
+//     swaps the item; SwiftUI replaces the content, so nothing races.
+//   - The photo source is a `Menu` (no dialog to animate away before the camera
+//     or library can open).
+//   - The supplier is chosen by a push, not a sheet.
 
-/// The one full-screen step of the photo flow on screen. A single
-/// `fullScreenCover(item:)` drives both, so the crop and preview never
-/// compete for the same presentation host.
-private enum PhotoStep: Identifiable {
+/// Every full-screen step of the photo flow.
+private enum PhotoDestination: Identifiable {
+    case camera
+    case library
     case crop(UIImage)
     case preview
 
     var id: String {
         switch self {
+        case .camera: "camera"
+        case .library: "library"
         case .crop: "crop"
         case .preview: "preview"
         }
@@ -24,23 +35,25 @@ struct CreateProductView: View {
     @Environment(\.dismiss) var dismiss
     @StateObject private var viewModel: CreateProductViewModel
 
-    // Image picker state
+    // Photo state
     @State private var selectedImage: UIImage?
     @State private var originalCroppedImage: UIImage?
     @State private var liftedImage: UIImage?
     @State private var backgroundRemoved = true
-    @State private var photoStep: PhotoStep?
-    @State private var showImageSourcePicker = false
     @State private var isLiftingSubject = false
-    @State private var quantity: Int?
-    @State private var unitCost: Double?
-    @State private var sellingPrice: Double?
-    @State private var showSupplierPicker = false
+    @State private var photoDestination: PhotoDestination?
+    /// Where Retomar Foto goes: the source the current photo came from.
+    @State private var photoSource: PhotoDestination = .library
 
     private enum Field: Hashable {
-        case quantity, unitCost, sellingPrice
+        case name, sku, description, sellingPrice, quantity, unitCost
     }
     @FocusState private var focusedField: Field?
+
+    private var focusOrder: FocusOrder<Field> {
+        FocusOrder([.name, .sku, .description, .sellingPrice]
+            + (viewModel.hasInitialStock ? [.quantity, .unitCost] : []))
+    }
 
     // Optional prefilled SKU (e.g. from barcode scanner) — seeded directly
     // into the StateObject at construction time rather than via .onAppear,
@@ -54,168 +67,71 @@ struct CreateProductView: View {
     var body: some View {
         NavigationStack {
             Form {
-                // Product Image Section
-                Section {
-                    HStack {
-                        Spacer()
-                        ZStack(alignment: .bottomTrailing) {
-                            if let image = selectedImage {
-                                Image(uiImage: image)
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                                    .frame(width: 100, height: 100)
-                                    .clipShape(.rect(cornerRadius: 16))
-                                    .onTapGesture {
-                                        photoStep = .preview
-                                    }
-                            } else {
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .fill(Color(.systemGray5))
-                                        .frame(width: 100, height: 100)
-                                    VStack(spacing: 4) {
-                                        Image(systemName: "camera.fill")
-                                            .font(.title2)
-                                            .foregroundStyle(.secondary)
-                                        Text("Agregar Foto")
-                                            .font(.caption2)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                }
-                                .onTapGesture {
-                                    showImageSourcePicker = true
-                                }
-                            }
-
-                            Button {
-                                showImageSourcePicker = true
-                            } label: {
-                                Image(systemName: selectedImage != nil ? "pencil.circle.fill" : "plus.circle.fill")
-                                    .font(.title3)
-                                    .foregroundStyle(.white)
-                                    .background(Circle().fill(Color.blue).frame(width: 28, height: 28))
-                            }
-                            .offset(x: 4, y: 4)
-
-                            if isLiftingSubject {
-                                ProgressView()
-                                    .frame(width: 100, height: 100)
-                                    .background(Color.black.opacity(0.3))
-                                    .clipShape(.rect(cornerRadius: 16))
-                            }
-                        }
-                        Spacer()
-                    }
-                    .listRowBackground(Color.clear)
-                } header: {
-                    Text("Imagen del Producto (Opcional)")
-                }
-                .confirmationDialog("Agregar Imagen del Producto", isPresented: $showImageSourcePicker) {
-                    Button("Tomar Foto") {
-                        ImagePickerPresenter.present(sourceType: .camera) { image in
-                            photoStep = .crop(image)
-                        }
-                    }
-                    Button("Elegir de la Biblioteca") {
-                        ImagePickerPresenter.present(sourceType: .photoLibrary) { image in
-                            photoStep = .crop(image)
-                        }
-                    }
-                    if selectedImage != nil {
-                        Button("Eliminar Foto", role: .destructive) {
-                            selectedImage = nil
-                            originalCroppedImage = nil
-                            liftedImage = nil
-                            backgroundRemoved = true
-                        }
-                    }
-                    Button("Cancelar", role: .cancel) {}
-                }
-                .onChange(of: backgroundRemoved) { _, removed in
-                    guard let originalCroppedImage else { return }
-                    selectedImage = removed ? (liftedImage ?? originalCroppedImage) : originalCroppedImage
-                }
+                photoSection
 
                 // Product Info Section
                 Section {
                     TextField("Nombre del Producto", text: $viewModel.name)
                         .textInputAutocapitalization(.words)
-                    
+                        .focused($focusedField, equals: .name)
+
                     TextField("SKU (Optional)", text: $viewModel.sku)
                         .textInputAutocapitalization(.characters)
                         .autocorrectionDisabled()
-                    
+                        .focused($focusedField, equals: .sku)
+
                     TextField("Descripción (Opcional)", text: $viewModel.description, axis: .vertical)
                         .lineLimit(2...4)
+                        .focused($focusedField, equals: .description)
                 } header: {
                     Text("Información del Producto")
                 } footer: {
                     Text("SKU helps identify products quickly. Leave empty to auto-generate.")
                 }
-                
+
                 // Pricing Section
                 Section {
-                    HStack {
-                        Text("$")
-                            .foregroundStyle(.secondary)
-                        TextField("0.00", value: $viewModel.sellingPrice, format: .number)
-                            .keyboardType(.decimalPad)
-                            .focused($focusedField, equals: .sellingPrice)
-                        Text("MXN")
-                            .foregroundStyle(.secondary)
-                    }
-                    .contentShape(Rectangle())
-                    .onTapGesture { focusedField = .sellingPrice }
+                    AmountField(
+                        prefix: "$",
+                        unit: "MXN",
+                        value: $viewModel.sellingPrice,
+                        focus: $focusedField,
+                        field: .sellingPrice
+                    )
                 } header: {
                     Text("Precio de Venta")
                 } footer: {
                     Text("El precio que los clientes pagarán en caja.")
                 }
-                
+
                 // Initial Inventory Section (Optional)
                 Section {
                     Toggle("Add Initial Stock", isOn: $viewModel.hasInitialStock)
-                    
-                    if viewModel.hasInitialStock {
-                        HStack {
-                            Text("Cantidad")
-                            Spacer()
-                            TextField("0", value: $viewModel.initialStock, format: .number)
-                                .keyboardType(.numberPad)
-                                .multilineTextAlignment(.trailing)
-                                .focused($focusedField, equals: .quantity)
-                            Text("UDS")
-                                .foregroundStyle(.secondary)
-                        }
-                        .contentShape(Rectangle())
-                        .onTapGesture { focusedField = .quantity }
-                        
-                        HStack {
-                            Text("Costo por Unidad")
-                            TextField("0.00", value: $viewModel.costPrice, format: .number)
-                                .keyboardType(.decimalPad)
-                                .multilineTextAlignment(.trailing)
-                                .focused($focusedField, equals: .unitCost)
-                            Text("MXN")
-                                .foregroundStyle(.secondary)
-                        }
-                        .contentShape(Rectangle())
-                        .onTapGesture { focusedField = .unitCost }
 
-                        HStack {
-                            Text("Proveedor")
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            Text(viewModel.selectedSupplier?.name ?? "Seleccionar (Opcional)")
-                                .foregroundStyle(.secondary)
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                        }
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            focusedField = nil
-                            showSupplierPicker = true
+                    if viewModel.hasInitialStock {
+                        AmountField(
+                            "Cantidad",
+                            unit: "UDS",
+                            quantity: $viewModel.initialStock,
+                            focus: $focusedField,
+                            field: .quantity
+                        )
+
+                        AmountField(
+                            "Costo por Unidad",
+                            unit: "MXN",
+                            value: $viewModel.costPrice,
+                            focus: $focusedField,
+                            field: .unitCost
+                        )
+
+                        NavigationLink {
+                            SupplierPickerView(
+                                suppliers: $viewModel.suppliers,
+                                selectedSupplier: $viewModel.selectedSupplier
+                            )
+                        } label: {
+                            LabeledContent("Proveedor", value: viewModel.selectedSupplier?.name ?? "Seleccionar (Opcional)")
                         }
                     }
                 } header: {
@@ -227,14 +143,7 @@ struct CreateProductView: View {
                         Text("Puedes recibir inventario después desde la pestaña de Inventario.")
                     }
                 }
-                // Toggling "Add Initial Stock" reveals these rows via the
-                // Form's implicit row-insertion animation. Tapping Proveedor
-                // while that animation is still in flight — e.g. toggling on
-                // and immediately tapping it — races the sheet presentation
-                // and UIKit cancels it on the first attempt. No animation on
-                // this reveal means no in-flight transaction to race.
-                .animation(nil, value: viewModel.hasInitialStock)
-                
+
                 // Margin Preview
                 if viewModel.showMarginPreview {
                     Section {
@@ -243,7 +152,7 @@ struct CreateProductView: View {
                         Text("Vista Previa del Margen")
                     }
                 }
-                
+
                 // Stores Section
                 Section {
                     Toggle("Vender en todas las sucursales", isOn: $viewModel.soldAtAllLocations)
@@ -268,63 +177,32 @@ struct CreateProductView: View {
                     }
                 }
             }
-            // Photo crop/preview live here, not on the image Section: that
-            // Section also hosts the source confirmationDialog, and sharing its
-            // presentation host made the crop cover close itself on first open.
-            .fullScreenCover(item: $photoStep) { step in
-                switch step {
-                case .crop(let image):
-                    cropView(for: image)
-                case .preview:
-                    if let originalCroppedImage {
-                        ProductPhotoPreviewView(
-                            liftedImage: liftedImage,
-                            originalImage: originalCroppedImage,
-                            backgroundRemoved: $backgroundRemoved,
-                            onRetake: {
-                                photoStep = nil
-                                showImageSourcePicker = true
-                            },
-                            onDone: {
-                                photoStep = nil
-                            }
-                        )
-                    }
-                }
+            .formKeyboard(focus: $focusedField, order: focusOrder)
+            .fullScreenCover(item: $photoDestination) { destination in
+                photoScreen(for: destination)
             }
-            .sheet(isPresented: $showSupplierPicker) {
-                SupplierPickerView(
-                    suppliers: $viewModel.suppliers,
-                    selectedSupplier: $viewModel.selectedSupplier
-                )
+            .onChange(of: backgroundRemoved) { _, removed in
+                guard let originalCroppedImage else { return }
+                selectedImage = removed ? (liftedImage ?? originalCroppedImage) : originalCroppedImage
             }
             .task {
                 await viewModel.loadSuppliers()
             }
             .navigationTitle("Nuevo Producto")
             .navigationBarTitleDisplayMode(.inline)
-            // Breathing room between the keyboard's top edge and bottom
-            // fields while editing
-            .keyboardTopSpacing(200, isActive: focusedField != nil)
-            // Scrolling dismisses the keyboard and removes field focus —
-            // otherwise the first tap on the photo area is consumed by the
-            // scroll view scrolling back to the focused (off-screen) field
-            // instead of opening the image source picker
-            .scrollDismissesKeyboard(.immediately)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .cancellationAction) {
                     Button("Cancelar") {
                         dismiss()
                     }
                 }
-                
-                ToolbarItem(placement: .topBarTrailing) {
+
+                ToolbarItem(placement: .confirmationAction) {
                     Button("Crear") {
                         Task {
                             await createProduct()
                         }
                     }
-                    .fontWeight(.semibold)
                     .disabled(!viewModel.isValid || viewModel.isSubmitting)
                 }
             }
@@ -350,8 +228,121 @@ struct CreateProductView: View {
             }
         }
     }
-    
-    // MARK: - Photo Crop
+
+    // MARK: - Photo
+
+    private var photoSection: some View {
+        Section {
+            HStack {
+                Spacer()
+                ZStack(alignment: .bottomTrailing) {
+                    if let image = selectedImage {
+                        Button {
+                            photoDestination = .preview
+                        } label: {
+                            Image(uiImage: image)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: 100, height: 100)
+                                .clipShape(.rect(cornerRadius: DS.Radius.xl))
+                        }
+                        .accessibilityLabel("Ver foto del producto")
+                    } else {
+                        Menu {
+                            photoSourceItems
+                        } label: {
+                            VStack(spacing: DS.Spacing.xs) {
+                                Image(systemName: "camera.fill")
+                                    .font(.title2)
+                                Text("Agregar Foto")
+                                    .font(.caption)
+                            }
+                            .foregroundStyle(.secondary)
+                            .frame(width: 100, height: 100)
+                            .background(Color(.systemGray5), in: .rect(cornerRadius: DS.Radius.xl))
+                        }
+                    }
+
+                    Menu {
+                        photoSourceItems
+                    } label: {
+                        Image(systemName: selectedImage != nil ? "pencil.circle.fill" : "plus.circle.fill")
+                            .font(.title3)
+                            .foregroundStyle(.white)
+                            .background(Circle().fill(Color.blue).frame(width: 28, height: 28))
+                            // Same look as before; the tap area grows to 44pt.
+                            .frame(width: DS.minTapSize, height: DS.minTapSize)
+                            .contentShape(.rect)
+                    }
+                    .accessibilityLabel(selectedImage != nil ? "Cambiar foto" : "Agregar foto")
+                    .offset(x: DS.Spacing.xs, y: DS.Spacing.xs)
+
+                    if isLiftingSubject {
+                        ProgressView()
+                            .frame(width: 100, height: 100)
+                            .background(Color.black.opacity(0.3), in: .rect(cornerRadius: DS.Radius.xl))
+                    }
+                }
+                .buttonStyle(.plain)
+                Spacer()
+            }
+            .listRowBackground(Color.clear)
+        } header: {
+            Text("Imagen del Producto (Opcional)")
+        }
+    }
+
+    @ViewBuilder
+    private var photoSourceItems: some View {
+        if CameraPicker.isAvailable {
+            Button("Tomar Foto", systemImage: "camera") {
+                photoSource = .camera
+                photoDestination = .camera
+            }
+        }
+        Button("Elegir de la Biblioteca", systemImage: "photo.on.rectangle") {
+            photoSource = .library
+            photoDestination = .library
+        }
+        if selectedImage != nil {
+            Button("Eliminar Foto", systemImage: "trash", role: .destructive) {
+                selectedImage = nil
+                originalCroppedImage = nil
+                liftedImage = nil
+                backgroundRemoved = true
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func photoScreen(for destination: PhotoDestination) -> some View {
+        switch destination {
+        case .camera:
+            CameraPicker(
+                onPicked: { photoDestination = .crop($0) },
+                onCancel: { photoDestination = nil }
+            )
+            .ignoresSafeArea()
+        case .library:
+            LibraryPicker(
+                onPicked: { photoDestination = .crop($0) },
+                onCancel: { photoDestination = nil }
+            )
+        case .crop(let image):
+            cropView(for: image)
+        case .preview:
+            if let originalCroppedImage {
+                ProductPhotoPreviewView(
+                    liftedImage: liftedImage,
+                    originalImage: originalCroppedImage,
+                    backgroundRemoved: $backgroundRemoved,
+                    isLifting: isLiftingSubject,
+                    onRetake: { photoDestination = photoSource },
+                    onDone: { photoDestination = nil }
+                )
+            }
+        }
+    }
 
     private func cropView(for image: UIImage) -> some View {
         SwiftyCropView(
@@ -362,14 +353,18 @@ struct CreateProductView: View {
             // applies 10% of the pinch as zoom. 8 gets close to a native,
             // 1:1-feeling pinch; retune if it still feels off.
             configuration: SwiftyCropConfiguration(zoomSensitivity: 8),
-            onCancel: { photoStep = nil }
+            onCancel: { photoDestination = nil }
         ) { croppedImage in
-            photoStep = nil
-            guard let croppedImage else { return }
+            guard let croppedImage else {
+                photoDestination = nil
+                return
+            }
             originalCroppedImage = croppedImage
             liftedImage = nil
             backgroundRemoved = true
             selectedImage = croppedImage
+            // Straight to the preview; it shows a spinner until lifting ends.
+            photoDestination = .preview
             Task {
                 isLiftingSubject = true
                 let lifted = await SubjectLifter.liftSubject(from: croppedImage)
@@ -381,7 +376,6 @@ struct CreateProductView: View {
                     selectedImage = lifted
                 }
                 isLiftingSubject = false
-                photoStep = .preview
             }
         }
     }
@@ -390,48 +384,48 @@ struct CreateProductView: View {
 
     private var marginPreviewRow: some View {
         HStack {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: DS.Spacing.xs) {
                 Text("Ganancia por Unidad")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                
+
                 if let profit = viewModel.profitPerUnit {
                     Text(formatCurrency(profit))
                         .font(.headline)
-                        .foregroundStyle(profit >= 0 ? .green : .red)
+                        .foregroundStyle((profit >= 0 ? Tone.positive : .critical).color)
                 }
             }
-            
+
             Spacer()
-            
-            VStack(alignment: .trailing, spacing: 4) {
+
+            VStack(alignment: .trailing, spacing: DS.Spacing.xs) {
                 Text("Margen")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                
+
                 if let margin = viewModel.marginPercent {
                     Text(String(format: "%.1f%%", margin))
                         .font(.headline)
-                        .foregroundStyle(margin >= 20 ? .green : (margin >= 10 ? .orange : .red))
+                        .foregroundStyle(Margin.tone(forPercent: margin).color)
                 }
             }
         }
     }
-    
+
     // MARK: - Loading Overlay
-    
+
     private var loadingOverlay: some View {
         ZStack {
             Color.black.opacity(0.3)
                 .ignoresSafeArea()
-            
-            VStack(spacing: 16) {
+
+            VStack(spacing: DS.Spacing.l) {
                 ProgressView()
-                    .scaleEffect(1.5)
-                
+                    .controlSize(.large)
+
                 Text("Creando producto...")
                     .font(.headline)
-                
+
                 if selectedImage != nil {
                     Text("Se subirá la imagen después de crear...")
                         .font(.caption)
@@ -442,26 +436,25 @@ struct CreateProductView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .padding(32)
-            .background(.regularMaterial)
-            .clipShape(.rect(cornerRadius: 16))
+            .padding(DS.Spacing.xxxl)
+            .background(.regularMaterial, in: .rect(cornerRadius: DS.Radius.xl))
         }
     }
-    
+
     // MARK: - Actions
-    
+
     private func createProduct() async {
         guard let locationId = authManager.currentLocation?.id else {
             viewModel.errorMessage = "No location selected"
             viewModel.showError = true
             return
         }
-        
+
         await viewModel.createProduct(locationId: locationId, image: selectedImage)
     }
-    
+
     // MARK: - Helpers
-    
+
     private func formatCurrency(_ value: Double) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
@@ -543,8 +536,8 @@ class CreateProductViewModel: ObservableObject {
     }
     
     var marginPercent: Double? {
-        guard let price = sellingPrice, let cost = costPrice, price > 0 else { return nil }
-        return ((price - cost) / price) * 100
+        guard let price = sellingPrice, let cost = costPrice else { return nil }
+        return Margin.percent(price: price, cost: cost)
     }
     
     // MARK: - Actions

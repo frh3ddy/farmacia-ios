@@ -1,64 +1,62 @@
 import SwiftUI
-import UIKit
+import FarmaciaKit
 
-// MARK: - Tap-Outside-to-Dismiss (WhatsApp-style)
+// MARK: - Form Keyboard
 //
-// A single window-level tap recognizer resigns the first responder when the
-// user taps anywhere outside an editable text input. The recognizer does NOT
-// consume touches (`cancelsTouchesInView = false`), so buttons, pickers and
-// list rows keep working normally — only the keyboard goes away.
-// Taps that land inside another UITextField/UITextView are ignored so focus
-// can move between fields without the keyboard flickering.
+// One modifier for how every form's keyboard behaves:
+//   - A toolbar above the keyboard: ‹ › walk the fields in `order`, Listo closes
+//     the keyboard. The number pad has no return key, so without this the
+//     only way out was tapping elsewhere. The bar also gives the focused field
+//     native breathing room above the keys (no extra inset needed).
+//   - The return key moves to the next field; on the last one it closes.
+//   - Scrolling closes the keyboard immediately (`.immediately`, not
+//     `.interactively`: interactive dismissal leaves the safe area stale
+//     mid-drag, and a scrolled-away focused field yanks the form back on the
+//     next tap).
+//
+// Replaces the app-wide tap-outside detector (a UIKit recognizer on every
+// window) — it closed the keyboard on the same tap aimed at a button, shifting
+// the form mid-tap.
 
-@MainActor
-enum KeyboardDismissInstaller {
-    private static var isInstalled = false
-
-    /// Attaches the dismiss recognizer to every window of the active scene.
-    /// Idempotent — safe to call from `onAppear`.
-    static func install() {
-        guard !isInstalled else { return }
-        isInstalled = true
-
-        guard let scene = UIApplication.shared.connectedScenes
-            .compactMap({ $0 as? UIWindowScene })
-            .first(where: { $0.activationState == .foregroundActive })
-            ?? UIApplication.shared.connectedScenes
-                .compactMap({ $0 as? UIWindowScene })
-                .first
-        else { return }
-
-        for window in scene.windows {
-            let tap = UITapGestureRecognizer(
-                target: KeyboardDismissHandler.shared,
-                action: #selector(KeyboardDismissHandler.handleTap(_:))
-            )
-            tap.cancelsTouchesInView = false
-            tap.delegate = KeyboardDismissHandler.shared
-            window.addGestureRecognizer(tap)
-        }
+extension View {
+    func formKeyboard<Field: Hashable>(
+        focus: FocusState<Field?>.Binding,
+        order: FocusOrder<Field>
+    ) -> some View {
+        modifier(FormKeyboardModifier(focus: focus, order: order))
     }
 }
 
-@MainActor
-final class KeyboardDismissHandler: NSObject, UIGestureRecognizerDelegate {
-    static let shared = KeyboardDismissHandler()
+private struct FormKeyboardModifier<Field: Hashable>: ViewModifier {
+    var focus: FocusState<Field?>.Binding
+    let order: FocusOrder<Field>
 
-    @objc func handleTap(_ gesture: UITapGestureRecognizer) {
-        gesture.view?.endEditing(true)
-    }
+    private var previous: Field? { focus.wrappedValue.flatMap(order.previous(before:)) }
+    private var next: Field? { focus.wrappedValue.flatMap(order.next(after:)) }
 
-    /// Ignore taps that land inside an editable text input (or its accessory
-    /// views) so moving focus between fields doesn't dismiss the keyboard.
-    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
-        var view = touch.view
-        while let current = view {
-            if current is UITextField || current is UITextView {
-                return false
+    func body(content: Content) -> some View {
+        content
+            .submitLabel(.next)
+            .onSubmit { focus.wrappedValue = next }
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Button("Campo anterior", systemImage: "chevron.up") {
+                        focus.wrappedValue = previous
+                    }
+                    .disabled(previous == nil)
+
+                    Button("Campo siguiente", systemImage: "chevron.down") {
+                        focus.wrappedValue = next
+                    }
+                    .disabled(next == nil)
+
+                    Spacer()
+
+                    Button("Listo") { focus.wrappedValue = nil }
+                        .bold()
+                }
             }
-            view = current.superview
-        }
-        return true
+            .scrollDismissesKeyboard(.immediately)
     }
 }
 

@@ -2,6 +2,9 @@ import SwiftUI
 import FarmaciaKit
 
 // MARK: - Receive Inventory Form View
+//
+// Design-system pilot (tasks/design-system-epic.md): AmountField, Margin/Tone,
+// .formKeyboard; the supplier is chosen by a push, so the form presents nothing.
 
 struct ReceiveInventoryFormView: View {
     @Environment(\.dismiss) var dismiss
@@ -22,15 +25,20 @@ struct ReceiveInventoryFormView: View {
     @State private var hasExpiry = false
     @State private var expiryDate = Date().addingTimeInterval(365 * 24 * 60 * 60) // 1 year
     @State private var selectedSupplier: Supplier?
-    @State private var showSupplierPicker = false
     @State private var notes = ""
     /// One per receiving being entered: a retry (or the offline queue's replay) reuses it.
     @State private var clientRequestId = UUID().uuidString
 
     private enum Field: Hashable {
-        case quantity, unitCost, sellingPrice
+        case quantity, unitCost, sellingPrice, invoiceNumber, batchNumber
     }
     @FocusState private var focusedField: Field?
+
+    private var focusOrder: FocusOrder<Field> {
+        FocusOrder([.quantity, .unitCost]
+            + (updateSellingPrice ? [.sellingPrice] : [])
+            + [.invoiceNumber, .batchNumber])
+    }
 
     // Supplier intelligence
     @State private var productSuppliers: [ProductSupplier] = []
@@ -71,29 +79,21 @@ struct ReceiveInventoryFormView: View {
 
                 // Quantity & Cost
                 Section("Cantidad y Costo") {
-                    HStack {
-                        Text("Cantidad")
-                        TextField("0", value: $quantity, format: .number)
-                            .keyboardType(.numberPad)
-                            .multilineTextAlignment(.trailing)
-                            .focused($focusedField, equals: .quantity)
-                        Text("UDS")
-                            .foregroundStyle(.secondary)
-                    }
-                    .contentShape(Rectangle())
-                    .onTapGesture { focusedField = .quantity }
+                    AmountField(
+                        "Cantidad",
+                        unit: "UDS",
+                        quantity: $quantity,
+                        focus: $focusedField,
+                        field: .quantity
+                    )
 
-                    HStack {
-                        Text("Costo Unitario")
-                        TextField("0.00", value: $receivingCost.value, format: .number)
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.trailing)
-                            .focused($focusedField, equals: .unitCost)
-                        Text("MXN")
-                            .foregroundStyle(.secondary)
-                    }
-                    .contentShape(Rectangle())
-                    .onTapGesture { focusedField = .unitCost }
+                    AmountField(
+                        "Costo Unitario",
+                        unit: "MXN",
+                        value: $receivingCost.value,
+                        focus: $focusedField,
+                        field: .unitCost
+                    )
 
                     if let qty = quantity, qty > 0,
                        let cost = receivingCost.value, cost > 0 {
@@ -101,7 +101,7 @@ struct ReceiveInventoryFormView: View {
                             Text("Costo Total")
                             Spacer()
                             Text("$\(String(format: "%.2f", Double(qty) * cost))")
-                                .fontWeight(.semibold)
+                                .bold()
                         }
                     }
                 }
@@ -111,17 +111,13 @@ struct ReceiveInventoryFormView: View {
                     Toggle("Actualizar Precio de Venta", isOn: $updateSellingPrice)
 
                     if updateSellingPrice {
-                        HStack {
-                            Text("Nuevo Precio")
-                            TextField("0.00", value: $newSellingPrice, format: .number)
-                                .keyboardType(.decimalPad)
-                                .multilineTextAlignment(.trailing)
-                                .focused($focusedField, equals: .sellingPrice)
-                            Text("MXN")
-                                .foregroundStyle(.secondary)
-                        }
-                        .contentShape(Rectangle())
-                        .onTapGesture { focusedField = .sellingPrice }
+                        AmountField(
+                            "Nuevo Precio",
+                            unit: "MXN",
+                            value: $newSellingPrice,
+                            focus: $focusedField,
+                            field: .sellingPrice
+                        )
 
                         // Show current price if available
                         if let currentPrice = product.sellingPrice {
@@ -137,14 +133,14 @@ struct ReceiveInventoryFormView: View {
 
                         // Margin preview
                         if let cost = receivingCost.value, cost > 0,
-                           let newPrice = newSellingPrice, newPrice > 0 {
-                            let margin = ((newPrice - cost) / newPrice) * 100
+                           let newPrice = newSellingPrice,
+                           let margin = Margin.percent(price: newPrice, cost: cost) {
                             HStack {
                                 Text("Nuevo Margen")
                                 Spacer()
                                 Text(String(format: "%.1f%%", margin))
-                                    .foregroundStyle(margin >= 20 ? .green : (margin >= 10 ? .orange : .red))
-                                    .fontWeight(.semibold)
+                                    .foregroundStyle(Margin.tone(forPercent: margin).color)
+                                    .bold()
                             }
                         }
                     }
@@ -158,8 +154,11 @@ struct ReceiveInventoryFormView: View {
 
                 // Supplier
                 Section {
-                    Button {
-                        showSupplierPicker = true
+                    NavigationLink {
+                        SupplierPickerView(
+                            suppliers: $viewModel.suppliers,
+                            selectedSupplier: $selectedSupplier
+                        )
                     } label: {
                         HStack {
                             if isLoadingSuppliers {
@@ -168,25 +167,23 @@ struct ReceiveInventoryFormView: View {
                                 Text("Cargando proveedores...")
                                     .foregroundStyle(.secondary)
                             } else if let supplier = selectedSupplier {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    HStack(spacing: 6) {
+                                VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
+                                    HStack(spacing: DS.Spacing.s) {
                                         Text(supplier.name)
                                             .foregroundStyle(.primary)
                                         // Show preferred badge if this supplier is the preferred one
                                         if let ps = productSuppliers.first(where: { $0.id == supplier.id }), ps.isPreferred {
                                             Text("Preferido")
-                                                .font(.caption2)
-                                                .fontWeight(.medium)
-                                                .padding(.horizontal, 5)
-                                                .padding(.vertical, 1)
-                                                .background(Color.blue.opacity(0.15))
-                                                .foregroundStyle(.blue)
-                                                .clipShape(.rect(cornerRadius: 4))
+                                                .font(.caption)
+                                                .padding(.horizontal, DS.Spacing.xs)
+                                                .padding(.vertical, DS.Spacing.xxs)
+                                                .background(Tone.info.color.opacity(0.15), in: .rect(cornerRadius: DS.Radius.s))
+                                                .foregroundStyle(Tone.info.color)
                                         }
                                     }
                                     // Show last cost from this supplier
                                     if let lastCost = supplierLastCost {
-                                        HStack(spacing: 4) {
+                                        HStack(spacing: DS.Spacing.xs) {
                                             Text("Último costo: $\(String(format: "%.2f", lastCost))")
                                                 .font(.caption)
                                                 .foregroundStyle(.secondary)
@@ -197,8 +194,7 @@ struct ReceiveInventoryFormView: View {
                                                 if abs(diff) > 0.01 {
                                                     Text(diff > 0 ? "\u{2191}\(String(format: "+%.1f%%", pct))" : "\u{2193}\(String(format: "%.1f%%", pct))")
                                                         .font(.caption)
-                                                        .fontWeight(.medium)
-                                                        .foregroundStyle(diff > 0 ? .red : .green)
+                                                        .foregroundStyle((diff > 0 ? Tone.critical : .positive).color)
                                                 }
                                             }
                                         }
@@ -218,23 +214,17 @@ struct ReceiveInventoryFormView: View {
                                     Image(systemName: "xmark.circle.fill")
                                         .foregroundStyle(.secondary)
                                 }
-                                .buttonStyle(.plain)
+                                .buttonStyle(.borderless)
                                 .accessibilityLabel("Quitar proveedor")
                             }
-                            Image(systemName: "chevron.right")
-                                .foregroundStyle(.secondary)
                         }
                     }
 
                     // Show supplier cost note (e.g. "Auto-filled from preferred supplier")
                     if let note = supplierCostNote {
-                        HStack(spacing: 4) {
-                            Image(systemName: "info.circle")
-                                .font(.caption)
-                            Text(note)
-                                .font(.caption)
-                        }
-                        .foregroundStyle(.blue)
+                        Label(note, systemImage: "info.circle")
+                            .font(.caption)
+                            .foregroundStyle(Tone.info.color)
                     }
                 } header: {
                     Text("Proveedor (Opcional)")
@@ -247,7 +237,9 @@ struct ReceiveInventoryFormView: View {
                 // Invoice & Batch
                 Section("Números de Referencia (Opcional)") {
                     TextField("Número de Factura", text: $invoiceNumber)
+                        .focused($focusedField, equals: .invoiceNumber)
                     TextField("Número de Lote", text: $batchNumber)
+                        .focused($focusedField, equals: .batchNumber)
                 }
 
                 // Expiry Date
@@ -267,15 +259,15 @@ struct ReceiveInventoryFormView: View {
             }
             .navigationTitle("Recibir Inventario")
             .navigationBarTitleDisplayMode(.inline)
-            .keyboardTopSpacing(200, isActive: focusedField != nil)
+            .formKeyboard(focus: $focusedField, order: focusOrder)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .cancellationAction) {
                     Button("Cancelar") {
                         dismiss()
                     }
                 }
 
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .confirmationAction) {
                     Button("Guardar") {
                         // Set before the Task runs, so a second tap can't slip in first
                         guard !viewModel.isSubmitting else { return }
@@ -284,12 +276,6 @@ struct ReceiveInventoryFormView: View {
                     }
                     .disabled(!isValid || viewModel.isSubmitting)
                 }
-            }
-            .sheet(isPresented: $showSupplierPicker) {
-                SupplierPickerView(
-                    suppliers: $viewModel.suppliers,
-                    selectedSupplier: $selectedSupplier
-                )
             }
             .alert("No se pudo guardar", isPresented: $viewModel.showSaveError) {
                 Button("OK", role: .cancel) {}
