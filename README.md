@@ -172,9 +172,10 @@ The two builds are separate apps, so both can be installed on the same phone:
 | Name on home screen | Farmacia Dev (amber **DEV** icon) | Farmacia |
 | Bundle ID | `com.farmacia.ios.dev` | `com.farmacia.ios` |
 | API | local (`AppConfiguration` `.development`) | production |
-| Install | Run from Xcode / XcodeBuildMCP | `scripts/release-build-install.sh` |
+| Install on iPhone | `scripts/dev-build-install.sh` (or Run in Xcode) | `scripts/release-build-install.sh` |
 
 Each keeps its own Keychain entries, so each app is activated once against its own server.
+Both scripts install on the first connected (or Wi-Fi paired) iPhone; the dev script warns if the local API isn't reachable and keeps `build/dev` between runs for faster rebuilds.
 On a free Apple account, the two count as 2 of the 3 sideloaded apps a device allows.
 Brand art (icon, logo lockups) comes from `scripts/brand/render-brand.swift`; see `docs/brand-guidelines.md`.
 
