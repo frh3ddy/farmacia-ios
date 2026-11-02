@@ -1,17 +1,7 @@
 import Foundation
+import FarmaciaKit
 
 // MARK: - Stock Alert ViewModel
-
-/// Server-computed catalog counts (GET /products/counts).
-/// Covers ALL products at the location — unlike a paginated list fetch.
-struct ProductCountsResponse: Decodable {
-    let total: Int
-    let outOfStock: Int
-    let lowStock: Int
-    let lowMargin: Int
-    let synced: Int
-    let local: Int
-}
 
 /// Pre-computed fallback counts (avoids re-filtering `products` on every
 /// access — see `StockAlertViewModel`).

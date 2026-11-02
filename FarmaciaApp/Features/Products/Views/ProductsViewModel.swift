@@ -329,7 +329,7 @@ class ProductsViewModel: ObservableObject {
         c.outOfStock = response.outOfStock
         c.lowStock = response.lowStock
         c.inStock = response.total - response.outOfStock - response.lowStock
-        c.lowMargin = response.lowMargin
+        c.lowMargin = response.lowMargin ?? 0
         c.synced = response.synced
         c.local = response.local
         counts = c
