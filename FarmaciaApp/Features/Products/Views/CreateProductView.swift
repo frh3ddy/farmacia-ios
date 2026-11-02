@@ -4,9 +4,19 @@ import SwiftyCrop
 
 // MARK: - Create Product View
 
-private struct ImageToCrop: Identifiable {
-    let id = UUID()
-    let image: UIImage
+/// The one full-screen step of the photo flow on screen. A single
+/// `fullScreenCover(item:)` drives both, so the crop and preview never
+/// compete for the same presentation host.
+private enum PhotoStep: Identifiable {
+    case crop(UIImage)
+    case preview
+
+    var id: String {
+        switch self {
+        case .crop: "crop"
+        case .preview: "preview"
+        }
+    }
 }
 
 struct CreateProductView: View {
@@ -19,9 +29,8 @@ struct CreateProductView: View {
     @State private var originalCroppedImage: UIImage?
     @State private var liftedImage: UIImage?
     @State private var backgroundRemoved = true
-    @State private var imageToCrop: ImageToCrop?
+    @State private var photoStep: PhotoStep?
     @State private var showImageSourcePicker = false
-    @State private var showImagePreview = false
     @State private var isLiftingSubject = false
     @State private var quantity: Int?
     @State private var unitCost: Double?
@@ -57,7 +66,7 @@ struct CreateProductView: View {
                                     .frame(width: 100, height: 100)
                                     .clipShape(.rect(cornerRadius: 16))
                                     .onTapGesture {
-                                        showImagePreview = true
+                                        photoStep = .preview
                                     }
                             } else {
                                 ZStack {
@@ -104,12 +113,12 @@ struct CreateProductView: View {
                 .confirmationDialog("Agregar Imagen del Producto", isPresented: $showImageSourcePicker) {
                     Button("Tomar Foto") {
                         ImagePickerPresenter.present(sourceType: .camera) { image in
-                            imageToCrop = ImageToCrop(image: image)
+                            photoStep = .crop(image)
                         }
                     }
                     Button("Elegir de la Biblioteca") {
                         ImagePickerPresenter.present(sourceType: .photoLibrary) { image in
-                            imageToCrop = ImageToCrop(image: image)
+                            photoStep = .crop(image)
                         }
                     }
                     if selectedImage != nil {
@@ -121,54 +130,6 @@ struct CreateProductView: View {
                         }
                     }
                     Button("Cancelar", role: .cancel) {}
-                }
-                .fullScreenCover(item: $imageToCrop) { item in
-                    SwiftyCropView(
-                        imageToCrop: item.image,
-                        maskShape: .square,
-                        // ponytail: SwiftyCrop scales magnification gesture magnitude
-                        // by 0.1 * zoomSensitivity internally, so the default (1.0) only
-                        // applies 10% of the pinch as zoom. 8 gets close to a native,
-                        // 1:1-feeling pinch; retune if it still feels off.
-                        configuration: SwiftyCropConfiguration(zoomSensitivity: 8),
-                        onCancel: { imageToCrop = nil }
-                    ) { croppedImage in
-                        imageToCrop = nil
-                        guard let croppedImage else { return }
-                        originalCroppedImage = croppedImage
-                        liftedImage = nil
-                        backgroundRemoved = true
-                        selectedImage = croppedImage
-                        Task {
-                            isLiftingSubject = true
-                            let lifted = await SubjectLifter.liftSubject(from: croppedImage)
-                            // Reference-identical result means lifting had no
-                            // effect (no clear subject, or it failed) — leave
-                            // the toggle hidden rather than offering a no-op.
-                            if lifted !== croppedImage {
-                                liftedImage = lifted
-                                selectedImage = lifted
-                            }
-                            isLiftingSubject = false
-                            showImagePreview = true
-                        }
-                    }
-                }
-                .fullScreenCover(isPresented: $showImagePreview) {
-                    if let originalCroppedImage {
-                        ProductPhotoPreviewView(
-                            liftedImage: liftedImage,
-                            originalImage: originalCroppedImage,
-                            backgroundRemoved: $backgroundRemoved,
-                            onRetake: {
-                                showImagePreview = false
-                                showImageSourcePicker = true
-                            },
-                            onDone: {
-                                showImagePreview = false
-                            }
-                        )
-                    }
                 }
                 .onChange(of: backgroundRemoved) { _, removed in
                     guard let originalCroppedImage else { return }
@@ -307,6 +268,30 @@ struct CreateProductView: View {
                     }
                 }
             }
+            // Photo crop/preview live here, not on the image Section: that
+            // Section also hosts the source confirmationDialog, and sharing its
+            // presentation host made the crop cover close itself on first open.
+            .fullScreenCover(item: $photoStep) { step in
+                switch step {
+                case .crop(let image):
+                    cropView(for: image)
+                case .preview:
+                    if let originalCroppedImage {
+                        ProductPhotoPreviewView(
+                            liftedImage: liftedImage,
+                            originalImage: originalCroppedImage,
+                            backgroundRemoved: $backgroundRemoved,
+                            onRetake: {
+                                photoStep = nil
+                                showImageSourcePicker = true
+                            },
+                            onDone: {
+                                photoStep = nil
+                            }
+                        )
+                    }
+                }
+            }
             .sheet(isPresented: $showSupplierPicker) {
                 SupplierPickerView(
                     suppliers: $viewModel.suppliers,
@@ -366,8 +351,43 @@ struct CreateProductView: View {
         }
     }
     
+    // MARK: - Photo Crop
+
+    private func cropView(for image: UIImage) -> some View {
+        SwiftyCropView(
+            imageToCrop: image,
+            maskShape: .square,
+            // ponytail: SwiftyCrop scales magnification gesture magnitude
+            // by 0.1 * zoomSensitivity internally, so the default (1.0) only
+            // applies 10% of the pinch as zoom. 8 gets close to a native,
+            // 1:1-feeling pinch; retune if it still feels off.
+            configuration: SwiftyCropConfiguration(zoomSensitivity: 8),
+            onCancel: { photoStep = nil }
+        ) { croppedImage in
+            photoStep = nil
+            guard let croppedImage else { return }
+            originalCroppedImage = croppedImage
+            liftedImage = nil
+            backgroundRemoved = true
+            selectedImage = croppedImage
+            Task {
+                isLiftingSubject = true
+                let lifted = await SubjectLifter.liftSubject(from: croppedImage)
+                // Reference-identical result means lifting had no
+                // effect (no clear subject, or it failed) — leave
+                // the toggle hidden rather than offering a no-op.
+                if lifted !== croppedImage {
+                    liftedImage = lifted
+                    selectedImage = lifted
+                }
+                isLiftingSubject = false
+                photoStep = .preview
+            }
+        }
+    }
+
     // MARK: - Margin Preview
-    
+
     private var marginPreviewRow: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {

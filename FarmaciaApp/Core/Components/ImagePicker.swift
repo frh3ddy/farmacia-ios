@@ -66,10 +66,13 @@ enum ImagePickerPresenter {
 
         func imagePickerController(_ picker: UIImagePickerController,
                                    didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
-            if let image = info[.originalImage] as? UIImage {
-                onImagePicked(image)
+            // Hand the image over only after the picker is gone: callers
+            // present the next screen (e.g. the crop cover) from it, and UIKit
+            // refuses to present while the full-screen camera is still up.
+            let image = info[.originalImage] as? UIImage
+            picker.dismiss(animated: true) { [onImagePicked] in
+                if let image { onImagePicked(image) }
             }
-            picker.dismiss(animated: true)
         }
 
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
