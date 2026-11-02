@@ -343,8 +343,8 @@ struct ProductsView: View {
                         filterChips
                             .padding(.bottom, 14)
 
-                        if viewModel.totalCount > 0 {
-                            statsRow
+                        if let summary = viewModel.syncSummary {
+                            statsRow(summary)
                         }
 
                         if viewModel.counts.local > 0 {
@@ -562,16 +562,11 @@ struct ProductsView: View {
     // chips (not the footer) so it's visible without scrolling past the
     // whole product list.
 
-    private var statsRow: some View {
-        HStack(spacing: 6) {
-            Text("\(viewModel.totalCount) productos")
-            Text("\u{2022}")
-                .foregroundStyle(.tertiary)
-            Text("\(viewModel.counts.synced) sincronizados")
-        }
-        .font(.caption)
-        .foregroundStyle(.secondary)
-        .frame(maxWidth: .infinity, alignment: .leading)
+    private func statsRow(_ summary: String) -> some View {
+        Text(summary)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - Local Sync Row

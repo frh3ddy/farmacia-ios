@@ -120,6 +120,7 @@ Opened from a product (Productos → product → Recibir Inventario / Ajustar In
 
 ### Products
 - The on-device product cache (used by the barcode scanner) stays current with a delta sync (`GET /products/sync`): opening Productos fetches only what changed since the last sync; the full catalog is downloaded once per store
+- The Products stats row reads "X de Y sincronizados con Square", both from the server's catalog counts
 - Catalog counts (stock chips, synced, stock alerts) come from the server for every role; a cashier's have no low-margin count, since it's worked out from cost
 
 ### Reports
