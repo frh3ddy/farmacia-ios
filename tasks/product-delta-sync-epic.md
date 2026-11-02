@@ -43,5 +43,5 @@ Every time the Productos tab opened, the app walked the whole catalog 50 product
   - A tab switch makes one sync request and shows no banner.
   - A sale or adjustment shows up after the next switch.
   - The barcode scanner finds a product from the cache.
-- [ ] Cashier counts bug, found during this work: for a cashier, `GET /products/counts` leaves out `lowMargin`, but `ProductCountsResponse` requires it. Decoding fails, and the counts fall back to the 50 loaded rows ("50 sincronizados"). Fix: make `lowMargin` optional, with a decoding test in FarmaciaKit.
+- [x] Cashier counts bug (fixed in `ae59fef`; `ProductCountsResponse` moved to FarmaciaKit, `ProductCountsTests`), found during this work: for a cashier, `GET /products/counts` leaves out `lowMargin`, but `ProductCountsResponse` requires it. Decoding fails, and the counts fall back to the 50 loaded rows ("50 sincronizados"). Fix: make `lowMargin` optional, with a decoding test in FarmaciaKit.
 - [ ] The stats row compares two different queries. "N productos" is the list's total, which includes discontinued products and items that don't track stock. "sincronizados" comes from the counts, which leave those out. That's why the owner sees 3,356 vs 3,351. Take both numbers from the same query.
