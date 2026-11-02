@@ -86,11 +86,6 @@ struct RootView: View {
                 Task { await OfflineQueueManager.shared.flush() }
             }
         }
-        .onAppear {
-            // WhatsApp-style: tapping anywhere outside a text input
-            // dismisses the keyboard and resigns field focus globally.
-            KeyboardDismissInstaller.install()
-        }
         .safeAreaInset(edge: .top) {
             if authManager.authState == .authenticated {
                 OfflineSyncBanner(

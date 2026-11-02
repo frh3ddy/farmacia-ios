@@ -9,6 +9,8 @@ struct ProductPhotoPreviewView: View {
     let liftedImage: UIImage?
     let originalImage: UIImage
     @Binding var backgroundRemoved: Bool
+    /// Background removal still running: show the photo with a spinner.
+    var isLifting = false
     let onRetake: () -> Void
     let onDone: () -> Void
 
@@ -24,6 +26,11 @@ struct ProductPhotoPreviewView: View {
                     .resizable()
                     .scaledToFit()
                     .padding()
+                if isLifting {
+                    ProgressView("Quitando fondo…")
+                        .padding()
+                        .background(.regularMaterial, in: .rect(cornerRadius: DS.Radius.l))
+                }
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

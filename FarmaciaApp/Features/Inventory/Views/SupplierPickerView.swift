@@ -3,6 +3,9 @@ import FarmaciaKit
 
 // MARK: - Supplier Picker View
 
+/// Pushed from a form's Proveedor row (not a sheet): choosing a value inside a
+/// form is a push, like Settings, so it can't race the form's own animations.
+/// Picking or creating a supplier pops back.
 struct SupplierPickerView: View {
     @Binding var suppliers: [Supplier]
     @Binding var selectedSupplier: Supplier?
@@ -25,86 +28,79 @@ struct SupplierPickerView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            Group {
-                if suppliers.isEmpty {
-                    VStack(spacing: 12) {
-                        Image(systemName: "building.2")
-                            .font(.system(size: 50))
-                            .foregroundStyle(.secondary)
-                        Text("No se encontraron proveedores")
-                            .foregroundStyle(.secondary)
-                        Button("Agregar Proveedor") {
-                            newSupplierName = searchText
-                            showCreateSupplier = true
-                        }
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    List {
-                        ForEach(filteredSuppliers) { supplier in
-                            Button {
-                                selectedSupplier = supplier
-                                dismiss()
-                            } label: {
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(supplier.name)
-                                            .foregroundStyle(.primary)
-
-                                        if let contactInfo = supplier.contactInfo {
-                                            Text(contactInfo)
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                        }
-                                    }
-
-                                    Spacer()
-
-                                    if selectedSupplier?.id == supplier.id {
-                                        Image(systemName: "checkmark")
-                                            .foregroundStyle(.blue)
-                                    }
-                                }
-                                .contentShape(.rect)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                    .searchable(text: $searchText, prompt: "Buscar proveedores")
-                }
-            }
-            .navigationTitle("Seleccionar Proveedor")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancelar") {
-                        dismiss()
-                    }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
+        Group {
+            if suppliers.isEmpty {
+                VStack(spacing: 12) {
+                    Image(systemName: "building.2")
+                        .font(.system(size: 50))
+                        .foregroundStyle(.secondary)
+                    Text("No se encontraron proveedores")
+                        .foregroundStyle(.secondary)
+                    Button("Agregar Proveedor") {
                         newSupplierName = searchText
                         showCreateSupplier = true
-                    } label: {
-                        Image(systemName: "plus")
                     }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                List {
+                    ForEach(filteredSuppliers) { supplier in
+                        Button {
+                            selectedSupplier = supplier
+                            dismiss()
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(supplier.name)
+                                        .foregroundStyle(.primary)
+
+                                    if let contactInfo = supplier.contactInfo {
+                                        Text(contactInfo)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+
+                                Spacer()
+
+                                if selectedSupplier?.id == supplier.id {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(.blue)
+                                }
+                            }
+                            .contentShape(.rect)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .searchable(text: $searchText, prompt: "Buscar proveedores")
             }
-            .alert("Nuevo Proveedor", isPresented: $showCreateSupplier) {
-                TextField("Nombre del proveedor", text: $newSupplierName)
-                Button("Cancelar", role: .cancel) {}
-                Button("Crear") {
-                    Task { await createSupplier() }
+        }
+        .navigationTitle("Seleccionar Proveedor")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    newSupplierName = searchText
+                    showCreateSupplier = true
+                } label: {
+                    Image(systemName: "plus")
                 }
             }
-            .alert("Error", isPresented: .constant(createError != nil)) {
-                Button("OK") { createError = nil }
-            } message: {
-                Text(createError ?? "")
-            }
-            .disabled(isCreating)
         }
+        .alert("Nuevo Proveedor", isPresented: $showCreateSupplier) {
+            TextField("Nombre del proveedor", text: $newSupplierName)
+            Button("Cancelar", role: .cancel) {}
+            Button("Crear") {
+                Task { await createSupplier() }
+            }
+        }
+        .alert("Error", isPresented: .constant(createError != nil)) {
+            Button("OK") { createError = nil }
+        } message: {
+            Text(createError ?? "")
+        }
+        .disabled(isCreating)
     }
 
     private func createSupplier() async {
