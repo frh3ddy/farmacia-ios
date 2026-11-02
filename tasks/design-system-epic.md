@@ -65,6 +65,14 @@
   `CameraPicker` / `LibraryPicker` (inline `PhotosPicker`) in `ImagePicker.swift`;
   `ProductPhotoPreviewView` shows a spinner while the background is being removed (`isLifting`); crop goes straight
   to preview. ReceiveInventoryFormView presents nothing now, so no destination enum was needed.
+- Keyboard, tuned on device (iPhone 13 Pro): the Listo bar is an overlay above the keyboard, the
+  focused field scrolls to a third down on the keyboard's own timing, and dismissal is interactive.
+  Measured: the system keyboard toolbar adds 14pt to the form's bottom inset and releases it after
+  the keyboard animation (the jump at the end of every dismiss); a `safeAreaInset` bar jumped too.
+  `ScrollPosition` can't move a SwiftUI `Form`. Details in `KeyboardHelpers.swift`.
+- Unsaved-changes protection (Nuevo Producto): FarmaciaKit `ProductDraft` (TDD, 5 tests); the sheet
+  can't be swiped away once anything is entered, and Cancelar asks "¿Descartar producto?".
+  Verified on device. Next: the same for Recibir Inventario.
 
 ## Follow-ups (`tasks/design-system-review-followups-epic.md`)
 

@@ -237,9 +237,9 @@ struct ReceiveInventoryFormView: View {
                 // Invoice & Batch
                 Section("Números de Referencia (Opcional)") {
                     TextField("Número de Factura", text: $invoiceNumber)
-                        .focused($focusedField, equals: .invoiceNumber)
+                        .formField(.invoiceNumber, focus: $focusedField)
                     TextField("Número de Lote", text: $batchNumber)
-                        .focused($focusedField, equals: .batchNumber)
+                        .formField(.batchNumber, focus: $focusedField)
                 }
 
                 // Expiry Date

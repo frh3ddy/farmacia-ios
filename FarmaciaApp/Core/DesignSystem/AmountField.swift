@@ -86,6 +86,7 @@ struct AmountField<Field: Hashable>: View {
         .frame(minHeight: DS.minTapSize)
         .contentShape(.rect)
         .onTapGesture { focus.wrappedValue = field }
+        .id(field)  // .formKeyboard scrolls the focused row into place
         .onChange(of: text) { _, newText in
             value = AmountText.parse(newText)
         }

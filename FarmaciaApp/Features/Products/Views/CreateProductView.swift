@@ -44,6 +44,13 @@ struct CreateProductView: View {
     @State private var photoDestination: PhotoDestination?
     /// Where Retomar Foto goes: the source the current photo came from.
     @State private var photoSource: PhotoDestination = .library
+    @State private var showDiscardConfirmation = false
+
+    /// Anything entered (photo included): the sheet can't be swiped away and
+    /// Cancelar asks before discarding it.
+    private var hasUnsavedChanges: Bool {
+        viewModel.hasChanges(hasPhoto: selectedImage != nil)
+    }
 
     private enum Field: Hashable {
         case name, sku, description, sellingPrice, quantity, unitCost
@@ -73,16 +80,16 @@ struct CreateProductView: View {
                 Section {
                     TextField("Nombre del Producto", text: $viewModel.name)
                         .textInputAutocapitalization(.words)
-                        .focused($focusedField, equals: .name)
+                        .formField(.name, focus: $focusedField)
 
                     TextField("SKU (Optional)", text: $viewModel.sku)
                         .textInputAutocapitalization(.characters)
                         .autocorrectionDisabled()
-                        .focused($focusedField, equals: .sku)
+                        .formField(.sku, focus: $focusedField)
 
                     TextField("Descripción (Opcional)", text: $viewModel.description, axis: .vertical)
                         .lineLimit(2...4)
-                        .focused($focusedField, equals: .description)
+                        .formField(.description, focus: $focusedField)
                 } header: {
                     Text("Información del Producto")
                 } footer: {
@@ -178,6 +185,8 @@ struct CreateProductView: View {
                 }
             }
             .formKeyboard(focus: $focusedField, order: focusOrder)
+            // Swiping the sheet down would lose what's been entered.
+            .interactiveDismissDisabled(hasUnsavedChanges)
             .fullScreenCover(item: $photoDestination) { destination in
                 photoScreen(for: destination)
             }
@@ -193,7 +202,21 @@ struct CreateProductView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancelar") {
-                        dismiss()
+                        if hasUnsavedChanges {
+                            showDiscardConfirmation = true
+                        } else {
+                            dismiss()
+                        }
+                    }
+                    .confirmationDialog(
+                        "¿Descartar producto?",
+                        isPresented: $showDiscardConfirmation,
+                        titleVisibility: .visible
+                    ) {
+                        Button("Descartar", role: .destructive) { dismiss() }
+                        Button("Seguir editando", role: .cancel) {}
+                    } message: {
+                        Text("Se perderá la información que ingresaste.")
                     }
                 }
 
@@ -502,10 +525,34 @@ class CreateProductViewModel: ObservableObject {
         }
     }
 
+    /// How the form started (e.g. with a scanned SKU): the baseline for
+    /// "has the user entered anything?".
+    private let start: ProductDraft
+
     init(prefillSku: String? = nil) {
-        if let prefillSku, !prefillSku.isEmpty {
-            sku = prefillSku
+        let prefill = prefillSku?.isEmpty == false ? prefillSku : nil
+        start = ProductDraft(prefillSku: prefill)
+        if let prefill {
+            sku = prefill
         }
+    }
+
+    /// Unsaved work the form protects (no swipe-to-dismiss, Cancelar asks).
+    /// The photo lives in the view, so it's passed in.
+    func hasChanges(hasPhoto: Bool) -> Bool {
+        var draft = ProductDraft()
+        draft.name = name
+        draft.sku = sku
+        draft.description = description
+        draft.sellingPrice = sellingPrice
+        draft.costPrice = costPrice
+        draft.initialStock = initialStock
+        draft.hasInitialStock = hasInitialStock
+        draft.syncToSquare = syncToSquare
+        draft.soldAtAllLocations = soldAtAllLocations
+        draft.supplierId = selectedSupplier?.id
+        draft.hasPhoto = hasPhoto
+        return draft.hasChanges(from: start)
     }
 
     // MARK: - Computed Properties
