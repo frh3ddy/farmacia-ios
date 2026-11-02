@@ -118,6 +118,8 @@ enum APIEndpoint {
     case supplierCatalog(supplierId: String)
     case syncProductsToSquare
     case productCounts
+    /// Delta sync: the store's products changed since an opaque cursor (ProductSync).
+    case productDeltaSync
     
     // MARK: - Supplier Endpoints
     case listSuppliers
@@ -225,6 +227,7 @@ enum APIEndpoint {
         case .supplierCatalog(let supplierId): return "/products/supplier-catalog/\(supplierId)"
         case .syncProductsToSquare: return "/products/sync-to-square"
         case .productCounts: return "/products/counts"
+        case .productDeltaSync: return "/products/sync"
             
         // Suppliers
         case .listSuppliers, .createSupplier: return "/admin/inventory/cutover/suppliers"
@@ -310,7 +313,7 @@ enum APIEndpoint {
             
         // Products
         case .listProducts, .getProduct, .productSuppliers, .productCostHistory, .supplierCatalog,
-             .productCounts:
+             .productCounts, .productDeltaSync:
             return .get
         case .createProduct, .syncProductsToSquare, .createSupplier:
             return .post

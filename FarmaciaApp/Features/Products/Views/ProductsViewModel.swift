@@ -48,7 +48,8 @@ class ProductsViewModel: ObservableObject {
     private var activeSort: ProductSortOption = .name
     
     // Background warm-up task (cancelled on refresh/search)
-    private var warmUpTask: Task<Void, Never>?
+    /// The running cache sync and its store; a reload never restarts it (see syncCache).
+    private var syncTask: (id: UUID, locationId: String, task: Task<Void, Never>)?
     
     private let apiClient = APIClient.shared
     private let cache = ProductCacheManager.shared
@@ -123,10 +124,6 @@ class ProductsViewModel: ObservableObject {
 
         // STEP 2: Show loading indicator and fetch fresh data from server
         isLoading = true
-        // Any explicit refresh invalidates the previous warm-up
-        warmUpTask?.cancel()
-        isWarmingCache = false
-
         do {
             let params = query.params(page: 1, limit: pageSize)
 
@@ -160,15 +157,10 @@ class ProductsViewModel: ObservableObject {
                 recalculateCounts()
             }
 
-            // STEP 3: Update cache with fresh data (plain catalog only)
+            // STEP 3: Bring the cache up to date (plain catalog only), so the
+            // barcode scanner's level-1 cache lookup covers all products.
             if query.isCatalog {
-                // Rows this walk doesn't save by its end are no longer listed (sweep).
-                let walkStartedAt = Date()
-                cache.saveProducts(response.data)
-                cache.markFresh()
-                // STEP 4: Warm up the full catalog in the background so the
-                // barcode scanner's level-1 cache lookup covers all products.
-                startWarmUp(locationId: locationId, walkStartedAt: walkStartedAt)
+                syncCache(locationId: locationId)
             }
         } catch {
             guard load.fail(ticket) else { return }
@@ -235,55 +227,47 @@ class ProductsViewModel: ObservableObject {
         isLoadingMore = false
     }
 
-    /// Background full-catalog warm-up: paginates pages 2..N silently and writes
-    /// ONLY to the SwiftData cache (never touches `products` or the UI).
-    /// Purpose: make barcode level-1 (indexed cache lookup) cover the whole catalog.
-    /// Server remains source of truth — this does not replace any GET.
-    /// After the last page, rows not saved since `walkStartedAt` are swept (CacheSweep):
-    /// deleted on the server, or another store's one-store product.
-    private func startWarmUp(locationId: String, walkStartedAt: Date) {
-        warmUpTask?.cancel()
-        // Always re-walk so the cache never goes stale, but only surface the
-        // banner on a cold cache — a silent refresh (e.g. after clearing a
-        // search) shouldn't flash the banner and jump the list.
-        let showsProgress = cache.cachedCount < totalCount
-        let startPage = load.currentPage + 1
-        warmUpTask = Task(priority: .utility) { [weak self] in
+    /// Brings the on-device cache up to date with GET /products/sync (ProductSync): usually
+    /// one small request. Only the first sync at a store, or a cursor the server rejects,
+    /// walks the whole catalog (the banner). A sync still running isn't restarted by a
+    /// reload — cancelling it on every tab switch kept the old full walk from finishing —
+    /// only by a store switch.
+    private func syncCache(locationId: String) {
+        if let running = syncTask {
+            guard running.locationId != locationId else { return }
+            running.task.cancel()
+        }
+        let scope = ProductCacheScope(locationId: locationId)
+        let storedCursor = cache.syncCursor(for: scope)
+        isWarmingCache = storedCursor == nil
+        warmUpProgress = 0
+        let id = UUID()
+        let task = Task(priority: .utility) { [weak self] in
             guard let self else { return }
-            if showsProgress {
-                await MainActor.run { self.isWarmingCache = true }
-            }
-            var page = startPage
-            var keepGoing = true
-            var reachedLastPage = false
-            while keepGoing {
-                if Task.isCancelled { break }
-                do {
-                    let params: [String: String] = [
-                        "locationId": locationId,
-                        "page": "\(page)",
-                        "limit": "\(self.pageSize)"
-                    ]
-                    let response: ProductListResponse = try await self.apiClient.request(
-                        endpoint: .listProducts,
+            do {
+                let result = try await ProductSync.run(from: storedCursor) { cursor in
+                    try Task.checkCancellation()
+                    var params = ["locationId": locationId]
+                    if let cursor { params["cursor"] = cursor }
+                    let response: ProductSyncResponse = try await self.apiClient.request(
+                        endpoint: .productDeltaSync,
                         queryParams: params
                     )
-                    self.cache.saveProducts(response.data)
-                    await MainActor.run { self.warmUpProgress = self.cache.cachedCount }
-                    keepGoing = response.hasMore ?? false
-                    reachedLastPage = !keepGoing
-                    page += 1
-                } catch {
-                    // Silent fail — warm-up is best-effort; level-2 server search covers gaps
-                    keepGoing = false
+                    self.warmUpProgress += response.data.count
+                    return ProductSyncPage(rows: response.data, removedIds: response.removedIds,
+                                           cursor: response.cursor, hasMore: response.hasMore)
                 }
+                if !Task.isCancelled { self.cache.applySync(result, for: scope) }
+            } catch {
+                // Best effort: the stored cursor stays and the next sync resumes from it;
+                // the scanner's level-2 server search covers gaps meanwhile.
             }
-            // A walk cut short (error, cancelled by a refresh) never touched the rest.
-            if reachedLastPage && !Task.isCancelled {
-                self.cache.sweep(fetchedBefore: walkStartedAt)
+            if self.syncTask?.id == id {
+                self.syncTask = nil
+                self.isWarmingCache = false
             }
-            await MainActor.run { self.isWarmingCache = false }
         }
+        syncTask = (id, locationId, task)
     }
     
     /// Search products on server with exact=true for barcode scanner.

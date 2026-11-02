@@ -26,16 +26,6 @@ public struct ProductCacheScope: Equatable, Sendable {
     }
 }
 
-/// Rows the server no longer lists (deleted, another store's one-store product)
-/// stay cached forever unless swept after a full catalog walk.
-public enum CacheSweep {
-    /// Only after the warm-up reached the last page: a walk cut short by an error
-    /// or cancellation never touched the rest, which are still good.
-    public static func isStale(lastFetchedAt: Date, walkStartedAt: Date, walkCompleted: Bool) -> Bool {
-        walkCompleted && lastFetchedAt < walkStartedAt
-    }
-}
-
 /// The barcode scanner's on-device lookup. Several products can share a barcode
 /// (presentations of one medication): opening one of them would be a guess.
 public enum BarcodeLookup {

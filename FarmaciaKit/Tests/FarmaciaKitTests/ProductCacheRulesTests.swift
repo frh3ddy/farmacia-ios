@@ -29,22 +29,6 @@ struct ProductCacheScopeTests {
     }
 }
 
-struct CacheSweepTests {
-    let start = Date(timeIntervalSince1970: 1_000)
-
-    @Test("given a warm-up that reached the last page, rows not fetched since it started should be swept, rows fetched during it kept")
-    func completedWalk() {
-        #expect(CacheSweep.isStale(lastFetchedAt: start.addingTimeInterval(-1), walkStartedAt: start, walkCompleted: true))
-        #expect(!CacheSweep.isStale(lastFetchedAt: start, walkStartedAt: start, walkCompleted: true))
-        #expect(!CacheSweep.isStale(lastFetchedAt: start.addingTimeInterval(5), walkStartedAt: start, walkCompleted: true))
-    }
-
-    @Test("given a warm-up stopped by an error or cancellation, should sweep nothing")
-    func partialWalk() {
-        #expect(!CacheSweep.isStale(lastFetchedAt: start.addingTimeInterval(-3600), walkStartedAt: start, walkCompleted: false))
-    }
-}
-
 struct BarcodeLookupTests {
     @Test("given two cached products with the same barcode, should ask the server instead of opening one")
     func shared() {
