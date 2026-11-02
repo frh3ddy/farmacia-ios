@@ -10,7 +10,6 @@ struct ProductCounts: Equatable {
     var lowStock = 0
     var inStock = 0
     var lowMargin = 0
-    var synced = 0
     var local = 0
 }
 
@@ -29,6 +28,8 @@ class ProductsViewModel: ObservableObject {
     // /products/counts, whole catalog) whenever it's available; falls back
     // to a page-based estimate from `products` only if that request fails.
     @Published var counts = ProductCounts()
+    /// The stats row, from the server's counts only (ProductCountsResponse.syncSummary).
+    @Published private(set) var syncSummary: String?
     
     // Background catalog warm-up state (for non-blocking progress indicator)
     @Published var isWarmingCache = false
@@ -330,9 +331,9 @@ class ProductsViewModel: ObservableObject {
         c.lowStock = response.lowStock
         c.inStock = response.total - response.outOfStock - response.lowStock
         c.lowMargin = response.lowMargin ?? 0
-        c.synced = response.synced
         c.local = response.local
         counts = c
+        syncSummary = ProductCountsResponse.syncSummary(response)
     }
     
     /// Single-pass count calculation over a given product list. Only used as
@@ -348,12 +349,13 @@ class ProductsViewModel: ObservableObject {
             else if stock < 10 { c.lowStock += 1 }
             else { c.inStock += 1 }
             if (product.profitMargin ?? 100) < 10 { c.lowMargin += 1 }
-            if product.hasSquareSync == true { c.synced += 1 } else { c.local += 1 }
+            if product.hasSquareSync != true { c.local += 1 }
         }
         return c
     }
 
     private func recalculateCounts() {
         counts = computeCounts(from: products)
+        syncSummary = nil
     }
 }
