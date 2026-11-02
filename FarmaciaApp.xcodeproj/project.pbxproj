@@ -34,6 +34,7 @@
 		D419F61DEDDF944288D2F152 /* CostSupplierViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B36C1CAC70495EFA1EEFDC2 /* CostSupplierViewModel.swift */; };
 		ED472745D3529AF20E11A7A3 /* ProductsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67DB948B9C5055D67639955A /* ProductsViewModel.swift */; };
 		EE00000100000001 /* ImagePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000001 /* ImagePicker.swift */; };
+		DD00000100000007 /* LibraryPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000007 /* LibraryPicker.swift */; };
 		EE00000100000002 /* ProductImageViewer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000002 /* ProductImageViewer.swift */; };
 		EE00000100000003 /* CachedProductImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000003 /* CachedProductImage.swift */; };
 		EE00000100000004 /* UIImage+Resize.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000004 /* UIImage+Resize.swift */; };
@@ -46,6 +47,7 @@
 		EE00000100000007 /* BackgroundTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000007 /* BackgroundTask.swift */; };
 		EE00000100000008 /* SubjectLifter.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000008 /* SubjectLifter.swift */; };
 		EE00000100000009 /* ProductPhotoPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000009 /* ProductPhotoPreviewView.swift */; };
+		DD00000100000006 /* ProductPhotoFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000006 /* ProductPhotoFlow.swift */; };
 		F000000100000001 /* FarmaciaApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000001 /* FarmaciaApp.swift */; };
 		F000000100000002 /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000002 /* AppConfiguration.swift */; };
 		F000000100000003 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000003 /* APIClient.swift */; };
@@ -64,6 +66,7 @@
 		F000000100000018 /* Device.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000018 /* Device.swift */; };
 		F000000100000019 /* Location.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000019 /* Location.swift */; };
 		F000000100000020 /* Product.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000020 /* Product.swift */; };
+		DD00000100000008 /* ImageUploadResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000008 /* ImageUploadResponse.swift */; };
 		F000000100000021 /* Inventory.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000021 /* Inventory.swift */; };
 		F000000100000022 /* Adjustment.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000022 /* Adjustment.swift */; };
 		F000000100000023 /* Expense.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000023 /* Expense.swift */; };
@@ -135,6 +138,7 @@
 		CA00000200000002 /* ProductCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductCacheManager.swift; sourceTree = "<group>"; };
 		CC00000200000001 /* BatchDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchDetailView.swift; sourceTree = "<group>"; };
 		EE00000200000001 /* ImagePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImagePicker.swift; sourceTree = "<group>"; };
+		DD00000200000007 /* LibraryPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryPicker.swift; sourceTree = "<group>"; };
 		EE00000200000002 /* ProductImageViewer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductImageViewer.swift; sourceTree = "<group>"; };
 		EE00000200000003 /* CachedProductImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CachedProductImage.swift; sourceTree = "<group>"; };
 		EE00000200000004 /* UIImage+Resize.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIImage+Resize.swift"; sourceTree = "<group>"; };
@@ -147,6 +151,7 @@
 		EE00000200000007 /* BackgroundTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTask.swift; sourceTree = "<group>"; };
 		EE00000200000008 /* SubjectLifter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubjectLifter.swift; sourceTree = "<group>"; };
 		EE00000200000009 /* ProductPhotoPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductPhotoPreviewView.swift; sourceTree = "<group>"; };
+		DD00000200000006 /* ProductPhotoFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductPhotoFlow.swift; sourceTree = "<group>"; };
 		F100000000000000 /* FarmaciaApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FarmaciaApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F100000100000001 /* FarmaciaApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FarmaciaApp.swift; sourceTree = "<group>"; };
 		F100000100000002 /* AppConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfiguration.swift; sourceTree = "<group>"; };
@@ -166,6 +171,7 @@
 		F100000100000018 /* Device.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Device.swift; sourceTree = "<group>"; };
 		F100000100000019 /* Location.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Location.swift; sourceTree = "<group>"; };
 		F100000100000020 /* Product.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Product.swift; sourceTree = "<group>"; };
+		DD00000200000008 /* ImageUploadResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageUploadResponse.swift; sourceTree = "<group>"; };
 		F100000100000021 /* Inventory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Inventory.swift; sourceTree = "<group>"; };
 		F100000100000022 /* Adjustment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Adjustment.swift; sourceTree = "<group>"; };
 		F100000100000023 /* Expense.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Expense.swift; sourceTree = "<group>"; };
@@ -287,6 +293,7 @@
 			isa = PBXGroup;
 			children = (
 				EE00000200000001 /* ImagePicker.swift */,
+				DD00000200000007 /* LibraryPicker.swift */,
 				EE00000200000002 /* ProductImageViewer.swift */,
 				EE00000200000003 /* CachedProductImage.swift */,
 				EE00000200000004 /* UIImage+Resize.swift */,
@@ -295,6 +302,7 @@
 				EE00000200000007 /* BackgroundTask.swift */,
 				EE00000200000008 /* SubjectLifter.swift */,
 				EE00000200000009 /* ProductPhotoPreviewView.swift */,
+				DD00000200000006 /* ProductPhotoFlow.swift */,
 				JJ00000200000005 /* OfflineSyncBanner.swift */,
 				JJ00000200000006 /* OfflineSyncIssuesView.swift */,
 			);
@@ -375,6 +383,7 @@
 				F100000100000018 /* Device.swift */,
 				F100000100000019 /* Location.swift */,
 				F100000100000020 /* Product.swift */,
+				DD00000200000008 /* ImageUploadResponse.swift */,
 				F100000100000021 /* Inventory.swift */,
 				F100000100000022 /* Adjustment.swift */,
 				F100000100000023 /* Expense.swift */,
@@ -684,6 +693,7 @@
 				F000000100000019 /* Location.swift in Sources */,
 				37E697422F3408EF00F6CB5D /* Setup.swift in Sources */,
 				F000000100000020 /* Product.swift in Sources */,
+				DD00000100000008 /* ImageUploadResponse.swift in Sources */,
 				F000000100000021 /* Inventory.swift in Sources */,
 				37E697342F32AC3200F6CB5D /* ExpenseFormView.swift in Sources */,
 				37E697352F32AC3200F6CB5D /* ExpensesView.swift in Sources */,
@@ -695,6 +705,7 @@
 				AA00000100000001 /* GlobalActivityHistoryView.swift in Sources */,
 				CC00000100000001 /* BatchDetailView.swift in Sources */,
 				EE00000100000001 /* ImagePicker.swift in Sources */,
+				DD00000100000007 /* LibraryPicker.swift in Sources */,
 				EE00000100000002 /* ProductImageViewer.swift in Sources */,
 				EE00000100000003 /* CachedProductImage.swift in Sources */,
 				EE00000100000004 /* UIImage+Resize.swift in Sources */,
@@ -707,6 +718,7 @@
 				EE00000100000007 /* BackgroundTask.swift in Sources */,
 				EE00000100000008 /* SubjectLifter.swift in Sources */,
 				EE00000100000009 /* ProductPhotoPreviewView.swift in Sources */,
+				DD00000100000006 /* ProductPhotoFlow.swift in Sources */,
 				GG00000100000001 /* Payroll.swift in Sources */,
 				GG00000100000002 /* PayrollView.swift in Sources */,
 				GG00000100000003 /* PayrollViewModel.swift in Sources */,

@@ -1,34 +1,16 @@
 import SwiftUI
 import FarmaciaKit
-import SwiftyCrop
 
 // MARK: - Create Product View
 //
 // Design-system pilot (tasks/design-system-epic.md): DS tokens, AmountField,
 // Margin/Tone, .formKeyboard. Presentation rules:
-//   - Everything full-screen in the photo flow is one destination
-//     (`photoDestination`) on one `fullScreenCover(item:)`. Moving between steps
-//     swaps the item; SwiftUI replaces the content, so nothing races.
+//   - The photo flow (camera/library → crop → preview) is FarmaciaKit
+//     `PhotoFlow` on one full-screen cover (`.productPhotoFlow`), shared with
+//     the product detail.
 //   - The photo source is a `Menu` (no dialog to animate away before the camera
 //     or library can open).
 //   - The supplier is chosen by a push, not a sheet.
-
-/// Every full-screen step of the photo flow.
-private enum PhotoDestination: Identifiable {
-    case camera
-    case library
-    case crop(UIImage)
-    case preview
-
-    var id: String {
-        switch self {
-        case .camera: "camera"
-        case .library: "library"
-        case .crop: "crop"
-        case .preview: "preview"
-        }
-    }
-}
 
 struct CreateProductView: View {
     @EnvironmentObject var authManager: AuthManager
@@ -41,9 +23,7 @@ struct CreateProductView: View {
     @State private var liftedImage: UIImage?
     @State private var backgroundRemoved = true
     @State private var isLiftingSubject = false
-    @State private var photoDestination: PhotoDestination?
-    /// Where Retomar Foto goes: the source the current photo came from.
-    @State private var photoSource: PhotoDestination = .library
+    @State private var photoFlow = PhotoFlow<UIImage>()
     @State private var showDiscardConfirmation = false
 
     /// Anything entered (photo included): the sheet can't be swiped away and
@@ -176,8 +156,17 @@ struct CreateProductView: View {
             .formKeyboard(focus: $focusedField, order: focusOrder)
             // Swiping the sheet down would lose what's been entered.
             .interactiveDismissDisabled(hasUnsavedChanges)
-            .fullScreenCover(item: $photoDestination) { destination in
-                photoScreen(for: destination)
+            .productPhotoFlow($photoFlow, onCropped: photoCropped) {
+                if let originalCroppedImage {
+                    ProductPhotoPreviewView(
+                        liftedImage: liftedImage,
+                        originalImage: originalCroppedImage,
+                        backgroundRemoved: $backgroundRemoved,
+                        isLifting: isLiftingSubject,
+                        onRetake: { photoFlow.retake() },
+                        onDone: { photoFlow.cancel() }
+                    )
+                }
             }
             .onChange(of: backgroundRemoved) { _, removed in
                 guard let originalCroppedImage else { return }
@@ -266,7 +255,7 @@ struct CreateProductView: View {
                 ZStack(alignment: .bottomTrailing) {
                     if let image = selectedImage {
                         Button {
-                            photoDestination = .preview
+                            photoFlow.step = .preview
                         } label: {
                             Image(uiImage: image)
                                 .resizable()
@@ -322,13 +311,11 @@ struct CreateProductView: View {
     private var photoSourceItems: some View {
         if CameraPicker.isAvailable {
             Button("Tomar Foto", systemImage: "camera") {
-                photoSource = .camera
-                photoDestination = .camera
+                photoFlow.start(.camera)
             }
         }
         Button("Elegir de la Biblioteca", systemImage: "photo.on.rectangle") {
-            photoSource = .library
-            photoDestination = .library
+            photoFlow.start(.library)
         }
         if selectedImage != nil {
             Button("Eliminar Foto", systemImage: "trash", role: .destructive) {
@@ -340,69 +327,24 @@ struct CreateProductView: View {
         }
     }
 
-    @ViewBuilder
-    private func photoScreen(for destination: PhotoDestination) -> some View {
-        switch destination {
-        case .camera:
-            CameraPicker(
-                onPicked: { photoDestination = .crop($0) },
-                onCancel: { photoDestination = nil }
-            )
-            .ignoresSafeArea()
-        case .library:
-            LibraryPicker(
-                onPicked: { photoDestination = .crop($0) },
-                onCancel: { photoDestination = nil }
-            )
-        case .crop(let image):
-            cropView(for: image)
-        case .preview:
-            if let originalCroppedImage {
-                ProductPhotoPreviewView(
-                    liftedImage: liftedImage,
-                    originalImage: originalCroppedImage,
-                    backgroundRemoved: $backgroundRemoved,
-                    isLifting: isLiftingSubject,
-                    onRetake: { photoDestination = photoSource },
-                    onDone: { photoDestination = nil }
-                )
+    /// The square photo, as the flow moves on to the preview (which shows a
+    /// spinner until background removal ends).
+    private func photoCropped(_ croppedImage: UIImage) {
+        originalCroppedImage = croppedImage
+        liftedImage = nil
+        backgroundRemoved = true
+        selectedImage = croppedImage
+        Task {
+            isLiftingSubject = true
+            let lifted = await SubjectLifter.liftSubject(from: croppedImage)
+            // Reference-identical result means lifting had no
+            // effect (no clear subject, or it failed) — leave
+            // the toggle hidden rather than offering a no-op.
+            if lifted !== croppedImage {
+                liftedImage = lifted
+                selectedImage = lifted
             }
-        }
-    }
-
-    private func cropView(for image: UIImage) -> some View {
-        SwiftyCropView(
-            imageToCrop: image,
-            maskShape: .square,
-            // ponytail: SwiftyCrop scales magnification gesture magnitude
-            // by 0.1 * zoomSensitivity internally, so the default (1.0) only
-            // applies 10% of the pinch as zoom. 8 gets close to a native,
-            // 1:1-feeling pinch; retune if it still feels off.
-            configuration: SwiftyCropConfiguration(zoomSensitivity: 8),
-            onCancel: { photoDestination = nil }
-        ) { croppedImage in
-            guard let croppedImage else {
-                photoDestination = nil
-                return
-            }
-            originalCroppedImage = croppedImage
-            liftedImage = nil
-            backgroundRemoved = true
-            selectedImage = croppedImage
-            // Straight to the preview; it shows a spinner until lifting ends.
-            photoDestination = .preview
-            Task {
-                isLiftingSubject = true
-                let lifted = await SubjectLifter.liftSubject(from: croppedImage)
-                // Reference-identical result means lifting had no
-                // effect (no clear subject, or it failed) — leave
-                // the toggle hidden rather than offering a no-op.
-                if lifted !== croppedImage {
-                    liftedImage = lifted
-                    selectedImage = lifted
-                }
-                isLiftingSubject = false
-            }
+            isLiftingSubject = false
         }
     }
 

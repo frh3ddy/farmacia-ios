@@ -85,11 +85,10 @@
 - swiftui-pro: one type per file — `ImagePicker.swift`, `KeyboardHelpers.swift`, and the view models
   inside `CreateProductView.swift` hold several.
 
-- `ProductDetailView`: 12 presentation modifiers → one `Destination` enum; photo via `Menu`/`PhotosPicker`.
+- ✅ `ProductDetailView` (feature/product-detail-presentation): its four sheets → one `DetailSheet` on `.sheet(item:)` (drops a `Binding(get:set:)`); photo source → `Menu`; photo flow shared with Nuevo Producto via FarmaciaKit `PhotoFlow` (TDD, 5 tests) + `.productPhotoFlow` — the detail now crops to square too; image viewer behind a real Button.
 - Scanner flow: one sheet with its own navigation (scan → candidates → create) instead of
   `pendingScannedCode` + `onDismiss`.
-- Delete `ImagePickerPresenter` and `keyboardTopSpacing` (still used by `EditPriceView` / `AdjustmentFormView`)
-  once nothing uses them.
+- ✅ `ImagePickerPresenter` deleted (no callers left). Still to delete: `keyboardTopSpacing` (used by `EditPriceView` / `AdjustmentFormView`) once those move to `.formKeyboard`.
 - UIKit haptics → `.sensoryFeedback`.
 - Convert the other screens as they get touched; continuous scan-to-count in receiving; a frame over the camera view
   showing where to place the product.

@@ -11,18 +11,14 @@ struct ProductDetailView: View {
     let product: Product
     var onProductUpdated: ((Product) -> Void)? = nil
     
-    @State private var showEditPrice = false
+    /// Every sheet this screen opens, on one `.sheet(item:)`: two can never
+    /// compete for the same presentation host, and each carries its own data
+    /// (with `.sheet(isPresented:)` the content was built before a Menu
+    /// action's state landed — the adjustment sheet showed the wrong type).
+    @State private var sheet: DetailSheet?
     @State private var isRefreshing = false
     @State private var currentProduct: Product?
     
-    // Inventory action sheets
-    @State private var showReceiveSheet = false
-    // Item-driven sheet presentation: with .sheet(isPresented:) the content
-    // closure is built BEFORE the state update from the Menu action
-    // propagates, so the first presentation always showed the default type
-    // (.damage) regardless of the tapped item. .sheet(item:) evaluates the
-    // content after the item is set — the selected type is always correct.
-    @State private var adjustmentSheetType: AdjustmentType?
     
     // Product-level activity data
     @StateObject private var activityViewModel = ProductActivityViewModel()
@@ -35,7 +31,6 @@ struct ProductDetailView: View {
     
     // Batch section expansion state
     @State private var showAllBatches = false
-    @State private var selectedBatchId: String? = nil
     
     // Cost history expansion state
     @State private var expandedSupplierHistory: String? = nil
@@ -44,15 +39,17 @@ struct ProductDetailView: View {
     @StateObject private var inventoryViewModel = InventoryViewModel()
     
     // Image upload state
-    @State private var showImageSourcePicker = false
     @State private var isUploadingImage = false
     @State private var uploadedImageUrl: String? = nil
     @State private var showImageUploadError = false
     @State private var showImageViewer = false
+    /// Camera/library → crop → preview (FarmaciaKit `PhotoFlow`, shared with
+    /// Nuevo Producto); Listo uploads.
+    @State private var photoFlow = PhotoFlow<UIImage>()
     @State private var pendingOriginalImage: UIImage?
     @State private var pendingLiftedImage: UIImage?
     @State private var pendingBackgroundRemoved = true
-    @State private var showImagePreview = false
+    @State private var isLiftingPhoto = false
     @State private var refreshErrorMessage: String?
     @State private var showRefreshError = false
     @State private var offlineQueue = OfflineQueueManager.shared
@@ -102,7 +99,7 @@ struct ProductDetailView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Button {
-                            showEditPrice = true
+                            sheet = .editPrice
                         } label: {
                             Label("Editar Precio", systemImage: "dollarsign.circle")
                         }
@@ -113,48 +110,43 @@ struct ProductDetailView: View {
                 }
             }
         }
-        .sheet(isPresented: $showEditPrice) {
-            EditPriceView(product: displayProduct) { updatedProduct in
-                currentProduct = updatedProduct
-                // Propagate the new price to the products list + SwiftData cache
-                onProductUpdated?(updatedProduct)
-                // Follow with a fresh GET — the server is the source of truth
-                // and the PATCH response may not carry every derived field
-                Task {
-                    await refreshProduct()
+        .sheet(item: $sheet) { sheet in
+            switch sheet {
+            case .editPrice:
+                EditPriceView(product: displayProduct) { updatedProduct in
+                    currentProduct = updatedProduct
+                    // Propagate the new price to the products list + SwiftData cache
+                    onProductUpdated?(updatedProduct)
+                    // Follow with a fresh GET — the server is the source of truth
+                    // and the PATCH response may not carry every derived field
+                    Task {
+                        await refreshProduct()
+                    }
                 }
-            }
-        }
-        .sheet(isPresented: $showReceiveSheet) {
-            ReceiveInventoryFormView(
-                viewModel: inventoryViewModel,
-                product: displayProduct,
-                onComplete: {
-                    Task { await refreshDependentData() }
+            case .receive:
+                ReceiveInventoryFormView(
+                    viewModel: inventoryViewModel,
+                    product: displayProduct,
+                    onComplete: {
+                        Task { await refreshDependentData() }
+                    }
+                )
+                .task {
+                    // Only if the parent's initial load didn't already populate it
+                    if inventoryViewModel.suppliers.isEmpty {
+                        await inventoryViewModel.loadSuppliers()
+                    }
                 }
-            )
-            .task {
-                // Only if the parent's initial load didn't already populate it
-                if inventoryViewModel.suppliers.isEmpty {
-                    await inventoryViewModel.loadSuppliers()
-                }
-            }
-        }
-        .sheet(item: $adjustmentSheetType) { type in
-            AdjustmentFormView(
-                adjustmentType: type,
-                viewModel: inventoryViewModel,
-                product: displayProduct,
-                onComplete: {
-                    Task { await refreshDependentData() }
-                }
-            )
-        }
-        .sheet(isPresented: Binding(
-            get: { selectedBatchId != nil },
-            set: { if !$0 { selectedBatchId = nil } }
-        )) {
-            if let batchId = selectedBatchId {
+            case .adjust(let type):
+                AdjustmentFormView(
+                    adjustmentType: type,
+                    viewModel: inventoryViewModel,
+                    product: displayProduct,
+                    onComplete: {
+                        Task { await refreshDependentData() }
+                    }
+                )
+            case .batch(let batchId):
                 BatchDetailView(batchId: batchId, productName: displayProduct.displayName)
             }
         }
@@ -210,34 +202,57 @@ struct ProductDetailView: View {
         VStack(spacing: 12) {
             // Product Image or Placeholder
             ZStack(alignment: .bottomTrailing) {
-                // Image area — tapping opens full-screen viewer (cached + downsampled)
+                // Image area — tapping opens the full-screen viewer (cached +
+                // downsampled). A Button, so VoiceOver can reach it; the viewer's
+                // cover sits here, apart from the photo flow's.
                 Group {
                     let displayUrl = uploadedImageUrl ?? displayProduct.squareImageUrl
                     if displayUrl != nil {
-                        CachedProductImage(url: displayUrl, targetSize: CGSize(width: 100, height: 100)) {
-                            productPlaceholder
-                        }
-                        .frame(width: 100, height: 100)
-                        .clipShape(.rect(cornerRadius: 16))
-                        .onTapGesture {
+                        Button {
                             showImageViewer = true
+                        } label: {
+                            CachedProductImage(url: displayUrl, targetSize: CGSize(width: 100, height: 100)) {
+                                productPlaceholder
+                            }
+                            .frame(width: 100, height: 100)
+                            .clipShape(.rect(cornerRadius: DS.Radius.xl))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Ver foto del producto")
+                        .fullScreenCover(isPresented: $showImageViewer) {
+                            if let imageUrl = uploadedImageUrl ?? displayProduct.squareImageUrl {
+                                ProductImageViewer(
+                                    imageUrl: imageUrl,
+                                    productName: displayProduct.displayName
+                                )
+                            }
                         }
                     } else {
                         productPlaceholder
                     }
                 }
-                
-                // Camera icon overlay — tapping opens upload picker (owners/managers only)
-                if (authManager.isOwner || authManager.isManager) && !isUploadingImage {
-                    Button {
-                        showImageSourcePicker = true
+
+                // Change-photo badge (owners/managers): a Menu, like Nuevo
+                // Producto — no dialog to animate away before the camera opens.
+                if (authManager.isOwner || authManager.isManager) && !isUploadingImage && !isLiftingPhoto {
+                    Menu {
+                        if CameraPicker.isAvailable {
+                            Button("Tomar Foto", systemImage: "camera") {
+                                photoFlow.start(.camera)
+                            }
+                        }
+                        Button("Elegir de la Biblioteca", systemImage: "photo.on.rectangle") {
+                            photoFlow.start(.library)
+                        }
                     } label: {
                         Image(systemName: "camera.circle.fill")
                             .font(.title3)
                             .foregroundStyle(.white)
-                            .background(Circle().fill(Color.blue).frame(width: 28, height: 28))
+                            .background(Circle().fill(.tint).frame(width: 28, height: 28))
+                            .frame(width: DS.minTapSize, height: DS.minTapSize)
+                            .contentShape(.rect)
                     }
-                    .offset(x: 4, y: 4)
+                    .offset(x: DS.Spacing.xs, y: DS.Spacing.xs)
                     .accessibilityLabel("Cambiar foto")
                 }
 
@@ -248,42 +263,19 @@ struct ProductDetailView: View {
                         .clipShape(.rect(cornerRadius: 16))
                 }
             }
-            .confirmationDialog("Cambiar Imagen del Producto", isPresented: $showImageSourcePicker) {
-                Button("Tomar Foto") {
-                    ImagePickerPresenter.present(sourceType: .camera) { image in
-                        stagePickedImage(image)
-                    }
-                }
-                Button("Elegir de la Biblioteca") {
-                    ImagePickerPresenter.present(sourceType: .photoLibrary) { image in
-                        stagePickedImage(image)
-                    }
-                }
-                Button("Cancelar", role: .cancel) {}
-            }
-            .fullScreenCover(isPresented: $showImageViewer) {
-                if let imageUrl = uploadedImageUrl ?? displayProduct.squareImageUrl {
-                    ProductImageViewer(
-                        imageUrl: imageUrl,
-                        productName: displayProduct.displayName
-                    )
-                }
-            }
-            .fullScreenCover(isPresented: $showImagePreview) {
+            .productPhotoFlow($photoFlow, onCropped: photoCropped) {
                 if let stagedImage = pendingOriginalImage {
                     ProductPhotoPreviewView(
                         liftedImage: pendingLiftedImage,
                         originalImage: stagedImage,
                         backgroundRemoved: $pendingBackgroundRemoved,
-                        onRetake: {
-                            showImagePreview = false
-                            showImageSourcePicker = true
-                        },
+                        isLifting: isLiftingPhoto,
+                        onRetake: { photoFlow.retake() },
                         onDone: {
-                            showImagePreview = false
                             let finalImage = pendingBackgroundRemoved
                                 ? (pendingLiftedImage ?? stagedImage)
                                 : stagedImage
+                            photoFlow.cancel()
                             pendingOriginalImage = nil
                             pendingLiftedImage = nil
                             Task {
@@ -293,7 +285,7 @@ struct ProductDetailView: View {
                     )
                 }
             }
-            
+
             // Product Name
             Text(displayProduct.displayName)
                 .font(.title2)
@@ -384,7 +376,7 @@ struct ProductDetailView: View {
                 HStack(spacing: 12) {
                     if canAddStock {
                         Button {
-                            showReceiveSheet = true
+                            sheet = .receive
                         } label: {
                             HStack(spacing: 6) {
                                 Image(systemName: "plus.circle.fill")
@@ -469,7 +461,7 @@ struct ProductDetailView: View {
                 
                 if canEditPrice {
                     Button("Editar") {
-                        showEditPrice = true
+                        sheet = .editPrice
                     }
                     .font(.subheadline)
                 }
@@ -538,7 +530,7 @@ struct ProductDetailView: View {
     
     
     private func selectAdjustment(_ type: AdjustmentType) {
-        adjustmentSheetType = type
+        sheet = .adjust(type)
     }
     
     // MARK: - Recent Activity Section (Product-Scoped)
@@ -824,23 +816,22 @@ struct ProductDetailView: View {
         )
     }
     
-    /// Stages a freshly picked photo for review: runs subject lifting, then
-    /// opens the preview so the change can be inspected/retaken/toggled off
-    /// before it's actually uploaded.
-    private func stagePickedImage(_ image: UIImage) {
+    /// The square photo, as the flow moves on to the preview: background
+    /// removal runs while it's on screen (the preview shows a spinner), and
+    /// Listo uploads the chosen version.
+    private func photoCropped(_ image: UIImage) {
         pendingOriginalImage = image
         pendingLiftedImage = nil
         pendingBackgroundRemoved = true
         Task {
-            isUploadingImage = true
+            isLiftingPhoto = true
             let lifted = await SubjectLifter.liftSubject(from: image)
             // Reference-identical result means lifting had no effect (no
             // clear subject, or it failed) — leave the toggle hidden.
             if lifted !== image {
                 pendingLiftedImage = lifted
             }
-            isUploadingImage = false
-            showImagePreview = true
+            isLiftingPhoto = false
         }
     }
 
@@ -965,7 +956,7 @@ struct ProductDetailView: View {
                 let batchesToShow = showAllBatches ? sortedBatches : Array(sortedBatches.prefix(3))
                 ForEach(batchesToShow) { batch in
                     Button {
-                        selectedBatchId = batch.batchId
+                        sheet = .batch(batch.batchId)
                     } label: {
                         batchRow(batch)
                     }
@@ -1489,5 +1480,24 @@ struct ProductDetailResponse: Decodable {
             tracksInventory: true
         ))
         .environmentObject(AuthManager.shared)
+    }
+}
+
+// MARK: - Detail Sheet
+
+/// What `ProductDetailView`'s single sheet shows.
+private enum DetailSheet: Identifiable {
+    case editPrice
+    case receive
+    case adjust(AdjustmentType)
+    case batch(String)
+
+    var id: String {
+        switch self {
+        case .editPrice: "editPrice"
+        case .receive: "receive"
+        case .adjust(let type): "adjust-\(type.id)"
+        case .batch(let batchId): "batch-\(batchId)"
+        }
     }
 }

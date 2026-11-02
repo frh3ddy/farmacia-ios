@@ -96,8 +96,13 @@ struct ProductImageViewer: View {
             }
             .toolbarBackground(.black, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
+            // Light status bar and bar items over the black bar.
+            .toolbarColorScheme(.dark, for: .navigationBar)
         }
-        .preferredColorScheme(.dark)
+        // Dark for this screen only. `.preferredColorScheme(.dark)` asks the
+        // whole window to switch, so the screen underneath flashed dark while
+        // the cover slid up.
+        .environment(\.colorScheme, .dark)
     }
     
     // MARK: - Gestures
