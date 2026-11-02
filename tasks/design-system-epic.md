@@ -72,9 +72,19 @@
   `ScrollPosition` can't move a SwiftUI `Form`. Details in `KeyboardHelpers.swift`.
 - Unsaved-changes protection (Nuevo Producto): FarmaciaKit `ProductDraft` (TDD, 5 tests); the sheet
   can't be swiped away once anything is entered, and Cancelar asks "¿Descartar producto?".
-  Verified on device. Next: the same for Recibir Inventario.
+  Verified on device.
+- Recibir Inventario: FarmaciaKit `ReceivingDraft` (TDD, 6 tests; the form's own auto-fill of the preferred
+  supplier and its cost, and values behind a switch that's off, aren't changes), same protection
+  ("¿Descartar recepción?"), and Guardar turns into a spinner while saving (form, Cancelar and swipe
+  locked). Verified on device.
+- Discard prompts sit on the NavigationStack, not the Cancelar button: attached to the button, iOS 26
+  shrinks the dialog back into it before the sheet starts closing (a half-second stall, measured).
 
 ## Follow-ups (`tasks/design-system-review-followups-epic.md`)
+
+- swiftui-pro: one type per file — `ImagePicker.swift`, `KeyboardHelpers.swift`, and the view models
+  inside `CreateProductView.swift` hold several.
+- `AmountField`'s quantity mode bridges `Int?` with `Binding(get:set:)` (swiftui-pro discourages it).
 
 - `ProductDetailView`: 12 presentation modifiers → one `Destination` enum; photo via `Menu`/`PhotosPicker`.
 - Scanner flow: one sheet with its own navigation (scan → candidates → create) instead of

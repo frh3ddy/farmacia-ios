@@ -208,16 +208,6 @@ struct CreateProductView: View {
                             dismiss()
                         }
                     }
-                    .confirmationDialog(
-                        "¿Descartar producto?",
-                        isPresented: $showDiscardConfirmation,
-                        titleVisibility: .visible
-                    ) {
-                        Button("Descartar", role: .destructive) { dismiss() }
-                        Button("Seguir editando", role: .cancel) {}
-                    } message: {
-                        Text("Se perderá la información que ingresaste.")
-                    }
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
@@ -249,6 +239,20 @@ struct CreateProductView: View {
             } message: {
                 Text(viewModel.successMessage)
             }
+        }
+        // On the NavigationStack, not the Cancelar button: attached to the button,
+        // iOS 26 shrinks the dialog back into it before the sheet may start
+        // closing — a half-second stall after Descartar (measured on device).
+        // Not on the Form either: it already hosts other presentations.
+        .confirmationDialog(
+            "¿Descartar producto?",
+            isPresented: $showDiscardConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Descartar", role: .destructive) { dismiss() }
+            Button("Seguir editando", role: .cancel) {}
+        } message: {
+            Text("Se perderá la información que ingresaste.")
         }
     }
 
