@@ -55,14 +55,19 @@ struct ReceiveInventoryFormView: View {
     }
 
     private enum Field: Hashable {
-        case quantity, unitCost, sellingPrice, invoiceNumber, batchNumber
+        case quantity, unitCost, sellingPrice, invoiceNumber, batchNumber, notes
     }
     @FocusState private var focusedField: Field?
 
+    /// Más detalles: price update, invoice, batch, notes.
+    @State private var showsDetails = false
+
+    /// Top to bottom, skipping rows that aren't shown.
     private var focusOrder: FocusOrder<Field> {
-        FocusOrder([.quantity, .unitCost]
+        guard showsDetails else { return FocusOrder([.quantity, .unitCost]) }
+        return FocusOrder([.quantity, .unitCost]
             + (updateSellingPrice ? [.sellingPrice] : [])
-            + [.invoiceNumber, .batchNumber])
+            + [.invoiceNumber, .batchNumber, .notes])
     }
 
     // Supplier intelligence
@@ -82,38 +87,25 @@ struct ReceiveInventoryFormView: View {
 
     var body: some View {
         NavigationStack {
+            // Layout (tasks/form-ux-polish-epic.md): what's being received on top,
+            // then the receiving itself, supplier, expiry (kept visible: it
+            // matters for a pharmacy), and everything optional under Más detalles.
             Form {
-                // Product Selection
-                Section("Producto") {
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text(product.displayName)
-                                .foregroundStyle(.primary)
-                            if let sku = product.sku {
-                                Text("SKU: \(sku)")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        Spacer()
-                        Image(systemName: "lock.fill")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+                Section {
+                    productSummary
                 }
 
-                // Quantity & Cost
-                Section("Cantidad y Costo") {
+                Section {
                     AmountField(
                         "Cantidad",
                         unit: "UDS",
-                        quantity: $quantity,
+                        value: $quantity,
                         focus: $focusedField,
                         field: .quantity
                     )
 
                     AmountField(
-                        "Costo Unitario",
+                        "Costo unitario",
                         unit: "MXN",
                         value: $receivingCost.value,
                         focus: $focusedField,
@@ -122,164 +114,73 @@ struct ReceiveInventoryFormView: View {
 
                     if let qty = quantity, qty > 0,
                        let cost = receivingCost.value, cost > 0 {
-                        HStack {
-                            Text("Costo Total")
-                            Spacer()
+                        LabeledContent("Costo total") {
                             Text("$\(String(format: "%.2f", Double(qty) * cost))")
                                 .bold()
                         }
                     }
                 }
 
-                // Selling Price Update (Optional)
+                supplierSection
+
                 Section {
-                    Toggle("Actualizar Precio de Venta", isOn: $updateSellingPrice)
-
-                    if updateSellingPrice {
-                        AmountField(
-                            "Nuevo Precio",
-                            unit: "MXN",
-                            value: $newSellingPrice,
-                            focus: $focusedField,
-                            field: .sellingPrice
-                        )
-
-                        // Show current price if available
-                        if let currentPrice = product.sellingPrice {
-                            HStack {
-                                Text("Precio Actual")
-                                    .foregroundStyle(.secondary)
-                                Spacer()
-                                Text("$\(String(format: "%.2f", currentPrice)) MXN")
-                                    .foregroundStyle(.secondary)
-                            }
-                            .font(.caption)
-                        }
-
-                        // Margin preview
-                        if let cost = receivingCost.value, cost > 0,
-                           let newPrice = newSellingPrice,
-                           let margin = Margin.percent(price: newPrice, cost: cost) {
-                            HStack {
-                                Text("Nuevo Margen")
-                                Spacer()
-                                Text(String(format: "%.1f%%", margin))
-                                    .foregroundStyle(Margin.tone(forPercent: margin).color)
-                                    .bold()
-                            }
-                        }
-                    }
-                } header: {
-                    Text("Precio de Venta (Opcional)")
-                } footer: {
-                    if updateSellingPrice {
-                        Text("El precio se actualizará en Square POS.")
-                    }
-                }
-
-                // Supplier
-                Section {
-                    NavigationLink {
-                        SupplierPickerView(
-                            suppliers: $viewModel.suppliers,
-                            selectedSupplier: $selectedSupplier
-                        )
-                    } label: {
-                        HStack {
-                            if isLoadingSuppliers {
-                                ProgressView()
-                                    .scaleEffect(0.8)
-                                Text("Cargando proveedores...")
-                                    .foregroundStyle(.secondary)
-                            } else if let supplier = selectedSupplier {
-                                VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
-                                    HStack(spacing: DS.Spacing.s) {
-                                        Text(supplier.name)
-                                            .foregroundStyle(.primary)
-                                        // Show preferred badge if this supplier is the preferred one
-                                        if let ps = productSuppliers.first(where: { $0.id == supplier.id }), ps.isPreferred {
-                                            Text("Preferido")
-                                                .font(.caption)
-                                                .padding(.horizontal, DS.Spacing.xs)
-                                                .padding(.vertical, DS.Spacing.xxs)
-                                                .background(Tone.info.color.opacity(0.15), in: .rect(cornerRadius: DS.Radius.s))
-                                                .foregroundStyle(Tone.info.color)
-                                        }
-                                    }
-                                    // Show last cost from this supplier
-                                    if let lastCost = supplierLastCost {
-                                        HStack(spacing: DS.Spacing.xs) {
-                                            Text("Último costo: $\(String(format: "%.2f", lastCost))")
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                            // Show comparison with current unit cost entry
-                                            if let currentCost = receivingCost.value, currentCost > 0 {
-                                                let diff = currentCost - lastCost
-                                                let pct = lastCost > 0 ? (diff / lastCost) * 100 : 0
-                                                if abs(diff) > 0.01 {
-                                                    Text(diff > 0 ? "\u{2191}\(String(format: "+%.1f%%", pct))" : "\u{2193}\(String(format: "%.1f%%", pct))")
-                                                        .font(.caption)
-                                                        .foregroundStyle((diff > 0 ? Tone.critical : .positive).color)
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            } else {
-                                Text("Seleccionar Proveedor")
-                                    .foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                            if selectedSupplier != nil {
-                                Button {
-                                    selectedSupplier = nil
-                                    supplierLastCost = nil
-                                    supplierCostNote = nil
-                                } label: {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .foregroundStyle(.secondary)
-                                }
-                                .buttonStyle(.borderless)
-                                .accessibilityLabel("Quitar proveedor")
-                            }
-                        }
-                    }
-
-                    // Show supplier cost note (e.g. "Auto-filled from preferred supplier")
-                    if let note = supplierCostNote {
-                        Label(note, systemImage: "info.circle")
-                            .font(.caption)
-                            .foregroundStyle(Tone.info.color)
-                    }
-                } header: {
-                    Text("Proveedor (Opcional)")
-                } footer: {
-                    if !productSuppliers.isEmpty && selectedSupplier == nil {
-                        Text("\(productSuppliers.count) supplier(s) available for this product")
-                    }
-                }
-
-                // Invoice & Batch
-                Section("Números de Referencia (Opcional)") {
-                    TextField("Número de Factura", text: $invoiceNumber)
-                        .formField(.invoiceNumber, focus: $focusedField)
-                    TextField("Número de Lote", text: $batchNumber)
-                        .formField(.batchNumber, focus: $focusedField)
-                }
-
-                // Expiry Date
-                Section {
-                    Toggle("Tiene Fecha de Vencimiento", isOn: $hasExpiry)
+                    Toggle("Tiene fecha de vencimiento", isOn: $hasExpiry)
 
                     if hasExpiry {
-                        DatePicker("Fecha de Vencimiento", selection: $expiryDate, displayedComponents: .date)
+                        DatePicker("Vence", selection: $expiryDate, displayedComponents: .date)
                     }
                 }
 
-                // Notes
-                Section("Notas (Opcional)") {
-                    TextEditor(text: $notes)
-                        .frame(minHeight: 60)
+                Section {
+                    DisclosureGroup(isExpanded: $showsDetails) {
+                        Toggle("Actualizar precio de venta", isOn: $updateSellingPrice)
+
+                        if updateSellingPrice {
+                            AmountField(
+                                "Nuevo precio",
+                                unit: "MXN",
+                                value: $newSellingPrice,
+                                focus: $focusedField,
+                                field: .sellingPrice
+                            )
+
+                            if let currentPrice = product.sellingPrice {
+                                LabeledContent("Precio actual", value: "$\(String(format: "%.2f", currentPrice)) MXN")
+                            }
+
+                            if let cost = receivingCost.value, cost > 0,
+                               let newPrice = newSellingPrice,
+                               let margin = Margin.percent(price: newPrice, cost: cost) {
+                                LabeledContent("Nuevo margen") {
+                                    Text(String(format: "%.1f%%", margin))
+                                        .foregroundStyle(Margin.tone(forPercent: margin).color)
+                                        .bold()
+                                }
+                            }
+                        }
+
+                        LabeledContent("Factura") {
+                            TextField("Factura", text: $invoiceNumber, prompt: Text("Número"))
+                                .multilineTextAlignment(.trailing)
+                                .formField(.invoiceNumber, focus: $focusedField)
+                        }
+
+                        LabeledContent("Lote") {
+                            TextField("Lote", text: $batchNumber, prompt: Text("Número"))
+                                .multilineTextAlignment(.trailing)
+                                .formField(.batchNumber, focus: $focusedField)
+                        }
+
+                        TextField("Notas", text: $notes, axis: .vertical)
+                            .lineLimit(2...5)
+                            .formField(.notes, focus: $focusedField)
+                    } label: {
+                        MoreDetailsLabel(hasHiddenDetails: !showsDetails && draft.hasDetails)
+                    }
+                } footer: {
+                    if showsDetails && updateSellingPrice {
+                        Text("El precio también se actualiza en Square POS.")
+                    }
                 }
             }
             // No edits while a save is in flight.
@@ -370,6 +271,120 @@ struct ReceiveInventoryFormView: View {
             Button("Seguir editando", role: .cancel) {}
         } message: {
             Text("Se perderá la información que ingresaste.")
+        }
+    }
+
+    // MARK: - Sections
+
+    /// What's being received: photo, name, SKU, stock on hand and price.
+    private var productSummary: some View {
+        HStack(spacing: DS.Spacing.m) {
+            CachedProductImage(url: product.squareImageUrl, targetSize: CGSize(width: 48, height: 48)) {
+                Image(systemName: "shippingbox")
+                    .foregroundStyle(.secondary)
+            }
+            .frame(width: 48, height: 48)
+            .background(.fill.tertiary, in: .rect(cornerRadius: DS.Radius.m))
+            .clipShape(.rect(cornerRadius: DS.Radius.m))
+            .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
+                Text(product.displayName)
+                    .font(.headline)
+                Text(productFacts)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    /// "SKU 123 · 12 en existencia · $25.00"
+    private var productFacts: String {
+        var facts: [String] = []
+        if let sku = product.sku, !sku.isEmpty { facts.append("SKU \(sku)") }
+        if let stock = product.totalInventory { facts.append("\(stock) en existencia") }
+        if let price = product.sellingPrice { facts.append("$\(String(format: "%.2f", price))") }
+        return facts.joined(separator: " · ")
+    }
+
+    private var supplierSection: some View {
+        Section {
+            NavigationLink {
+                SupplierPickerView(
+                    suppliers: $viewModel.suppliers,
+                    selectedSupplier: $selectedSupplier
+                )
+            } label: {
+                HStack {
+                    if isLoadingSuppliers {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("Cargando proveedores...")
+                            .foregroundStyle(.secondary)
+                    } else if let supplier = selectedSupplier {
+                        VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
+                            HStack(spacing: DS.Spacing.s) {
+                                Text(supplier.name)
+                                    .foregroundStyle(.primary)
+                                if let ps = productSuppliers.first(where: { $0.id == supplier.id }), ps.isPreferred {
+                                    Text("Preferido")
+                                        .font(.caption)
+                                        .padding(.horizontal, DS.Spacing.xs)
+                                        .padding(.vertical, DS.Spacing.xxs)
+                                        .background(Tone.info.color.opacity(0.15), in: .rect(cornerRadius: DS.Radius.s))
+                                        .foregroundStyle(Tone.info.color)
+                                }
+                            }
+                            if let lastCost = supplierLastCost {
+                                HStack(spacing: DS.Spacing.xs) {
+                                    Text("Último costo: $\(String(format: "%.2f", lastCost))")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    if let currentCost = receivingCost.value, currentCost > 0 {
+                                        let diff = currentCost - lastCost
+                                        let pct = lastCost > 0 ? (diff / lastCost) * 100 : 0
+                                        if abs(diff) > 0.01 {
+                                            Text(diff > 0 ? "\u{2191}\(String(format: "+%.1f%%", pct))" : "\u{2193}\(String(format: "%.1f%%", pct))")
+                                                .font(.caption)
+                                                .foregroundStyle((diff > 0 ? Tone.critical : .positive).color)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        LabeledContent("Proveedor", value: "Ninguno")
+                    }
+                    Spacer()
+                    if selectedSupplier != nil {
+                        Button {
+                            selectedSupplier = nil
+                            supplierLastCost = nil
+                            supplierCostNote = nil
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.borderless)
+                        .accessibilityLabel("Quitar proveedor")
+                    }
+                }
+            }
+
+            if let note = supplierCostNote {
+                Label(note, systemImage: "info.circle")
+                    .font(.caption)
+                    .foregroundStyle(Tone.info.color)
+            }
+        } header: {
+            Text("Proveedor")
+        } footer: {
+            if !productSuppliers.isEmpty && selectedSupplier == nil {
+                Text(productSuppliers.count == 1
+                    ? "1 proveedor disponible para este producto."
+                    : "\(productSuppliers.count) proveedores disponibles para este producto.")
+            }
         }
     }
 

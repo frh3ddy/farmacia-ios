@@ -53,13 +53,18 @@ struct CreateProductView: View {
     }
 
     private enum Field: Hashable {
-        case name, sku, description, sellingPrice, quantity, unitCost
+        case name, sku, sellingPrice, quantity, unitCost, description
     }
     @FocusState private var focusedField: Field?
 
+    /// Más detalles: the optional fields, collapsed unless they already hold
+    /// something (e.g. a scanned SKU) — `ProductDraft.hasDetails`.
+    @State private var showsDetails: Bool
+
+    /// Top to bottom, skipping rows that aren't shown.
     private var focusOrder: FocusOrder<Field> {
-        FocusOrder([.name, .sku, .description, .sellingPrice]
-            + (viewModel.hasInitialStock ? [.quantity, .unitCost] : []))
+        FocusOrder([.name, .sku, .sellingPrice, .quantity, .unitCost]
+            + (showsDetails ? [.description] : []))
     }
 
     // Optional prefilled SKU (e.g. from barcode scanner) — seeded directly
@@ -69,118 +74,102 @@ struct CreateProductView: View {
     // SKU field blank on the first scan.
     init(prefillSku: String? = nil) {
         _viewModel = StateObject(wrappedValue: CreateProductViewModel(prefillSku: prefillSku))
+        _showsDetails = State(initialValue: ProductDraft(prefillSku: prefillSku).hasDetails)
     }
 
     var body: some View {
         NavigationStack {
+            // Layout (tasks/form-ux-polish-epic.md): essentials first — photo,
+            // name, price — as labelled rows; initial stock behind its switch;
+            // everything optional under Más detalles.
             Form {
                 photoSection
 
-                // Product Info Section
                 Section {
-                    TextField("Nombre del Producto", text: $viewModel.name)
-                        .textInputAutocapitalization(.words)
-                        .formField(.name, focus: $focusedField)
+                    LabeledContent("Nombre") {
+                        TextField("Nombre", text: $viewModel.name, prompt: Text("Ej. Paracetamol 500 mg"))
+                            .multilineTextAlignment(.trailing)
+                            .textInputAutocapitalization(.words)
+                            .formField(.name, focus: $focusedField)
+                    }
 
-                    TextField("SKU (Optional)", text: $viewModel.sku)
-                        .textInputAutocapitalization(.characters)
-                        .autocorrectionDisabled()
-                        .formField(.sku, focus: $focusedField)
+                    // With the essentials, not under Más detalles: empty shows
+                    // "Automático", so a missing SKU is visible at a glance.
+                    LabeledContent("SKU") {
+                        TextField("SKU", text: $viewModel.sku, prompt: Text("Automático"))
+                            .multilineTextAlignment(.trailing)
+                            .textInputAutocapitalization(.characters)
+                            .autocorrectionDisabled()
+                            .formField(.sku, focus: $focusedField)
+                    }
 
-                    TextField("Descripción (Opcional)", text: $viewModel.description, axis: .vertical)
-                        .lineLimit(2...4)
-                        .formField(.description, focus: $focusedField)
-                } header: {
-                    Text("Información del Producto")
-                } footer: {
-                    Text("SKU helps identify products quickly. Leave empty to auto-generate.")
-                }
-
-                // Pricing Section
-                Section {
                     AmountField(
+                        "Precio",
                         prefix: "$",
                         unit: "MXN",
                         value: $viewModel.sellingPrice,
                         focus: $focusedField,
                         field: .sellingPrice
                     )
-                } header: {
-                    Text("Precio de Venta")
                 } footer: {
-                    Text("El precio que los clientes pagarán en caja.")
+                    Text("Sin SKU, se genera uno automáticamente. El precio es el que los clientes pagan en caja.")
                 }
 
-                // Initial Inventory Section (Optional)
+                // No switch: most new products arrive with stock, so the fields
+                // are always here and a quantity is what creates it
+                // (ProductDraft.createsInitialStock).
                 Section {
-                    Toggle("Add Initial Stock", isOn: $viewModel.hasInitialStock)
+                    AmountField(
+                        "Cantidad",
+                        unit: "UDS",
+                        value: $viewModel.initialStock,
+                        focus: $focusedField,
+                        field: .quantity
+                    )
 
-                    if viewModel.hasInitialStock {
-                        AmountField(
-                            "Cantidad",
-                            unit: "UDS",
-                            quantity: $viewModel.initialStock,
-                            focus: $focusedField,
-                            field: .quantity
+                    AmountField(
+                        "Costo por unidad",
+                        unit: "MXN",
+                        value: $viewModel.costPrice,
+                        focus: $focusedField,
+                        field: .unitCost
+                    )
+
+                    NavigationLink {
+                        SupplierPickerView(
+                            suppliers: $viewModel.suppliers,
+                            selectedSupplier: $viewModel.selectedSupplier
                         )
-
-                        AmountField(
-                            "Costo por Unidad",
-                            unit: "MXN",
-                            value: $viewModel.costPrice,
-                            focus: $focusedField,
-                            field: .unitCost
-                        )
-
-                        NavigationLink {
-                            SupplierPickerView(
-                                suppliers: $viewModel.suppliers,
-                                selectedSupplier: $viewModel.selectedSupplier
-                            )
-                        } label: {
-                            LabeledContent("Proveedor", value: viewModel.selectedSupplier?.name ?? "Seleccionar (Opcional)")
-                        }
+                    } label: {
+                        LabeledContent("Proveedor", value: viewModel.selectedSupplier?.name ?? "Ninguno")
                     }
                 } header: {
-                    Text("Inventario Inicial (Opcional)")
+                    Text("Inventario inicial")
                 } footer: {
-                    if viewModel.hasInitialStock {
-                        Text("Esto creará inventario de saldo inicial en la ubicación actual.")
-                    } else {
-                        Text("Puedes recibir inventario después desde la pestaña de Inventario.")
-                    }
+                    Text("Sin cantidad, el producto se crea sin existencias. Con cantidad, se registra como saldo inicial en esta sucursal.")
                 }
 
-                // Margin Preview
                 if viewModel.showMarginPreview {
-                    Section {
+                    Section("Margen") {
                         marginPreviewRow
-                    } header: {
-                        Text("Vista Previa del Margen")
                     }
                 }
 
-                // Stores Section
                 Section {
-                    Toggle("Vender en todas las sucursales", isOn: $viewModel.soldAtAllLocations)
-                } header: {
-                    Text("Sucursales")
-                } footer: {
-                    if !viewModel.soldAtAllLocations {
-                        Text("Solo se venderá en esta sucursal y no aparecerá en las demás.")
-                    }
-                }
+                    DisclosureGroup(isExpanded: $showsDetails) {
+                        TextField("Descripción", text: $viewModel.description, axis: .vertical)
+                            .lineLimit(2...4)
+                            .formField(.description, focus: $focusedField)
 
-                // Square Sync Section
-                Section {
-                    Toggle("Sync to Square POS", isOn: $viewModel.syncToSquare)
-                } header: {
-                    Text("Square Integration")
+                        Toggle("Vender en todas las sucursales", isOn: $viewModel.soldAtAllLocations)
+
+                        Toggle("Sincronizar con Square", isOn: $viewModel.syncToSquare)
+                    } label: {
+                        MoreDetailsLabel(hasHiddenDetails: !showsDetails && viewModel.hasDetails)
+                    }
                 } footer: {
-                    if viewModel.syncToSquare {
-                        Text("Product will appear in Square POS for sales.")
-                    } else {
-                        Text("Product will be tracked locally only. Not visible in Square POS.")
+                    if showsDetails {
+                        Text(detailsFooter)
                     }
                 }
             }
@@ -256,6 +245,18 @@ struct CreateProductView: View {
         }
     }
 
+    /// What the Más detalles settings mean, for the choices made.
+    private var detailsFooter: String {
+        var lines: [String] = []
+        if !viewModel.soldAtAllLocations {
+            lines.append("Solo se vende en esta sucursal; no aparece en las demás.")
+        }
+        lines.append(viewModel.syncToSquare
+            ? "Aparece en Square POS para venderse."
+            : "Solo se lleva aquí; no aparece en Square POS.")
+        return lines.joined(separator: " ")
+    }
+
     // MARK: - Photo
 
     private var photoSection: some View {
@@ -286,7 +287,7 @@ struct CreateProductView: View {
                             }
                             .foregroundStyle(.secondary)
                             .frame(width: 100, height: 100)
-                            .background(Color(.systemGray5), in: .rect(cornerRadius: DS.Radius.xl))
+                            .background(.fill.tertiary, in: .rect(cornerRadius: DS.Radius.xl))
                         }
                     }
 
@@ -296,7 +297,7 @@ struct CreateProductView: View {
                         Image(systemName: selectedImage != nil ? "pencil.circle.fill" : "plus.circle.fill")
                             .font(.title3)
                             .foregroundStyle(.white)
-                            .background(Circle().fill(Color.blue).frame(width: 28, height: 28))
+                            .background(Circle().fill(.tint).frame(width: 28, height: 28))
                             // Same look as before; the tap area grows to 44pt.
                             .frame(width: DS.minTapSize, height: DS.minTapSize)
                             .contentShape(.rect)
@@ -314,8 +315,6 @@ struct CreateProductView: View {
                 Spacer()
             }
             .listRowBackground(Color.clear)
-        } header: {
-            Text("Imagen del Producto (Opcional)")
         }
     }
 
@@ -458,7 +457,7 @@ struct CreateProductView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else if viewModel.syncToSquare {
-                    Text("Syncing to Square...")
+                    Text("Sincronizando con Square...")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -472,7 +471,7 @@ struct CreateProductView: View {
 
     private func createProduct() async {
         guard let locationId = authManager.currentLocation?.id else {
-            viewModel.errorMessage = "No location selected"
+            viewModel.errorMessage = "No hay una sucursal seleccionada"
             viewModel.showError = true
             return
         }
@@ -488,175 +487,6 @@ struct CreateProductView: View {
         formatter.currencyCode = "MXN"
         formatter.locale = Locale(identifier: "es_MX")
         return formatter.string(from: NSNumber(value: value)) ?? "$\(value)"
-    }
-}
-
-// MARK: - Create Product View Model
-
-@MainActor
-class CreateProductViewModel: ObservableObject {
-    // Form fields
-    @Published var name = ""
-    @Published var sku = ""
-    @Published var description = ""
-    @Published var sellingPrice: Double?
-    @Published var costPrice: Double?
-    @Published var initialStock: Int?
-    @Published var hasInitialStock = false
-    @Published var syncToSquare = true
-    @Published var soldAtAllLocations = true
-    @Published var selectedSupplier: Supplier?
-    /// One per product being created: a retry (or the offline queue's replay) of this create reuses it.
-    let clientRequestId = UUID().uuidString
-
-    // State
-    @Published var isSubmitting = false
-    @Published var showError = false
-    @Published var errorMessage = ""
-    @Published var showSuccess = false
-    @Published var successMessage = ""
-    @Published var suppliers: [Supplier] = []
-
-    private let apiClient = APIClient.shared
-
-    func loadSuppliers() async {
-        do {
-            let response: SupplierListResponse = try await apiClient.request(endpoint: .listSuppliers)
-            suppliers = response.data
-        } catch {
-            // Optional — the picker just shows empty if this fails.
-            print("Failed to load suppliers: \(error)")
-        }
-    }
-
-    /// How the form started (e.g. with a scanned SKU): the baseline for
-    /// "has the user entered anything?".
-    private let start: ProductDraft
-
-    init(prefillSku: String? = nil) {
-        let prefill = prefillSku?.isEmpty == false ? prefillSku : nil
-        start = ProductDraft(prefillSku: prefill)
-        if let prefill {
-            sku = prefill
-        }
-    }
-
-    /// Unsaved work the form protects (no swipe-to-dismiss, Cancelar asks).
-    /// The photo lives in the view, so it's passed in.
-    func hasChanges(hasPhoto: Bool) -> Bool {
-        var draft = ProductDraft()
-        draft.name = name
-        draft.sku = sku
-        draft.description = description
-        draft.sellingPrice = sellingPrice
-        draft.costPrice = costPrice
-        draft.initialStock = initialStock
-        draft.hasInitialStock = hasInitialStock
-        draft.syncToSquare = syncToSquare
-        draft.soldAtAllLocations = soldAtAllLocations
-        draft.supplierId = selectedSupplier?.id
-        draft.hasPhoto = hasPhoto
-        return draft.hasChanges(from: start)
-    }
-
-    // MARK: - Computed Properties
-
-    var isValid: Bool {
-        // Name is required
-        guard !name.trimmingCharacters(in: .whitespaces).isEmpty else { return false }
-        
-        // Selling price is required and must be positive
-        guard let price = sellingPrice, price > 0 else { return false }
-        
-        // If initial stock is enabled, validate stock and cost
-        if hasInitialStock {
-            guard let stock = initialStock, stock > 0 else { return false }
-            guard let cost = costPrice, cost >= 0 else { return false }
-        }
-        
-        return true
-    }
-    
-    var showMarginPreview: Bool {
-        hasInitialStock && sellingPrice != nil && costPrice != nil
-    }
-    
-    var profitPerUnit: Double? {
-        guard let price = sellingPrice, let cost = costPrice else { return nil }
-        return price - cost
-    }
-    
-    var marginPercent: Double? {
-        guard let price = sellingPrice, let cost = costPrice else { return nil }
-        return Margin.percent(price: price, cost: cost)
-    }
-    
-    // MARK: - Actions
-    
-    func createProduct(locationId: String, image: UIImage? = nil) async {
-        isSubmitting = true
-        
-        do {
-            let request = CreateProductRequest(
-                name: name.trimmingCharacters(in: .whitespaces),
-                sku: sku.isEmpty ? nil : sku.trimmingCharacters(in: .whitespaces),
-                description: description.isEmpty ? nil : description.trimmingCharacters(in: .whitespaces),
-                sellingPrice: sellingPrice ?? 0,
-                costPrice: hasInitialStock ? costPrice : nil,
-                initialStock: hasInitialStock ? initialStock : nil,
-                supplierId: hasInitialStock ? selectedSupplier?.id : nil,
-                locationId: locationId,
-                syncToSquare: syncToSquare,
-                soldAtAllLocations: soldAtAllLocations,
-                clientRequestId: clientRequestId
-            )
-            
-            let response: APIResponse<CreateProductResponse> = try await apiClient.request(
-                endpoint: .createProduct,
-                body: request
-            )
-            
-            let data = try response.requireData()
-            var message = "Producto \"\(name)\" creado exitosamente!"
-            if data.squareSynced {
-                message += "\n✓ Synced to Square POS"
-            }
-            if data.inventoryCreated {
-                message += "\n✓ Initial inventory added"
-            }
-            
-            // Upload image if one was selected (resized to 1600px ceiling first)
-            if let image = image, let imageData = image.jpegDataForUpload() {
-                do {
-                    let _: ImageUploadResponse = try await apiClient.uploadImage(
-                        endpoint: .uploadProductImage(id: data.product.id),
-                        imageData: imageData,
-                        filename: "product_\(data.product.id).jpg"
-                    )
-                    message += "\n✓ Product image uploaded"
-                } catch {
-                    message += "\n⚠ Image upload failed (product was created)"
-                    print("Failed to upload product image: \(error)")
-                }
-            }
-            
-            successMessage = message
-            showSuccess = true
-        } catch NetworkError.queuedForSync {
-            // The queued replay carries this create's clientRequestId, so it
-            // can't duplicate itself; creating the product again from a new
-            // form would. No product id exists yet, so image upload can't run.
-            successMessage = "Sin conexión. \"\(name)\" se creará automáticamente cuando vuelva la conexión — evita crearlo de nuevo mientras tanto."
-            showSuccess = true
-        } catch let error as NetworkError {
-            errorMessage = error.errorDescription ?? "Error al crear producto"
-            showError = true
-        } catch {
-            errorMessage = error.localizedDescription
-            showError = true
-        }
-        
-        isSubmitting = false
     }
 }
 

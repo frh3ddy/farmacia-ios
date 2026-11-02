@@ -50,6 +50,25 @@ struct ReceivingDraftTests {
         #expect(!draft.hasChanges(from: opened))
     }
 
+    @Test("given an invoice number, should open Más detalles")
+    func invoiceOpensDetails() {
+        var draft = opened
+        draft.invoiceNumber = "F-123"
+        #expect(draft.hasDetails)
+    }
+
+    @Test("given the form as it opened, should keep Más detalles closed")
+    func openedKeepsDetailsClosed() {
+        #expect(!opened.hasDetails)
+    }
+
+    @Test("given a price update switched on, should open Más detalles")
+    func priceUpdateOpensDetails() {
+        var draft = opened
+        draft.updatesPrice = true
+        #expect(draft.hasDetails)
+    }
+
     @Test("given only spaces in the reference numbers or notes, should have no changes")
     func whitespaceOnly() {
         var draft = opened

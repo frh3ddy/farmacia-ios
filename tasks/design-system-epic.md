@@ -51,7 +51,7 @@
 8. [~] Pilot `ReceiveInventoryFormView`: same keyboard/tokens/`Margin` treatment, its own `Destination`
    enum, no `keyboardTopSpacing`. Smoke: receiving end to end incl. the new-margin row.
 9. [x] Scan feedback: already there. `CodeScannerView` runs with `shouldVibrateOnSuccess: true`, so no change.
-10. [ ] Review: `swiftui-pro` on everything touched + the `ui-ux-pro-max` mobile checklist (contrast, Dynamic Type).
+10. [x] Review (2026-11-03, feature/form-ux-polish): SupplierPicker empty state → `ContentUnavailableView`; UIKit `Color(.systemGray5)` → `.fill.tertiary`; photo badge → `.tint`; `AmountField` generic over `AmountValue` (Int/Double), no `Binding(get:set:)`; `CreateProductViewModel` and `AmountValue` in their own files. Accepted: Tone colors as text rely on iOS Increase Contrast and are paired with the number. Original scope: `swiftui-pro` on everything touched + the `ui-ux-pro-max` mobile checklist (contrast, Dynamic Type).
     Add to the README and this epic, and run `graphify update .`.
 
 ## Status (2026-11-02)
@@ -84,7 +84,6 @@
 
 - swiftui-pro: one type per file — `ImagePicker.swift`, `KeyboardHelpers.swift`, and the view models
   inside `CreateProductView.swift` hold several.
-- `AmountField`'s quantity mode bridges `Int?` with `Binding(get:set:)` (swiftui-pro discourages it).
 
 - `ProductDetailView`: 12 presentation modifiers → one `Destination` enum; photo via `Menu`/`PhotosPicker`.
 - Scanner flow: one sheet with its own navigation (scan → candidates → create) instead of
