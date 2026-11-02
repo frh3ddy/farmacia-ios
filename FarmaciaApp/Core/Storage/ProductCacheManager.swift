@@ -128,34 +128,52 @@ final class ProductCacheManager {
         try? context.save()
     }
     
-    /// Mark cache as freshly synced
-    func markFresh() {
-        guard let context = modelContext else { return }
-        let descriptor = FetchDescriptor<SyncMetadata>(
-            predicate: #Predicate<SyncMetadata> { $0.key == "products_last_sync" }
-        )
-        
-        if let existing = try? context.fetch(descriptor).first {
-            existing.updatedAt = Date()
-        } else {
-            context.insert(SyncMetadata(key: "products_last_sync", value: "true"))
+    // MARK: - Delta Sync
+
+    private static let cursorKey = "products_sync_cursor"
+
+    /// The cursor the last finished sync saved for this store; nil means walk everything.
+    /// A store switch clears it with the rows (prepare(for:) → clearAll).
+    func syncCursor(for scope: ProductCacheScope) -> String? {
+        guard storedValue(Self.scopeKey) == scope.key else { return nil }
+        return storedValue(Self.cursorKey)
+    }
+
+    /// Writes a finished sync and its cursor in one save, so a cursor never points past
+    /// rows the cache doesn't hold. Dropped if the cache now belongs to another store.
+    func applySync(_ result: ProductSyncResult<Product>, for scope: ProductCacheScope) {
+        guard let context = modelContext, storedValue(Self.scopeKey) == scope.key else { return }
+
+        let cachedIds = Set(((try? context.fetch(FetchDescriptor<CachedProduct>())) ?? []).map(\.id))
+        let doomed = result.idsToDelete(cached: cachedIds)
+        if !doomed.isEmpty {
+            try? context.delete(model: CachedProduct.self, where: #Predicate<CachedProduct> { doomed.contains($0.id) })
         }
-        
+
+        let ids = result.upserts.map(\.id)
+        let existing = (try? context.fetch(FetchDescriptor<CachedProduct>(predicate: #Predicate { ids.contains($0.id) }))) ?? []
+        let existingById = Dictionary(uniqueKeysWithValues: existing.map { ($0.id, $0) })
+        for product in result.upserts {
+            if let row = existingById[product.id] {
+                row.update(from: product)
+            } else {
+                context.insert(CachedProduct(from: product))
+            }
+        }
+
+        let key = Self.cursorKey
+        if let stored = try? context.fetch(FetchDescriptor<SyncMetadata>(predicate: #Predicate { $0.key == key })).first {
+            stored.value = result.cursor
+            stored.updatedAt = Date()
+        } else {
+            context.insert(SyncMetadata(key: key, value: result.cursor))
+        }
         try? context.save()
     }
-    
-    /// After a warm-up walked the whole catalog: drop rows it didn't fetch (deleted on
-    /// the server, or another store's one-store product). See CacheSweep.
-    func sweep(fetchedBefore walkStartedAt: Date) {
-        guard let context = modelContext else { return }
-        let descriptor = FetchDescriptor<CachedProduct>(
-            predicate: #Predicate<CachedProduct> { $0.lastFetchedAt < walkStartedAt }
-        )
-        for row in (try? context.fetch(descriptor)) ?? []
-        where CacheSweep.isStale(lastFetchedAt: row.lastFetchedAt, walkStartedAt: walkStartedAt, walkCompleted: true) {
-            context.delete(row)
-        }
-        try? context.save()
+
+    private func storedValue(_ key: String) -> String? {
+        let descriptor = FetchDescriptor<SyncMetadata>(predicate: #Predicate<SyncMetadata> { $0.key == key })
+        return (try? modelContext?.fetch(descriptor).first)?.value
     }
 
     /// Clear all cached products (e.g., on location switch or logout)

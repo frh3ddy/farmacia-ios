@@ -157,6 +157,14 @@ struct Supplier: Codable, Identifiable, Equatable, Hashable {
 
 // MARK: - Product List Response (paginated)
 
+/// GET /products/sync: rows shaped like the list's, ids to drop, the next cursor.
+struct ProductSyncResponse: Decodable {
+    let data: [Product]
+    let removedIds: [String]
+    let cursor: String
+    let hasMore: Bool
+}
+
 struct ProductListResponse: Decodable {
     let data: [Product]
     let count: Int

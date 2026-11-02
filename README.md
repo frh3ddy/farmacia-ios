@@ -118,6 +118,9 @@ Opened from a product (Productos → product → Recibir Inventario / Ajustar In
 - Receiving and adjustment history (product activity and global history)
 - Square sync status on each receiving and adjustment; the owner can retry a failed sync from product activity or global history
 
+### Products
+- The on-device product cache (used by the barcode scanner) stays current with a delta sync (`GET /products/sync`): opening Productos fetches only what changed since the last sync; the full catalog is downloaded once per store
+
 ### Reports
 - Cost of Goods Sold (COGS)
 - Profit Margin analysis
