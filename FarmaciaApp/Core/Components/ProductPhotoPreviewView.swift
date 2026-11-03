@@ -44,6 +44,8 @@ struct ProductPhotoPreviewView: View {
             }
             .toolbarBackground(.black, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
+            // Light status bar and bar items over the black bar.
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .safeAreaInset(edge: .bottom) {
                 if liftedImage != nil {
                     Toggle("Quitar Fondo", isOn: $backgroundRemoved)
@@ -53,6 +55,9 @@ struct ProductPhotoPreviewView: View {
                 }
             }
         }
-        .preferredColorScheme(.dark)
+        // Dark for this screen only. `.preferredColorScheme(.dark)` asks the
+        // whole window to switch, so the screen underneath flashed dark while
+        // the cover slid up.
+        .environment(\.colorScheme, .dark)
     }
 }

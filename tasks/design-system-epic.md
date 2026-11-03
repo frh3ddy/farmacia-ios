@@ -51,7 +51,7 @@
 8. [~] Pilot `ReceiveInventoryFormView`: same keyboard/tokens/`Margin` treatment, its own `Destination`
    enum, no `keyboardTopSpacing`. Smoke: receiving end to end incl. the new-margin row.
 9. [x] Scan feedback: already there. `CodeScannerView` runs with `shouldVibrateOnSuccess: true`, so no change.
-10. [ ] Review: `swiftui-pro` on everything touched + the `ui-ux-pro-max` mobile checklist (contrast, Dynamic Type).
+10. [x] Review (2026-11-03, feature/form-ux-polish): SupplierPicker empty state → `ContentUnavailableView`; UIKit `Color(.systemGray5)` → `.fill.tertiary`; photo badge → `.tint`; `AmountField` generic over `AmountValue` (Int/Double), no `Binding(get:set:)`; `CreateProductViewModel` and `AmountValue` in their own files. Accepted: Tone colors as text rely on iOS Increase Contrast and are paired with the number. Original scope: `swiftui-pro` on everything touched + the `ui-ux-pro-max` mobile checklist (contrast, Dynamic Type).
     Add to the README and this epic, and run `graphify update .`.
 
 ## Status (2026-11-02)
@@ -84,13 +84,11 @@
 
 - swiftui-pro: one type per file — `ImagePicker.swift`, `KeyboardHelpers.swift`, and the view models
   inside `CreateProductView.swift` hold several.
-- `AmountField`'s quantity mode bridges `Int?` with `Binding(get:set:)` (swiftui-pro discourages it).
 
-- `ProductDetailView`: 12 presentation modifiers → one `Destination` enum; photo via `Menu`/`PhotosPicker`.
+- ✅ `ProductDetailView` (feature/product-detail-presentation): its four sheets → one `DetailSheet` on `.sheet(item:)` (drops a `Binding(get:set:)`); photo source → `Menu`; photo flow shared with Nuevo Producto via FarmaciaKit `PhotoFlow` (TDD, 5 tests) + `.productPhotoFlow` — the detail now crops to square too; image viewer behind a real Button.
 - Scanner flow: one sheet with its own navigation (scan → candidates → create) instead of
   `pendingScannedCode` + `onDismiss`.
-- Delete `ImagePickerPresenter` and `keyboardTopSpacing` (still used by `EditPriceView` / `AdjustmentFormView`)
-  once nothing uses them.
+- ✅ `ImagePickerPresenter` deleted (no callers left). Still to delete: `keyboardTopSpacing` (used by `EditPriceView` / `AdjustmentFormView`) once those move to `.formKeyboard`.
 - UIKit haptics → `.sensoryFeedback`.
 - Convert the other screens as they get touched; continuous scan-to-count in receiving; a frame over the camera view
   showing where to place the product.

@@ -30,18 +30,16 @@ struct SupplierPickerView: View {
     var body: some View {
         Group {
             if suppliers.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: "building.2")
-                        .font(.system(size: 50))
-                        .foregroundStyle(.secondary)
-                    Text("No se encontraron proveedores")
-                        .foregroundStyle(.secondary)
-                    Button("Agregar Proveedor") {
+                ContentUnavailableView {
+                    Label("Sin proveedores", systemImage: "building.2")
+                } description: {
+                    Text("Agrega el primero para asignarlo a este producto.")
+                } actions: {
+                    Button("Agregar proveedor") {
                         newSupplierName = searchText
                         showCreateSupplier = true
                     }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List {
                     ForEach(filteredSuppliers) { supplier in

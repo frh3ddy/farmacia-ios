@@ -19,6 +19,7 @@
 		37E6973C2F32F2A400F6CB5D /* ProductDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E697382F32F2A400F6CB5D /* ProductDetailView.swift */; };
 		37E6973D2F32F2A400F6CB5D /* ProductsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E697392F32F2A400F6CB5D /* ProductsView.swift */; };
 		37E6973E2F32F2A400F6CB5D /* CreateProductView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E697372F32F2A400F6CB5D /* CreateProductView.swift */; };
+		DD00000100000005 /* CreateProductViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000005 /* CreateProductViewModel.swift */; };
 		37E697402F34065A00F6CB5D /* InitialSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E6973F2F34065A00F6CB5D /* InitialSetupView.swift */; };
 		37E697422F3408EF00F6CB5D /* Setup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E697412F3408EF00F6CB5D /* Setup.swift */; };
 		60F1A074105F42A169FD4F72 /* ProductActivityModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE1BABB646D2A0D186E009DB /* ProductActivityModels.swift */; };
@@ -33,16 +34,20 @@
 		D419F61DEDDF944288D2F152 /* CostSupplierViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B36C1CAC70495EFA1EEFDC2 /* CostSupplierViewModel.swift */; };
 		ED472745D3529AF20E11A7A3 /* ProductsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67DB948B9C5055D67639955A /* ProductsViewModel.swift */; };
 		EE00000100000001 /* ImagePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000001 /* ImagePicker.swift */; };
+		DD00000100000007 /* LibraryPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000007 /* LibraryPicker.swift */; };
 		EE00000100000002 /* ProductImageViewer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000002 /* ProductImageViewer.swift */; };
 		EE00000100000003 /* CachedProductImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000003 /* CachedProductImage.swift */; };
 		EE00000100000004 /* UIImage+Resize.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000004 /* UIImage+Resize.swift */; };
 		EE00000100000005 /* KeyboardHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000005 /* KeyboardHelpers.swift */; };
 		EE00000100000006 /* StateViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000006 /* StateViews.swift */; };
+		DD00000100000003 /* MoreDetailsLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000003 /* MoreDetailsLabel.swift */; };
 		DD00000100000002 /* AmountField.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000002 /* AmountField.swift */; };
+		DD00000100000004 /* AmountValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000004 /* AmountValue.swift */; };
 		DD00000100000001 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000001 /* DesignSystem.swift */; };
 		EE00000100000007 /* BackgroundTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000007 /* BackgroundTask.swift */; };
 		EE00000100000008 /* SubjectLifter.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000008 /* SubjectLifter.swift */; };
 		EE00000100000009 /* ProductPhotoPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000009 /* ProductPhotoPreviewView.swift */; };
+		DD00000100000006 /* ProductPhotoFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000006 /* ProductPhotoFlow.swift */; };
 		F000000100000001 /* FarmaciaApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000001 /* FarmaciaApp.swift */; };
 		F000000100000002 /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000002 /* AppConfiguration.swift */; };
 		F000000100000003 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000003 /* APIClient.swift */; };
@@ -61,6 +66,7 @@
 		F000000100000018 /* Device.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000018 /* Device.swift */; };
 		F000000100000019 /* Location.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000019 /* Location.swift */; };
 		F000000100000020 /* Product.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000020 /* Product.swift */; };
+		DD00000100000008 /* ImageUploadResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000008 /* ImageUploadResponse.swift */; };
 		F000000100000021 /* Inventory.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000021 /* Inventory.swift */; };
 		F000000100000022 /* Adjustment.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000022 /* Adjustment.swift */; };
 		F000000100000023 /* Expense.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000023 /* Expense.swift */; };
@@ -111,6 +117,7 @@
 		37E697302F32AC3200F6CB5D /* ExpenseFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseFormView.swift; sourceTree = "<group>"; };
 		37E697312F32AC3200F6CB5D /* ExpensesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpensesView.swift; sourceTree = "<group>"; };
 		37E697372F32F2A400F6CB5D /* CreateProductView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateProductView.swift; sourceTree = "<group>"; };
+		DD00000200000005 /* CreateProductViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateProductViewModel.swift; sourceTree = "<group>"; };
 		37E697382F32F2A400F6CB5D /* ProductDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductDetailView.swift; sourceTree = "<group>"; };
 		37E697392F32F2A400F6CB5D /* ProductsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductsView.swift; sourceTree = "<group>"; };
 		37E6973F2F34065A00F6CB5D /* InitialSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InitialSetupView.swift; sourceTree = "<group>"; };
@@ -131,16 +138,20 @@
 		CA00000200000002 /* ProductCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductCacheManager.swift; sourceTree = "<group>"; };
 		CC00000200000001 /* BatchDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchDetailView.swift; sourceTree = "<group>"; };
 		EE00000200000001 /* ImagePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImagePicker.swift; sourceTree = "<group>"; };
+		DD00000200000007 /* LibraryPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryPicker.swift; sourceTree = "<group>"; };
 		EE00000200000002 /* ProductImageViewer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductImageViewer.swift; sourceTree = "<group>"; };
 		EE00000200000003 /* CachedProductImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CachedProductImage.swift; sourceTree = "<group>"; };
 		EE00000200000004 /* UIImage+Resize.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIImage+Resize.swift"; sourceTree = "<group>"; };
 		EE00000200000005 /* KeyboardHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardHelpers.swift; sourceTree = "<group>"; };
 		EE00000200000006 /* StateViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StateViews.swift; sourceTree = "<group>"; };
+		DD00000200000003 /* MoreDetailsLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoreDetailsLabel.swift; sourceTree = "<group>"; };
 		DD00000200000002 /* AmountField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmountField.swift; sourceTree = "<group>"; };
+		DD00000200000004 /* AmountValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmountValue.swift; sourceTree = "<group>"; };
 		DD00000200000001 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
 		EE00000200000007 /* BackgroundTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTask.swift; sourceTree = "<group>"; };
 		EE00000200000008 /* SubjectLifter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubjectLifter.swift; sourceTree = "<group>"; };
 		EE00000200000009 /* ProductPhotoPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductPhotoPreviewView.swift; sourceTree = "<group>"; };
+		DD00000200000006 /* ProductPhotoFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductPhotoFlow.swift; sourceTree = "<group>"; };
 		F100000000000000 /* FarmaciaApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FarmaciaApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F100000100000001 /* FarmaciaApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FarmaciaApp.swift; sourceTree = "<group>"; };
 		F100000100000002 /* AppConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfiguration.swift; sourceTree = "<group>"; };
@@ -160,6 +171,7 @@
 		F100000100000018 /* Device.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Device.swift; sourceTree = "<group>"; };
 		F100000100000019 /* Location.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Location.swift; sourceTree = "<group>"; };
 		F100000100000020 /* Product.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Product.swift; sourceTree = "<group>"; };
+		DD00000200000008 /* ImageUploadResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageUploadResponse.swift; sourceTree = "<group>"; };
 		F100000100000021 /* Inventory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Inventory.swift; sourceTree = "<group>"; };
 		F100000100000022 /* Adjustment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Adjustment.swift; sourceTree = "<group>"; };
 		F100000100000023 /* Expense.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Expense.swift; sourceTree = "<group>"; };
@@ -237,6 +249,7 @@
 			isa = PBXGroup;
 			children = (
 				37E697372F32F2A400F6CB5D /* CreateProductView.swift */,
+				DD00000200000005 /* CreateProductViewModel.swift */,
 				37E697382F32F2A400F6CB5D /* ProductDetailView.swift */,
 				BE1BABB646D2A0D186E009DB /* ProductActivityModels.swift */,
 				7AF0652B989018922F154F43 /* ProductActivityFullView.swift */,
@@ -280,6 +293,7 @@
 			isa = PBXGroup;
 			children = (
 				EE00000200000001 /* ImagePicker.swift */,
+				DD00000200000007 /* LibraryPicker.swift */,
 				EE00000200000002 /* ProductImageViewer.swift */,
 				EE00000200000003 /* CachedProductImage.swift */,
 				EE00000200000004 /* UIImage+Resize.swift */,
@@ -288,6 +302,7 @@
 				EE00000200000007 /* BackgroundTask.swift */,
 				EE00000200000008 /* SubjectLifter.swift */,
 				EE00000200000009 /* ProductPhotoPreviewView.swift */,
+				DD00000200000006 /* ProductPhotoFlow.swift */,
 				JJ00000200000005 /* OfflineSyncBanner.swift */,
 				JJ00000200000006 /* OfflineSyncIssuesView.swift */,
 			);
@@ -326,7 +341,9 @@
 		DD00000300000001 /* DesignSystem */ = {
 			isa = PBXGroup;
 			children = (
+				DD00000200000003 /* MoreDetailsLabel.swift */,
 				DD00000200000002 /* AmountField.swift */,
+				DD00000200000004 /* AmountValue.swift */,
 				DD00000200000001 /* DesignSystem.swift */,
 			);
 			path = DesignSystem;
@@ -366,6 +383,7 @@
 				F100000100000018 /* Device.swift */,
 				F100000100000019 /* Location.swift */,
 				F100000100000020 /* Product.swift */,
+				DD00000200000008 /* ImageUploadResponse.swift */,
 				F100000100000021 /* Inventory.swift */,
 				F100000100000022 /* Adjustment.swift */,
 				F100000100000023 /* Expense.swift */,
@@ -641,6 +659,7 @@
 				F54D97249C9261EDD5DE1FF9 /* ProductsAgingViewModel.swift in Sources */,
 				9E25ADFE9081EC5831439365 /* ExpiringProductsViewModel.swift in Sources */,
 				37E6973E2F32F2A400F6CB5D /* CreateProductView.swift in Sources */,
+				DD00000100000005 /* CreateProductViewModel.swift in Sources */,
 				F000000100000012 /* DashboardView.swift in Sources */,
 				F000000100000048 /* StatCard.swift in Sources */,
 				F000000100000049 /* DashboardViewModel.swift in Sources */,
@@ -674,6 +693,7 @@
 				F000000100000019 /* Location.swift in Sources */,
 				37E697422F3408EF00F6CB5D /* Setup.swift in Sources */,
 				F000000100000020 /* Product.swift in Sources */,
+				DD00000100000008 /* ImageUploadResponse.swift in Sources */,
 				F000000100000021 /* Inventory.swift in Sources */,
 				37E697342F32AC3200F6CB5D /* ExpenseFormView.swift in Sources */,
 				37E697352F32AC3200F6CB5D /* ExpensesView.swift in Sources */,
@@ -685,16 +705,20 @@
 				AA00000100000001 /* GlobalActivityHistoryView.swift in Sources */,
 				CC00000100000001 /* BatchDetailView.swift in Sources */,
 				EE00000100000001 /* ImagePicker.swift in Sources */,
+				DD00000100000007 /* LibraryPicker.swift in Sources */,
 				EE00000100000002 /* ProductImageViewer.swift in Sources */,
 				EE00000100000003 /* CachedProductImage.swift in Sources */,
 				EE00000100000004 /* UIImage+Resize.swift in Sources */,
 				EE00000100000005 /* KeyboardHelpers.swift in Sources */,
 				EE00000100000006 /* StateViews.swift in Sources */,
+				DD00000100000003 /* MoreDetailsLabel.swift in Sources */,
 				DD00000100000002 /* AmountField.swift in Sources */,
+				DD00000100000004 /* AmountValue.swift in Sources */,
 				DD00000100000001 /* DesignSystem.swift in Sources */,
 				EE00000100000007 /* BackgroundTask.swift in Sources */,
 				EE00000100000008 /* SubjectLifter.swift in Sources */,
 				EE00000100000009 /* ProductPhotoPreviewView.swift in Sources */,
+				DD00000100000006 /* ProductPhotoFlow.swift in Sources */,
 				GG00000100000001 /* Payroll.swift in Sources */,
 				GG00000100000002 /* PayrollView.swift in Sources */,
 				GG00000100000003 /* PayrollViewModel.swift in Sources */,

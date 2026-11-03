@@ -11,56 +11,29 @@ import FarmaciaKit
 //     Crear/Guardar enables while typing. A value set from elsewhere (e.g. a
 //     prefilled supplier cost) still shows up in the field.
 
-struct AmountField<Field: Hashable>: View {
+struct AmountField<Field: Hashable, Value: AmountValue>: View {
     private let label: String?
-    private let placeholder: String
     private let prefix: String?
     private let unit: String?
-    private let keyboard: UIKeyboardType
-    @Binding private var value: Double?
+    @Binding private var value: Value?
     private let focus: FocusState<Field?>.Binding
     private let field: Field
 
     @State private var text = ""
 
-    /// A money amount (decimal pad).
+    /// Money (`Double`, decimal pad) or a whole-number quantity (`Int`, number pad).
     init(
         _ label: String? = nil,
-        placeholder: String = "0.00",
         prefix: String? = nil,
         unit: String? = nil,
-        value: Binding<Double?>,
+        value: Binding<Value?>,
         focus: FocusState<Field?>.Binding,
         field: Field
     ) {
         self.label = label
-        self.placeholder = placeholder
         self.prefix = prefix
         self.unit = unit
-        self.keyboard = .decimalPad
         self._value = value
-        self.focus = focus
-        self.field = field
-    }
-
-    /// A whole-number quantity (number pad).
-    init(
-        _ label: String? = nil,
-        placeholder: String = "0",
-        unit: String? = nil,
-        quantity: Binding<Int?>,
-        focus: FocusState<Field?>.Binding,
-        field: Field
-    ) {
-        self.label = label
-        self.placeholder = placeholder
-        self.prefix = nil
-        self.unit = unit
-        self.keyboard = .numberPad
-        self._value = Binding(
-            get: { quantity.wrappedValue.map(Double.init) },
-            set: { quantity.wrappedValue = $0.map { Int($0) } }
-        )
         self.focus = focus
         self.field = field
     }
@@ -74,8 +47,8 @@ struct AmountField<Field: Hashable>: View {
                 Text(prefix)
                     .foregroundStyle(.secondary)
             }
-            TextField(placeholder, text: $text)
-                .keyboardType(keyboard)
+            TextField(Value.placeholder, text: $text)
+                .keyboardType(Value.keyboard)
                 .multilineTextAlignment(label == nil ? .leading : .trailing)
                 .focused(focus, equals: field)
             if let unit {
@@ -88,13 +61,13 @@ struct AmountField<Field: Hashable>: View {
         .onTapGesture { focus.wrappedValue = field }
         .id(field)  // .formKeyboard scrolls the focused row into place
         .onChange(of: text) { _, newText in
-            value = AmountText.parse(newText)
+            value = Value(parsing: newText)
         }
         .onChange(of: value, initial: true) { _, newValue in
             // Only rewrite the text for changes made elsewhere; while typing,
             // "12." already parses to the same value and stays as typed.
-            if AmountText.parse(text) != newValue {
-                text = AmountText.string(from: newValue)
+            if Value(parsing: text) != newValue {
+                text = AmountText.string(from: newValue?.amount)
             }
         }
     }
