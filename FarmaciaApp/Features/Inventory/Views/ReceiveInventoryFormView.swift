@@ -92,7 +92,7 @@ struct ReceiveInventoryFormView: View {
             // matters for a pharmacy), and everything optional under Más detalles.
             Form {
                 Section {
-                    productSummary
+                    ProductSummaryRow(product: product)
                 }
 
                 Section {
@@ -275,38 +275,6 @@ struct ReceiveInventoryFormView: View {
     }
 
     // MARK: - Sections
-
-    /// What's being received: photo, name, SKU, stock on hand and price.
-    private var productSummary: some View {
-        HStack(spacing: DS.Spacing.m) {
-            CachedProductImage(url: product.squareImageUrl, targetSize: CGSize(width: 48, height: 48)) {
-                Image(systemName: "shippingbox")
-                    .foregroundStyle(.secondary)
-            }
-            .frame(width: 48, height: 48)
-            .background(.fill.tertiary, in: .rect(cornerRadius: DS.Radius.m))
-            .clipShape(.rect(cornerRadius: DS.Radius.m))
-            .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
-                Text(product.displayName)
-                    .font(.headline)
-                Text(productFacts)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .accessibilityElement(children: .combine)
-    }
-
-    /// "SKU 123 · 12 en existencia · $25.00"
-    private var productFacts: String {
-        var facts: [String] = []
-        if let sku = product.sku, !sku.isEmpty { facts.append("SKU \(sku)") }
-        if let stock = product.totalInventory { facts.append("\(stock) en existencia") }
-        if let price = product.sellingPrice { facts.append("$\(String(format: "%.2f", price))") }
-        return facts.joined(separator: " · ")
-    }
 
     private var supplierSection: some View {
         Section {

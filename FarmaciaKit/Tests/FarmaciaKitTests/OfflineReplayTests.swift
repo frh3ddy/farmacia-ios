@@ -157,3 +157,21 @@ struct OfflineReplayTests {
         #expect(OfflineReplay.cleanup(method: method, path: path, employeeId: employeeId, status: status) == .keep)
     }
 }
+
+/// The sync status (iOS 26: the tab bar accessory) shows only when there's
+/// something to say: sync problems, offline, syncing, or another employee's
+/// writes waiting.
+struct OfflineBannerVisibilityTests {
+    @Test("given online with nothing queued, should hide the sync status")
+    func idle() {
+        #expect(!OfflineReplay.showsSyncStatus(isOffline: false, pendingCount: 0, failedCount: 0, othersWaiting: []))
+    }
+
+    @Test("given offline, pending, failed or others waiting, should show it")
+    func somethingToSay() {
+        #expect(OfflineReplay.showsSyncStatus(isOffline: true, pendingCount: 0, failedCount: 0, othersWaiting: []))
+        #expect(OfflineReplay.showsSyncStatus(isOffline: false, pendingCount: 2, failedCount: 0, othersWaiting: []))
+        #expect(OfflineReplay.showsSyncStatus(isOffline: false, pendingCount: 0, failedCount: 1, othersWaiting: []))
+        #expect(OfflineReplay.showsSyncStatus(isOffline: false, pendingCount: 0, failedCount: 0, othersWaiting: ["Ana"]))
+    }
+}

@@ -2,142 +2,125 @@ import SwiftUI
 import FarmaciaKit
 
 // MARK: - Edit Price View
+//
+// On the form kit (tasks/design-system-epic.md): AmountField, .formKeyboard,
+// Guardar → spinner while saving; Guardar's rule is PriceEditing.canSave.
 
 struct EditPriceView: View {
     @EnvironmentObject var authManager: AuthManager
     @Environment(\.dismiss) var dismiss
     let product: Product
     var onUpdate: ((Product) -> Void)?
-    
-    @State private var priceText: String = ""
+
+    @State private var newPrice: Double?
     @State private var syncToSquare = true
     @State private var applyToAllLocations = false
     @State private var isSubmitting = false
     @State private var showError = false
     @State private var errorMessage = ""
-    @FocusState private var priceFieldFocused: Bool
 
-    private var newPrice: Double? {
-        Double(priceText.replacingOccurrences(of: ",", with: "."))
+    private enum Field: Hashable { case price }
+    @FocusState private var focusedField: Field?
+
+    private var canSave: Bool {
+        PriceEditing.canSave(newPrice: newPrice, currentPrice: product.sellingPrice)
     }
-    
-    private var isValid: Bool {
-        guard let price = newPrice, price > 0 else { return false }
-        return true
-    }
-    
-    private var priceChanged: Bool {
-        guard let newPrice = newPrice else { return false }
-        return newPrice != product.sellingPrice
-    }
-    
+
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    HStack {
-                        Text("Precio Actual")
-                        Spacer()
-                        Text(product.sellingPrice.map { String(format: "%.2f MXN", $0) } ?? "No definido")
-                            .foregroundStyle(.secondary)
+                    LabeledContent("Precio actual") {
+                        Text(product.sellingPrice.map { String(format: "$%.2f MXN", $0) } ?? "Sin precio")
                     }
-                    
-                    HStack {
-                        Text("Nuevo precio")
-                        TextField("0.00", text: $priceText)
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.trailing)
-                            .focused($priceFieldFocused)
-                        Text("MXN")
-                            .foregroundStyle(.secondary)
-                    }
-                    .contentShape(Rectangle())
-                    .onTapGesture { priceFieldFocused = true }
-                } header: {
-                    Text("Precio de Venta")
+
+                    AmountField(
+                        "Nuevo precio",
+                        prefix: "$",
+                        unit: "MXN",
+                        value: $newPrice,
+                        focus: $focusedField,
+                        field: .price
+                    )
                 }
-                
+
                 if product.hasSquareSync == true {
                     Section {
                         Toggle("Actualizar en Square", isOn: $syncToSquare)
-                        
+
                         if syncToSquare && PriceEditing.canApplyToAllLocations(isOwner: authManager.isOwner) {
-                            Toggle("Aplicar a todas las ubicaciones", isOn: $applyToAllLocations)
+                            Toggle("Aplicar a todas las sucursales", isOn: $applyToAllLocations)
                         }
                     } footer: {
                         if syncToSquare {
                             if applyToAllLocations {
-                                Text("El precio se actualizará en Square POS en TODAS las ubicaciones inmediatamente.")
+                                Text("Se actualiza en Square POS en todas las sucursales de inmediato.")
                             } else {
-                                Text("El precio se actualizará en Square POS solo para la ubicación actual.")
+                                Text("Se actualiza en Square POS solo en esta sucursal.")
                             }
                         } else {
-                            Text("El precio solo se actualizará localmente. Square POS mostrará el precio anterior.")
+                            Text("Solo se actualiza aquí; Square POS sigue mostrando el precio anterior.")
                         }
                     }
                 }
-                
-                // Preview
-                if let newPrice = newPrice, priceChanged {
-                    Section {
-                        HStack {
-                            Text("Cambio de Precio")
-                            Spacer()
-                            let change = newPrice - (product.sellingPrice ?? 0)
+
+                if canSave, let newPrice {
+                    Section("Vista previa") {
+                        let change = newPrice - (product.sellingPrice ?? 0)
+                        LabeledContent("Cambio de precio") {
                             Text(change >= 0 ? "+\(formatCurrency(change))" : formatCurrency(change))
-                                .foregroundStyle(change >= 0 ? .green : .red)
+                                .foregroundStyle((change >= 0 ? Tone.positive : .critical).color)
                         }
-                        
-                        if let cost = product.averageCost {
-                            let newMargin = ((newPrice - cost) / newPrice) * 100
-                            HStack {
-                                Text("Nuevo Margen")
-                                Spacer()
-                                Text(String(format: "%.1f%%", newMargin))
-                                    .foregroundStyle(newMargin >= 20 ? .green : (newMargin >= 10 ? .orange : .red))
+
+                        if let cost = product.averageCost,
+                           let margin = Margin.percent(price: newPrice, cost: cost) {
+                            LabeledContent("Nuevo margen") {
+                                Text(String(format: "%.1f%%", margin))
+                                    .foregroundStyle(Margin.tone(forPercent: margin).color)
                             }
                         }
-                    } header: {
-                        Text("Vista Previa")
                     }
                 }
             }
+            // No edits while a save is in flight.
+            .disabled(isSubmitting)
             .navigationTitle("Editar Precio")
             .navigationBarTitleDisplayMode(.inline)
-            .keyboardTopSpacing(24, isActive: priceFieldFocused)
+            .formKeyboard(focus: $focusedField, order: FocusOrder([.price]))
+            // The one thing to type: focus it as the sheet opens.
+            .task { focusedField = .price }
+            .interactiveDismissDisabled(isSubmitting)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .cancellationAction) {
                     Button("Cancelar") {
                         dismiss()
                     }
+                    .disabled(isSubmitting)
                 }
-                
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Guardar") {
-                        Task {
-                            await updatePrice()
+
+                ToolbarItem(placement: .confirmationAction) {
+                    // While saving, the button becomes a spinner in its place.
+                    if isSubmitting {
+                        ProgressView()
+                            .accessibilityLabel("Guardando")
+                    } else {
+                        Button("Guardar") {
+                            Task {
+                                await updatePrice()
+                            }
                         }
+                        .disabled(!canSave)
                     }
-                    .fontWeight(.semibold)
-                    .disabled(!isValid || !priceChanged || isSubmitting)
                 }
             }
-            .overlay {
-                if isSubmitting {
-                    ProgressView()
-                        .scaleEffect(1.5)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(Color.black.opacity(0.2))
-                }
-            }
-            .alert("Error", isPresented: $showError) {
+            .alert("No se pudo guardar", isPresented: $showError) {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(errorMessage)
             }
         }
     }
-    
+
     private func updatePrice() async {
         guard let price = newPrice,
               let locationId = authManager.currentLocation?.id else { return }
@@ -164,7 +147,7 @@ struct EditPriceView: View {
             
             dismiss()
         } catch let error as NetworkError {
-            errorMessage = error.errorDescription ?? "Failed to update price"
+            errorMessage = error.errorDescription ?? "No se pudo actualizar el precio"
             showError = true
         } catch {
             errorMessage = error.localizedDescription

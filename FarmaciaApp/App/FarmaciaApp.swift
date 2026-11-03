@@ -60,6 +60,26 @@ struct RootView: View {
     @Bindable private var offlineQueue = OfflineQueueManager.shared
     @State private var showSyncIssues = false
 
+    private var showsSyncStatus: Bool {
+        OfflineReplay.showsSyncStatus(
+            isOffline: !networkMonitor.isConnected,
+            pendingCount: offlineQueue.pendingCount,
+            failedCount: offlineQueue.failedRequests.count,
+            othersWaiting: offlineQueue.pendingForOthers
+        )
+    }
+
+    private func syncBanner(style: OfflineSyncBanner.Style) -> OfflineSyncBanner {
+        OfflineSyncBanner(
+            isOffline: !networkMonitor.isConnected,
+            pendingCount: offlineQueue.pendingCount,
+            failedCount: offlineQueue.failedRequests.count,
+            othersWaiting: offlineQueue.pendingForOthers,
+            style: style,
+            onTapFailed: { showSyncIssues = true }
+        )
+    }
+
     var body: some View {
         Group {
             switch authManager.authState {
@@ -73,7 +93,10 @@ struct RootView: View {
                 PINEntryView()
 
             case .authenticated:
-                MainTabView()
+                MainTabView(
+                    syncStatus: syncBanner(style: .accessory),
+                    showsSyncStatus: showsSyncStatus
+                )
             }
         }
         .animation(.easeInOut, value: authManager.authState)
@@ -87,14 +110,12 @@ struct RootView: View {
             }
         }
         .safeAreaInset(edge: .top) {
-            if authManager.authState == .authenticated {
-                OfflineSyncBanner(
-                    isOffline: !networkMonitor.isConnected,
-                    pendingCount: offlineQueue.pendingCount,
-                    failedCount: offlineQueue.failedRequests.count,
-                    othersWaiting: offlineQueue.pendingForOthers,
-                    onTapFailed: { showSyncIssues = true }
-                )
+            // iOS 26.1+: the tab bar accessory instead (MainTabView) — a
+            // top inset here sat over the tab screens' navigation bar buttons.
+            if #available(iOS 26.1, *) {
+                EmptyView()
+            } else if authManager.authState == .authenticated {
+                syncBanner(style: .bar)
             }
         }
         .alert("Sin conexión", isPresented: $networkMonitor.justWentOffline) {

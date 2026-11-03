@@ -1,5 +1,4 @@
 import SwiftUI
-import CodeScanner
 import FarmaciaKit
 
 // MARK: - Filter / Sort enums (file scope — used by both the view and the view model)
@@ -40,18 +39,21 @@ enum ProductSortOption: String, CaseIterable {
     case priceDesc = "Precio (Mayor)"
 }
 
-// MARK: - Create Product Request
-// Single source of truth for presenting CreateProductView, replacing a
-// separate Bool + optional-SKU pair. Two independent @State mutations
-// aren't guaranteed to land in the same SwiftUI transaction, so driving
-// the sheet off a Bool while the SKU rode along on a second variable let
-// the sheet present before the SKU propagated — and since @StateObject only
-// honors its wrappedValue on first construction, no later update could fix
-// the already-presented view. `sheet(item:)` makes this atomic: a new item
-// (fresh id) always means a freshly-constructed CreateProductView.
-private struct CreateProductSheetRequest: Identifiable {
-    let id = UUID()
-    var prefillSku: String? = nil
+// MARK: - Products Sheet
+// What Productos presents, on one `sheet(item:)`: a new product, or the scan
+// flow (which itself goes on to the candidates or a new product with the
+// scanned SKU — see ScanFlowSheet). One item, so the sheet and its data land in
+// the same transaction, and two sheets can never compete for the screen.
+private enum ProductsSheet: Identifiable {
+    case newProduct
+    case scan
+
+    var id: String {
+        switch self {
+        case .newProduct: "newProduct"
+        case .scan: "scan"
+        }
+    }
 }
 
 // MARK: - Products View
@@ -63,16 +65,15 @@ struct ProductsView: View {
     @StateObject private var viewModel = ProductsViewModel()
     @StateObject private var agingViewModel = ProductsAgingViewModel()
     @StateObject private var expiringViewModel = ExpiringProductsViewModel()
-    @State private var createProductRequest: CreateProductSheetRequest?
+    @State private var sheet: ProductsSheet?
+    @State private var offlineQueue = OfflineQueueManager.shared
     @State private var searchText = ""
     @State private var activeFilter: ProductFilter = .all
     @State private var sortOption: ProductSortOption = .name
 
-    // Barcode scanner state
-    @State private var showBarcodeScanner = false
+    // A scanned product opens here (the scan flow closes its sheet first)
     @State private var scannedProduct: Product? = nil
     @State private var navigateToScannedProduct = false
-    @State private var pendingScannedCode: String? = nil
     
     /// Tab-switch refresh trigger (set by MainTabView)
     var refreshTrigger: UUID = UUID()
@@ -116,10 +117,6 @@ struct ProductsView: View {
         !searchText.trimmingCharacters(in: .whitespaces).isEmpty
     }
     
-    // Barcode scanner: multiple candidates from fuzzy server match
-    @State private var barcodeCandidates: [Product] = []
-    @State private var showBarcodeCandidates = false
-    @State private var lastScannedCode: String = ""
     
     // Square bulk sync
     @State private var isSyncingToSquare = false
@@ -162,7 +159,7 @@ struct ProductsView: View {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     // Barcode scanner
                     Button {
-                        showBarcodeScanner = true
+                        sheet = .scan
                     } label: {
                         Image(systemName: "barcode.viewfinder")
                     }
@@ -183,7 +180,7 @@ struct ProductsView: View {
                     // Add product
                     if authManager.isOwner || authManager.isManager {
                         Button {
-                            createProductRequest = CreateProductSheetRequest()
+                            sheet = .newProduct
                         } label: {
                             Image(systemName: "plus")
                         }
@@ -211,42 +208,31 @@ struct ProductsView: View {
                     showSyncBanner = false
                 }
             }
+            .onChange(of: offlineQueue.pendingCount) { oldValue, newValue in
+                // A queued write just synced (e.g. a product created offline):
+                // reload, so it shows up without a manual refresh.
+                if newValue < oldValue {
+                    Task { await loadProducts() }
+                }
+            }
             .refreshable {
                 async let products: () = loadProducts()
                 async let aging: () = loadAgingData()
                 _ = await (products, aging)
             }
-            .sheet(item: $createProductRequest) { request in
-                CreateProductView(prefillSku: request.prefillSku)
-            }
-            .sheet(isPresented: $showBarcodeCandidates) {
-                BarcodeCandidatesSheet(
-                    code: lastScannedCode,
-                    candidates: barcodeCandidates,
-                    onSelect: { product in
-                        showBarcodeCandidates = false
-                        scannedProduct = product
-                        navigateToScannedProduct = true
-                    },
-                    onCreate: {
-                        showBarcodeCandidates = false
-                        createProductRequest = CreateProductSheetRequest(prefillSku: lastScannedCode)
-                    }
-                )
-            }
-            .sheet(isPresented: $showBarcodeScanner, onDismiss: {
-                // Deferred until the scanner sheet has fully dismissed —
-                // presenting a new sheet (e.g. create product) while this one
-                // is still animating away causes SwiftUI to lose the prefill
-                // state on the first attempt.
-                if let code = pendingScannedCode {
-                    pendingScannedCode = nil
-                    handleScannedBarcode(code)
-                }
-            }) {
-                BarcodeScannerSheet { scannedCode in
-                    pendingScannedCode = scannedCode
-                    showBarcodeScanner = false
+            .sheet(item: $sheet) { sheet in
+                switch sheet {
+                case .newProduct:
+                    CreateProductView(onCreated: viewModel.upsertProduct)
+                case .scan:
+                    ScanFlowSheet(
+                        lookup: lookupScannedCode,
+                        onOpen: { product in
+                            scannedProduct = product
+                            navigateToScannedProduct = true
+                        },
+                        onCreated: viewModel.upsertProduct
+                    )
                 }
             }
             .navigationDestination(isPresented: $navigateToScannedProduct) {
@@ -319,7 +305,7 @@ struct ProductsView: View {
             
             if authManager.isOwner || authManager.isManager {
                 Button {
-                    createProductRequest = CreateProductSheetRequest()
+                    sheet = .newProduct
                 } label: {
                     Label("Crear Producto", systemImage: "plus")
                         .font(.headline)
@@ -644,187 +630,40 @@ struct ProductsView: View {
         isSyncingToSquare = false
     }
     
-    private func handleScannedBarcode(_ code: String) {
-        lastScannedCode = code
-        let cache = ProductCacheManager.shared
-        
+    /// What a scanned code is: one product (open it), several (choose), or
+    /// none (create one with the code as SKU). Loaded products and the on-device
+    /// cache first; the server's exact search when they can't settle it.
+    private func lookupScannedCode(_ code: String) async -> ScanOutcome {
         // LEVEL 1a: loaded products in memory (instant), then LEVEL 1b: the SwiftData
         // cache (whole catalog, indexed). Open a product only if it's the one match:
         // a barcode shared by several goes to the server, which lists them all.
         let lowered = code.lowercased()
         let inMemory = viewModel.products.filter { $0.sku?.lowercased() == lowered }
-        let cached = cache.findBySku(code)
+        let cached = ProductCacheManager.shared.findBySku(code)
         // The cache can know a second product with this barcode that isn't loaded yet.
         let matches = cached.count > inMemory.count ? cached : inMemory
         if BarcodeLookup.cacheDecision(matchCount: matches.count) == .open, let match = matches.first {
-            scannedProduct = match
-            navigateToScannedProduct = true
-            return
+            return .open(match)
         }
-        
+
         // LEVEL 2 + 3: Server search with exact=true (does NOT touch the product list)
-        Task {
-            guard let locationId = authManager.currentLocation?.id else { return }
-            
-            do {
-                let response = try await viewModel.searchExact(locationId: locationId, code: code)
-                
-                if response.exactMatch == true, let match = response.data.first {
-                    // Exact SKU match — go straight to detail
-                    scannedProduct = match
-                    navigateToScannedProduct = true
-                } else if response.data.count == 1 {
-                    // Single fuzzy result — go straight to detail
-                    scannedProduct = response.data.first
-                    navigateToScannedProduct = true
-                } else if response.data.count > 1 {
-                    // Multiple fuzzy results — show candidates sheet
-                    barcodeCandidates = response.data
-                    showBarcodeCandidates = true
-                } else {
-                    // Not found — offer to create product
-                    createProductRequest = CreateProductSheetRequest(prefillSku: code)
-                }
-            } catch {
-                // Network error — offer to create anyway
-                createProductRequest = CreateProductSheetRequest(prefillSku: code)
+        guard let locationId = authManager.currentLocation?.id else { return .create }
+        do {
+            let response = try await viewModel.searchExact(locationId: locationId, code: code)
+            switch BarcodeLookup.serverDecision(exactMatch: response.exactMatch, resultCount: response.data.count) {
+            case .open:
+                return response.data.first.map(ScanOutcome.open) ?? .create
+            case .choose:
+                return .choose(response.data)
+            case .create:
+                return .create
             }
+        } catch {
+            // Network error — offer to create anyway
+            return .create
         }
     }
 }
-
-// MARK: - Barcode Scanner Sheet
-
-private struct BarcodeScannerSheet: View {
-    let onCodeScanned: (String) -> Void
-    @Environment(\.dismiss) var dismiss
-    
-    var body: some View {
-        NavigationStack {
-            CodeScannerView(
-                codeTypes: [.ean13, .ean8, .upce, .code128, .code39, .code93, .itf14, .qr],
-                scanMode: .once,
-                showViewfinder: true,
-                shouldVibrateOnSuccess: true,
-                completion: handleScan
-            )
-            .navigationTitle("Escanear Código")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancelar") {
-                        dismiss()
-                    }
-                }
-            }
-        }
-    }
-    
-    private func handleScan(result: Result<ScanResult, ScanError>) {
-        switch result {
-        case .success(let scanResult):
-            onCodeScanned(scanResult.string)
-        case .failure(let error):
-            print("Barcode scan failed: \(error.localizedDescription)")
-            dismiss()
-        }
-    }
-}
-
-// MARK: - Barcode Candidates Sheet (fuzzy match results)
-
-private struct BarcodeCandidatesSheet: View {
-    let code: String
-    let candidates: [Product]
-    let onSelect: (Product) -> Void
-    let onCreate: () -> Void
-    @Environment(\.dismiss) var dismiss
-    
-    var body: some View {
-        NavigationStack {
-            List {
-                Section {
-                    ForEach(candidates) { product in
-                        Button {
-                            onSelect(product)
-                        } label: {
-                            HStack(spacing: 12) {
-                                Image(systemName: "shippingbox.fill")
-                                    .foregroundStyle(.blue)
-                                    .frame(width: 32)
-                                
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(product.displayName)
-                                        .font(.headline)
-                                        .foregroundStyle(.primary)
-                                    
-                                    if let sku = product.sku {
-                                        Text("SKU: \(sku)")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                }
-                                
-                                Spacer()
-                                
-                                VStack(alignment: .trailing, spacing: 4) {
-                                    if let price = product.formattedPrice {
-                                        Text(price)
-                                            .font(.subheadline)
-                                            .fontWeight(.semibold)
-                                    }
-                                    if let stock = product.totalInventory {
-                                        Text("\(stock) uds")
-                                            .font(.caption)
-                                            .foregroundStyle(stock > 0 ? Color.secondary : Color.red)
-                                    }
-                                }
-                            }
-                            .padding(.vertical, 4)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                } header: {
-                    Text("Resultados para \"\(code)\"")
-                }
-                
-                Section {
-                    Button {
-                        onCreate()
-                    } label: {
-                        HStack(spacing: 12) {
-                            Image(systemName: "plus.circle.fill")
-                                .foregroundStyle(.green)
-                                .frame(width: 32)
-                            
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Crear Producto Nuevo")
-                                    .font(.headline)
-                                    .foregroundStyle(.primary)
-                                Text("SKU: \(code)")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        .padding(.vertical, 4)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .listStyle(.insetGrouped)
-            .navigationTitle("Seleccionar Producto")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancelar") {
-                        dismiss()
-                    }
-                }
-            }
-        }
-    }
-}
-
 
 // MARK: - Preview
 

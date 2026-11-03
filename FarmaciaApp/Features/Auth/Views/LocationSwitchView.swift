@@ -62,6 +62,10 @@ struct LocationSwitchView: View {
                     }
                 }
             }
+            // Haptics follow the outcome's state (success / error) instead of
+            // UIKit generators fired from the async code.
+            .sensoryFeedback(.success, trigger: showSuccess) { _, shown in shown }
+            .sensoryFeedback(.error, trigger: showError) { _, shown in shown }
             .alert("Error al Cambiar", isPresented: $showError) {
                 Button("OK", role: .cancel) {}
             } message: {
@@ -317,18 +321,10 @@ struct LocationSwitchView: View {
     // MARK: - Switch Location
     
     private func switchToLocation(_ location: SessionLocation) async {
-        // Haptic feedback - preparing to switch
-        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-        impactFeedback.prepare()
-        
         switchingLocationId = location.id
         
         do {
             try await authManager.switchLocation(to: location.id)
-            
-            // Success haptic
-            let successFeedback = UINotificationFeedbackGenerator()
-            successFeedback.notificationOccurred(.success)
             
             // Show success animation
             successLocationName = location.name
@@ -341,17 +337,9 @@ struct LocationSwitchView: View {
             
             dismiss()
         } catch let error as NetworkError {
-            // Error haptic
-            let errorFeedback = UINotificationFeedbackGenerator()
-            errorFeedback.notificationOccurred(.error)
-            
             errorMessage = error.errorDescription ?? "Error al cambiar ubicación"
             showError = true
         } catch {
-            // Error haptic
-            let errorFeedback = UINotificationFeedbackGenerator()
-            errorFeedback.notificationOccurred(.error)
-            
             errorMessage = error.localizedDescription
             showError = true
         }

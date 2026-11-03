@@ -2,6 +2,9 @@ import SwiftUI
 import FarmaciaKit
 
 // MARK: - Adjustment Form View
+//
+// On the form kit (tasks/design-system-epic.md): product summary, AmountField,
+// .formKeyboard, Guardar → spinner while saving.
 
 struct AdjustmentFormView: View {
     let adjustmentType: AdjustmentType
@@ -22,7 +25,15 @@ struct AdjustmentFormView: View {
     @State private var costRequired = false
     @State private var reason = ""
     @State private var notes = ""
-    @FocusState private var isFieldFocused: Bool
+    private enum Field: Hashable { case quantity, newCount, unitCost, reason, notes }
+    @FocusState private var focusedField: Field?
+
+    /// Top to bottom, skipping rows that aren't shown.
+    private var focusOrder: FocusOrder<Field> {
+        FocusOrder([adjustmentType.isVariable ? .newCount : .quantity]
+            + (asksForCost ? [.unitCost] : [])
+            + [.reason, .notes])
+    }
     /// One per adjustment being entered: a retry (or the offline queue's replay) reuses it.
     @State private var clientRequestId = UUID().uuidString
     /// Count types compare against stock loaded for the current location when the form opens,
@@ -44,6 +55,21 @@ struct AdjustmentFormView: View {
         )
     }
 
+    /// What saving does to the stock, under the quantity: "Esto agregará 3
+    /// unidades…" in the positive tone, a removal in the critical one.
+    private var stockEffect: (text: String, tone: Tone)? {
+        if adjustmentType.isVariable {
+            guard let delta = countChange else { return nil }
+            return delta > 0
+                ? ("Esto agregará \(delta) unidades al inventario.", .positive)
+                : ("Esto eliminará \(abs(delta)) unidades del inventario.", .critical)
+        }
+        guard let quantity, quantity != 0 else { return nil }
+        return adjustmentType.isNegative
+            ? ("Esto eliminará \(abs(quantity)) unidades del inventario.", .critical)
+            : ("Esto agregará \(abs(quantity)) unidades al inventario.", .positive)
+    }
+
     private var isValid: Bool {
         if adjustmentType.isVariable {
             return network.isConnected && countChange != nil
@@ -54,40 +80,18 @@ struct AdjustmentFormView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Producto") {
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text(product.displayName)
-                                .foregroundStyle(.primary)
-                            if let sku = product.sku {
-                                Text("SKU: \(sku)")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            if !adjustmentType.isVariable, let stock = product.totalInventory {
-                                Text("Stock actual: \(stock) unidades")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        Spacer()
-                        Image(systemName: "lock.fill")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+                Section {
+                    ProductSummaryRow(product: product, showsStock: !adjustmentType.isVariable)
                 }
 
-                Section("Cantidad") {
+                Section {
                     if adjustmentType.isVariable {
-                        HStack {
-                            Text("Cantidad Actual")
-                            Spacer()
+                        LabeledContent("Cantidad actual") {
                             if let liveStock {
                                 Text("\(liveStock)")
-                                    .foregroundStyle(.secondary)
                             } else if !network.isConnected {
                                 Text("Requiere conexión")
-                                    .foregroundStyle(.orange)
+                                    .foregroundStyle(Tone.caution.color)
                             } else if liveStockFailed {
                                 Button("Reintentar") {
                                     Task { await loadLiveStock() }
@@ -97,87 +101,82 @@ struct AdjustmentFormView: View {
                             }
                         }
 
-                        HStack {
-                            Text("Nueva Cantidad")
-                            Spacer()
-                            TextField("0", value: $newCount, format: .number)
-                                .keyboardType(.numberPad)
-                                .multilineTextAlignment(.trailing)
-                                .frame(width: 100)
-                                .focused($isFieldFocused)
-                        }
-
-                        if let delta = countChange {
-                            Text(delta > 0
-                                 ? "Esto agregará \(delta) unidades al inventario"
-                                 : "Esto eliminará \(abs(delta)) unidades del inventario")
-                                .font(.caption)
-                                .foregroundStyle(delta > 0 ? .green : .red)
-                        }
+                        AmountField(
+                            "Nueva cantidad",
+                            unit: "UDS",
+                            value: $newCount,
+                            focus: $focusedField,
+                            field: .newCount
+                        )
                     } else {
-                        HStack {
-                            Text("Cantidad")
-                            Spacer()
-                            TextField("0", value: $quantity, format: .number)
-                                .keyboardType(.numberPad)
-                                .multilineTextAlignment(.trailing)
-                                .frame(width: 100)
-                                .focused($isFieldFocused)
-                        }
-
-                        if adjustmentType.isNegative {
-                            Text("Esto eliminará \(quantity ?? 0) unidades del inventario")
-                                .font(.caption)
-                                .foregroundStyle(.red)
-                        } else {
-                            Text("Esto agregará \(quantity ?? 0) unidades al inventario")
-                                .font(.caption)
-                                .foregroundStyle(.green)
-                        }
+                        AmountField(
+                            "Cantidad",
+                            unit: "UDS",
+                            value: $quantity,
+                            focus: $focusedField,
+                            field: .quantity
+                        )
+                    }
+                } footer: {
+                    if let effect = stockEffect {
+                        Text(effect.text)
+                            .foregroundStyle(effect.tone.color)
                     }
                 }
 
                 if asksForCost {
                     Section {
-                        HStack {
-                            Text("Costo Unitario")
-                            TextField("0.00", value: $unitCost, format: .number)
-                                .keyboardType(.decimalPad)
-                                .multilineTextAlignment(.trailing)
-                                .focused($isFieldFocused)
-                            Text("MXN")
-                                .foregroundStyle(.secondary)
-                        }
+                        AmountField(
+                            "Costo unitario",
+                            unit: "MXN",
+                            value: $unitCost,
+                            focus: $focusedField,
+                            field: .unitCost
+                        )
                     } footer: {
                         Text("Este producto no tiene un costo anterior registrado.")
                     }
                 }
 
-                Section("Detalles") {
-                    TextField("Razón", text: $reason)
-                        .focused($isFieldFocused)
-                    TextField("Notas (opcional)", text: $notes)
-                        .focused($isFieldFocused)
+                Section {
+                    LabeledContent("Razón") {
+                        TextField("Razón", text: $reason, prompt: Text("Opcional"))
+                            .multilineTextAlignment(.trailing)
+                            .formField(.reason, focus: $focusedField)
+                    }
+                    TextField("Notas", text: $notes, axis: .vertical)
+                        .lineLimit(1...4)
+                        .formField(.notes, focus: $focusedField)
                 }
             }
+            // No edits while a save is in flight.
+            .disabled(viewModel.isSubmitting)
             .navigationTitle(adjustmentType.displayName)
             .navigationBarTitleDisplayMode(.inline)
-            .keyboardTopSpacing(24, isActive: isFieldFocused)
+            .formKeyboard(focus: $focusedField, order: focusOrder)
+            .interactiveDismissDisabled(viewModel.isSubmitting)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .cancellationAction) {
                     Button("Cancelar") {
                         dismiss()
                     }
+                    .disabled(viewModel.isSubmitting)
                 }
 
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Guardar") {
-                        // Set before the Task runs, so a second tap can't slip in first
-                        guard !viewModel.isSubmitting else { return }
-                        viewModel.isSubmitting = true
-                        Task { await saveAdjustment() }
+                ToolbarItem(placement: .confirmationAction) {
+                    // While saving, the button becomes a spinner in its place.
+                    if viewModel.isSubmitting {
+                        ProgressView()
+                            .accessibilityLabel("Guardando")
+                    } else {
+                        Button("Guardar") {
+                            // Set before the Task runs, so a second tap can't slip in first
+                            guard !viewModel.isSubmitting else { return }
+                            viewModel.isSubmitting = true
+                            Task { await saveAdjustment() }
+                        }
+                        .disabled(!isValid)
                     }
-                    .disabled(!isValid || viewModel.isSubmitting)
                 }
             }
             .alert("No se pudo guardar", isPresented: $viewModel.showSaveError) {

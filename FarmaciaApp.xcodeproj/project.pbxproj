@@ -18,6 +18,7 @@
 		37E697362F32AC3200F6CB5D /* ExpenseDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E6972F2F32AC3200F6CB5D /* ExpenseDetailView.swift */; };
 		37E6973C2F32F2A400F6CB5D /* ProductDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E697382F32F2A400F6CB5D /* ProductDetailView.swift */; };
 		37E6973D2F32F2A400F6CB5D /* ProductsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E697392F32F2A400F6CB5D /* ProductsView.swift */; };
+		DD00000100000010 /* ScanFlowSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000010 /* ScanFlowSheet.swift */; };
 		37E6973E2F32F2A400F6CB5D /* CreateProductView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E697372F32F2A400F6CB5D /* CreateProductView.swift */; };
 		DD00000100000005 /* CreateProductViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000005 /* CreateProductViewModel.swift */; };
 		37E697402F34065A00F6CB5D /* InitialSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E6973F2F34065A00F6CB5D /* InitialSetupView.swift */; };
@@ -41,6 +42,7 @@
 		EE00000100000005 /* KeyboardHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000005 /* KeyboardHelpers.swift */; };
 		EE00000100000006 /* StateViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000006 /* StateViews.swift */; };
 		DD00000100000003 /* MoreDetailsLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000003 /* MoreDetailsLabel.swift */; };
+		DD00000100000009 /* ProductSummaryRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000009 /* ProductSummaryRow.swift */; };
 		DD00000100000002 /* AmountField.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000002 /* AmountField.swift */; };
 		DD00000100000004 /* AmountValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000004 /* AmountValue.swift */; };
 		DD00000100000001 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000001 /* DesignSystem.swift */; };
@@ -104,6 +106,7 @@
 		GG00000100000003 /* PayrollViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = GG00000200000003 /* PayrollViewModel.swift */; };
 		JJ00000100000001 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = JJ00000200000001 /* NetworkMonitor.swift */; };
 		JJ00000100000002 /* OfflineQueueManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = JJ00000200000002 /* OfflineQueueManager.swift */; };
+		DD00000100000011 /* OfflinePhotoStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000011 /* OfflinePhotoStore.swift */; };
 		JJ00000100000004 /* QueuedRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = JJ00000200000004 /* QueuedRequest.swift */; };
 		JJ00000100000005 /* OfflineSyncBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = JJ00000200000005 /* OfflineSyncBanner.swift */; };
 		JJ00000100000006 /* OfflineSyncIssuesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = JJ00000200000006 /* OfflineSyncIssuesView.swift */; };
@@ -120,6 +123,7 @@
 		DD00000200000005 /* CreateProductViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateProductViewModel.swift; sourceTree = "<group>"; };
 		37E697382F32F2A400F6CB5D /* ProductDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductDetailView.swift; sourceTree = "<group>"; };
 		37E697392F32F2A400F6CB5D /* ProductsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductsView.swift; sourceTree = "<group>"; };
+		DD00000200000010 /* ScanFlowSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanFlowSheet.swift; sourceTree = "<group>"; };
 		37E6973F2F34065A00F6CB5D /* InitialSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InitialSetupView.swift; sourceTree = "<group>"; };
 		37E697412F3408EF00F6CB5D /* Setup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Setup.swift; sourceTree = "<group>"; };
 		3B554D9AF0B85104FDC78630 /* ProductRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductRow.swift; sourceTree = "<group>"; };
@@ -145,6 +149,7 @@
 		EE00000200000005 /* KeyboardHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardHelpers.swift; sourceTree = "<group>"; };
 		EE00000200000006 /* StateViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StateViews.swift; sourceTree = "<group>"; };
 		DD00000200000003 /* MoreDetailsLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoreDetailsLabel.swift; sourceTree = "<group>"; };
+		DD00000200000009 /* ProductSummaryRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductSummaryRow.swift; sourceTree = "<group>"; };
 		DD00000200000002 /* AmountField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmountField.swift; sourceTree = "<group>"; };
 		DD00000200000004 /* AmountValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmountValue.swift; sourceTree = "<group>"; };
 		DD00000200000001 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
@@ -206,6 +211,7 @@
 		GG00000200000003 /* PayrollViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PayrollViewModel.swift; sourceTree = "<group>"; };
 		JJ00000200000001 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		JJ00000200000002 /* OfflineQueueManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineQueueManager.swift; sourceTree = "<group>"; };
+		DD00000200000011 /* OfflinePhotoStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflinePhotoStore.swift; sourceTree = "<group>"; };
 		JJ00000200000004 /* QueuedRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueuedRequest.swift; sourceTree = "<group>"; };
 		JJ00000200000005 /* OfflineSyncBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineSyncBanner.swift; sourceTree = "<group>"; };
 		JJ00000200000006 /* OfflineSyncIssuesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineSyncIssuesView.swift; sourceTree = "<group>"; };
@@ -261,6 +267,7 @@
 				551F6878C658EA6406F8A5A7 /* EditPriceView.swift */,
 				5B36C1CAC70495EFA1EEFDC2 /* CostSupplierViewModel.swift */,
 				37E697392F32F2A400F6CB5D /* ProductsView.swift */,
+				DD00000200000010 /* ScanFlowSheet.swift */,
 				3B554D9AF0B85104FDC78630 /* ProductRow.swift */,
 				67DB948B9C5055D67639955A /* ProductsViewModel.swift */,
 				2F07F452947561CD91FFF44E /* ProductsAgingViewModel.swift */,
@@ -342,6 +349,7 @@
 			isa = PBXGroup;
 			children = (
 				DD00000200000003 /* MoreDetailsLabel.swift */,
+				DD00000200000009 /* ProductSummaryRow.swift */,
 				DD00000200000002 /* AmountField.swift */,
 				DD00000200000004 /* AmountValue.swift */,
 				DD00000200000001 /* DesignSystem.swift */,
@@ -411,6 +419,7 @@
 				F100000100000004 /* APIEndpoint.swift */,
 				JJ00000200000001 /* NetworkMonitor.swift */,
 				JJ00000200000002 /* OfflineQueueManager.swift */,
+				DD00000200000011 /* OfflinePhotoStore.swift */,
 			);
 			path = Network;
 			sourceTree = "<group>";
@@ -654,6 +663,7 @@
 				A72617238F43931DC3C57629 /* EditPriceView.swift in Sources */,
 				D419F61DEDDF944288D2F152 /* CostSupplierViewModel.swift in Sources */,
 				37E6973D2F32F2A400F6CB5D /* ProductsView.swift in Sources */,
+				DD00000100000010 /* ScanFlowSheet.swift in Sources */,
 				6251561FA87E93ECDA322277 /* ProductRow.swift in Sources */,
 				ED472745D3529AF20E11A7A3 /* ProductsViewModel.swift in Sources */,
 				F54D97249C9261EDD5DE1FF9 /* ProductsAgingViewModel.swift in Sources */,
@@ -712,6 +722,7 @@
 				EE00000100000005 /* KeyboardHelpers.swift in Sources */,
 				EE00000100000006 /* StateViews.swift in Sources */,
 				DD00000100000003 /* MoreDetailsLabel.swift in Sources */,
+				DD00000100000009 /* ProductSummaryRow.swift in Sources */,
 				DD00000100000002 /* AmountField.swift in Sources */,
 				DD00000100000004 /* AmountValue.swift in Sources */,
 				DD00000100000001 /* DesignSystem.swift in Sources */,
@@ -726,6 +737,7 @@
 				CA00000100000002 /* ProductCacheManager.swift in Sources */,
 				JJ00000100000001 /* NetworkMonitor.swift in Sources */,
 				JJ00000100000002 /* OfflineQueueManager.swift in Sources */,
+				DD00000100000011 /* OfflinePhotoStore.swift in Sources */,
 				JJ00000100000004 /* QueuedRequest.swift in Sources */,
 				JJ00000100000005 /* OfflineSyncBanner.swift in Sources */,
 				JJ00000100000006 /* OfflineSyncIssuesView.swift in Sources */,

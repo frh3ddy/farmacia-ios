@@ -6,7 +6,12 @@ import FarmaciaKit
 // The standalone Inventory tab has been merged into Products to eliminate context switching.
 // Users search once, see product info, and perform receive/adjust actions in the same context.
 
-struct MainTabView: View {
+struct MainTabView<SyncStatus: View>: View {
+    /// The offline/sync status, shown as the tab bar accessory on iOS 26.1+
+    /// (RootView keeps a top banner on older versions).
+    let syncStatus: SyncStatus
+    let showsSyncStatus: Bool
+
     @EnvironmentObject var authManager: AuthManager
     @State private var selectedTab: Tab = .dashboard
     
@@ -65,6 +70,7 @@ struct MainTabView: View {
                 .tag(Tab.more)
         }
         .accentColor(.blue)
+        .syncStatusAccessory(isEnabled: showsSyncStatus) { syncStatus }
         .onChange(of: selectedTab) { _, _ in
             // Bump trigger so the newly-selected tab re-fetches fresh data
             refreshTrigger = UUID()
@@ -81,6 +87,19 @@ struct MainTabView: View {
 // MARK: - Preview
 
 #Preview {
-    MainTabView()
+    MainTabView(syncStatus: EmptyView(), showsSyncStatus: false)
         .environmentObject(AuthManager.shared)
+}
+
+private extension View {
+    /// The tab bar accessory (iOS 26.1+: the version that can be turned off
+    /// when there's nothing to say). Earlier versions show nothing here.
+    @ViewBuilder
+    func syncStatusAccessory<Content: View>(isEnabled: Bool, @ViewBuilder content: () -> Content) -> some View {
+        if #available(iOS 26.1, *) {
+            tabViewBottomAccessory(isEnabled: isEnabled, content: content)
+        } else {
+            self
+        }
+    }
 }

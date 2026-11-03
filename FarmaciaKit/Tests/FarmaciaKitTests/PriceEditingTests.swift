@@ -29,3 +29,27 @@ struct PriceEditingTests {
         #expect(PriceEditing.canApplyToAllLocations(isOwner: isOwner) == expected)
     }
 }
+
+/// Editar Precio's Guardar: a positive price that differs from the current one.
+struct PriceEditingSaveTests {
+    @Test("given the current price typed again, should not save")
+    func unchanged() {
+        #expect(!PriceEditing.canSave(newPrice: 25, currentPrice: 25))
+    }
+
+    @Test("given a new positive price, should save")
+    func changed() {
+        #expect(PriceEditing.canSave(newPrice: 27.5, currentPrice: 25))
+    }
+
+    @Test("given 0 or no price, should not save")
+    func missing() {
+        #expect(!PriceEditing.canSave(newPrice: 0, currentPrice: 25))
+        #expect(!PriceEditing.canSave(newPrice: nil, currentPrice: 25))
+    }
+
+    @Test("given a product without a price yet, should save a first price")
+    func firstPrice() {
+        #expect(PriceEditing.canSave(newPrice: 25, currentPrice: nil))
+    }
+}

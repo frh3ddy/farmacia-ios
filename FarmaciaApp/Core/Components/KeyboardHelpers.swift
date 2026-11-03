@@ -129,37 +129,3 @@ private struct FormKeyboardModifier<Field: Hashable>: ViewModifier {
         .overlay(alignment: .top) { Divider() }
     }
 }
-
-// MARK: - Keyboard-Top Spacing
-//
-// SwiftUI already scrolls the focused field above the keyboard, but leaves it
-// flush against the keyboard's top edge. This modifier adds a small extra
-// gap so bottom fields stay visually separated and more visible while editing.
-//
-// Driven by `@FocusState` (passed in as `isActive`) rather than by observing
-// `keyboardWillShowNotification`: focus changes land in the same view-update
-// pass as Form's own "scroll focused field into view" adjustment, so the
-// extra spacing is applied together with that scroll instead of growing the
-// safe-area inset afterward and forcing a second, visibly delayed rescroll.
-
-private struct KeyboardTopSpacingModifier: ViewModifier {
-    let spacing: CGFloat
-    let isActive: Bool
-
-    func body(content: Content) -> some View {
-        content
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                Color.clear
-                    .frame(height: isActive ? spacing : 0)
-            }
-            .animation(.easeOut(duration: 0.25), value: isActive)
-    }
-}
-
-extension View {
-    /// Extra breathing room between the keyboard's top edge and this view's
-    /// bottom edge while `isActive` (typically `focusedField != nil`) is true.
-    func keyboardTopSpacing(_ spacing: CGFloat = 20, isActive: Bool) -> some View {
-        modifier(KeyboardTopSpacingModifier(spacing: spacing, isActive: isActive))
-    }
-}
