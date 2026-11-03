@@ -351,3 +351,14 @@ struct UpdateExpenseRequest: Encodable {
     let paidAt: Date?
     let notes: String?
 }
+
+// MARK: - Store Stock
+
+extension APIClient {
+    /// Every store's stock of a product. Empty when offline or the fetch fails:
+    /// the section hides rather than showing an error or stale numbers.
+    func storeStock(productId: String) async -> [StoreStock] {
+        let response: StoreStockResponse? = try? await request(endpoint: .productStock(productId: productId))
+        return response?.data ?? []
+    }
+}

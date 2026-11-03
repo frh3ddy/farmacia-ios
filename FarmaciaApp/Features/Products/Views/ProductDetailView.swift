@@ -53,6 +53,7 @@ struct ProductDetailView: View {
     @State private var refreshErrorMessage: String?
     @State private var showRefreshError = false
     @State private var offlineQueue = OfflineQueueManager.shared
+    @State private var storeStock: [StoreStock] = []
 
     private var canEditPrice: Bool {
         PriceEditing.canEdit(isOwner: authManager.isOwner, isManager: authManager.isManager, tracksInventory: displayProduct.tracksInventory)
@@ -67,6 +68,8 @@ struct ProductDetailView: View {
             VStack(spacing: 20) {
                 // Product Header (with stats row + action buttons)
                 productHeader
+
+                otherStoresCard
                 
                 // Price Card
                 priceCard
@@ -156,7 +159,8 @@ struct ProductDetailView: View {
             async let productRefresh: () = refreshProduct()
             async let suppliersLoad: () = inventoryViewModel.loadSuppliers()
             async let costSupplierLoad: () = loadCostSupplierData()
-            _ = await (productRefresh, suppliersLoad, costSupplierLoad)
+            async let storeStockLoad: () = loadStoreStock()
+            _ = await (productRefresh, suppliersLoad, costSupplierLoad, storeStockLoad)
         }
         .task(id: "fifo-batches") {
             // Lazy: load FIFO batches only for owners/managers
@@ -447,6 +451,36 @@ struct ProductDetailView: View {
         }
     }
     
+    // MARK: - Other Stores Card
+
+    /// The other stores' stock (tasks/other-stores-stock-epic.md). Hidden when
+    /// there's none to show: offline, failed fetch, untracked, or sold only here.
+    @ViewBuilder
+    private var otherStoresCard: some View {
+        let stores = StoreStock.others(storeStock, currentLocationId: authManager.currentLocation?.id)
+        if !stores.isEmpty {
+            let here = displayProduct.totalInventory ?? 0
+            VStack(alignment: .leading, spacing: DS.Spacing.m) {
+                Label("En otras tiendas", systemImage: "building.2")
+                    .font(.headline)
+
+                Divider()
+
+                ForEach(stores) { store in
+                    let standsOut = store.standsOut(hereQuantity: here)
+                    LabeledContent(store.locationName) {
+                        Text("\(store.quantity) uds")
+                            .fontWeight(standsOut ? .bold : .regular)
+                            .foregroundStyle(standsOut ? .green : (store.quantity > 0 ? .primary : .secondary))
+                    }
+                }
+            }
+            .padding()
+            .background(Color(.systemGray6))
+            .clipShape(.rect(cornerRadius: DS.Radius.xl))
+        }
+    }
+
     // MARK: - Price Card
     
     private var priceCard: some View {
@@ -749,7 +783,14 @@ struct ProductDetailView: View {
         async let activityLoad: () = loadActivity()
         async let batchLoad: () = loadBatchData()
         async let costSupplierLoad: () = loadCostSupplierData()
-        _ = await (productRefresh, activityLoad, batchLoad, costSupplierLoad)
+        async let storeStockLoad: () = loadStoreStock()
+        _ = await (productRefresh, activityLoad, batchLoad, costSupplierLoad, storeStockLoad)
+    }
+
+    /// Products that don't track stock (Yastás) have nothing to show.
+    private func loadStoreStock() async {
+        guard displayProduct.tracksInventory != false else { return }
+        storeStock = await APIClient.shared.storeStock(productId: product.id)
     }
 
     private func refreshProduct() async {

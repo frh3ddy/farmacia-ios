@@ -115,6 +115,8 @@ enum APIEndpoint {
     case uploadProductImage(id: String)
     case productSuppliers(productId: String)
     case productCostHistory(productId: String)
+    /// Every open store's stock of the product (StoreStock). Never sends locationId.
+    case productStock(productId: String)
     case supplierCatalog(supplierId: String)
     case syncProductsToSquare
     case productCounts
@@ -224,6 +226,7 @@ enum APIEndpoint {
         case .uploadProductImage(let id): return "/products/\(id)/image"
         case .productSuppliers(let productId): return "/products/\(productId)/suppliers"
         case .productCostHistory(let productId): return "/products/\(productId)/cost-history"
+        case .productStock(let productId): return "/products/\(productId)/stock"
         case .supplierCatalog(let supplierId): return "/products/supplier-catalog/\(supplierId)"
         case .syncProductsToSquare: return "/products/sync-to-square"
         case .productCounts: return "/products/counts"
@@ -313,7 +316,7 @@ enum APIEndpoint {
             
         // Products
         case .listProducts, .getProduct, .productSuppliers, .productCostHistory, .supplierCatalog,
-             .productCounts, .productDeltaSync:
+             .productCounts, .productDeltaSync, .productStock:
             return .get
         case .createProduct, .syncProductsToSquare, .createSupplier:
             return .post

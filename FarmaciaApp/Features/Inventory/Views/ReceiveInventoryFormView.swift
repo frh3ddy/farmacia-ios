@@ -78,6 +78,8 @@ struct ReceiveInventoryFormView: View {
 
     // Supplier intelligence
     @State private var productSuppliers: [ProductSupplier] = []
+    /// Every store's stock, to split the delivery; empty (hidden) if the fetch fails.
+    @State private var storeStock: [StoreStock] = []
     @State private var isLoadingSuppliers = false
     @State private var supplierLastCost: Double?
     @State private var supplierCostNote: String?
@@ -130,6 +132,13 @@ struct ReceiveInventoryFormView: View {
                         focus: $focusedField,
                         field: .unitCost
                     )
+
+                    if let summary = StoreStock.summary(storeStock, currentLocationId: authManager.currentLocation?.id) {
+                        Label(summary, systemImage: "building.2")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .accessibilityLabel("Existencia por tienda: \(summary)")
+                    }
 
                     if let qty = quantity, qty > 0,
                        let cost = receivingCost.value, cost > 0 {
@@ -270,6 +279,10 @@ struct ReceiveInventoryFormView: View {
                 // Fetch the product's suppliers to auto-pick the preferred one
                 receivingCost.productChanged(to: product.id)
                 await loadProductSuppliers(for: product.id)
+            }
+            .task {
+                guard product.tracksInventory != false else { return }
+                storeStock = await APIClient.shared.storeStock(productId: product.id)
             }
             // The full supplier list can arrive after the product's suppliers
             .onChange(of: viewModel.suppliers.map(\.id)) {
