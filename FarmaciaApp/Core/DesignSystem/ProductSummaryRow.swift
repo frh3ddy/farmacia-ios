@@ -7,8 +7,9 @@ import SwiftUI
 
 struct ProductSummaryRow: View {
     let product: Product
-    /// Off where the form shows a live count of its own (count corrections).
-    var showsStock = true
+    /// This store's stock as the form knows it (fresh when loaded, else the
+    /// cached product's); nil hides it, e.g. where a count correction shows its own.
+    let stock: Int?
 
     var body: some View {
         HStack(spacing: DS.Spacing.m) {
@@ -36,7 +37,7 @@ struct ProductSummaryRow: View {
     private var facts: String {
         var facts: [String] = []
         if let sku = product.sku, !sku.isEmpty { facts.append("SKU \(sku)") }
-        if showsStock, let stock = product.totalInventory { facts.append("\(stock) en existencia") }
+        if let stock { facts.append("\(stock) en existencia") }
         if let price = product.sellingPrice { facts.append("$\(String(format: "%.2f", price))") }
         return facts.joined(separator: " · ")
     }

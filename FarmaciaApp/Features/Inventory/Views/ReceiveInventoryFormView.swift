@@ -98,6 +98,11 @@ struct ReceiveInventoryFormView: View {
         )
     }
 
+    /// This store's stock: from the fresh fetch when it's in, else the cached product's.
+    private var currentStock: Int? {
+        StoreStock.here(storeStock, currentLocationId: authManager.currentLocation?.id) ?? product.totalInventory
+    }
+
     var body: some View {
         NavigationStack {
             // Layout (tasks/form-ux-polish-epic.md): what's being received on top,
@@ -105,7 +110,7 @@ struct ReceiveInventoryFormView: View {
             // matters for a pharmacy), and everything optional under Más detalles.
             Form {
                 Section {
-                    ProductSummaryRow(product: product)
+                    ProductSummaryRow(product: product, stock: currentStock)
                 }
 
                 Section {
@@ -148,11 +153,8 @@ struct ReceiveInventoryFormView: View {
                         }
                     }
                 } footer: {
-                    // What Guardar does to this store's stock: from the fresh fetch
-                    // when it's in, else the stock loaded with the product.
-                    let before = StoreStock.here(storeStock, currentLocationId: authManager.currentLocation?.id)
-                        ?? product.totalInventory
-                    if let impact = StockImpact(before: before, change: quantity) {
+                    // What Guardar does to this store's stock.
+                    if let impact = StockImpact(before: currentStock, change: quantity) {
                         StatusLabel(
                             [authManager.currentLocation?.name, impact.summary]
                                 .compactMap { $0 }.joined(separator: " · "),
