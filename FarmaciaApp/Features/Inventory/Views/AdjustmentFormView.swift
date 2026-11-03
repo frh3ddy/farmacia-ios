@@ -65,7 +65,7 @@ struct AdjustmentFormView: View {
         }
         guard let quantity else { return nil }
         let change = adjustmentType.isNegative ? -abs(quantity) : abs(quantity)
-        return StockImpact(before: liveStock ?? product.totalInventory, change: change)
+        return StockImpact(before: currentStock, change: change)
     }
 
     private var isValid: Bool {
@@ -75,11 +75,14 @@ struct AdjustmentFormView: View {
         return (quantity ?? 0) != 0
     }
 
+    /// This store's stock: the live fetch when it's in, else the cached product's.
+    private var currentStock: Int? { liveStock ?? product.totalInventory }
+
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    ProductSummaryRow(product: product, showsStock: !adjustmentType.isVariable)
+                    ProductSummaryRow(product: product, stock: adjustmentType.isVariable ? nil : currentStock)
                 }
 
                 Section {

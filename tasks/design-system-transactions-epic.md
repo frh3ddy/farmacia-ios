@@ -56,7 +56,8 @@ is in `tasks/design-system-epic.md` / `tasks/form-ux-polish-epic.md`.
    Cajas / Piezas por caja count as unsaved work (`ReceivingDraft.boxes`/`perBox`, TDD, 2 tests); unused
    `Expiry.isExpired` / `expiresWithin` deleted (tests moved to `daysUntil` + `tone`; CLAUDE.md rule updated).
    Before-stock: Ajuste now loads live stock for every type when online (falls back to the last loaded stock offline);
-   the product summary row above still shows the loaded stock.
+   ✅ the product summary row above shows the same stock as the preview (`ProductSummaryRow(stock:)`, Ajuste and
+   Recibir; `fix/ajuste-summary-stock`).
    ✅ Recibir's "antes" starts from the other-stores `StoreStock` fetch for this store (`StoreStock.here`, TDD,
    2 tests; no extra request), falling back to the loaded stock until it arrives or if it fails.
    `feature/other-stores-stock` (committed part, `e13297a`) is merged into this branch for it.
