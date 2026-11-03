@@ -1,4 +1,5 @@
 import SwiftUI
+import FarmaciaKit
 
 // MARK: - Expense Detail View
 
@@ -33,16 +34,16 @@ struct ExpenseDetailView: View {
             List {
                 // Header Section
                 Section {
-                    VStack(spacing: 16) {
+                    VStack(spacing: DS.Spacing.l) {
                         // Type Icon
                         ZStack {
                             Circle()
-                                .fill(typeColor.opacity(0.15))
+                                .fill(expense.type.color.opacity(0.15))
                                 .frame(width: 80, height: 80)
                             
                             Image(systemName: expense.type.icon)
-                                .font(.system(size: 36))
-                                .foregroundStyle(typeColor)
+                                .font(.largeTitle)
+                                .foregroundStyle(expense.type.color)
                         }
                         
                         // Amount
@@ -56,28 +57,15 @@ struct ExpenseDetailView: View {
                             .foregroundStyle(.secondary)
                         
                         // Status Badge
-                        HStack(spacing: 8) {
-                            if expense.isPaid {
-                                Label("Pagado", systemImage: "checkmark.circle.fill")
-                                    .font(.caption)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 4)
-                                    .background(Color.green.opacity(0.15))
-                                    .foregroundStyle(.green)
-                                    .clipShape(.rect(cornerRadius: 8))
-                            } else {
-                                Label("No Pagado", systemImage: "clock")
-                                    .font(.caption)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 4)
-                                    .background(Color.orange.opacity(0.15))
-                                    .foregroundStyle(.orange)
-                                    .clipShape(.rect(cornerRadius: 8))
-                            }
-                        }
+                        StatusLabel(expense.paymentLabel, tone: expense.paymentTone, systemImage: expense.paymentIcon)
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .padding(.horizontal, DS.Spacing.m)
+                            .padding(.vertical, DS.Spacing.xs)
+                            .background(expense.paymentTone.color.opacity(0.15), in: .capsule)
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
+                    .padding(.vertical, DS.Spacing.l)
                 }
                 
                 // Details Section
@@ -109,8 +97,7 @@ struct ExpenseDetailView: View {
                 // Payment Section
                 Section("Pago") {
                     LabeledContent("Estado") {
-                        Text(expense.isPaid ? "Pagado" : "No Pagado")
-                            .foregroundStyle(expense.isPaid ? .green : .orange)
+                        StatusLabel(expense.paymentLabel, tone: expense.paymentTone, systemImage: expense.paymentIcon)
                     }
                     
                     if expense.isPaid, let paidAt = expense.paidAt {
@@ -149,7 +136,7 @@ struct ExpenseDetailView: View {
                         } label: {
                             Label("Marcar como Pagado", systemImage: "checkmark.circle")
                         }
-                        .foregroundStyle(.green)
+                        .foregroundStyle(Tone.positive.color)
                     }
                     
                     Button {
@@ -202,24 +189,6 @@ struct ExpenseDetailView: View {
         }
     }
     
-    // MARK: - Type Color
-    
-    private var typeColor: Color {
-        switch expense.type.color {
-        case "blue": return .blue
-        case "yellow": return .yellow
-        case "green": return .green
-        case "purple": return .purple
-        case "orange": return .orange
-        case "pink": return .pink
-        case "gray": return .gray
-        case "red": return .red
-        case "indigo": return .indigo
-        case "cyan": return .cyan
-        case "mint": return .mint
-        default: return .secondary
-        }
-    }
     
     // MARK: - Actions
     

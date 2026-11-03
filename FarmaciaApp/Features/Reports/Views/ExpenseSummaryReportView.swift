@@ -43,7 +43,7 @@ struct ExpenseSummaryReportView: View {
                         )
 
                         ReportHeaderCard(
-                            title: "No Pagado",
+                            title: "No pagado",
                             value: formatCurrency(summary.unpaidExpenses),
                             color: .orange
                         )

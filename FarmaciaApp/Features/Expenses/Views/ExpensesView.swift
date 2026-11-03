@@ -15,7 +15,7 @@ struct ExpensesView: View {
     enum PaidFilter: String, CaseIterable {
         case all = "Todos"
         case paid = "Pagado"
-        case unpaid = "No Pagado"
+        case unpaid = "No pagado"
     }
     
     var body: some View {
@@ -79,7 +79,7 @@ struct ExpensesView: View {
     // MARK: - Filter Bar
     
     private var filterBar: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: DS.Spacing.s) {
             // Paid Status Filter — uses Picker to avoid SwiftUI Menu+ForEach first-item bug
             Menu {
                 Picker("Estado de Pago", selection: $filterPaidStatus) {
@@ -136,12 +136,13 @@ struct ExpensesView: View {
                 } label: {
                     Text("Limpiar")
                         .font(.caption)
-                        .foregroundStyle(.red)
+                        .frame(minHeight: DS.minTapSize)
+                        .contentShape(.rect)
                 }
             }
         }
+        // No vertical padding: the chips' 44pt tap rows already space the bar.
         .padding(.horizontal)
-        .padding(.vertical, 8)
     }
     
     // MARK: - Filtered Expenses
@@ -170,11 +171,13 @@ struct ExpensesView: View {
     private var expenseList: some View {
         List {
             ForEach(filteredExpenses) { expense in
-                ExpenseRow(expense: expense)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        selectedExpense = expense
-                    }
+                Button {
+                    selectedExpense = expense
+                } label: {
+                    ExpenseRow(expense: expense)
+                        .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
             }
             .onDelete { indexSet in
                 deleteExpenses(at: indexSet)
@@ -186,19 +189,11 @@ struct ExpensesView: View {
     // MARK: - Empty State
     
     private var emptyStateView: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "creditcard")
-                .font(.system(size: 60))
-                .foregroundStyle(.secondary)
-            
-            Text("No Hay Gastos")
-                .font(.headline)
-            
-            Text("Toca + para agregar tu primer gasto")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        ContentUnavailableView(
+            "Sin gastos",
+            systemImage: "creditcard",
+            description: Text("Toca + para agregar tu primer gasto.")
+        )
     }
     
     // MARK: - Actions
@@ -238,7 +233,7 @@ struct FilterChip: View {
     let isActive: Bool
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: DS.Spacing.xs) {
             Text(title)
                 .font(.subheadline)
                 .lineLimit(1)
@@ -246,11 +241,12 @@ struct FilterChip: View {
             Image(systemName: "chevron.down")
                 .font(.caption)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(isActive ? Color.blue.opacity(0.15) : Color(.systemGray6))
-        .foregroundStyle(isActive ? Color.blue : Color.primary)
-        .clipShape(.rect(cornerRadius: 16))
+        .padding(.horizontal, DS.Spacing.m)
+        .padding(.vertical, DS.Spacing.s)
+        .background(isActive ? Tone.info.color.opacity(0.15) : Color(.systemGray6), in: .capsule)
+        .foregroundStyle(isActive ? Tone.info.color : Color.primary)
+        .frame(minHeight: DS.minTapSize)
+        .contentShape(.rect)
     }
 }
 
@@ -260,20 +256,20 @@ struct ExpenseSummaryCard: View {
     let summary: ExpenseSummary
     
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: DS.Spacing.m) {
             HStack {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: DS.Spacing.xs) {
                     Text("Total de Gastos")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                    Text(formatCurrency(summary.totalDouble))
+                    Text(ReportFormat.currency(summary.totalDouble))
                         .font(.title2)
                         .fontWeight(.bold)
                 }
                 
                 Spacer()
                 
-                VStack(alignment: .trailing, spacing: 4) {
+                VStack(alignment: .trailing, spacing: DS.Spacing.xs) {
                     Text("\(summary.expenseCount) gastos")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -283,38 +279,31 @@ struct ExpenseSummaryCard: View {
             Divider()
             
             HStack {
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
                     Text("Pagado")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Text(formatCurrency(summary.paidDouble))
+                    Text(ReportFormat.currency(summary.paidDouble))
                         .font(.subheadline)
-                        .foregroundStyle(.green)
+                        .foregroundStyle(Tone.positive.color)
                 }
                 
                 Spacer()
                 
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("No Pagado")
+                VStack(alignment: .trailing, spacing: DS.Spacing.xxs) {
+                    Text("No pagado")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Text(formatCurrency(summary.unpaidDouble))
+                    Text(ReportFormat.currency(summary.unpaidDouble))
                         .font(.subheadline)
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(Tone.caution.color)
                 }
             }
         }
         .padding()
         .background(Color(.systemBackground))
-        .clipShape(.rect(cornerRadius: 12))
+        .clipShape(.rect(cornerRadius: DS.Radius.l))
         .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
-    }
-    
-    private func formatCurrency(_ value: Double) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "MXN"
-        return formatter.string(from: NSNumber(value: value)) ?? "$\(value)"
     }
 }
 
@@ -324,31 +313,25 @@ struct ExpenseRow: View {
     let expense: Expense
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: DS.Spacing.m) {
             // Type Icon
             ZStack {
                 Circle()
-                    .fill(typeColor.opacity(0.15))
-                    .frame(width: 44, height: 44)
+                    .fill(expense.type.color.opacity(0.15))
+                    .frame(width: DS.minTapSize, height: DS.minTapSize)
                 
                 Image(systemName: expense.type.icon)
-                    .foregroundStyle(typeColor)
+                    .foregroundStyle(expense.type.color)
             }
             
             // Details
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: DS.Spacing.xs) {
                 HStack {
                     Text(expense.type.displayName)
                         .font(.headline)
                     
                     if !expense.isPaid {
-                        Text("No Pagado")
-                            .font(.caption2)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color.orange.opacity(0.15))
-                            .foregroundStyle(.orange)
-                            .clipShape(.rect(cornerRadius: 4))
+                        ToneBadge(expense.paymentLabel, tone: expense.paymentTone)
                     }
                 }
                 
@@ -371,25 +354,9 @@ struct ExpenseRow: View {
                 .font(.headline)
                 .foregroundStyle(.primary)
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, DS.Spacing.xs)
     }
     
-    private var typeColor: Color {
-        switch expense.type.color {
-        case "blue": return .blue
-        case "yellow": return .yellow
-        case "green": return .green
-        case "purple": return .purple
-        case "orange": return .orange
-        case "pink": return .pink
-        case "gray": return .gray
-        case "red": return .red
-        case "indigo": return .indigo
-        case "cyan": return .cyan
-        case "mint": return .mint
-        default: return .secondary
-        }
-    }
 }
 
 // MARK: - Expenses ViewModel

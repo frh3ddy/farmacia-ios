@@ -139,6 +139,10 @@ Opened from a product (Productos → product → Recibir Inventario / Ajustar In
 - Profit & Loss statement
 - Merma in the P&L (dashboard card and statement) is losses; stock that came back (Encontrado, a count corrected up) shows apart as "Mercancía recuperada" and lowers the expense total
 
+### Design system
+- Status colors come from meaning (`Tone`: positive/caution/critical/info/neutral) across Productos, Lotes, Gastos,
+  Empleados and Nómina; empty and error screens use the standard iOS layout with a retry where loading can fail
+
 ### Employee Management (Owner only)
 - Add/edit employees
 - Assign locations

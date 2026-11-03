@@ -46,18 +46,14 @@ struct PayrollView: View {
     // MARK: - States
 
     private var emptyTeamState: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "person.3")
-                .font(.system(size: 48))
-                .foregroundStyle(.secondary)
-            Text("No hay empleados cargados")
-                .foregroundStyle(.secondary)
+        ContentUnavailableView {
+            Label("Sin empleados cargados", systemImage: "person.3")
+        } actions: {
             Button("Cargar desde Square") {
                 Task { await viewModel.loadTeamMembers() }
             }
             .buttonStyle(.borderedProminent)
         }
-        .padding()
     }
     
     @ViewBuilder
@@ -97,7 +93,7 @@ struct PayrollView: View {
                 }
             }
         } label: {
-            HStack(spacing: 4) {
+            HStack(spacing: DS.Spacing.xs) {
                 Text(selectedMember.displayName)
                 Image(systemName: "chevron.up.chevron.down")
                     .font(.caption2)
@@ -161,7 +157,7 @@ struct PayrollView: View {
                 Button {
                     showPeriodPicker = true
                 } label: {
-                    HStack(spacing: 4) {
+                    HStack(spacing: DS.Spacing.xs) {
                         periodLabel
                             .font(.subheadline)
                             .fontWeight(.bold)
@@ -256,7 +252,6 @@ struct PayrollView: View {
                     Spacer()
                     Text(summary.formattedTotalCost)
                         .bold()
-                        .foregroundStyle(.green)
                 }
             }
         }
@@ -299,7 +294,7 @@ private struct ShiftRow: View {
             showEditor = true
         } label: {
             HStack {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: DS.Spacing.xs) {
                     HStack(spacing: 6) {
                         HStack(spacing: 5) {
                             Text(PayrollDateFormatting.shiftWeekday(from: shift.date))
@@ -310,14 +305,7 @@ private struct ShiftRow: View {
                         }
                         .font(.subheadline)
                         if shift.isOpen {
-                            Text("EN CURSO")
-                                .font(.caption2)
-                                .bold()
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.green.opacity(0.15))
-                                .foregroundStyle(.green)
-                                .clipShape(Capsule())
+                            ToneBadge("En curso", tone: .positive)
                         }
                     }
                     Text(timeRangeText)
@@ -325,7 +313,7 @@ private struct ShiftRow: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
-                VStack(alignment: .trailing, spacing: 4) {
+                VStack(alignment: .trailing, spacing: DS.Spacing.xs) {
                     Text(shift.formattedDuration)
                         .font(.subheadline)
                         .bold()
@@ -357,7 +345,7 @@ private struct ShiftRow: View {
 private struct ShiftRowPlaceholder: View {
     var body: some View {
         HStack {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: DS.Spacing.xs) {
                 Text("Lunes 00/00")
                     .font(.subheadline)
                     .bold()
@@ -366,7 +354,7 @@ private struct ShiftRowPlaceholder: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            VStack(alignment: .trailing, spacing: 4) {
+            VStack(alignment: .trailing, spacing: DS.Spacing.xs) {
                 Text("0:00")
                     .font(.subheadline)
                     .bold()
