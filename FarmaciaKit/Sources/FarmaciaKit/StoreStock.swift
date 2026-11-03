@@ -30,6 +30,11 @@ public struct StoreStock: Decodable, Equatable, Identifiable, Sendable {
         hereQuantity <= 0 && quantity > 0
     }
 
+    /// This store's fresh quantity — where receiving's "antes → después" starts.
+    public static func here(_ stores: [StoreStock], currentLocationId: String?) -> Int? {
+        stores.first { $0.locationId == currentLocationId }?.quantity
+    }
+
     /// Receiving, next to the quantity: "Aquí 7 · Centro 0 · Sur 0".
     public static func summary(_ stores: [StoreStock], currentLocationId: String?) -> String? {
         guard !stores.isEmpty else { return nil }

@@ -47,4 +47,15 @@ struct StoreStockTests {
     func noSummary() {
         #expect(StoreStock.summary([], currentLocationId: "c") == nil)
     }
+
+    @Test("given the list, receiving's stock preview should start from this store's fresh quantity")
+    func hereQuantity() {
+        #expect(StoreStock.here([centro, norte, sur], currentLocationId: "n") == 7)
+    }
+
+    @Test("given this store missing from the list (failed fetch, not tracked), should be nil")
+    func hereMissing() {
+        #expect(StoreStock.here([], currentLocationId: "n") == nil)
+        #expect(StoreStock.here([centro], currentLocationId: nil) == nil)
+    }
 }

@@ -57,8 +57,9 @@ is in `tasks/design-system-epic.md` / `tasks/form-ux-polish-epic.md`.
    `Expiry.isExpired` / `expiresWithin` deleted (tests moved to `daysUntil` + `tone`; CLAUDE.md rule updated).
    Before-stock: Ajuste now loads live stock for every type when online (falls back to the last loaded stock offline);
    the product summary row above still shows the loaded stock.
-   **Open:** Recibir's "antes" still uses the last loaded stock — after `feature/other-stores-stock` merges, start it
-   from that branch's `StoreStock` fetch for this store (no extra request).
+   ✅ Recibir's "antes" starts from the other-stores `StoreStock` fetch for this store (`StoreStock.here`, TDD,
+   2 tests; no extra request), falling back to the loaded stock until it arrives or if it fails.
+   `feature/other-stores-stock` (committed part, `e13297a`) is merged into this branch for it.
 
 ## Status (2026-11-03)
 
@@ -71,8 +72,8 @@ is in `tasks/design-system-epic.md` / `tasks/form-ux-polish-epic.md`.
   when a removal is more than the last known stock (warns only; the API checks its own stock). Recibir: "Por cajas"
   toggle and the same footer ("Centro · 7 → 43 (+36)"). Nuevo Producto: price / quantity-without-cost /
   cost-without-quantity hints in their section footers.
-- Merge note: `feature/other-stores-stock` (unmerged) adds a footnote under Recibir's Cantidad too — expect a conflict
-  in that section's footer; keep both lines.
+- `feature/other-stores-stock` is merged in (no conflict). Its uncommitted polish in the main checkout
+  (`StoreStock.isExpected`, detail-card placeholders) isn't.
 - Smoke: Daño −3 and a removal past stock; Conteo down and up; Recibir 3 × 12 → 36 and back to Cantidad;
   Nuevo Producto cost without quantity; a product with an expired and a soon-to-expire lot.
 

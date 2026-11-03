@@ -148,8 +148,11 @@ struct ReceiveInventoryFormView: View {
                         }
                     }
                 } footer: {
-                    // What Guardar does to this store's stock.
-                    if let impact = StockImpact(before: product.totalInventory, change: quantity) {
+                    // What Guardar does to this store's stock: from the fresh fetch
+                    // when it's in, else the stock loaded with the product.
+                    let before = StoreStock.here(storeStock, currentLocationId: authManager.currentLocation?.id)
+                        ?? product.totalInventory
+                    if let impact = StockImpact(before: before, change: quantity) {
                         StatusLabel(
                             [authManager.currentLocation?.name, impact.summary]
                                 .compactMap { $0 }.joined(separator: " · "),
