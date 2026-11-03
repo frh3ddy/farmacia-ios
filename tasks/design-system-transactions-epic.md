@@ -55,7 +55,10 @@ is in `tasks/design-system-epic.md` / `tasks/form-ux-polish-epic.md`.
    Fixed (2026-11-03): turning "Por cajas" on no longer erases a typed Cantidad (it changes once the boxes add up);
    Cajas / Piezas por caja count as unsaved work (`ReceivingDraft.boxes`/`perBox`, TDD, 2 tests); unused
    `Expiry.isExpired` / `expiresWithin` deleted (tests moved to `daysUntil` + `tone`; CLAUDE.md rule updated).
-   Accepted: Ajuste/Recibir compare with the last loaded stock (warns only; Conteo uses live stock).
+   Before-stock: Ajuste now loads live stock for every type when online (falls back to the last loaded stock offline);
+   the product summary row above still shows the loaded stock.
+   **Open:** Recibir's "antes" still uses the last loaded stock — after `feature/other-stores-stock` merges, start it
+   from that branch's `StoreStock` fetch for this store (no extra request).
 
 ## Status (2026-11-03)
 

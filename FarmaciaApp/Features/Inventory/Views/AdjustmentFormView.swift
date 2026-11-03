@@ -36,8 +36,8 @@ struct AdjustmentFormView: View {
     }
     /// One per adjustment being entered: a retry (or the offline queue's replay) reuses it.
     @State private var clientRequestId = UUID().uuidString
-    /// Count types compare against stock loaded for the current location when the form opens,
-    /// never the product snapshot the form was handed.
+    /// Stock loaded for the current location when the form opens (online): counts compare
+    /// against it, never the product snapshot the form was handed; other types preview from it.
     @State private var liveStock: Int?
     @State private var liveStockFailed = false
     private let network = NetworkMonitor.shared
@@ -56,16 +56,16 @@ struct AdjustmentFormView: View {
     }
 
     /// What saving does to this store's stock, shown before Guardar
-    /// ("Centro · 42 → 39 (−3)"). Counts use the live stock; other types the
-    /// product's last known stock, so a removal past it only warns — the API
-    /// checks against its own stock.
+    /// ("Centro · 42 → 39 (−3)"). Counts use the live stock; other types too
+    /// when it has loaded, else the product's last known stock — so a removal
+    /// past it only warns. The API checks against its own stock.
     private var stockImpact: StockImpact? {
         if adjustmentType.isVariable {
             return StockImpact(before: liveStock, change: countChange)
         }
         guard let quantity else { return nil }
         let change = adjustmentType.isNegative ? -abs(quantity) : abs(quantity)
-        return StockImpact(before: product.totalInventory, change: change)
+        return StockImpact(before: liveStock ?? product.totalInventory, change: change)
     }
 
     private var isValid: Bool {
@@ -202,7 +202,7 @@ struct AdjustmentFormView: View {
     private func loadLiveStock() async {
         liveStock = nil
         liveStockFailed = false
-        guard adjustmentType.isVariable, network.isConnected,
+        guard network.isConnected,
               let locationId = authManager.currentLocation?.id else { return }
 
         do {
