@@ -12,4 +12,13 @@ public enum StockChange: Equatable, Sendable {
     public init(quantity: Int) {
         self = quantity > 0 ? .added : quantity < 0 ? .removed : .none
     }
+
+    /// Added → positive, removed → critical, no change → caution.
+    public var tone: Tone {
+        switch self {
+        case .added: .positive
+        case .removed: .critical
+        case .none: .caution
+        }
+    }
 }

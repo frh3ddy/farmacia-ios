@@ -1,4 +1,6 @@
 import Foundation
+import FarmaciaKit
+import SwiftUI
 
 // MARK: - Expense Type
 
@@ -50,20 +52,21 @@ enum ExpenseType: String, Codable, CaseIterable {
         }
     }
     
-    var color: String {
+    /// Category identity color (not a status).
+    var color: Color {
         switch self {
-        case .rent: return "blue"
-        case .utilities: return "yellow"
-        case .payroll: return "green"
-        case .insurance: return "purple"
-        case .supplies: return "orange"
-        case .marketing: return "pink"
-        case .maintenance: return "gray"
-        case .taxes: return "red"
-        case .bankFees: return "indigo"
-        case .software: return "cyan"
-        case .professional: return "mint"
-        case .other: return "secondary"
+        case .rent: .blue
+        case .utilities: .yellow
+        case .payroll: .green
+        case .insurance: .purple
+        case .supplies: .orange
+        case .marketing: .pink
+        case .maintenance: .gray
+        case .taxes: .red
+        case .bankFees: .indigo
+        case .software: .cyan
+        case .professional: .mint
+        case .other: .secondary
         }
     }
 }
@@ -191,4 +194,12 @@ struct MonthlyExpenseSummary: Decodable {
 
 struct ExpenseTypesResponse: Decodable {
     let types: [String]
+}
+
+// MARK: - Payment status
+
+extension Expense {
+    var paymentLabel: String { isPaid ? "Pagado" : "No pagado" }
+    var paymentTone: Tone { isPaid ? .positive : .caution }
+    var paymentIcon: String { isPaid ? "checkmark.circle.fill" : "clock" }
 }

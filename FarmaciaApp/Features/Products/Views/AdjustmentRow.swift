@@ -8,7 +8,7 @@ struct AdjustmentRow: View {
     var onRetrySync: (() async -> Void)? = nil
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: DS.Spacing.s) {
             HStack {
                 Image(systemName: adjustment.type.icon)
                     .foregroundStyle(typeColor)
@@ -24,13 +24,7 @@ struct AdjustmentRow: View {
             }
 
             HStack {
-                Text(adjustment.type.displayName)
-                    .font(.caption)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(typeColor.opacity(0.15))
-                    .foregroundStyle(typeColor)
-                    .clipShape(.rect(cornerRadius: 4))
+                ToneBadge(adjustment.type.displayName, color: typeColor)
 
                 if let reason = adjustment.reason {
                     Text(reason)
@@ -52,21 +46,10 @@ struct AdjustmentRow: View {
                 onRetry: onRetrySync
             )
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, DS.Spacing.xs)
     }
 
     private var typeColor: Color {
-        StockChange(quantity: adjustment.quantity).color
-    }
-}
-
-extension StockChange {
-    /// Green for stock added, red for removed, orange for no change.
-    var color: Color {
-        switch self {
-        case .added: .green
-        case .removed: .red
-        case .none: .orange
-        }
+        StockChange(quantity: adjustment.quantity).tone.color
     }
 }

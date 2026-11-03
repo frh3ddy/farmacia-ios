@@ -109,7 +109,7 @@ struct ProductActivityFullView: View {
                 date: a.adjustedAt,
                 quantity: a.quantity,
                 icon: a.type.icon,
-                iconColor: StockChange(quantity: a.quantity).color
+                iconColor: StockChange(quantity: a.quantity).tone.color
             ))
         }
         

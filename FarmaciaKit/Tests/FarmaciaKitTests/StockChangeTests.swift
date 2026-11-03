@@ -11,4 +11,10 @@ struct StockChangeTests {
     func positiveAndZero(quantity: Int, expected: StockChange) {
         #expect(StockChange(quantity: quantity) == expected)
     }
+
+    @Test("given +3 / −2 / 0, tone should be positive / critical / caution",
+          arguments: [(3, Tone.positive), (-2, .critical), (0, .caution)])
+    func tone(quantity: Int, expected: Tone) {
+        #expect(StockChange(quantity: quantity).tone == expected)
+    }
 }

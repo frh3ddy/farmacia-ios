@@ -1,4 +1,5 @@
 import SwiftUI
+import FarmaciaKit
 
 // MARK: - Expense Form View
 
@@ -38,6 +39,10 @@ struct ExpenseFormView: View {
     private var isValid: Bool {
         (amount ?? 0) > 0
     }
+
+    private enum Field: Hashable { case amount, description, vendor, reference }
+    @FocusState private var focusedField: Field?
+    private let focusOrder = FocusOrder<Field>([.amount, .description, .vendor, .reference])
     
     var body: some View {
         NavigationStack {
@@ -59,25 +64,27 @@ struct ExpenseFormView: View {
                 }
                 
                 // Amount & Date
-                Section("Monto y Fecha") {
-                    HStack {
-                        Text("Monto")
-                        Spacer()
-                        Text("$")
-                        TextField("0.00", value: $amount, format: .number)
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.trailing)
-                            .frame(width: 100)
-                    }
+                Section {
+                    AmountField("Monto", prefix: "$", value: $amount, focus: $focusedField, field: .amount)
                     
                     DatePicker("Fecha", selection: $date, displayedComponents: .date)
+                } header: {
+                    Text("Monto y Fecha")
+                } footer: {
+                    // Why Guardar is off: same rule as Nuevo Producto's price.
+                    if let amount, amount <= 0 {
+                        StatusLabel("El monto debe ser mayor a $0.", tone: .caution)
+                    }
                 }
                 
                 // Description & Vendor
                 Section("Detalles") {
                     TextField("Descripción", text: $description)
+                        .formField(Field.description, focus: $focusedField)
                     TextField("Proveedor/Beneficiario", text: $vendor)
+                        .formField(Field.vendor, focus: $focusedField)
                     TextField("Referencia/Factura #", text: $reference)
+                        .formField(Field.reference, focus: $focusedField)
                 }
                 
                 // Payment Status
@@ -98,7 +105,7 @@ struct ExpenseFormView: View {
                 // Quick Amount Buttons
                 Section("Montos Rápidos") {
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
+                        HStack(spacing: DS.Spacing.s) {
                             ForEach([50, 100, 250, 500, 1000, 2500], id: \.self) { value in
                                 Button("$\(value)") {
                                     amount = Double(value)
@@ -109,6 +116,7 @@ struct ExpenseFormView: View {
                     }
                 }
             }
+            .formKeyboard(focus: $focusedField, order: focusOrder)
             .navigationTitle(isEditing ? "Editar Gasto" : "Agregar Gasto")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -195,7 +203,7 @@ struct ExpenseFormView: View {
                     .disabled(payrollViewModel.isLoadingSummary)
                     
                     if payrollAutofilled, let summary = payrollViewModel.summary {
-                        VStack(alignment: .leading, spacing: 4) {
+                        VStack(alignment: .leading, spacing: DS.Spacing.xs) {
                             Label("\(summary.workedDays) días trabajados", systemImage: "calendar")
                             Label("\(summary.formattedTotalTime) horas", systemImage: "clock")
                             Label("$\(String(format: "%.2f", summary.hourlyRate))/hora", systemImage: "dollarsign.circle")
