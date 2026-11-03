@@ -49,6 +49,27 @@ public enum BarcodeLookup {
         case create
     }
 
+    /// GTIN lengths (EAN-8, UPC-A, EAN-13, GTIN-14); leading zeros pad between them.
+    private static let gtinLengths = [8, 12, 13, 14]
+
+    /// Every SKU a scanned code may be saved under, the scanned one first: a GTIN's
+    /// zero-padded forms (the iPhone can read an EAN-13 as 14 digits, and products
+    /// were saved with either). Anything else is only itself.
+    public static func codeVariants(_ code: String) -> [String] {
+        guard gtinLengths.contains(code.count), code.allSatisfy(\.isASCIIDigit) else { return [code] }
+        let core = code.drop(while: { $0 == "0" })
+        let padded = gtinLengths
+            .filter { $0 >= core.count }
+            .map { String(repeating: "0", count: $0 - core.count) + core }
+        return [code] + padded.filter { $0 != code }
+    }
+
+    /// The SKU a new product gets from a scan: the 14-digit form of an EAN-13 loses
+    /// its leading zero, so it matches the box and Square's register scanner.
+    public static func newProductSku(_ code: String) -> String {
+        code.count == 14 && code.hasPrefix("0") && code.allSatisfy(\.isASCIIDigit) ? String(code.dropFirst()) : code
+    }
+
     public static func serverDecision(exactMatch: Bool?, resultCount: Int) -> ServerDecision {
         if exactMatch == true, resultCount > 0 { return .open }
         switch resultCount {
@@ -57,4 +78,8 @@ public enum BarcodeLookup {
         default: return .choose
         }
     }
+}
+
+private extension Character {
+    var isASCIIDigit: Bool { isASCII && isNumber }
 }

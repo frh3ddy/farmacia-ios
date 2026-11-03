@@ -67,3 +67,43 @@ struct BarcodeServerDecisionTests {
         #expect(BarcodeLookup.serverDecision(exactMatch: nil, resultCount: 0) == .create)
     }
 }
+
+/// The iPhone can read an EAN-13 as its 14-digit GTIN (3664798067460 → 03664798067460),
+/// and some products were saved with that form as their SKU. A scan tries every
+/// zero-padded GTIN form of the code, the scanned one first.
+struct BarcodeVariantsTests {
+    @Test("given the 14-digit form of an EAN-13, should also try the 13 digits printed on the box")
+    func fourteenToThirteen() {
+        #expect(BarcodeLookup.codeVariants("03664798067460") == ["03664798067460", "3664798067460"])
+    }
+
+    @Test("given an EAN-13, should also try its 14-digit form (a product saved from an earlier scan)")
+    func thirteenToFourteen() {
+        #expect(BarcodeLookup.codeVariants("3664798067460") == ["3664798067460", "03664798067460"])
+    }
+
+    @Test("given a UPC-A, should try its 12-, 13- and 14-digit forms")
+    func upcA() {
+        #expect(BarcodeLookup.codeVariants("012345678905") == ["012345678905", "0012345678905", "00012345678905"])
+    }
+
+    @Test("given a case-pack GTIN-14 (no leading zero), should try only itself")
+    func realGtin14() {
+        #expect(BarcodeLookup.codeVariants("13664798067467") == ["13664798067467"])
+    }
+
+    @Test("given a code that isn't a GTIN, should try only itself", arguments: ["ABC-123", "12345", "036647980674601"])
+    func notGtin(code: String) {
+        #expect(BarcodeLookup.codeVariants(code) == [code])
+    }
+
+    @Test("given the 14-digit form, a new product's SKU should be the 13 digits printed on the box")
+    func prefillDropsZero() {
+        #expect(BarcodeLookup.newProductSku("03664798067460") == "3664798067460")
+    }
+
+    @Test("given any other code, a new product's SKU should be the code as scanned", arguments: ["3664798067460", "13664798067467", "ABC-123"])
+    func prefillUnchanged(code: String) {
+        #expect(BarcodeLookup.newProductSku(code) == code)
+    }
+}
