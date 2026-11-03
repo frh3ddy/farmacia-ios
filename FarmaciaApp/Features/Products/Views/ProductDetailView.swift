@@ -66,7 +66,7 @@ struct ProductDetailView: View {
     
     var body: some View {
         ScrollView {
-            VStack(spacing: 20) {
+            VStack(spacing: DS.Spacing.xl) {
                 // Product Header (with stats row + action buttons)
                 productHeader
 
@@ -204,7 +204,7 @@ struct ProductDetailView: View {
     // MARK: - Product Header
     
     private var productHeader: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: DS.Spacing.m) {
             // Product Image or Placeholder
             ZStack(alignment: .bottomTrailing) {
                 // Image area — tapping opens the full-screen viewer (cached +
@@ -265,7 +265,7 @@ struct ProductDetailView: View {
                     ProgressView()
                         .frame(width: 100, height: 100)
                         .background(Color.black.opacity(0.3))
-                        .clipShape(.rect(cornerRadius: 16))
+                        .clipShape(.rect(cornerRadius: DS.Radius.xl))
                 }
             }
             .productPhotoFlow($photoFlow, onCropped: photoCropped) {
@@ -307,7 +307,7 @@ struct ProductDetailView: View {
             // Stats row: STOCK | PRICE | LATEST COST
             HStack(spacing: 0) {
                 // Stock
-                VStack(spacing: 4) {
+                VStack(spacing: DS.Spacing.xs) {
                     Text("EXISTENCIA")
                         .font(.caption2)
                         .fontWeight(.medium)
@@ -322,7 +322,7 @@ struct ProductDetailView: View {
                     .frame(height: 36)
                 
                 // Price
-                VStack(spacing: 4) {
+                VStack(spacing: DS.Spacing.xs) {
                     Text("PRECIO")
                         .font(.caption2)
                         .fontWeight(.medium)
@@ -345,7 +345,7 @@ struct ProductDetailView: View {
                         .frame(height: 36)
                 
                     // Latest Cost (from preferred supplier or most recent cost)
-                    VStack(spacing: 4) {
+                    VStack(spacing: DS.Spacing.xs) {
                         Text("COSTO")
                             .font(.caption2)
                             .fontWeight(.medium)
@@ -375,7 +375,7 @@ struct ProductDetailView: View {
                     .frame(maxWidth: .infinity)
                 }
             }
-            .padding(.vertical, 8)
+            .padding(.vertical, DS.Spacing.s)
             .background(Color(.systemGray5))
             .clipShape(.rect(cornerRadius: 10))
             
@@ -386,7 +386,7 @@ struct ProductDetailView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                HStack(spacing: 12) {
+                HStack(spacing: DS.Spacing.m) {
                     if canAddStock {
                         Button {
                             sheet = .receive
@@ -436,9 +436,7 @@ struct ProductDetailView: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .padding()
-        .background(Color(.systemGray6))
-        .clipShape(.rect(cornerRadius: 16))
+        .card()
     }
     
     /// Latest cost from the preferred supplier, or first supplier if none preferred
@@ -450,12 +448,12 @@ struct ProductDetailView: View {
     
     private var productPlaceholder: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.systemGray5))
+            RoundedRectangle(cornerRadius: DS.Radius.xl)
+                .fill(.fill.tertiary)
                 .frame(width: 100, height: 100)
             
             Image(systemName: "shippingbox.fill")
-                .font(.system(size: 40))
+                .font(.largeTitle)
                 .foregroundStyle(.secondary)
         }
     }
@@ -485,7 +483,7 @@ struct ProductDetailView: View {
                     LabeledContent(store.locationName) {
                         Text("\(store.quantity) uds")
                             .fontWeight(standsOut ? .bold : .regular)
-                            .foregroundStyle(standsOut ? .green : (store.quantity > 0 ? .primary : .secondary))
+                            .foregroundStyle(standsOut ? Tone.positive.color : (store.quantity > 0 ? .primary : .secondary))
                     }
                 }
             }
@@ -501,15 +499,13 @@ struct ProductDetailView: View {
 
             rows()
         }
-        .padding()
-        .background(Color(.systemGray6))
-        .clipShape(.rect(cornerRadius: DS.Radius.xl))
+        .card()
     }
 
     // MARK: - Price Card
     
     private var priceCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: DS.Spacing.l) {
             HStack {
                 Image(systemName: "dollarsign.circle.fill")
                     .foregroundStyle(.green)
@@ -529,7 +525,7 @@ struct ProductDetailView: View {
             Divider()
             
             HStack {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: DS.Spacing.xs) {
                     Text("Precio de Venta")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -548,7 +544,7 @@ struct ProductDetailView: View {
                 
                 Spacer()
                 
-                VStack(alignment: .trailing, spacing: 4) {
+                VStack(alignment: .trailing, spacing: DS.Spacing.xs) {
                     Text("Costo Prom.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -577,14 +573,12 @@ struct ProductDetailView: View {
                     
                     Text(String(format: "%.1f%%", margin))
                         .font(.headline)
-                        .foregroundStyle(margin >= 20 ? .green : (margin >= 10 ? .orange : .red))
+                        .foregroundStyle(Margin.tone(forPercent: margin).color)
                 }
-                .padding(.top, 8)
+                .padding(.top, DS.Spacing.s)
             }
         }
-        .padding()
-        .background(Color(.systemGray6))
-        .clipShape(.rect(cornerRadius: 16))
+        .card()
     }
     
     
@@ -595,7 +589,7 @@ struct ProductDetailView: View {
     // MARK: - Recent Activity Section (Product-Scoped)
     
     private var recentActivitySection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: DS.Spacing.l) {
             HStack {
                 Image(systemName: "clock.arrow.circlepath")
                     .foregroundStyle(.indigo)
@@ -613,7 +607,7 @@ struct ProductDetailView: View {
             Divider()
             
             if activityViewModel.combinedActivity.isEmpty && !activityViewModel.isLoading {
-                VStack(spacing: 8) {
+                VStack(spacing: DS.Spacing.s) {
                     Image(systemName: "tray")
                         .font(.title2)
                         .foregroundStyle(.secondary)
@@ -622,7 +616,7 @@ struct ProductDetailView: View {
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
+                .padding(.vertical, DS.Spacing.m)
             } else {
                 // Show combined and chronologically sorted activity
                 ForEach(activityViewModel.combinedActivity.prefix(5)) { item in
@@ -663,9 +657,7 @@ struct ProductDetailView: View {
                 }
             }
         }
-        .padding()
-        .background(Color(.systemGray6))
-        .clipShape(.rect(cornerRadius: 16))
+        .card()
     }
     
     @ViewBuilder
@@ -680,7 +672,7 @@ struct ProductDetailView: View {
                 .clipShape(.rect(cornerRadius: 6))
             
             // Description
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
                 Text(item.title)
                     .font(.subheadline)
                     .fontWeight(.medium)
@@ -698,13 +690,13 @@ struct ProductDetailView: View {
                 .fontWeight(.semibold)
                 .foregroundStyle(item.quantityColor)
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, DS.Spacing.xxs)
     }
     
     // MARK: - Details Card
     
     private var detailsCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: DS.Spacing.l) {
             HStack {
                 Image(systemName: "info.circle.fill")
                     .foregroundStyle(.purple)
@@ -715,7 +707,7 @@ struct ProductDetailView: View {
             Divider()
             
             if let description = displayProduct.squareDescription, !description.isEmpty {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: DS.Spacing.xs) {
                     Text("Descripción")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -733,9 +725,7 @@ struct ProductDetailView: View {
                 detailRow(title: "Creado", value: createdAt.formatted(date: .abbreviated, time: .omitted))
             }
         }
-        .padding()
-        .background(Color(.systemGray6))
-        .clipShape(.rect(cornerRadius: 16))
+        .card()
     }
     
     private func detailRow(title: String, value: String) -> some View {
@@ -752,7 +742,7 @@ struct ProductDetailView: View {
     // MARK: - Square Sync Card
     
     private var squareSyncCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: DS.Spacing.l) {
             HStack {
                 Image(systemName: "arrow.triangle.2.circlepath")
                     .foregroundStyle(.orange)
@@ -765,7 +755,7 @@ struct ProductDetailView: View {
             HStack {
                 if displayProduct.hasSquareSync == true {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
+                        .foregroundStyle(Tone.positive.color)
                     VStack(alignment: .leading) {
                         Text("Sincronizado con Square")
                             .font(.subheadline)
@@ -775,7 +765,7 @@ struct ProductDetailView: View {
                     }
                 } else {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(Tone.caution.color)
                     VStack(alignment: .leading) {
                         Text("Solo Local")
                             .font(.subheadline)
@@ -792,9 +782,7 @@ struct ProductDetailView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .padding()
-        .background(Color(.systemGray6))
-        .clipShape(.rect(cornerRadius: 16))
+        .card()
     }
     
     // MARK: - Actions
@@ -945,7 +933,7 @@ struct ProductDetailView: View {
     // MARK: - FIFO Batch Breakdown Section
     
     private var fifoBatchSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: DS.Spacing.l) {
             HStack {
                 Image(systemName: "square.stack.3d.up.fill")
                     .foregroundStyle(.teal)
@@ -967,7 +955,7 @@ struct ProductDetailView: View {
             Divider()
             
             if batchViewModel.batches.isEmpty && !batchViewModel.isLoading {
-                VStack(spacing: 8) {
+                VStack(spacing: DS.Spacing.s) {
                     Image(systemName: "tray")
                         .font(.title2)
                         .foregroundStyle(.secondary)
@@ -976,7 +964,7 @@ struct ProductDetailView: View {
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
+                .padding(.vertical, DS.Spacing.m)
             } else {
                 // Aging risk summary (from aging service)
                 if let aging = batchViewModel.productAging {
@@ -985,10 +973,10 @@ struct ProductDetailView: View {
                 
                 // Batch summary bar
                 if let agingInfo = batchViewModel.agingSummary {
-                    HStack(spacing: 12) {
-                        agingPill(label: "<30d", count: agingInfo.fresh, color: .green)
-                        agingPill(label: "30-90d", count: agingInfo.moderate, color: .orange)
-                        agingPill(label: ">90d", count: agingInfo.old, color: .red)
+                    HStack(spacing: DS.Spacing.m) {
+                        agingPill(label: "<30d", count: agingInfo.fresh, color: BatchAge.tone(days: 0).color)
+                        agingPill(label: "30-90d", count: agingInfo.moderate, color: BatchAge.tone(days: 30).color)
+                        agingPill(label: ">90d", count: agingInfo.old, color: BatchAge.tone(days: 90).color)
                     }
                 }
                 
@@ -1007,7 +995,7 @@ struct ProductDetailView: View {
                     }
                     .font(.caption)
                     .fontWeight(.medium)
-                    .padding(.horizontal, 4)
+                    .padding(.horizontal, DS.Spacing.xs)
                 }
                 
                 // Individual batches (newest first, show first 3, expand for all)
@@ -1042,17 +1030,15 @@ struct ProductDetailView: View {
                 }
             }
         }
-        .padding()
-        .background(Color(.systemGray6))
-        .clipShape(.rect(cornerRadius: 16))
+        .card()
     }
     
     @ViewBuilder
     private func agingRiskSummaryCard(_ aging: ProductAgingAnalysis) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: DS.Spacing.s) {
             // Risk level + cash tied up
             HStack {
-                HStack(spacing: 4) {
+                HStack(spacing: DS.Spacing.xs) {
                     Image(systemName: aging.riskLevel.icon)
                         .font(.caption)
                     Text("\(aging.riskLevel.displayName) Risk")
@@ -1089,16 +1075,17 @@ struct ProductDetailView: View {
                 .frame(height: 6)
                 
                 // Bucket legend
-                HStack(spacing: 8) {
+                HStack(spacing: DS.Spacing.s) {
                     ForEach(aging.bucketDistribution) { bucket in
                         HStack(spacing: 3) {
                             Circle()
                                 .fill(bucketColor(bucket.bucket.min))
                                 .frame(width: 6, height: 6)
                             Text(bucket.bucket.label)
-                                .font(.system(size: 9))
+                                .font(.caption2)
                             Text("\(bucket.unitCount)")
-                                .font(.system(size: 9, weight: .bold))
+                                .font(.caption2)
+                                .fontWeight(.bold)
                         }
                         .foregroundStyle(.secondary)
                     }
@@ -1109,19 +1096,12 @@ struct ProductDetailView: View {
             // Cash at risk callout (if any >90d inventory)
             let atRiskCash = batchViewModel.cashAtRisk
             if atRiskCash > 0 {
-                HStack(spacing: 6) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.caption2)
-                        .foregroundStyle(.red)
-                    Text(String(format: "$%.2f at risk (>90 days)", atRiskCash))
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                        .fontWeight(.medium)
-                }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color.red.opacity(0.08))
-                .clipShape(.rect(cornerRadius: 6))
+                StatusLabel(String(format: "$%.2f en riesgo (más de 90 días)", atRiskCash), tone: .critical)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .padding(.horizontal, DS.Spacing.s)
+                    .padding(.vertical, DS.Spacing.xs)
+                    .background(Tone.critical.color.opacity(0.08), in: .rect(cornerRadius: DS.Radius.m))
             }
         }
         .padding(10)
@@ -1141,7 +1121,7 @@ struct ProductDetailView: View {
     }
     
     private func agingPill(label: String, count: Int, color: Color) -> some View {
-        HStack(spacing: 4) {
+        HStack(spacing: DS.Spacing.xs) {
             Circle()
                 .fill(color)
                 .frame(width: 8, height: 8)
@@ -1151,10 +1131,10 @@ struct ProductDetailView: View {
                 .font(.caption2)
                 .fontWeight(.bold)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
+        .padding(.horizontal, DS.Spacing.s)
+        .padding(.vertical, DS.Spacing.xs)
         .background(color.opacity(0.1))
-        .clipShape(.rect(cornerRadius: 8))
+        .clipShape(.rect(cornerRadius: DS.Radius.m))
     }
     
     private func batchRow(_ batch: BatchValuation) -> some View {
@@ -1173,8 +1153,8 @@ struct ProductDetailView: View {
                         .frame(width: 10, height: 10)
                 }
                 
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 4) {
+                VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
+                    HStack(spacing: DS.Spacing.xs) {
                         Text("\(batch.quantity) uds")
                             .font(.subheadline)
                             .fontWeight(.medium)
@@ -1184,7 +1164,7 @@ struct ProductDetailView: View {
                     }
                     
                     // Row 2: Age + received date + source
-                    HStack(spacing: 4) {
+                    HStack(spacing: DS.Spacing.xs) {
                         Text("\(batch.age)d old")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
@@ -1222,7 +1202,7 @@ struct ProductDetailView: View {
                         ForEach(pills, id: \.label) { pill in
                             HStack(spacing: 3) {
                                 Image(systemName: pill.icon)
-                                    .font(.system(size: 9))
+                                    .font(.caption2)
                                 Text(pill.label)
                                     .font(.caption2)
                             }
@@ -1236,7 +1216,7 @@ struct ProductDetailView: View {
                 }
             }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, DS.Spacing.xs)
     }
     
     private struct BatchPill: Hashable {
@@ -1270,15 +1250,13 @@ struct ProductDetailView: View {
     }
     
     private func batchAgeColor(_ age: Int) -> Color {
-        if age < 30 { return .green }
-        if age < 90 { return .orange }
-        return .red
+        BatchAge.tone(days: age).color
     }
     
     // MARK: - Cost & Supplier History Section
     
     private var costSupplierHistorySection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: DS.Spacing.l) {
             HStack {
                 Image(systemName: "chart.line.uptrend.xyaxis")
                     .foregroundStyle(.cyan)
@@ -1299,11 +1277,11 @@ struct ProductDetailView: View {
             
             if costSupplierViewModel.isLoading && costSupplierViewModel.suppliers.isEmpty {
                 // Skeleton in the shape of a supplier row.
-                HStack(spacing: 12) {
+                HStack(spacing: DS.Spacing.m) {
                     Circle()
                         .fill(Color(.systemGray5))
                         .frame(width: 36, height: 36)
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
                         Text("Nombre del proveedor")
                             .font(.subheadline)
                             .fontWeight(.medium)
@@ -1311,7 +1289,7 @@ struct ProductDetailView: View {
                             .font(.caption)
                     }
                     Spacer()
-                    VStack(alignment: .trailing, spacing: 2) {
+                    VStack(alignment: .trailing, spacing: DS.Spacing.xxs) {
                         Text("$00.00")
                             .font(.subheadline)
                             .fontWeight(.semibold)
@@ -1323,7 +1301,7 @@ struct ProductDetailView: View {
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel("Cargando datos de proveedor")
             } else if costSupplierViewModel.suppliers.isEmpty && costSupplierViewModel.costHistory.isEmpty {
-                VStack(spacing: 8) {
+                VStack(spacing: DS.Spacing.s) {
                     Image(systemName: "building.2")
                         .font(.title2)
                         .foregroundStyle(.secondary)
@@ -1336,7 +1314,7 @@ struct ProductDetailView: View {
                         .multilineTextAlignment(.center)
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
+                .padding(.vertical, DS.Spacing.m)
             } else {
                 // Current Suppliers section (from SupplierProduct)
                 if !costSupplierViewModel.suppliers.isEmpty {
@@ -1346,7 +1324,7 @@ struct ProductDetailView: View {
                         .textCase(.uppercase)
                     
                     ForEach(costSupplierViewModel.suppliers) { supplier in
-                        HStack(spacing: 12) {
+                        HStack(spacing: DS.Spacing.m) {
                             // Supplier icon
                             ZStack {
                                 Circle()
@@ -1357,8 +1335,8 @@ struct ProductDetailView: View {
                                     .foregroundStyle(supplier.isPreferred ? Color.blue : Color.secondary)
                             }
                             
-                            VStack(alignment: .leading, spacing: 2) {
-                                HStack(spacing: 4) {
+                            VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
+                                HStack(spacing: DS.Spacing.xs) {
                                     Text(supplier.name)
                                         .font(.subheadline)
                                         .fontWeight(.medium)
@@ -1369,7 +1347,7 @@ struct ProductDetailView: View {
                                             .padding(.vertical, 1)
                                             .background(Color.blue.opacity(0.15))
                                             .foregroundStyle(.blue)
-                                            .clipShape(.rect(cornerRadius: 4))
+                                            .clipShape(.rect(cornerRadius: DS.Radius.s))
                                     }
                                 }
                                 if let notes = supplier.notes, !notes.isEmpty {
@@ -1382,7 +1360,7 @@ struct ProductDetailView: View {
                             
                             Spacer()
                             
-                            VStack(alignment: .trailing, spacing: 2) {
+                            VStack(alignment: .trailing, spacing: DS.Spacing.xxs) {
                                 Text(supplier.formattedCost)
                                     .font(.subheadline)
                                     .fontWeight(.semibold)
@@ -1391,7 +1369,7 @@ struct ProductDetailView: View {
                                     .foregroundStyle(.secondary)
                             }
                         }
-                        .padding(.vertical, 4)
+                        .padding(.vertical, DS.Spacing.xs)
                     }
                 }
                 
@@ -1433,13 +1411,13 @@ struct ProductDetailView: View {
                                     
                                     // Cost trend indicator
                                     if let trend = group.costTrend {
-                                        HStack(spacing: 2) {
+                                        HStack(spacing: DS.Spacing.xxs) {
                                             Image(systemName: trend.change >= 0 ? "arrow.up.right" : "arrow.down.right")
                                                 .font(.caption2)
                                             Text(String(format: "%.1f%%", abs(trend.percent)))
                                                 .font(.caption2)
                                         }
-                                        .foregroundStyle(trend.change > 0 ? .red : .green)
+                                        .foregroundStyle((trend.change > 0 ? Tone.critical : Tone.positive).color)
                                     }
                                     
                                     Spacer()
@@ -1458,7 +1436,7 @@ struct ProductDetailView: View {
                             // Expanded cost timeline
                             if expandedSupplierHistory == group.supplierId {
                                 ForEach(group.costHistory.prefix(10)) { entry in
-                                    HStack(spacing: 8) {
+                                    HStack(spacing: DS.Spacing.s) {
                                         // Timeline dot
                                         Circle()
                                             .fill(entry.isCurrent ? Color.blue : Color(.systemGray4))
@@ -1489,18 +1467,18 @@ struct ProductDetailView: View {
                                                 .clipShape(.rect(cornerRadius: 3))
                                         }
                                     }
-                                    .padding(.leading, 16)
+                                    .padding(.leading, DS.Spacing.l)
                                 }
                                 
                                 if group.costHistory.count > 10 {
                                     Text("+ \(group.costHistory.count - 10) more entries")
                                         .font(.caption2)
                                         .foregroundStyle(.secondary)
-                                        .padding(.leading, 16)
+                                        .padding(.leading, DS.Spacing.l)
                                 }
                             }
                         }
-                        .padding(.vertical, 4)
+                        .padding(.vertical, DS.Spacing.xs)
                         
                         if group.supplierId != costSupplierViewModel.costHistory.last?.supplierId {
                             Divider()
@@ -1509,9 +1487,7 @@ struct ProductDetailView: View {
                 }
             }
         }
-        .padding()
-        .background(Color(.systemGray6))
-        .clipShape(.rect(cornerRadius: 16))
+        .card()
     }
 }
 

@@ -16,18 +16,6 @@ extension ProductFilter {
         case .lowMargin: return "percent"
         }
     }
-    
-    var color: Color {
-        switch self {
-        case .all: return .blue
-        case .lowStock: return .orange
-        case .outOfStock: return .red
-        case .inStock: return .green
-        case .atRisk: return .red
-        case .expiringSoon: return .orange
-        case .lowMargin: return .purple
-        }
-    }
 }
 
 enum ProductSortOption: String, CaseIterable {
@@ -277,7 +265,7 @@ struct ProductsView: View {
     // MARK: - Loading View
     
     private var loadingView: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: DS.Spacing.l) {
             ProgressView()
                 .scaleEffect(1.5)
             Text("Cargando productos...")
@@ -288,21 +276,11 @@ struct ProductsView: View {
     // MARK: - Empty State View
     
     private var emptyStateView: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "shippingbox")
-                .font(.system(size: 60))
-                .foregroundStyle(.secondary)
-            
-            Text("Sin Productos")
-                .font(.title2)
-                .fontWeight(.bold)
-            
-            Text("Products synced from Square will appear here.\nYou can also create products manually.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
-            
+        ContentUnavailableView {
+            Label("Sin productos", systemImage: "shippingbox")
+        } description: {
+            Text("Los productos de Square aparecerán aquí. También puedes crearlos a mano.")
+        } actions: {
             if authManager.isOwner || authManager.isManager {
                 Button {
                     sheet = .newProduct
@@ -402,7 +380,7 @@ struct ProductsView: View {
                         HStack {
                             Spacer()
                             ProgressView()
-                                .padding(.vertical, 8)
+                                .padding(.vertical, DS.Spacing.s)
                             Spacer()
                         }
                     }
@@ -475,7 +453,7 @@ struct ProductsView: View {
             Spacer()
         }
         .padding(.horizontal)
-        .padding(.vertical, 8)
+        .padding(.vertical, DS.Spacing.s)
         .background(.bar)
     }
 
@@ -491,7 +469,7 @@ struct ProductsView: View {
                     filterChip(filter)
                 }
             }
-            .padding(.vertical, 2)
+            .padding(.vertical, DS.Spacing.xxs)
         }
     }
 
@@ -504,29 +482,30 @@ struct ProductsView: View {
                 activeFilter = filter
             }
         } label: {
-            HStack(spacing: 3) {
+            HStack(spacing: DS.Spacing.xs) {
                 Image(systemName: filter.icon)
-                    .font(.system(size: 10))
                 Text(filter.rawValue)
-                    .font(.caption2)
                     .fontWeight(.medium)
 
                 if filter != .all {
                     Text(count.map(String.init) ?? "—")
-                        .font(.system(size: 9, weight: .bold))
-                        .padding(.horizontal, 4)
+                        .fontWeight(.bold)
+                        .padding(.horizontal, DS.Spacing.xs)
                         .padding(.vertical, 1)
                         .background(
-                            isActive ? Color.white.opacity(0.3) : filter.color.opacity(0.15)
+                            isActive ? Color.white.opacity(0.3) : filter.tone.color.opacity(0.15),
+                            in: .rect(cornerRadius: DS.Radius.s)
                         )
-                        .clipShape(.rect(cornerRadius: 3))
                 }
             }
+            .font(.caption2)
             .padding(.horizontal, 9)
             .padding(.vertical, 5)
-            .background(isActive ? filter.color : Color(.systemGray6))
+            .background(isActive ? filter.tone.color : Color(.systemGray6), in: .capsule)
             .foregroundStyle(isActive ? Color.white : Color.primary)
-            .clipShape(.rect(cornerRadius: 14))
+            // Looks compact; still a full-size tap target.
+            .frame(minHeight: DS.minTapSize)
+            .contentShape(.rect)
         }
         .buttonStyle(.plain)
     }
@@ -562,13 +541,13 @@ struct ProductsView: View {
         Button {
             Task { await syncLocalProductsToSquare() }
         } label: {
-            HStack(spacing: 8) {
+            HStack(spacing: DS.Spacing.s) {
                 if isSyncingToSquare {
                     ProgressView()
                         .scaleEffect(0.8)
                 } else {
                     Image(systemName: "arrow.triangle.2.circlepath")
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(Tone.caution.color)
                 }
 
                 let localCount = viewModel.counts.local
@@ -581,12 +560,11 @@ struct ProductsView: View {
                 Text("Sincronizar")
                     .font(.caption)
                     .fontWeight(.semibold)
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(Tone.caution.color)
             }
-            .padding(.horizontal, 12)
+            .padding(.horizontal, DS.Spacing.m)
             .padding(.vertical, 10)
-            .background(Color.orange.opacity(0.1))
-            .clipShape(.rect(cornerRadius: 10))
+            .background(Tone.caution.color.opacity(0.1), in: .rect(cornerRadius: DS.Radius.l))
         }
         .buttonStyle(.plain)
         .disabled(isSyncingToSquare)

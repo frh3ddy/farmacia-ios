@@ -1,4 +1,5 @@
 import SwiftUI
+import FarmaciaKit
 
 // MARK: - Product Row (Enhanced with stock badges and margin)
 
@@ -10,20 +11,20 @@ struct ProductRow: View {
     var showsMargin = false
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: DS.Spacing.m) {
             // Product Image or Placeholder (cached + downsampled to display size)
             if product.squareImageUrl != nil {
                 CachedProductImage(url: product.squareImageUrl, targetSize: CGSize(width: 50, height: 50)) {
                     productPlaceholder
                 }
                 .frame(width: 50, height: 50)
-                .clipShape(.rect(cornerRadius: 8))
+                .clipShape(.rect(cornerRadius: DS.Radius.m))
             } else {
                 productPlaceholder
             }
             
             // Product Info
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: DS.Spacing.xs) {
                 Text(product.displayName)
                     .font(.headline)
                     .lineLimit(1)
@@ -38,7 +39,7 @@ struct ProductRow: View {
                     if product.hasSquareSync == true {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.caption2)
-                            .foregroundStyle(.green)
+                            .foregroundStyle(Tone.positive.color)
                     }
                     
                     // Stock badge
@@ -46,13 +47,7 @@ struct ProductRow: View {
                     
                     // Risk badge (from aging service)
                     if let risk = riskLevel, risk == .high || risk == .critical {
-                        Text(risk == .critical ? "CRIT" : "RISK")
-                            .font(.system(size: 9, weight: .bold))
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 1)
-                            .background(risk.color.opacity(0.15))
-                            .foregroundStyle(risk.color)
-                            .clipShape(.rect(cornerRadius: 3))
+                        ToneBadge(risk == .critical ? "Crítico" : "Riesgo", color: risk.color)
                     }
                 }
             }
@@ -60,7 +55,7 @@ struct ProductRow: View {
             Spacer()
             
             // Price, Margin, and Stock
-            VStack(alignment: .trailing, spacing: 4) {
+            VStack(alignment: .trailing, spacing: DS.Spacing.xs) {
                 if let price = product.formattedPrice {
                     Text(price)
                         .font(.subheadline)
@@ -69,59 +64,32 @@ struct ProductRow: View {
                 
                 // Margin indicator
                 if showsMargin, let margin = product.profitMargin {
-                    Text(String(format: "%.0f%%", margin))
-                        .font(.caption2)
-                        .fontWeight(.semibold)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 1)
-                        .background(marginColor(margin).opacity(0.15))
-                        .foregroundStyle(marginColor(margin))
-                        .clipShape(.rect(cornerRadius: 4))
+                    ToneBadge(String(format: "%.0f%%", margin), tone: Margin.tone(forPercent: margin))
                 }
                 
                 if let stock = product.totalInventory {
                     Text("\(stock) uds")
                         .font(.caption)
-                        .foregroundStyle(stock > 0 ? Color.secondary : Color.red)
+                        .foregroundStyle(StockLevel(quantity: stock) == .out ? Tone.critical.color : .secondary)
                 }
             }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, DS.Spacing.xs)
     }
     
+    /// Shown with no stock info too (counts as 0), as before.
+    @ViewBuilder
     private var stockBadge: some View {
-        Group {
-            let stock = product.totalInventory ?? 0
-            if stock == 0 {
-                Text("OUT")
-                    .font(.system(size: 9, weight: .bold))
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 1)
-                    .background(Color.red.opacity(0.15))
-                    .foregroundStyle(.red)
-                    .clipShape(.rect(cornerRadius: 3))
-            } else if stock < 10 {
-                Text("LOW")
-                    .font(.system(size: 9, weight: .bold))
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 1)
-                    .background(Color.orange.opacity(0.15))
-                    .foregroundStyle(.orange)
-                    .clipShape(.rect(cornerRadius: 3))
-            }
+        let level = StockLevel(quantity: product.totalInventory ?? 0)
+        if let label = level.label {
+            ToneBadge(label, tone: level.tone)
         }
-    }
-    
-    private func marginColor(_ margin: Double) -> Color {
-        if margin >= 20 { return .green }
-        if margin >= 10 { return .orange }
-        return .red
     }
     
     private var productPlaceholder: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color(.systemGray5))
+            RoundedRectangle(cornerRadius: DS.Radius.m)
+                .fill(.fill.tertiary)
                 .frame(width: 50, height: 50)
             
             Image(systemName: "shippingbox")

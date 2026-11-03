@@ -30,6 +30,16 @@ public enum ProductFilter: String, CaseIterable, Sendable {
         }
     }
 
+    /// The chip's color by meaning (the app maps tones to colors).
+    public var tone: Tone {
+        switch self {
+        case .all: .info
+        case .outOfStock, .atRisk: .critical
+        case .lowStock, .expiringSoon, .lowMargin: .caution
+        case .inStock: .positive
+        }
+    }
+
     public static func visible(canViewCosts: Bool) -> [ProductFilter] {
         canViewCosts ? allCases : allCases.filter { $0 != .atRisk && $0 != .lowMargin }
     }
