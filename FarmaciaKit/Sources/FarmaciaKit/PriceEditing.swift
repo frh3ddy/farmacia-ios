@@ -16,4 +16,11 @@ public enum PriceEditing {
     public static func canApplyToAllLocations(isOwner: Bool) -> Bool {
         isOwner
     }
+
+    /// Editar Precio's Guardar: a positive price that differs from the current
+    /// one (or a first price for a product without one).
+    public static func canSave(newPrice: Double?, currentPrice: Double?) -> Bool {
+        guard let newPrice, newPrice > 0 else { return false }
+        return newPrice != currentPrice
+    }
 }

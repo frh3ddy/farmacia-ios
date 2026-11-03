@@ -298,6 +298,16 @@ class ProductsViewModel: ObservableObject {
         refreshServerCounts()
     }
 
+    /// A newly created product, reported once on create and again once its
+    /// photo is uploaded: insert it the first time, update it after that.
+    func upsertProduct(_ product: Product) {
+        if products.contains(where: { $0.id == product.id }) {
+            updateProduct(product)
+        } else {
+            insertProduct(product)
+        }
+    }
+
     /// Insert a newly created product at the top of the list.
     /// Write-through: updates both in-memory array AND SwiftData cache.
     func insertProduct(_ product: Product) {

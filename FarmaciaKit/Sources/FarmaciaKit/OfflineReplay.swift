@@ -108,6 +108,12 @@ public enum OfflineReplay {
         return "Se guardan en este dispositivo y se sincronizan al volver la conexión: \(spanishList(kinds)). Los demás cambios necesitan conexión."
     }()
 
+    /// Whether the sync status has anything to say (on iOS 26 it's the tab bar
+    /// accessory, which is hidden otherwise).
+    public static func showsSyncStatus(isOffline: Bool, pendingCount: Int, failedCount: Int, othersWaiting: [String]) -> Bool {
+        isOffline || pendingCount > 0 || failedCount > 0 || !othersWaiting.isEmpty
+    }
+
     /// The banner for other employees' writes waiting on this device ("inicie" for one, "inicien" for several).
     public static func othersWaitingText(_ names: [String]) -> String {
         "Cambios de \(spanishList(names)) se sincronizan cuando \(names.count == 1 ? "inicie" : "inicien") sesión"

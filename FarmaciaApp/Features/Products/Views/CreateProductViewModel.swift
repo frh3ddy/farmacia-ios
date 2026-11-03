@@ -25,6 +25,9 @@ class CreateProductViewModel: ObservableObject {
     @Published var showSuccess = false
     @Published var successMessage = ""
     @Published var suppliers: [Supplier] = []
+    /// The product the server created (not set when the create was queued
+    /// offline): the view reports it so Productos lists it right away.
+    @Published var createdProduct: Product?
 
     private let apiClient = APIClient.shared
 
@@ -121,6 +124,7 @@ class CreateProductViewModel: ObservableObject {
             )
             
             let data = try response.requireData()
+            createdProduct = data.product
             var message = "Producto \"\(name)\" creado."
             if data.squareSynced {
                 message += "\n✓ Sincronizado con Square POS"
@@ -138,6 +142,14 @@ class CreateProductViewModel: ObservableObject {
                         filename: "product_\(data.product.id).jpg"
                     )
                     message += "\n✓ Imagen subida"
+                    // Report the product again with its image URL, so Productos'
+                    // copy gets the thumbnail (it listed the photo-less one).
+                    if let refreshed: ProductDetailResponse = try? await apiClient.request(
+                        endpoint: .getProduct(id: data.product.id),
+                        queryParams: ["locationId": locationId]
+                    ) {
+                        createdProduct = refreshed.data
+                    }
                 } catch {
                     message += "\n⚠ No se pudo subir la imagen (el producto sí se creó)"
                     print("Failed to upload product image: \(error)")
@@ -150,7 +162,20 @@ class CreateProductViewModel: ObservableObject {
             // The queued replay carries this create's clientRequestId, so it
             // can't duplicate itself; creating the product again from a new
             // form would. No product id exists yet, so image upload can't run.
-            successMessage = "Sin conexión. \"\(name)\" se creará automáticamente cuando vuelva la conexión — evita crearlo de nuevo mientras tanto."
+            // Productos reloads when the queue syncs, so the product shows up
+            // by itself then (ProductsView, onChange of pendingCount).
+            var message = "\"\(name)\" se creará cuando vuelva la conexión y aparecerá en la lista en ese momento. Evita crearlo de nuevo mientras tanto."
+            // The photo waits on the device and uploads once the create syncs
+            // (OfflinePhotoStore / OfflineQueueManager).
+            if let image {
+                if let jpeg = image.jpegDataForUpload(),
+                   OfflinePhotoStore.save(jpeg, forRequest: clientRequestId) {
+                    message += " La foto se sube al sincronizar."
+                } else {
+                    message += "\n\nLa foto no se pudo guardar: agrégala desde el producto cuando ya aparezca en la lista."
+                }
+            }
+            successMessage = "Sin conexión. " + message
             showSuccess = true
         } catch let error as NetworkError {
             errorMessage = error.errorDescription ?? "Error al crear producto"

@@ -41,3 +41,29 @@ struct BarcodeLookupTests {
         #expect(BarcodeLookup.cacheDecision(matchCount: 0) == .askServer)
     }
 }
+
+/// After a scan the cache couldn't settle, the server's exact search decides the
+/// next step of the scan flow: open the product, choose among several, or create
+/// one with the scanned code. An error offers to create too.
+struct BarcodeServerDecisionTests {
+    @Test("given an exact match, should open it")
+    func exactMatch() {
+        #expect(BarcodeLookup.serverDecision(exactMatch: true, resultCount: 3) == .open)
+    }
+
+    @Test("given one result that isn't exact, should open it")
+    func singleFuzzy() {
+        #expect(BarcodeLookup.serverDecision(exactMatch: false, resultCount: 1) == .open)
+    }
+
+    @Test("given several results, should list them to choose")
+    func several() {
+        #expect(BarcodeLookup.serverDecision(exactMatch: false, resultCount: 2) == .choose)
+        #expect(BarcodeLookup.serverDecision(exactMatch: nil, resultCount: 4) == .choose)
+    }
+
+    @Test("given no results, should offer to create a product with the code")
+    func none() {
+        #expect(BarcodeLookup.serverDecision(exactMatch: nil, resultCount: 0) == .create)
+    }
+}

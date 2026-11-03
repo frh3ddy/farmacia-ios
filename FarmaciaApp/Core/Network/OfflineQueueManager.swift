@@ -94,7 +94,7 @@ final class OfflineQueueManager {
             predicate: #Predicate { $0.status == pendingStatus },
             sortBy: [SortDescriptor(\.queuedAt)]
         )
-        guard let items = try? context.fetch(descriptor), !items.isEmpty else { return }
+        let items = (try? context.fetch(descriptor)) ?? []
         // Only this employee's writes, under their own session; others wait for them.
         // Checked per item: the employee can change during the awaits of a long flush.
         for item in items {
@@ -104,7 +104,14 @@ final class OfflineQueueManager {
                   // out under this employee's session even if someone logs in meanwhile.
                   let sessionToken = APIClient.shared.sessionToken else { continue }
             do {
-                try await APIClient.shared.replay(method: item.method, path: item.path, bodyData: item.bodyData, sessionToken: sessionToken)
+                let replayed = try await APIClient.shared.replay(method: item.method, path: item.path, bodyData: item.bodyData, sessionToken: sessionToken)
+                // A product created offline: its stored photo now belongs to the
+                // product the server made, and waits for upload below.
+                if OfflinePhoto.isProductCreate(method: item.method, path: item.path),
+                   let requestId = OfflinePhoto.clientRequestId(fromBody: item.bodyData),
+                   let productId = replayed.productId {
+                    OfflinePhotoStore.adopt(request: requestId, productId: productId)
+                }
                 context.delete(item)
             } catch {
                 switch OfflineReplay.afterFailure(error) {
@@ -122,7 +129,31 @@ final class OfflineQueueManager {
         }
 
         try? context.save()
+        // Before refresh(): Productos reloads when the pending count drops, and
+        // should find the product with its photo.
+        await uploadPendingPhotos()
         refresh()
+    }
+
+    /// Photos of products created offline that have synced: upload each and
+    /// delete its file. One that fails stays and is retried on the next flush.
+    private func uploadPendingPhotos() async {
+        for (productId, url) in OfflinePhotoStore.pendingUploads() {
+            guard let jpeg = try? Data(contentsOf: url) else {
+                OfflinePhotoStore.remove(url)
+                continue
+            }
+            do {
+                let _: ImageUploadResponse = try await APIClient.shared.uploadImage(
+                    endpoint: .uploadProductImage(id: productId),
+                    imageData: jpeg,
+                    filename: "product_\(productId).jpg"
+                )
+                OfflinePhotoStore.remove(url)
+            } catch {
+                print("Offline photo upload failed for \(productId), will retry: \(error)")
+            }
+        }
     }
 
     /// User has reviewed a failed sync and wants it replayed.
@@ -140,6 +171,10 @@ final class OfflineQueueManager {
     /// User has reviewed a failed sync and chosen to discard it.
     func dismissFailed(_ item: QueuedRequest) {
         guard let context = modelContext else { return }
+        if OfflinePhoto.isProductCreate(method: item.method, path: item.path),
+           let requestId = OfflinePhoto.clientRequestId(fromBody: item.bodyData) {
+            OfflinePhotoStore.removeRequestPhoto(requestId)
+        }
         context.delete(item)
         try? context.save()
         refresh()

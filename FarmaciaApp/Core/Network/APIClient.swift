@@ -121,7 +121,10 @@ final class APIClient {
     /// the item it's already replaying.
     /// `sessionToken` is the queued item's author's, taken when the flush checked
     /// who's logged in (never whatever session is current by the time it's sent).
-    func replay(method: String, path: String, bodyData: Data?, sessionToken: String) async throws {
+    /// Returns what the offline queue needs from the response (a created
+    /// product's id, for its stored photo); reading it never fails the replay.
+    @discardableResult
+    func replay(method: String, path: String, bodyData: Data?, sessionToken: String) async throws -> ReplayedWrite {
         let urlString = AppConfiguration.apiBaseURL + path
         guard let url = URL(string: urlString) else { throw NetworkError.invalidURL }
 
@@ -136,9 +139,10 @@ final class APIClient {
         request.setValue(sessionToken, forHTTPHeaderField: "X-Session-Token")
         request.httpBody = bodyData
 
-        let _: EmptyResponse = try await RetryPolicy.withBackoff {
+        let replayed: ReplayedWrite = try await RetryPolicy.withBackoff {
             try await self.executeOnce(request)
         }
+        return replayed
     }
 
     // MARK: - Private Methods

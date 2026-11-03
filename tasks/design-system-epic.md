@@ -82,13 +82,11 @@
 
 ## Follow-ups (`tasks/design-system-review-followups-epic.md`)
 
-- swiftui-pro: one type per file — `ImagePicker.swift`, `KeyboardHelpers.swift`, and the view models
-  inside `CreateProductView.swift` hold several.
+- ✅ swiftui-pro one type per file: `CreateProductViewModel`, `AmountValue`, `CameraPicker`/`LibraryPicker`/`ImageUploadResponse` split out; `KeyboardHelpers.swift` holds one type now.
 
 - ✅ `ProductDetailView` (feature/product-detail-presentation): its four sheets → one `DetailSheet` on `.sheet(item:)` (drops a `Binding(get:set:)`); photo source → `Menu`; photo flow shared with Nuevo Producto via FarmaciaKit `PhotoFlow` (TDD, 5 tests) + `.productPhotoFlow` — the detail now crops to square too; image viewer behind a real Button.
-- Scanner flow: one sheet with its own navigation (scan → candidates → create) instead of
-  `pendingScannedCode` + `onDismiss`.
-- ✅ `ImagePickerPresenter` deleted (no callers left). Still to delete: `keyboardTopSpacing` (used by `EditPriceView` / `AdjustmentFormView`) once those move to `.formKeyboard`.
-- UIKit haptics → `.sensoryFeedback`.
+- ✅ Scanner flow (feature/form-kit-followups): one `ScanFlowSheet` — scanner → candidates → Nuevo Producto swap inside the sheet (slide-in), a single match closes it and opens the product; FarmaciaKit `BarcodeLookup.serverDecision` (TDD, 4 tests); `pendingScannedCode` + `onDismiss` and the separate candidates sheet are gone; ProductsView presents one `ProductsSheet`.
+- ✅ `ImagePickerPresenter` deleted. ✅ `keyboardTopSpacing` deleted: Editar Precio and Ajuste are on the form kit (AmountField, .formKeyboard, Guardar spinner, shared `ProductSummaryRow`; `PriceEditing.canSave`, TDD, 4 tests).
+- ✅ UIKit haptics → `.sensoryFeedback` (LocationSwitchView; its never-fired impact generator dropped).
 - Convert the other screens as they get touched; continuous scan-to-count in receiving; a frame over the camera view
   showing where to place the product.

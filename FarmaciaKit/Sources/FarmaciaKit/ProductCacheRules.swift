@@ -38,4 +38,23 @@ public enum BarcodeLookup {
     public static func cacheDecision(matchCount: Int) -> CacheDecision {
         matchCount == 1 ? .open : .askServer
     }
+
+    /// The scan flow's next step from the server's exact search.
+    public enum ServerDecision: Equatable, Sendable {
+        /// Open the (first) result.
+        case open
+        /// Several results: list them to choose from.
+        case choose
+        /// Nothing found (or the search failed): create a product with the code.
+        case create
+    }
+
+    public static func serverDecision(exactMatch: Bool?, resultCount: Int) -> ServerDecision {
+        if exactMatch == true, resultCount > 0 { return .open }
+        switch resultCount {
+        case 0: return .create
+        case 1: return .open
+        default: return .choose
+        }
+    }
 }

@@ -52,7 +52,12 @@ struct CreateProductView: View {
     // since .onAppear on a Form inside a freshly-presented sheet doesn't
     // reliably fire in time on the very first presentation, leaving the
     // SKU field blank on the first scan.
-    init(prefillSku: String? = nil) {
+    /// The created product, so the list it was opened from shows it right
+    /// away (ProductsViewModel.insertProduct).
+    private let onCreated: ((Product) -> Void)?
+
+    init(prefillSku: String? = nil, onCreated: ((Product) -> Void)? = nil) {
+        self.onCreated = onCreated
         _viewModel = StateObject(wrappedValue: CreateProductViewModel(prefillSku: prefillSku))
         _showsDetails = State(initialValue: ProductDraft(prefillSku: prefillSku).hasDetails)
     }
@@ -174,6 +179,9 @@ struct CreateProductView: View {
             }
             .task {
                 await viewModel.loadSuppliers()
+            }
+            .onChange(of: viewModel.createdProduct) { _, product in
+                if let product { onCreated?(product) }
             }
             .navigationTitle("Nuevo Producto")
             .navigationBarTitleDisplayMode(.inline)
