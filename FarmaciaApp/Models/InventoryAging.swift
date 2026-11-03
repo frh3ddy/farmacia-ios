@@ -253,7 +253,7 @@ struct BatchConsumption: Decodable, Identifiable {
     var typeLabel: String {
         switch type {
         case "SALE": return "Venta"
-        case "ADJUSTMENT": return adjustment?.type ?? "Ajuste"
+        case "ADJUSTMENT": return adjustment.map { AdjustmentType.label($0.type) } ?? "Ajuste"
         default: return "Desconocido"
         }
     }
@@ -266,11 +266,11 @@ struct BatchConsumption: Decodable, Identifiable {
         }
     }
     
-    var typeColor: Color {
+    var typeTone: Tone {
         switch type {
-        case "SALE": return .blue
-        case "ADJUSTMENT": return .orange
-        default: return .secondary
+        case "SALE": return .info
+        case "ADJUSTMENT": return .caution
+        default: return .neutral
         }
     }
     

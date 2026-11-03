@@ -37,6 +37,11 @@ enum AdjustmentType: String, Codable, CaseIterable, Identifiable {
         }
     }
 
+    /// Spanish name for a raw server type ("DAMAGE" → "Daño"); unknown types pass through.
+    static func label(_ raw: String) -> String {
+        AdjustmentType(rawValue: raw)?.displayName ?? raw
+    }
+
     var icon: String {
         switch self {
         case .damage: return "exclamationmark.triangle"

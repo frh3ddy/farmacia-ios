@@ -1,4 +1,5 @@
 import Foundation
+import FarmaciaKit
 
 // MARK: - Product Batch ViewModel (FIFO valuation + aging risk data)
 
@@ -8,18 +9,9 @@ class ProductBatchViewModel: ObservableObject {
     @Published var productAging: ProductAgingAnalysis?
     @Published var isLoading = false
     
-    struct AgingInfo {
-        let fresh: Int   // < 30 days
-        let moderate: Int // 30-90 days
-        let old: Int     // > 90 days
-    }
-    
-    var agingSummary: AgingInfo? {
-        guard !batches.isEmpty else { return nil }
-        let fresh = batches.filter { $0.age < 30 }.count
-        let moderate = batches.filter { $0.age >= 30 && $0.age < 90 }.count
-        let old = batches.filter { $0.age >= 90 }.count
-        return AgingInfo(fresh: fresh, moderate: moderate, old: old)
+    /// Age and expiry counts for the section header; nil with no lots.
+    var lotSummary: LotSummary? {
+        batches.isEmpty ? nil : LotSummary(lots: batches)
     }
     
     /// Cash at risk: value of batches > 90 days old
