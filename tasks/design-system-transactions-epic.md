@@ -86,6 +86,7 @@ Needs the API: a `PurchaseOrder` model (today only `InventoryReceiving.purchaseO
 becomes one line of a PO receipt.
 
 ### Several lots in one receipt
+**Decision (2026-11-03):** waits — mixed-lot deliveries aren't frequent enough yet. Open when it's picked up: what each lot requires (lot number, expiry, both), and whether history groups lots per delivery.
 Lot rows (lote, cantidad, vencimiento) under one received total, "120 de 200 asignadas a lotes" until they add up.
 Each lot is its own FIFO batch already (one `InventoryReceiving` → one `Inventory`), so the API needs either a
 multi-lot receive endpoint (atomic) or the app posts N receivings (not atomic — a half-saved receipt).
