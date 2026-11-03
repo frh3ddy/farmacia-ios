@@ -73,7 +73,8 @@ These need no test, so they aren't steps:
 
 - **Links from history rows to the receipt or sale** (brief §6.3). There's no sale detail screen yet.
 - **"Recibido por":** the API sends `receivedBy`/`adjustedBy` as employee ids, not names. Ask ops if it's wanted.
-- **`bucketColor`'s 31/61/91-day scale vs `BatchAge`:** still open from the product-screens epic.
+- ~~**`bucketColor`'s 31/61/91-day scale vs `BatchAge`**~~ — done (`fix/aging-colors`): `BatchAge` now uses the API's
+  aging buckets (0–30 / 31–90 / 90+), and the chart colors each bucket with it.
 - **Moving `AdjustmentType` into FarmaciaKit:** it's used in many places, so it moves when its logic changes.
 
 ## Status (2026-11-03)

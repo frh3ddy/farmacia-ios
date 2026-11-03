@@ -26,15 +26,11 @@ struct StockLevelTests {
     }
 }
 
+/// Same buckets as the API's aging service (0–30, 31–60, 61–90, 90+ days).
 struct BatchAgeTests {
-    @Test("given a 29-day-old batch, should be positive")
-    func fresh() { #expect(BatchAge.tone(days: 29) == .positive) }
-
-    @Test("given 30 days, should be caution")
-    func moderate() { #expect(BatchAge.tone(days: 30) == .caution) }
-
-    @Test("given 90 days, should be critical")
-    func old() { #expect(BatchAge.tone(days: 90) == .critical) }
+    @Test("given 30 / 31 / 90 / 91 days, should be positive / caution / caution / critical",
+          arguments: [(30, Tone.positive), (31, .caution), (90, .caution), (91, .critical)])
+    func bucketEdges(days: Int, expected: Tone) { #expect(BatchAge.tone(days: days) == expected) }
 }
 
 struct ProductFilterToneTests {
