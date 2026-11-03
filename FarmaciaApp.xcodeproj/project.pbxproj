@@ -43,6 +43,7 @@
 		EE00000100000006 /* StateViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000006 /* StateViews.swift */; };
 		DD00000100000003 /* MoreDetailsLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000003 /* MoreDetailsLabel.swift */; };
 		DD0000010000000A /* StatusLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000020000000A /* StatusLabel.swift */; };
+		DD0000010000000B /* ToneBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000020000000B /* ToneBadge.swift */; };
 		DD00000100000009 /* ProductSummaryRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000009 /* ProductSummaryRow.swift */; };
 		DD00000100000002 /* AmountField.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000002 /* AmountField.swift */; };
 		DD00000100000004 /* AmountValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000004 /* AmountValue.swift */; };
@@ -151,6 +152,7 @@
 		EE00000200000006 /* StateViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StateViews.swift; sourceTree = "<group>"; };
 		DD00000200000003 /* MoreDetailsLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoreDetailsLabel.swift; sourceTree = "<group>"; };
 		DD0000020000000A /* StatusLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusLabel.swift; sourceTree = "<group>"; };
+		DD0000020000000B /* ToneBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToneBadge.swift; sourceTree = "<group>"; };
 		DD00000200000009 /* ProductSummaryRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductSummaryRow.swift; sourceTree = "<group>"; };
 		DD00000200000002 /* AmountField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmountField.swift; sourceTree = "<group>"; };
 		DD00000200000004 /* AmountValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmountValue.swift; sourceTree = "<group>"; };
@@ -352,6 +354,7 @@
 			children = (
 				DD00000200000003 /* MoreDetailsLabel.swift */,
 				DD0000020000000A /* StatusLabel.swift */,
+				DD0000020000000B /* ToneBadge.swift */,
 				DD00000200000009 /* ProductSummaryRow.swift */,
 				DD00000200000002 /* AmountField.swift */,
 				DD00000200000004 /* AmountValue.swift */,
@@ -726,6 +729,7 @@
 				EE00000100000006 /* StateViews.swift in Sources */,
 				DD00000100000003 /* MoreDetailsLabel.swift in Sources */,
 				DD0000010000000A /* StatusLabel.swift in Sources */,
+				DD0000010000000B /* ToneBadge.swift in Sources */,
 				DD00000100000009 /* ProductSummaryRow.swift in Sources */,
 				DD00000100000002 /* AmountField.swift in Sources */,
 				DD00000100000004 /* AmountValue.swift in Sources */,
