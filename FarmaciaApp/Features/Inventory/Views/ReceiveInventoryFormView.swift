@@ -241,7 +241,8 @@ struct ReceiveInventoryFormView: View {
                 await loadProductSuppliers(for: product.id)
             }
             .task {
-                guard product.tracksInventory != false else { return }
+                guard StoreStock.isExpected(tracksInventory: product.tracksInventory,
+                                            soldOnlyAtLocationId: product.soldOnlyAtLocationId) else { return }
                 storeStock = await APIClient.shared.storeStock(productId: product.id)
             }
             // The full supplier list can arrive after the product's suppliers
