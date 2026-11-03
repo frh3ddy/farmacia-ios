@@ -58,4 +58,27 @@ struct StoreStockTests {
         #expect(StoreStock.here([], currentLocationId: "n") == nil)
         #expect(StoreStock.here([centro], currentLocationId: nil) == nil)
     }
+
+    @Test("given a product that tracks stock and is sold at every store, should fetch (and show a skeleton while loading)")
+    func fetchesWhenOtherStoresMayHaveIt() {
+        #expect(StoreStock.isExpected(tracksInventory: true, soldOnlyAtLocationId: nil))
+        #expect(StoreStock.isExpected(tracksInventory: nil, soldOnlyAtLocationId: nil))
+    }
+
+    @Test("given a product that doesn't track stock, or is sold at one store only, there's nothing elsewhere to load")
+    func skipsWhenNothingElsewhere() {
+        #expect(!StoreStock.isExpected(tracksInventory: false, soldOnlyAtLocationId: nil))
+        #expect(!StoreStock.isExpected(tracksInventory: true, soldOnlyAtLocationId: "c"))
+    }
+
+    @Test("given the stores this employee knows, the loading card should have one row per other store", arguments: [(2, 1), (3, 2)])
+    func placeholderRows(known: Int, rows: Int) {
+        #expect(StoreStock.placeholderRows(knownLocations: known) == rows)
+    }
+
+    @Test("given an employee assigned to one store (or none known), the loading card should still have one row")
+    func atLeastOnePlaceholderRow() {
+        #expect(StoreStock.placeholderRows(knownLocations: 1) == 1)
+        #expect(StoreStock.placeholderRows(knownLocations: 0) == 1)
+    }
 }

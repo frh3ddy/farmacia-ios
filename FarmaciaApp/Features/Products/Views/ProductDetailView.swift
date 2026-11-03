@@ -54,6 +54,7 @@ struct ProductDetailView: View {
     @State private var showRefreshError = false
     @State private var offlineQueue = OfflineQueueManager.shared
     @State private var storeStock: [StoreStock] = []
+    @State private var storeStockLoaded = false
 
     private var canEditPrice: Bool {
         PriceEditing.canEdit(isOwner: authManager.isOwner, isManager: authManager.isManager, tracksInventory: displayProduct.tracksInventory)
@@ -349,7 +350,15 @@ struct ProductDetailView: View {
                             .font(.caption2)
                             .fontWeight(.medium)
                             .foregroundStyle(.secondary)
-                        if let latestCost = latestSupplierCost {
+                        if costSupplierViewModel.isLoading && costSupplierViewModel.suppliers.isEmpty {
+                            // The latest supplier cost is still loading: a placeholder
+                            // instead of the average cost flipping to it moments later.
+                            Text("$00.00")
+                                .font(.title3)
+                                .fontWeight(.bold)
+                                .redacted(reason: .placeholder)
+                                .accessibilityLabel("Cargando costo")
+                        } else if let latestCost = latestSupplierCost {
                             Text(String(format: "$%.2f", latestCost))
                                 .font(.title3)
                                 .fontWeight(.bold)
@@ -458,14 +467,19 @@ struct ProductDetailView: View {
     @ViewBuilder
     private var otherStoresCard: some View {
         let stores = StoreStock.others(storeStock, currentLocationId: authManager.currentLocation?.id)
-        if !stores.isEmpty {
+        if !storeStockLoaded && expectsStoreStock {
+            // First load: placeholder rows, so the card visibly fills in.
+            otherStoresCardContent {
+                ForEach(0..<StoreStock.placeholderRows(knownLocations: authManager.availableLocations.count), id: \.self) { _ in
+                    LabeledContent("Sucursal") { Text("00 uds") }
+                }
+                .redacted(reason: .placeholder)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Cargando existencias")
+            }
+        } else if !stores.isEmpty {
             let here = displayProduct.totalInventory ?? 0
-            VStack(alignment: .leading, spacing: DS.Spacing.m) {
-                Label("En otras tiendas", systemImage: "building.2")
-                    .font(.headline)
-
-                Divider()
-
+            otherStoresCardContent {
                 ForEach(stores) { store in
                     let standsOut = store.standsOut(hereQuantity: here)
                     LabeledContent(store.locationName) {
@@ -475,10 +489,21 @@ struct ProductDetailView: View {
                     }
                 }
             }
-            .padding()
-            .background(Color(.systemGray6))
-            .clipShape(.rect(cornerRadius: DS.Radius.xl))
         }
+    }
+
+    private func otherStoresCardContent(@ViewBuilder rows: () -> some View) -> some View {
+        VStack(alignment: .leading, spacing: DS.Spacing.m) {
+            Label("En otras tiendas", systemImage: "building.2")
+                .font(.headline)
+
+            Divider()
+
+            rows()
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .clipShape(.rect(cornerRadius: DS.Radius.xl))
     }
 
     // MARK: - Price Card
@@ -787,10 +812,15 @@ struct ProductDetailView: View {
         _ = await (productRefresh, activityLoad, batchLoad, costSupplierLoad, storeStockLoad)
     }
 
-    /// Products that don't track stock (Yastás) have nothing to show.
+    private var expectsStoreStock: Bool {
+        StoreStock.isExpected(tracksInventory: displayProduct.tracksInventory,
+                              soldOnlyAtLocationId: displayProduct.soldOnlyAtLocationId)
+    }
+
     private func loadStoreStock() async {
-        guard displayProduct.tracksInventory != false else { return }
+        guard expectsStoreStock else { return }
         storeStock = await APIClient.shared.storeStock(productId: product.id)
+        storeStockLoaded = true
     }
 
     private func refreshProduct() async {
@@ -1258,7 +1288,8 @@ struct ProductDetailView: View {
 
                 Spacer()
 
-                if costSupplierViewModel.isLoading {
+                // Refresh only: the first load shows skeleton rows below.
+                if costSupplierViewModel.isLoading && !costSupplierViewModel.suppliers.isEmpty {
                     ProgressView()
                         .scaleEffect(0.7)
                 }
@@ -1267,14 +1298,30 @@ struct ProductDetailView: View {
             Divider()
             
             if costSupplierViewModel.isLoading && costSupplierViewModel.suppliers.isEmpty {
-                VStack(spacing: 8) {
-                    ProgressView()
-                    Text("Cargando datos de proveedor...")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                // Skeleton in the shape of a supplier row.
+                HStack(spacing: 12) {
+                    Circle()
+                        .fill(Color(.systemGray5))
+                        .frame(width: 36, height: 36)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Nombre del proveedor")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        Text("Notas")
+                            .font(.caption)
+                    }
+                    Spacer()
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("$00.00")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                        Text("per ud")
+                            .font(.caption2)
+                    }
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
+                .redacted(reason: .placeholder)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Cargando datos de proveedor")
             } else if costSupplierViewModel.suppliers.isEmpty && costSupplierViewModel.costHistory.isEmpty {
                 VStack(spacing: 8) {
                     Image(systemName: "building.2")

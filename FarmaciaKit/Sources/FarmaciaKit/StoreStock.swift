@@ -20,6 +20,18 @@ public struct StoreStock: Decodable, Equatable, Identifiable, Sendable {
         self.quantity = quantity
     }
 
+    /// Whether other stores' stock is worth fetching (and a skeleton worth showing):
+    /// not for products that don't track stock, nor ones sold at a single store.
+    public static func isExpected(tracksInventory: Bool?, soldOnlyAtLocationId: String?) -> Bool {
+        tracksInventory != false && soldOnlyAtLocationId == nil
+    }
+
+    /// Rows in the loading card: one per other store the employee knows of
+    /// (the real list may differ slightly), at least one.
+    public static func placeholderRows(knownLocations: Int) -> Int {
+        max(1, knownLocations - 1)
+    }
+
     /// Product detail lists the other stores; this one already has its own stock line.
     public static func others(_ stores: [StoreStock], currentLocationId: String?) -> [StoreStock] {
         stores.filter { $0.locationId != currentLocationId }
