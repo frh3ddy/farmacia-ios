@@ -44,6 +44,28 @@ public struct ProductDraft: Equatable, Sendable {
         return true
     }
 
+    /// Why Crear is off, for values the user entered — shown under the field
+    /// that fixes it. Empty required fields aren't listed: their labels say so.
+    public enum Issue: Hashable, Sendable {
+        case priceNotPositive, quantityNeeded, costNeeded
+
+        public var message: String {
+            switch self {
+            case .priceNotPositive: "El precio debe ser mayor a $0."
+            case .quantityNeeded: "Indica la cantidad para registrar este costo, o borra el costo."
+            case .costNeeded: "Indica el costo unitario de esta cantidad (0 si fue regalo)."
+            }
+        }
+    }
+
+    public var issues: [Issue] {
+        var issues: [Issue] = []
+        if let price = sellingPrice, price <= 0 { issues.append(.priceNotPositive) }
+        if createsInitialStock, costPrice == nil { issues.append(.costNeeded) }
+        if !createsInitialStock, costPrice != nil { issues.append(.quantityNeeded) }
+        return issues
+    }
+
     /// Whether the optional fields (Más detalles: description, stores, Square)
     /// hold anything. The SKU isn't one of them: it shows with the essentials,
     /// "Automático" when empty.

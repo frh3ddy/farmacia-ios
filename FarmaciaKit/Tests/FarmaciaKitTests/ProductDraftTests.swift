@@ -139,3 +139,50 @@ struct ProductDraftSaveTests {
         #expect(!freePrice.canSave)
     }
 }
+
+/// Why Crear is off, said next to the field that fixes it. Only for values the user
+/// entered: an empty required field is already marked by its label.
+struct ProductDraftIssueTests {
+    func draft(price: Double? = 10, cost: Double? = nil, stock: Int? = nil) -> ProductDraft {
+        var d = ProductDraft()
+        d.name = "Paracetamol"
+        d.sellingPrice = price
+        d.costPrice = cost
+        d.initialStock = stock
+        return d
+    }
+
+    @Test("given a cost and no quantity, should ask for the quantity")
+    func costWithoutQuantity() {
+        #expect(draft(cost: 5).issues == [.quantityNeeded])
+    }
+
+    @Test("given a quantity and no cost, should ask for the cost")
+    func quantityWithoutCost() {
+        #expect(draft(stock: 3).issues == [.costNeeded])
+    }
+
+    @Test("given a price of 0, should say it must be above 0")
+    func zeroPrice() {
+        #expect(draft(price: 0).issues == [.priceNotPositive])
+    }
+
+    @Test("given an empty price, should not complain yet")
+    func emptyPrice() {
+        #expect(draft(price: nil).issues.isEmpty)
+    }
+
+    @Test("given a valid draft, should have no issues and be saveable")
+    func valid() {
+        let d = draft(cost: 5, stock: 3)
+        #expect(d.issues.isEmpty)
+        #expect(d.canSave)
+    }
+
+    @Test("each issue should explain the fix in Spanish")
+    func messages() {
+        #expect(ProductDraft.Issue.quantityNeeded.message == "Indica la cantidad para registrar este costo, o borra el costo.")
+        #expect(ProductDraft.Issue.costNeeded.message == "Indica el costo unitario de esta cantidad (0 si fue regalo).")
+        #expect(ProductDraft.Issue.priceNotPositive.message == "El precio debe ser mayor a $0.")
+    }
+}

@@ -37,6 +37,8 @@ struct ReceiveInventoryFormView: View {
     private var draft: ReceivingDraft {
         var draft = ReceivingDraft(expiryDate: expiryDate)
         draft.quantity = quantity
+        draft.boxes = receivesByBox ? boxes : nil
+        draft.perBox = receivesByBox ? perBox : nil
         draft.unitCost = receivingCost.value
         draft.updatesPrice = updateSellingPrice
         draft.newPrice = newSellingPrice
@@ -55,8 +57,11 @@ struct ReceiveInventoryFormView: View {
     }
 
     private enum Field: Hashable {
-        case quantity, unitCost, sellingPrice, invoiceNumber, batchNumber, notes
+        case quantity, boxes, perBox, unitCost, sellingPrice, invoiceNumber, batchNumber, notes
     }
+    @State private var receivesByBox = false
+    @State private var boxes: Int?
+    @State private var perBox: Int?
     @FocusState private var focusedField: Field?
 
     /// Más detalles: price update, invoice, batch, notes.
@@ -64,17 +69,25 @@ struct ReceiveInventoryFormView: View {
 
     /// Top to bottom, skipping rows that aren't shown.
     private var focusOrder: FocusOrder<Field> {
-        guard showsDetails else { return FocusOrder([.quantity, .unitCost]) }
-        return FocusOrder([.quantity, .unitCost]
+        let amounts: [Field] = (receivesByBox ? [.boxes, .perBox] : [.quantity]) + [.unitCost]
+        guard showsDetails else { return FocusOrder(amounts) }
+        return FocusOrder(amounts
             + (updateSellingPrice ? [.sellingPrice] : [])
             + [.invoiceNumber, .batchNumber, .notes])
     }
 
     // Supplier intelligence
     @State private var productSuppliers: [ProductSupplier] = []
+    /// Every store's stock, to split the delivery; empty (hidden) if the fetch fails.
+    @State private var storeStock: [StoreStock] = []
     @State private var isLoadingSuppliers = false
     @State private var supplierLastCost: Double?
     @State private var supplierCostNote: String?
+
+    private func fillQuantityFromBoxes() {
+        guard receivesByBox else { return }
+        quantity = PackQuantity.total(boxes: boxes, perBox: perBox)
+    }
 
     private var isValid: Bool {
         ReceivingForm.canSave(
@@ -96,13 +109,21 @@ struct ReceiveInventoryFormView: View {
                 }
 
                 Section {
-                    AmountField(
-                        "Cantidad",
-                        unit: "UDS",
-                        value: $quantity,
-                        focus: $focusedField,
-                        field: .quantity
-                    )
+                    // By the box: Cajas × Piezas por caja fills Cantidad (no mental math).
+                    Toggle("Por cajas", isOn: $receivesByBox)
+                    if receivesByBox {
+                        AmountField("Cajas", unit: "CAJAS", value: $boxes, focus: $focusedField, field: .boxes)
+                        AmountField("Piezas por caja", unit: "UDS", value: $perBox, focus: $focusedField, field: .perBox)
+                        LabeledContent("Cantidad", value: quantity.map { "\($0) UDS" } ?? "—")
+                    } else {
+                        AmountField(
+                            "Cantidad",
+                            unit: "UDS",
+                            value: $quantity,
+                            focus: $focusedField,
+                            field: .quantity
+                        )
+                    }
 
                     AmountField(
                         "Costo unitario",
@@ -112,12 +133,43 @@ struct ReceiveInventoryFormView: View {
                         field: .unitCost
                     )
 
+                    if let summary = StoreStock.summary(storeStock, currentLocationId: authManager.currentLocation?.id) {
+                        Label(summary, systemImage: "building.2")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .accessibilityLabel("Existencia por tienda: \(summary)")
+                    }
+
                     if let qty = quantity, qty > 0,
                        let cost = receivingCost.value, cost > 0 {
                         LabeledContent("Costo total") {
                             Text("$\(String(format: "%.2f", Double(qty) * cost))")
                                 .bold()
                         }
+                    }
+                } footer: {
+                    // What Guardar does to this store's stock: from the fresh fetch
+                    // when it's in, else the stock loaded with the product.
+                    let before = StoreStock.here(storeStock, currentLocationId: authManager.currentLocation?.id)
+                        ?? product.totalInventory
+                    if let impact = StockImpact(before: before, change: quantity) {
+                        StatusLabel(
+                            [authManager.currentLocation?.name, impact.summary]
+                                .compactMap { $0 }.joined(separator: " · "),
+                            tone: impact.tone,
+                            systemImage: "arrow.up.circle.fill"
+                        )
+                        .monospacedDigit()
+                    }
+                }
+                // Typing boxes fills Cantidad. Turning the switch on keeps a typed
+                // quantity until the boxes add up to one; turning it off keeps the
+                // total, ready to edit.
+                .onChange(of: boxes) { fillQuantityFromBoxes() }
+                .onChange(of: perBox) { fillQuantityFromBoxes() }
+                .onChange(of: receivesByBox) {
+                    if let total = PackQuantity.total(boxes: boxes, perBox: perBox), receivesByBox {
+                        quantity = total
                     }
                 }
 
@@ -230,6 +282,11 @@ struct ReceiveInventoryFormView: View {
                 // Fetch the product's suppliers to auto-pick the preferred one
                 receivingCost.productChanged(to: product.id)
                 await loadProductSuppliers(for: product.id)
+            }
+            .task {
+                guard StoreStock.isExpected(tracksInventory: product.tracksInventory,
+                                            soldOnlyAtLocationId: product.soldOnlyAtLocationId) else { return }
+                storeStock = await APIClient.shared.storeStock(productId: product.id)
             }
             // The full supplier list can arrive after the product's suppliers
             .onChange(of: viewModel.suppliers.map(\.id)) {

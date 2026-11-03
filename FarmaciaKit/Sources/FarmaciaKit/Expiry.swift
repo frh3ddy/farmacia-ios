@@ -37,11 +37,13 @@ public enum Expiry {
         expiry.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted, locale: locale, timeZone: TimeZone(identifier: "UTC")!))
     }
 
-    public static func isExpired(_ expiry: Date, now: Date = Date(), timeZone: TimeZone = .current) -> Bool {
-        daysUntil(expiry, now: now, timeZone: timeZone) <= 0
-    }
+    /// Days of warning before a lot's expiry turns it to caution.
+    public static let warningDays = 90
 
-    public static func expiresWithin(_ expiry: Date, days: Int, now: Date = Date(), timeZone: TimeZone = .current) -> Bool {
-        daysUntil(expiry, now: now, timeZone: timeZone) <= days
+    /// Expired (from the start of the expiry day) → critical; within `warningDays` → caution.
+    public static func tone(daysUntil: Int) -> Tone {
+        if daysUntil <= 0 { return .critical }
+        if daysUntil <= warningDays { return .caution }
+        return .neutral
     }
 }

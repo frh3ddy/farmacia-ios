@@ -53,6 +53,8 @@ struct ProductDetailView: View {
     @State private var refreshErrorMessage: String?
     @State private var showRefreshError = false
     @State private var offlineQueue = OfflineQueueManager.shared
+    @State private var storeStock: [StoreStock] = []
+    @State private var storeStockLoaded = false
 
     private var canEditPrice: Bool {
         PriceEditing.canEdit(isOwner: authManager.isOwner, isManager: authManager.isManager, tracksInventory: displayProduct.tracksInventory)
@@ -67,6 +69,8 @@ struct ProductDetailView: View {
             VStack(spacing: 20) {
                 // Product Header (with stats row + action buttons)
                 productHeader
+
+                otherStoresCard
                 
                 // Price Card
                 priceCard
@@ -156,7 +160,8 @@ struct ProductDetailView: View {
             async let productRefresh: () = refreshProduct()
             async let suppliersLoad: () = inventoryViewModel.loadSuppliers()
             async let costSupplierLoad: () = loadCostSupplierData()
-            _ = await (productRefresh, suppliersLoad, costSupplierLoad)
+            async let storeStockLoad: () = loadStoreStock()
+            _ = await (productRefresh, suppliersLoad, costSupplierLoad, storeStockLoad)
         }
         .task(id: "fifo-batches") {
             // Lazy: load FIFO batches only for owners/managers
@@ -345,7 +350,15 @@ struct ProductDetailView: View {
                             .font(.caption2)
                             .fontWeight(.medium)
                             .foregroundStyle(.secondary)
-                        if let latestCost = latestSupplierCost {
+                        if costSupplierViewModel.isLoading && costSupplierViewModel.suppliers.isEmpty {
+                            // The latest supplier cost is still loading: a placeholder
+                            // instead of the average cost flipping to it moments later.
+                            Text("$00.00")
+                                .font(.title3)
+                                .fontWeight(.bold)
+                                .redacted(reason: .placeholder)
+                                .accessibilityLabel("Cargando costo")
+                        } else if let latestCost = latestSupplierCost {
                             Text(String(format: "$%.2f", latestCost))
                                 .font(.title3)
                                 .fontWeight(.bold)
@@ -447,6 +460,52 @@ struct ProductDetailView: View {
         }
     }
     
+    // MARK: - Other Stores Card
+
+    /// The other stores' stock (tasks/other-stores-stock-epic.md). Hidden when
+    /// there's none to show: offline, failed fetch, untracked, or sold only here.
+    @ViewBuilder
+    private var otherStoresCard: some View {
+        let stores = StoreStock.others(storeStock, currentLocationId: authManager.currentLocation?.id)
+        if !storeStockLoaded && expectsStoreStock {
+            // First load: placeholder rows, so the card visibly fills in.
+            otherStoresCardContent {
+                ForEach(0..<StoreStock.placeholderRows(knownLocations: authManager.availableLocations.count), id: \.self) { _ in
+                    LabeledContent("Sucursal") { Text("00 uds") }
+                }
+                .redacted(reason: .placeholder)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Cargando existencias")
+            }
+        } else if !stores.isEmpty {
+            let here = displayProduct.totalInventory ?? 0
+            otherStoresCardContent {
+                ForEach(stores) { store in
+                    let standsOut = store.standsOut(hereQuantity: here)
+                    LabeledContent(store.locationName) {
+                        Text("\(store.quantity) uds")
+                            .fontWeight(standsOut ? .bold : .regular)
+                            .foregroundStyle(standsOut ? .green : (store.quantity > 0 ? .primary : .secondary))
+                    }
+                }
+            }
+        }
+    }
+
+    private func otherStoresCardContent(@ViewBuilder rows: () -> some View) -> some View {
+        VStack(alignment: .leading, spacing: DS.Spacing.m) {
+            Label("En otras tiendas", systemImage: "building.2")
+                .font(.headline)
+
+            Divider()
+
+            rows()
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .clipShape(.rect(cornerRadius: DS.Radius.xl))
+    }
+
     // MARK: - Price Card
     
     private var priceCard: some View {
@@ -749,7 +808,19 @@ struct ProductDetailView: View {
         async let activityLoad: () = loadActivity()
         async let batchLoad: () = loadBatchData()
         async let costSupplierLoad: () = loadCostSupplierData()
-        _ = await (productRefresh, activityLoad, batchLoad, costSupplierLoad)
+        async let storeStockLoad: () = loadStoreStock()
+        _ = await (productRefresh, activityLoad, batchLoad, costSupplierLoad, storeStockLoad)
+    }
+
+    private var expectsStoreStock: Bool {
+        StoreStock.isExpected(tracksInventory: displayProduct.tracksInventory,
+                              soldOnlyAtLocationId: displayProduct.soldOnlyAtLocationId)
+    }
+
+    private func loadStoreStock() async {
+        guard expectsStoreStock else { return }
+        storeStock = await APIClient.shared.storeStock(productId: product.id)
+        storeStockLoaded = true
     }
 
     private func refreshProduct() async {
@@ -922,32 +993,20 @@ struct ProductDetailView: View {
                 }
                 
                 // Expiry summary (if any batches have expiry dates)
-                let expiredCount = batchViewModel.batches.filter { $0.isExpired }.count
-                let expiringSoonCount = batchViewModel.batches.filter { !$0.isExpired && $0.expiresWithin(days: 90) }.count
+                let expiredCount = batchViewModel.batches.filter { $0.expiryTone == .critical }.count
+                let expiringSoonCount = batchViewModel.batches.filter { $0.expiryTone == .caution }.count
                 if expiredCount > 0 || expiringSoonCount > 0 {
-                    HStack(spacing: 12) {
+                    HStack(spacing: DS.Spacing.m) {
                         if expiredCount > 0 {
-                            HStack(spacing: 4) {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .font(.caption2)
-                                Text("\(expiredCount) expired")
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                            }
-                            .foregroundStyle(.red)
+                            StatusLabel("\(expiredCount) vencido\(expiredCount == 1 ? "" : "s")", tone: .critical)
                         }
                         if expiringSoonCount > 0 {
-                            HStack(spacing: 4) {
-                                Image(systemName: "clock.badge.exclamationmark")
-                                    .font(.caption2)
-                                Text("\(expiringSoonCount) expiring soon")
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                            }
-                            .foregroundStyle(.orange)
+                            StatusLabel("\(expiringSoonCount) por vencer", tone: .caution)
                         }
                         Spacer()
                     }
+                    .font(.caption)
+                    .fontWeight(.medium)
                     .padding(.horizontal, 4)
                 }
                 
@@ -1103,14 +1162,11 @@ struct ProductDetailView: View {
             // Row 1: Quantity, unit cost, and value
             HStack(spacing: 10) {
                 // Age indicator (or expiry warning)
-                if batch.isExpired {
-                    Image(systemName: "exclamationmark.triangle.fill")
+                if let tone = batch.expiryTone, tone != .neutral {
+                    // The pill below says it in words ("Vencido …" / "Vence …").
+                    Image(systemName: tone.systemImage)
                         .font(.caption2)
-                        .foregroundStyle(.red)
-                } else if batch.expiresWithin(days: 90) {
-                    Image(systemName: "clock.badge.exclamationmark")
-                        .font(.caption2)
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(tone.color)
                 } else {
                     Circle()
                         .fill(batchAgeColor(batch.age))
@@ -1200,15 +1256,10 @@ struct ProductDetailView: View {
             pills.append(BatchPill(icon: "building.2", label: supplier, color: .blue))
         }
         
-        if let expiry = batch.expiryDate {
+        if let expiry = batch.expiryDate, let tone = batch.expiryTone {
             let formatted = Expiry.display(expiry)
-            if batch.isExpired {
-                pills.append(BatchPill(icon: "xmark.circle", label: "Vencido \(formatted)", color: .red))
-            } else if batch.expiresWithin(days: 90) {
-                pills.append(BatchPill(icon: "clock", label: "Vence \(formatted)", color: .orange))
-            } else {
-                pills.append(BatchPill(icon: "calendar", label: "Vence \(formatted)", color: .green))
-            }
+            let label = tone == .critical ? "Vencido \(formatted)" : "Vence \(formatted)"
+            pills.append(BatchPill(icon: tone.systemImage, label: label, color: tone.color))
         }
         
         if let invoice = batch.invoiceNumber, !invoice.isEmpty {
@@ -1237,7 +1288,8 @@ struct ProductDetailView: View {
 
                 Spacer()
 
-                if costSupplierViewModel.isLoading {
+                // Refresh only: the first load shows skeleton rows below.
+                if costSupplierViewModel.isLoading && !costSupplierViewModel.suppliers.isEmpty {
                     ProgressView()
                         .scaleEffect(0.7)
                 }
@@ -1246,14 +1298,30 @@ struct ProductDetailView: View {
             Divider()
             
             if costSupplierViewModel.isLoading && costSupplierViewModel.suppliers.isEmpty {
-                VStack(spacing: 8) {
-                    ProgressView()
-                    Text("Cargando datos de proveedor...")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                // Skeleton in the shape of a supplier row.
+                HStack(spacing: 12) {
+                    Circle()
+                        .fill(Color(.systemGray5))
+                        .frame(width: 36, height: 36)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Nombre del proveedor")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        Text("Notas")
+                            .font(.caption)
+                    }
+                    Spacer()
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("$00.00")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                        Text("per ud")
+                            .font(.caption2)
+                    }
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
+                .redacted(reason: .placeholder)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Cargando datos de proveedor")
             } else if costSupplierViewModel.suppliers.isEmpty && costSupplierViewModel.costHistory.isEmpty {
                 VStack(spacing: 8) {
                     Image(systemName: "building.2")
