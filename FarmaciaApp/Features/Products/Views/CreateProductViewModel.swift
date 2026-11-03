@@ -83,6 +83,9 @@ class CreateProductViewModel: ObservableObject {
     /// quantity creates initial stock and then needs its cost.
     var isValid: Bool { draft(hasPhoto: false).canSave }
 
+    /// Why Crear is off, shown under the field that fixes it.
+    var issues: [ProductDraft.Issue] { draft(hasPhoto: false).issues }
+
     var showMarginPreview: Bool {
         sellingPrice != nil && costPrice != nil
     }

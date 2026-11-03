@@ -37,6 +37,8 @@ struct ReceiveInventoryFormView: View {
     private var draft: ReceivingDraft {
         var draft = ReceivingDraft(expiryDate: expiryDate)
         draft.quantity = quantity
+        draft.boxes = receivesByBox ? boxes : nil
+        draft.perBox = receivesByBox ? perBox : nil
         draft.unitCost = receivingCost.value
         draft.updatesPrice = updateSellingPrice
         draft.newPrice = newSellingPrice
@@ -55,8 +57,11 @@ struct ReceiveInventoryFormView: View {
     }
 
     private enum Field: Hashable {
-        case quantity, unitCost, sellingPrice, invoiceNumber, batchNumber, notes
+        case quantity, boxes, perBox, unitCost, sellingPrice, invoiceNumber, batchNumber, notes
     }
+    @State private var receivesByBox = false
+    @State private var boxes: Int?
+    @State private var perBox: Int?
     @FocusState private var focusedField: Field?
 
     /// Más detalles: price update, invoice, batch, notes.
@@ -64,8 +69,9 @@ struct ReceiveInventoryFormView: View {
 
     /// Top to bottom, skipping rows that aren't shown.
     private var focusOrder: FocusOrder<Field> {
-        guard showsDetails else { return FocusOrder([.quantity, .unitCost]) }
-        return FocusOrder([.quantity, .unitCost]
+        let amounts: [Field] = (receivesByBox ? [.boxes, .perBox] : [.quantity]) + [.unitCost]
+        guard showsDetails else { return FocusOrder(amounts) }
+        return FocusOrder(amounts
             + (updateSellingPrice ? [.sellingPrice] : [])
             + [.invoiceNumber, .batchNumber, .notes])
     }
@@ -75,6 +81,11 @@ struct ReceiveInventoryFormView: View {
     @State private var isLoadingSuppliers = false
     @State private var supplierLastCost: Double?
     @State private var supplierCostNote: String?
+
+    private func fillQuantityFromBoxes() {
+        guard receivesByBox else { return }
+        quantity = PackQuantity.total(boxes: boxes, perBox: perBox)
+    }
 
     private var isValid: Bool {
         ReceivingForm.canSave(
@@ -96,13 +107,21 @@ struct ReceiveInventoryFormView: View {
                 }
 
                 Section {
-                    AmountField(
-                        "Cantidad",
-                        unit: "UDS",
-                        value: $quantity,
-                        focus: $focusedField,
-                        field: .quantity
-                    )
+                    // By the box: Cajas × Piezas por caja fills Cantidad (no mental math).
+                    Toggle("Por cajas", isOn: $receivesByBox)
+                    if receivesByBox {
+                        AmountField("Cajas", unit: "CAJAS", value: $boxes, focus: $focusedField, field: .boxes)
+                        AmountField("Piezas por caja", unit: "UDS", value: $perBox, focus: $focusedField, field: .perBox)
+                        LabeledContent("Cantidad", value: quantity.map { "\($0) UDS" } ?? "—")
+                    } else {
+                        AmountField(
+                            "Cantidad",
+                            unit: "UDS",
+                            value: $quantity,
+                            focus: $focusedField,
+                            field: .quantity
+                        )
+                    }
 
                     AmountField(
                         "Costo unitario",
@@ -118,6 +137,27 @@ struct ReceiveInventoryFormView: View {
                             Text("$\(String(format: "%.2f", Double(qty) * cost))")
                                 .bold()
                         }
+                    }
+                } footer: {
+                    // What Guardar does to this store's stock.
+                    if let impact = StockImpact(before: product.totalInventory, change: quantity) {
+                        StatusLabel(
+                            [authManager.currentLocation?.name, impact.summary]
+                                .compactMap { $0 }.joined(separator: " · "),
+                            tone: impact.tone,
+                            systemImage: "arrow.up.circle.fill"
+                        )
+                        .monospacedDigit()
+                    }
+                }
+                // Typing boxes fills Cantidad. Turning the switch on keeps a typed
+                // quantity until the boxes add up to one; turning it off keeps the
+                // total, ready to edit.
+                .onChange(of: boxes) { fillQuantityFromBoxes() }
+                .onChange(of: perBox) { fillQuantityFromBoxes() }
+                .onChange(of: receivesByBox) {
+                    if let total = PackQuantity.total(boxes: boxes, perBox: perBox), receivesByBox {
+                        quantity = total
                     }
                 }
 

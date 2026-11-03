@@ -93,16 +93,9 @@ struct BatchValuation: Decodable, Identifiable {
     
     var id: String { batchId }
     
-    /// True if batch has an expiry date that is within the given days threshold
-    func expiresWithin(days: Int) -> Bool {
-        guard let expiry = expiryDate else { return false }
-        return Expiry.expiresWithin(expiry, days: days)
-    }
-    
-    /// True from the start of the expiry day (local time)
-    var isExpired: Bool {
-        guard let expiry = expiryDate else { return false }
-        return Expiry.isExpired(expiry)
+    /// Expired → critical, within `Expiry.warningDays` → caution; nil without an expiry date.
+    var expiryTone: Tone? {
+        expiryDate.map { Expiry.tone(daysUntil: Expiry.daysUntil($0)) }
     }
     
     /// Human-readable source label

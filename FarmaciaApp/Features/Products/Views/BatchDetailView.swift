@@ -159,12 +159,12 @@ struct BatchDetailView: View {
                     infoRow(icon: "number", label: "Lot / Batch #", value: lot, color: .purple)
                 }
                 if let expiry = receiving.expiryDate {
-                    let isExpired = Expiry.isExpired(expiry)
+                    let tone = Expiry.tone(daysUntil: Expiry.daysUntil(expiry))
                     infoRow(
-                        icon: isExpired ? "exclamationmark.triangle.fill" : "calendar",
-                        label: "Expiry Date",
+                        icon: tone.systemImage,
+                        label: tone == .critical ? "Vencido" : "Vence",
                         value: Expiry.display(expiry),
-                        color: isExpired ? .red : .orange
+                        color: tone.color
                     )
                 }
                 if let mfg = receiving.manufacturingDate {

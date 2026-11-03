@@ -97,7 +97,10 @@ struct CreateProductView: View {
                         field: .sellingPrice
                     )
                 } footer: {
-                    Text("Sin SKU, se genera uno automáticamente. El precio es el que los clientes pagan en caja.")
+                    VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+                        issueHints([.priceNotPositive])
+                        Text("Sin SKU, se genera uno automáticamente. El precio es el que los clientes pagan en caja.")
+                    }
                 }
 
                 // No switch: most new products arrive with stock, so the fields
@@ -131,7 +134,10 @@ struct CreateProductView: View {
                 } header: {
                     Text("Inventario inicial")
                 } footer: {
-                    Text("Sin cantidad, el producto se crea sin existencias. Con cantidad, se registra como saldo inicial en esta sucursal.")
+                    VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+                        issueHints([.quantityNeeded, .costNeeded])
+                        Text("Sin cantidad, el producto se crea sin existencias. Con cantidad, se registra como saldo inicial en esta sucursal.")
+                    }
                 }
 
                 if viewModel.showMarginPreview {
@@ -353,6 +359,13 @@ struct CreateProductView: View {
                 selectedImage = lifted
             }
             isLiftingSubject = false
+        }
+    }
+
+    /// The section's share of `ProductDraft.issues`, in words next to the fields they're about.
+    private func issueHints(_ shown: [ProductDraft.Issue]) -> some View {
+        ForEach(viewModel.issues.filter(shown.contains), id: \.self) { issue in
+            StatusLabel(issue.message, tone: .caution)
         }
     }
 

@@ -55,19 +55,17 @@ struct AdjustmentFormView: View {
         )
     }
 
-    /// What saving does to the stock, under the quantity: "Esto agregará 3
-    /// unidades…" in the positive tone, a removal in the critical one.
-    private var stockEffect: (text: String, tone: Tone)? {
+    /// What saving does to this store's stock, shown before Guardar
+    /// ("Centro · 42 → 39 (−3)"). Counts use the live stock; other types the
+    /// product's last known stock, so a removal past it only warns — the API
+    /// checks against its own stock.
+    private var stockImpact: StockImpact? {
         if adjustmentType.isVariable {
-            guard let delta = countChange else { return nil }
-            return delta > 0
-                ? ("Esto agregará \(delta) unidades al inventario.", .positive)
-                : ("Esto eliminará \(abs(delta)) unidades del inventario.", .critical)
+            return StockImpact(before: liveStock, change: countChange)
         }
-        guard let quantity, quantity != 0 else { return nil }
-        return adjustmentType.isNegative
-            ? ("Esto eliminará \(abs(quantity)) unidades del inventario.", .critical)
-            : ("Esto agregará \(abs(quantity)) unidades al inventario.", .positive)
+        guard let quantity else { return nil }
+        let change = adjustmentType.isNegative ? -abs(quantity) : abs(quantity)
+        return StockImpact(before: product.totalInventory, change: change)
     }
 
     private var isValid: Bool {
@@ -118,9 +116,19 @@ struct AdjustmentFormView: View {
                         )
                     }
                 } footer: {
-                    if let effect = stockEffect {
-                        Text(effect.text)
-                            .foregroundStyle(effect.tone.color)
+                    if let impact = stockImpact {
+                        VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+                            StatusLabel(
+                                [authManager.currentLocation?.name, impact.summary]
+                                    .compactMap { $0 }.joined(separator: " · "),
+                                tone: impact.tone,
+                                systemImage: impact.change > 0 ? "arrow.up.circle.fill" : "arrow.down.circle.fill"
+                            )
+                            .monospacedDigit()
+                            if impact.exceedsStock {
+                                StatusLabel("Es más de lo que hay en existencia.", tone: .caution)
+                            }
+                        }
                     }
                 }
 

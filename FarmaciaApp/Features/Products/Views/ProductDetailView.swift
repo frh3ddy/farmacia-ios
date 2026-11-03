@@ -922,32 +922,20 @@ struct ProductDetailView: View {
                 }
                 
                 // Expiry summary (if any batches have expiry dates)
-                let expiredCount = batchViewModel.batches.filter { $0.isExpired }.count
-                let expiringSoonCount = batchViewModel.batches.filter { !$0.isExpired && $0.expiresWithin(days: 90) }.count
+                let expiredCount = batchViewModel.batches.filter { $0.expiryTone == .critical }.count
+                let expiringSoonCount = batchViewModel.batches.filter { $0.expiryTone == .caution }.count
                 if expiredCount > 0 || expiringSoonCount > 0 {
-                    HStack(spacing: 12) {
+                    HStack(spacing: DS.Spacing.m) {
                         if expiredCount > 0 {
-                            HStack(spacing: 4) {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .font(.caption2)
-                                Text("\(expiredCount) expired")
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                            }
-                            .foregroundStyle(.red)
+                            StatusLabel("\(expiredCount) vencido\(expiredCount == 1 ? "" : "s")", tone: .critical)
                         }
                         if expiringSoonCount > 0 {
-                            HStack(spacing: 4) {
-                                Image(systemName: "clock.badge.exclamationmark")
-                                    .font(.caption2)
-                                Text("\(expiringSoonCount) expiring soon")
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                            }
-                            .foregroundStyle(.orange)
+                            StatusLabel("\(expiringSoonCount) por vencer", tone: .caution)
                         }
                         Spacer()
                     }
+                    .font(.caption)
+                    .fontWeight(.medium)
                     .padding(.horizontal, 4)
                 }
                 
@@ -1103,14 +1091,11 @@ struct ProductDetailView: View {
             // Row 1: Quantity, unit cost, and value
             HStack(spacing: 10) {
                 // Age indicator (or expiry warning)
-                if batch.isExpired {
-                    Image(systemName: "exclamationmark.triangle.fill")
+                if let tone = batch.expiryTone, tone != .neutral {
+                    // The pill below says it in words ("Vencido …" / "Vence …").
+                    Image(systemName: tone.systemImage)
                         .font(.caption2)
-                        .foregroundStyle(.red)
-                } else if batch.expiresWithin(days: 90) {
-                    Image(systemName: "clock.badge.exclamationmark")
-                        .font(.caption2)
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(tone.color)
                 } else {
                     Circle()
                         .fill(batchAgeColor(batch.age))
@@ -1200,15 +1185,10 @@ struct ProductDetailView: View {
             pills.append(BatchPill(icon: "building.2", label: supplier, color: .blue))
         }
         
-        if let expiry = batch.expiryDate {
+        if let expiry = batch.expiryDate, let tone = batch.expiryTone {
             let formatted = Expiry.display(expiry)
-            if batch.isExpired {
-                pills.append(BatchPill(icon: "xmark.circle", label: "Vencido \(formatted)", color: .red))
-            } else if batch.expiresWithin(days: 90) {
-                pills.append(BatchPill(icon: "clock", label: "Vence \(formatted)", color: .orange))
-            } else {
-                pills.append(BatchPill(icon: "calendar", label: "Vence \(formatted)", color: .green))
-            }
+            let label = tone == .critical ? "Vencido \(formatted)" : "Vence \(formatted)"
+            pills.append(BatchPill(icon: tone.systemImage, label: label, color: tone.color))
         }
         
         if let invoice = batch.invoiceNumber, !invoice.isEmpty {

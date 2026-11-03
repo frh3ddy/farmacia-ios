@@ -11,6 +11,9 @@ import Foundation
 
 public struct ReceivingDraft: Equatable, Sendable {
     public var quantity: Int?
+    /// "Por cajas": typed before Cantidad has a total, so they count on their own.
+    public var boxes: Int?
+    public var perBox: Int?
     public var unitCost: Double?
     public var updatesPrice = false
     public var newPrice: Double?
@@ -45,6 +48,8 @@ public struct ReceivingDraft: Equatable, Sendable {
     private var saved: Saved {
         Saved(
             quantity: quantity,
+            boxes: boxes,
+            perBox: perBox,
             unitCost: unitCost,
             newPrice: updatesPrice ? newPrice : nil,
             updatesPrice: updatesPrice,
@@ -58,6 +63,8 @@ public struct ReceivingDraft: Equatable, Sendable {
 
     private struct Saved: Equatable {
         let quantity: Int?
+        let boxes: Int?
+        let perBox: Int?
         let unitCost: Double?
         let newPrice: Double?
         let updatesPrice: Bool

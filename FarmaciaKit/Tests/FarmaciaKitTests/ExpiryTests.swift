@@ -17,14 +17,14 @@ struct ExpiryTests {
     func eveningBeforeIsNotExpired() {
         let now = mxTime("2026-11-14T18:30:00-06:00")
         #expect(Expiry.daysUntil(expiry, now: now, timeZone: mx) == 1)
-        #expect(!Expiry.isExpired(expiry, now: now, timeZone: mx))
+        #expect(!(Expiry.tone(daysUntil: Expiry.daysUntil(expiry, now: now, timeZone: mx)) == .critical))
     }
 
     @Test("given just after midnight on the expiry day, should be expired")
     func expiryDayIsExpired() {
         let now = mxTime("2026-11-15T00:10:00-06:00")
         #expect(Expiry.daysUntil(expiry, now: now, timeZone: mx) == 0)
-        #expect(Expiry.isExpired(expiry, now: now, timeZone: mx))
+        #expect((Expiry.tone(daysUntil: Expiry.daysUntil(expiry, now: now, timeZone: mx)) == .critical))
     }
 
     @Test("given 11pm two days before, should count calendar days, not 24h blocks")
@@ -36,7 +36,7 @@ struct ExpiryTests {
     func past() {
         let now = mxTime("2026-11-20T09:00:00-06:00")
         #expect(Expiry.daysUntil(expiry, now: now, timeZone: mx) == -5)
-        #expect(Expiry.isExpired(expiry, now: now, timeZone: mx))
+        #expect((Expiry.tone(daysUntil: Expiry.daysUntil(expiry, now: now, timeZone: mx)) == .critical))
     }
 
     @Test("given either stored form of a Nov 15 expiry, should land on the same day",
@@ -72,7 +72,23 @@ struct ExpiryTests {
 
     @Test("given a 90-day window, should include the 90th day and exclude the 91st",
           arguments: [("2026-08-17T12:00:00-06:00", true), ("2026-08-16T12:00:00-06:00", false)])
-    func expiresWithin(now: String, expected: Bool) {
-        #expect(Expiry.expiresWithin(expiry, days: 90, now: mxTime(now), timeZone: mx) == expected)
+    func warningWindow(now: String, expected: Bool) {
+        let days = Expiry.daysUntil(expiry, now: mxTime(now), timeZone: mx)
+        #expect((Expiry.tone(daysUntil: days) == .caution) == expected)
     }
+}
+
+/// Expiry status as a tone, so screens don't pick red/orange or the 90-day cutoff themselves.
+struct ExpiryToneTests {
+    @Test("given a lot that expired yesterday, should be critical")
+    func pastIsCritical() { #expect(Expiry.tone(daysUntil: -1) == .critical) }
+
+    @Test("given the expiry day itself, should be critical (expired from the start of the day)")
+    func todayIsCritical() { #expect(Expiry.tone(daysUntil: 0) == .critical) }
+
+    @Test("given 90 days left, should be caution")
+    func withinNinetyIsCaution() { #expect(Expiry.tone(daysUntil: 90) == .caution) }
+
+    @Test("given 91 days left, should be neutral")
+    func laterIsNeutral() { #expect(Expiry.tone(daysUntil: 91) == .neutral) }
 }

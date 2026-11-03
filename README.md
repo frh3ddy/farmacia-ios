@@ -114,6 +114,10 @@ Opened from a product (Productos → product → Recibir Inventario / Ajustar In
 - Receive new inventory with cost tracking
 - Quick adjustments (damage, theft, expired, found, etc.); an adjustment that adds stock uses the product's last cost, and asks for a unit cost only when the product has none on record
 - Count correction by counted total against the store's live stock (needs a connection)
+- Before saving, adjustments, counts and receivings show what they do to this store's stock ("Centro · 42 → 39 (−3)"), and warn when a removal is more than the stock on hand
+- Receive by the box: Cajas × Piezas por caja fills Cantidad
+- Lot expiry shows in words and an icon, not just color ("2 vencidos", "1 por vencer"; caution from 90 days)
+- Nuevo Producto says next to the field why Crear is off (price 0, a quantity without cost, a cost without quantity)
 - Switching store returns the other tabs to their first screen, so nothing from the previous store or role stays open
 - Receiving and adjustment history (product activity and global history)
 - Square sync status on each receiving and adjustment; the owner can retry a failed sync from product activity or global history

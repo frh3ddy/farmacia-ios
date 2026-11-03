@@ -27,6 +27,20 @@ struct ReceivingDraftTests {
         #expect(draft.hasChanges(from: opened))
     }
 
+    @Test("given only a box count typed (Cantidad still empty), should have changes")
+    func typedBoxesOnly() {
+        var draft = opened
+        draft.boxes = 3
+        #expect(draft.hasChanges(from: opened))
+    }
+
+    @Test("given only pieces per box typed, should have changes")
+    func typedPerBoxOnly() {
+        var draft = opened
+        draft.perBox = 12
+        #expect(draft.hasChanges(from: opened))
+    }
+
     @Test("given another supplier picked, should have changes")
     func otherSupplier() {
         var draft = opened
