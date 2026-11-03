@@ -34,10 +34,11 @@ public enum StockLevel: Equatable, Sendable {
 // MARK: - Batch Age
 
 public enum BatchAge {
-    /// How long a batch has sat on the shelf: under 30 days fresh, under 90 slow, then old.
+    /// How long a batch has sat on the shelf, in the API aging service's buckets
+    /// (0–30, 31–60, 61–90, 90+): up to 30 days fresh, up to 90 slow, then old.
     public static func tone(days: Int) -> Tone {
-        if days < 30 { return .positive }
-        if days < 90 { return .caution }
+        if days <= 30 { return .positive }
+        if days <= 90 { return .caution }
         return .critical
     }
 }

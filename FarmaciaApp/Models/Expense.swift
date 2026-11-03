@@ -93,13 +93,9 @@ struct Expense: Codable, Identifiable {
         Double(amount) ?? 0
     }
     
+    /// MXN only — the backend's Expense model has no currency field.
     var formattedAmount: String {
-        // This business operates in MXN only — the backend's Expense model
-        // has no currency field, matching Product's own "MXN" default.
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "MXN"
-        return formatter.string(from: NSNumber(value: amountDouble)) ?? "$\(amount)"
+        ReportFormat.currency(amount)
     }
 }
 
@@ -139,18 +135,6 @@ struct ExpenseSummary: Decodable {
     var expenseCount: Int { totals.expenseCount }
     var paidExpenses: String { totals.paidExpenses }
     var unpaidExpenses: String { totals.unpaidExpenses }
-    
-    var totalDouble: Double {
-        Double(totalExpenses) ?? 0
-    }
-    
-    var paidDouble: Double {
-        Double(paidExpenses) ?? 0
-    }
-    
-    var unpaidDouble: Double {
-        Double(unpaidExpenses) ?? 0
-    }
 }
 
 struct ExpenseTotals: Decodable {
@@ -170,24 +154,12 @@ struct ExpenseTypeSummary: Decodable {
     let total: String
     let count: Int
     let percentage: String
-    
-    var totalDouble: Double {
-        Double(total) ?? 0
-    }
-    
-    var percentageDouble: Double {
-        Double(percentage) ?? 0
-    }
 }
 
 struct MonthlyExpenseSummary: Decodable {
     let month: String
     let total: String
     let count: Int
-    
-    var totalDouble: Double {
-        Double(total) ?? 0
-    }
 }
 
 // MARK: - Expense Types Response

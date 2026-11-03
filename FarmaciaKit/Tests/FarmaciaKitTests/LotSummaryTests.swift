@@ -8,7 +8,7 @@ struct LotSummaryTests {
     }
 
     @Test func countsByAgeUsingBatchAgeCutoffs() {
-        let summary = LotSummary(lots: [lot(age: 29), lot(age: 30), lot(age: 90)])
+        let summary = LotSummary(lots: [lot(age: 30), lot(age: 31), lot(age: 91)])
         #expect(summary.fresh == 1)
         #expect(summary.moderate == 1)
         #expect(summary.old == 1)

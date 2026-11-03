@@ -32,4 +32,10 @@ struct ReportFormatTests {
     func isNonNegative(value: String, expected: Bool) {
         #expect(ReportFormat.isNonNegative(value) == expected)
     }
+
+    @Test("given a profit of 0 / 12.50 / -3, tone should be positive / positive / critical",
+          arguments: [("0", Tone.positive), ("12.50", .positive), ("-3", .critical)])
+    func gainLossTone(amount: String, expected: Tone) {
+        #expect(ReportFormat.tone(amount) == expected)
+    }
 }

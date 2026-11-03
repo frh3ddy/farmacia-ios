@@ -974,9 +974,9 @@ struct ProductDetailView: View {
                 // Batch summary bar
                 if let agingInfo = batchViewModel.lotSummary {
                     HStack(spacing: DS.Spacing.m) {
-                        agingPill(label: "<30d", count: agingInfo.fresh, color: BatchAge.tone(days: 0).color)
-                        agingPill(label: "30-90d", count: agingInfo.moderate, color: BatchAge.tone(days: 30).color)
-                        agingPill(label: ">90d", count: agingInfo.old, color: BatchAge.tone(days: 90).color)
+                        agingPill(label: "0–30d", count: agingInfo.fresh, color: BatchAge.tone(days: 0).color)
+                        agingPill(label: "31–90d", count: agingInfo.moderate, color: BatchAge.tone(days: 31).color)
+                        agingPill(label: "90+d", count: agingInfo.old, color: BatchAge.tone(days: 91).color)
                     }
                 }
                 
@@ -1115,11 +1115,9 @@ struct ProductDetailView: View {
         )
     }
     
+    /// The aging service's buckets start at 0/31/61/91 days; color them like the lot age dots.
     private func bucketColor(_ minDays: Int) -> Color {
-        if minDays >= 91 { return .red }
-        if minDays >= 61 { return .orange }
-        if minDays >= 31 { return .yellow }
-        return .green
+        BatchAge.tone(days: minDays).color
     }
     
     private func agingPill(label: String, count: Int, color: Color) -> some View {

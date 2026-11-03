@@ -42,7 +42,7 @@ struct AdjustmentImpactReportView: View {
                             title: "Diferencia Neta",
                             value: formatCurrency(report.summary.netImpact),
                             subtitle: "Referencia, no es Ganancia Neta",
-                            color: ReportFormat.isNonNegative(report.summary.netImpact) ? .green : .red
+                            color: ReportFormat.tone(report.summary.netImpact).color
                         )
 
                         ReportHeaderCard(
@@ -178,7 +178,7 @@ struct ProductAdjustmentRow: View {
                 Text(formatCurrency(product.netImpact))
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                    .foregroundStyle(ReportFormat.isNonNegative(product.netImpact) ? .green : .red)
+                    .foregroundStyle(ReportFormat.tone(product.netImpact).color)
             }
         }
         .padding()

@@ -262,7 +262,7 @@ struct ExpenseSummaryCard: View {
                     Text("Total de Gastos")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                    Text(ReportFormat.currency(summary.totalDouble))
+                    Text(ReportFormat.currency(summary.totalExpenses))
                         .font(.title2)
                         .fontWeight(.bold)
                 }
@@ -283,7 +283,7 @@ struct ExpenseSummaryCard: View {
                     Text("Pagado")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Text(ReportFormat.currency(summary.paidDouble))
+                    Text(ReportFormat.currency(summary.paidExpenses))
                         .font(.subheadline)
                         .foregroundStyle(Tone.positive.color)
                 }
@@ -294,7 +294,7 @@ struct ExpenseSummaryCard: View {
                     Text("No pagado")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Text(ReportFormat.currency(summary.unpaidDouble))
+                    Text(ReportFormat.currency(summary.unpaidExpenses))
                         .font(.subheadline)
                         .foregroundStyle(Tone.caution.color)
                 }

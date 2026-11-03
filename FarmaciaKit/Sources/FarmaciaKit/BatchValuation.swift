@@ -69,9 +69,9 @@ public struct BatchValuation: Decodable, Identifiable, Equatable, Sendable {
 // Counts for the Lotes FIFO section: by shelf age (`BatchAge.tone`) and by expiry (`expiryTone`).
 
 public struct LotSummary: Equatable, Sendable {
-    public let fresh: Int     // < 30 days
-    public let moderate: Int  // 30–89 days
-    public let old: Int       // ≥ 90 days
+    public let fresh: Int     // 0–30 days
+    public let moderate: Int  // 31–90 days
+    public let old: Int       // 91+ days
     public let expired: Int
     public let expiringSoon: Int
 

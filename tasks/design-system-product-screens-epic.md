@@ -38,3 +38,9 @@ sizes). Same look; colors come from rules, sizes from text styles. Other screens
 - Kept on purpose: section-header accent icons (decorative), `BatchPill` category colors (lot/supplier/invoice),
   `bucketColor` (the aging service's 4 tiers at 31/61/91 days — a different scale; a follow-up if it should match
   `BatchAge`), `InventoryRiskLevel.color` (model).
+
+## Follow-up (2026-11-03, `fix/aging-colors`)
+
+- `BatchAge.tone` moved to the API aging service's buckets (0–30 positive, 31–90 caution, 91+ critical; was <30 / <90),
+  so the age dots, the 0–30d / 31–90d / 90+d pills, the aging chart (`bucketColor` now uses `BatchAge`) and
+  "más de 90 días" all agree. The chart's 31–60 and 61–90 segments now share the caution color (was yellow/orange).

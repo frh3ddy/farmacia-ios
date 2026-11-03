@@ -66,7 +66,7 @@ struct ProfitLossReportView: View {
                             label: "Ganancia Neta",
                             value: report.netProfit.amount,
                             subtitle: "\(formatPercent(report.netProfit.marginPercent)) margen",
-                            color: ReportFormat.isNonNegative(report.netProfit.amount) ? .green : .red
+                            color: ReportFormat.tone(report.netProfit.amount).color
                         )
                     }
                     .padding(.horizontal)

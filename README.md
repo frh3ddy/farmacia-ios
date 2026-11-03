@@ -127,6 +127,7 @@ Opened from a product (Productos → product → Recibir Inventario / Ajustar In
 - The Products stats row reads "X de Y sincronizados con Square", both from the server's catalog counts
 - Catalog counts (stock chips, synced, stock alerts) come from the server for every role; a cashier's have no low-margin count, since it's worked out from cost
 - Product list badges in Spanish ("Agotado" at 0, "Bajo" at 1–9, the API's stock-filter cutoffs); filter chip, margin and lot-age colors follow what they mean (`StockLevel`, `ProductFilter.tone`, `BatchAge.tone` in FarmaciaKit)
+- Lot age colors, the 0–30d / 31–90d / 90+d counts and the aging chart use the API's aging buckets
 - Lotes FIFO lists lots in the order they sell (oldest first, "Sale siguiente" on the next one); the lot detail is in Spanish, with stock left as a progress bar, movements newest first and a retry on load errors
 - Product photo (camera or library): square crop → background removal → preview; the crop screen opens on the first try
 
@@ -141,7 +142,7 @@ Opened from a product (Productos → product → Recibir Inventario / Ajustar In
 
 ### Design system
 - Status colors come from meaning (`Tone`: positive/caution/critical/info/neutral) across Productos, Lotes, Gastos,
-  Empleados and Nómina; empty and error screens use the standard iOS layout with a retry where loading can fail
+  Empleados, Nómina, aging risk (Alto and Crítico both red) and gain/loss figures; empty and error screens use the standard iOS layout with a retry where loading can fail
 
 ### Employee Management (Owner only)
 - Add/edit employees
