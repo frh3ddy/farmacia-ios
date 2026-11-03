@@ -127,6 +127,7 @@ Opened from a product (Productos → product → Recibir Inventario / Ajustar In
 - The Products stats row reads "X de Y sincronizados con Square", both from the server's catalog counts
 - Catalog counts (stock chips, synced, stock alerts) come from the server for every role; a cashier's have no low-margin count, since it's worked out from cost
 - Product list badges in Spanish ("Agotado" at 0, "Bajo" at 1–9, the API's stock-filter cutoffs); filter chip, margin and lot-age colors follow what they mean (`StockLevel`, `ProductFilter.tone`, `BatchAge.tone` in FarmaciaKit)
+- Lotes FIFO lists lots in the order they sell (oldest first, "Sale siguiente" on the next one); the lot detail is in Spanish, with stock left as a progress bar, movements newest first and a retry on load errors
 - Product photo (camera or library): square crop → background removal → preview; the crop screen opens on the first try
 
 ### Reports

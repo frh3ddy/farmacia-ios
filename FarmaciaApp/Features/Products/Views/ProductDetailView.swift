@@ -946,7 +946,7 @@ struct ProductDetailView: View {
                     ProgressView()
                         .scaleEffect(0.8)
                 } else if !batchViewModel.batches.isEmpty {
-                    Text("\(batchViewModel.batches.count) batch\(batchViewModel.batches.count == 1 ? "" : "es")")
+                    Text("\(batchViewModel.batches.count) lote\(batchViewModel.batches.count == 1 ? "" : "s")")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -972,7 +972,7 @@ struct ProductDetailView: View {
                 }
                 
                 // Batch summary bar
-                if let agingInfo = batchViewModel.agingSummary {
+                if let agingInfo = batchViewModel.lotSummary {
                     HStack(spacing: DS.Spacing.m) {
                         agingPill(label: "<30d", count: agingInfo.fresh, color: BatchAge.tone(days: 0).color)
                         agingPill(label: "30-90d", count: agingInfo.moderate, color: BatchAge.tone(days: 30).color)
@@ -981,8 +981,8 @@ struct ProductDetailView: View {
                 }
                 
                 // Expiry summary (if any batches have expiry dates)
-                let expiredCount = batchViewModel.batches.filter { $0.expiryTone == .critical }.count
-                let expiringSoonCount = batchViewModel.batches.filter { $0.expiryTone == .caution }.count
+                let expiredCount = batchViewModel.lotSummary?.expired ?? 0
+                let expiringSoonCount = batchViewModel.lotSummary?.expiringSoon ?? 0
                 if expiredCount > 0 || expiringSoonCount > 0 {
                     HStack(spacing: DS.Spacing.m) {
                         if expiredCount > 0 {
@@ -998,14 +998,15 @@ struct ProductDetailView: View {
                     .padding(.horizontal, DS.Spacing.xs)
                 }
                 
-                // Individual batches (newest first, show first 3, expand for all)
-                let sortedBatches = batchViewModel.batches.sorted { $0.receivedAt > $1.receivedAt }
+                // Lots in the order FIFO sells them (first 3 = next to sell, expand for all)
+                let sortedBatches = BatchValuation.fifoOrder(batchViewModel.batches)
+                let nextOutId = BatchValuation.nextOut(batchViewModel.batches)?.id
                 let batchesToShow = showAllBatches ? sortedBatches : Array(sortedBatches.prefix(3))
                 ForEach(batchesToShow) { batch in
                     Button {
                         sheet = .batch(batch.batchId)
                     } label: {
-                        batchRow(batch)
+                        batchRow(batch, isNextOut: batch.id == nextOutId)
                     }
                     .buttonStyle(.plain)
                     if batch.id != batchesToShow.last?.id {
@@ -1025,7 +1026,8 @@ struct ProductDetailView: View {
                             Image(systemName: showAllBatches ? "chevron.up" : "chevron.down")
                                 .font(.caption)
                         }
-                        .foregroundStyle(.blue)
+                        .frame(minHeight: DS.minTapSize)
+                        .contentShape(.rect)
                     }
                 }
             }
@@ -1041,7 +1043,7 @@ struct ProductDetailView: View {
                 HStack(spacing: DS.Spacing.xs) {
                     Image(systemName: aging.riskLevel.icon)
                         .font(.caption)
-                    Text("\(aging.riskLevel.displayName) Risk")
+                    Text("Riesgo \(aging.riskLevel.displayName)")
                         .font(.caption)
                         .fontWeight(.semibold)
                 }
@@ -1053,7 +1055,7 @@ struct ProductDetailView: View {
                     Text(aging.formattedCashTiedUp)
                         .font(.caption)
                         .fontWeight(.bold)
-                    Text("tied up")
+                    Text("inmovilizado")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
@@ -1137,7 +1139,7 @@ struct ProductDetailView: View {
         .clipShape(.rect(cornerRadius: DS.Radius.m))
     }
     
-    private func batchRow(_ batch: BatchValuation) -> some View {
+    private func batchRow(_ batch: BatchValuation, isNextOut: Bool) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             // Row 1: Quantity, unit cost, and value
             HStack(spacing: 10) {
@@ -1158,14 +1160,17 @@ struct ProductDetailView: View {
                         Text("\(batch.quantity) uds")
                             .font(.subheadline)
                             .fontWeight(.medium)
-                        Text("@ $\(batch.unitCost)/ea")
+                        Text("\(ReportFormat.currency(batch.unitCost)) c/u")
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                        if isNextOut {
+                            ToneBadge("Sale siguiente", tone: .info)
+                        }
                     }
                     
                     // Row 2: Age + received date + source
                     HStack(spacing: DS.Spacing.xs) {
-                        Text("\(batch.age)d old")
+                        Text("\(batch.age) días")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                         Text("\u{2022}")
@@ -1188,7 +1193,7 @@ struct ProductDetailView: View {
                 Spacer()
                 
                 // Batch value
-                Text("$\(batch.value)")
+                Text(ReportFormat.currency(batch.value))
                     .font(.caption)
                     .fontWeight(.semibold)
                     .foregroundStyle(.secondary)

@@ -2,68 +2,52 @@ import SwiftUI
 import FarmaciaKit
 
 // MARK: - Batch Detail View
-// Tapped from a FIFO batch row in ProductDetailView
-// Shows full batch history: receiving metadata, consumption trail, remaining quantity
+// Tapped from a lot row in ProductDetailView's Lotes FIFO section.
+// Shows the lot's receipt (or the adjustment that created it), how much is left,
+// and every sale/adjustment that took units from it.
 
 struct BatchDetailView: View {
     let batchId: String
     let productName: String
-    
+
     @StateObject private var viewModel = BatchDetailViewModel()
     @Environment(\.dismiss) private var dismiss
-    
+
     var body: some View {
         NavigationStack {
             Group {
                 if viewModel.isLoading {
-                    VStack(spacing: 16) {
-                        ProgressView()
-                            .scaleEffect(1.2)
-                        Text("Loading batch history...")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    ProgressView("Cargando lote…")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if let detail = viewModel.batchDetail {
                     ScrollView {
-                        VStack(spacing: 16) {
-                            // Batch overview card
+                        VStack(spacing: DS.Spacing.l) {
                             overviewCard(detail)
-                            
-                            // Receiving metadata
                             if let receiving = detail.receiving {
                                 receivingCard(receiving)
                             }
-                            
-                            // Adjustment metadata (if created by adjustment)
                             if let adjustment = detail.adjustment {
                                 adjustmentCard(adjustment)
                             }
-                            
-                            // Quantity timeline
                             quantityCard(detail)
-                            
-                            // Consumption history
-                            consumptionCard(detail)
+                            historyCard(detail)
                         }
                         .padding()
                     }
                 } else if let error = viewModel.errorMessage {
-                    VStack(spacing: 12) {
-                        Image(systemName: "exclamationmark.triangle")
-                            .font(.title)
-                            .foregroundStyle(.secondary)
-                        Text("Failed to load batch")
-                            .font(.headline)
+                    ContentUnavailableView {
+                        Label("No se pudo cargar el lote", systemImage: "exclamationmark.triangle")
+                    } description: {
                         Text(error)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
+                    } actions: {
+                        Button("Reintentar") {
+                            Task { await viewModel.loadBatchDetail(batchId: batchId) }
+                        }
+                        .buttonStyle(.borderedProminent)
                     }
-                    .padding()
                 }
             }
-            .navigationTitle("Batch Detail")
+            .navigationTitle("Lote")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -75,30 +59,19 @@ struct BatchDetailView: View {
             await viewModel.loadBatchDetail(batchId: batchId)
         }
     }
-    
-    // MARK: - Overview Card
-    
+
+    // MARK: - Overview
+
     private func overviewCard(_ detail: BatchDetail) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: DS.Spacing.m) {
             HStack {
-                Image(systemName: "square.stack.3d.up.fill")
-                    .foregroundStyle(.teal)
-                Text("Batch Overview")
-                    .font(.headline)
+                cardTitle("Resumen", systemImage: "square.stack.3d.up.fill", color: .teal)
                 Spacer()
-                Text(detail.sourceLabel)
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(Color.blue.opacity(0.1))
-                    .foregroundStyle(.blue)
-                    .clipShape(.rect(cornerRadius: 6))
+                ToneBadge(detail.sourceLabel, tone: .info)
             }
-            
+
             Divider()
-            
-            // Product
+
             HStack {
                 Text(productName)
                     .font(.subheadline)
@@ -110,53 +83,40 @@ struct BatchDetailView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            
-            // Key metrics grid
-            LazyVGrid(columns: [
-                GridItem(.flexible()),
-                GridItem(.flexible()),
-                GridItem(.flexible()),
-            ], spacing: 12) {
-                metricBox(value: "\(detail.quantity)", label: "Restante", color: detail.quantity > 0 ? .green : .red)
-                metricBox(value: detail.formattedUnitCost, label: "Costo Unitario", color: .blue)
-                metricBox(value: "\(detail.ageDays)d", label: "Age", color: detail.ageDays > 90 ? .red : detail.ageDays > 30 ? .orange : .green)
+
+            HStack(spacing: DS.Spacing.m) {
+                metricBox(value: "\(detail.quantity)", label: "Restante",
+                          tone: StockLevel(quantity: detail.quantity) == .out ? .critical : .neutral)
+                metricBox(value: detail.formattedUnitCost, label: "Costo unitario", tone: .neutral)
+                metricBox(value: "\(detail.ageDays) días", label: "Antigüedad", tone: BatchAge.tone(days: detail.ageDays))
             }
-            
-            // Value and location
+
             HStack {
                 Label(detail.locationName, systemImage: "building.2")
-                    .font(.caption)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Text("Value: \(detail.formattedCurrentValue)")
-                    .font(.caption)
+                Text("Valor: \(detail.formattedCurrentValue)")
                     .fontWeight(.semibold)
             }
+            .font(.caption)
         }
-        .padding()
-        .background(Color(.systemGray6))
-        .clipShape(.rect(cornerRadius: 16))
+        .card()
     }
-    
-    // MARK: - Receiving Card
-    
+
+    // MARK: - Receipt
+
     private func receivingCard(_ receiving: BatchReceivingDetail) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: "arrow.down.doc.fill")
-                    .foregroundStyle(.green)
-                Text("Receiving Details")
-                    .font(.headline)
-            }
-            
+        VStack(alignment: .leading, spacing: DS.Spacing.m) {
+            cardTitle("Recepción", systemImage: "arrow.down.doc.fill", color: .green)
+
             Divider()
-            
-            VStack(spacing: 8) {
+
+            VStack(spacing: DS.Spacing.s) {
                 if let supplier = receiving.supplierName {
-                    infoRow(icon: "building.2", label: "Proveedor", value: supplier, color: .blue)
+                    infoRow(icon: "building.2", label: "Proveedor", value: supplier)
                 }
                 if let lot = receiving.batchNumber, !lot.isEmpty {
-                    infoRow(icon: "number", label: "Lot / Batch #", value: lot, color: .purple)
+                    infoRow(icon: "number", label: "Lote", value: lot)
                 }
                 if let expiry = receiving.expiryDate {
                     let tone = Expiry.tone(daysUntil: Expiry.daysUntil(expiry))
@@ -168,219 +128,172 @@ struct BatchDetailView: View {
                     )
                 }
                 if let mfg = receiving.manufacturingDate {
-                    infoRow(icon: "hammer", label: "Manufacturing Date", value: mfg.formatted(date: .abbreviated, time: .omitted), color: .secondary)
+                    infoRow(icon: "hammer", label: "Fabricación", value: Expiry.display(mfg))
                 }
                 if let invoice = receiving.invoiceNumber, !invoice.isEmpty {
-                    infoRow(icon: "doc.text", label: "Invoice", value: invoice, color: .gray)
+                    infoRow(icon: "doc.text", label: "Factura", value: invoice)
                 }
-                infoRow(icon: "clock", label: "Recibido", value: receiving.receivedAt.formatted(date: .abbreviated, time: .shortened), color: .secondary)
+                infoRow(icon: "clock", label: "Recibido", value: receiving.receivedAt.formatted(date: .abbreviated, time: .shortened))
                 if let notes = receiving.notes, !notes.isEmpty {
-                    infoRow(icon: "note.text", label: "Notas", value: notes, color: .secondary)
+                    infoRow(icon: "note.text", label: "Notas", value: notes)
                 }
             }
         }
-        .padding()
-        .background(Color(.systemGray6))
-        .clipShape(.rect(cornerRadius: 16))
+        .card()
     }
-    
-    // MARK: - Adjustment Card
-    
+
+    // MARK: - Created by Adjustment
+
     private func adjustmentCard(_ adjustment: BatchAdjustmentDetail) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: "arrow.triangle.2.circlepath")
-                    .foregroundStyle(.orange)
-                Text("Created by Adjustment")
-                    .font(.headline)
-            }
-            
+        VStack(alignment: .leading, spacing: DS.Spacing.m) {
+            cardTitle("Creado por ajuste", systemImage: "arrow.triangle.2.circlepath", color: .orange)
+
             Divider()
-            
-            VStack(spacing: 8) {
-                infoRow(icon: "tag", label: "Tipo", value: adjustment.type, color: .orange)
-                if let reason = adjustment.reason {
-                    infoRow(icon: "text.quote", label: "Reason", value: reason, color: .secondary)
+
+            VStack(spacing: DS.Spacing.s) {
+                infoRow(icon: "tag", label: "Tipo", value: AdjustmentType.label(adjustment.type))
+                if let reason = adjustment.reason, !reason.isEmpty {
+                    infoRow(icon: "text.quote", label: "Motivo", value: reason)
                 }
-                infoRow(icon: "clock", label: "Adjusted", value: adjustment.adjustedAt.formatted(date: .abbreviated, time: .shortened), color: .secondary)
+                if let notes = adjustment.notes, !notes.isEmpty {
+                    infoRow(icon: "note.text", label: "Notas", value: notes)
+                }
+                infoRow(icon: "clock", label: "Fecha", value: adjustment.adjustedAt.formatted(date: .abbreviated, time: .shortened))
             }
         }
-        .padding()
-        .background(Color(.systemGray6))
-        .clipShape(.rect(cornerRadius: 16))
+        .card()
     }
-    
-    // MARK: - Quantity Card
-    
+
+    // MARK: - Quantity
+
     private func quantityCard(_ detail: BatchDetail) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: "chart.bar.fill")
-                    .foregroundStyle(.indigo)
-                Text("Quantity Tracking")
-                    .font(.headline)
-            }
-            
+        VStack(alignment: .leading, spacing: DS.Spacing.m) {
+            cardTitle("Existencia", systemImage: "chart.bar.fill", color: .indigo)
+
             Divider()
-            
-            // Progress bar showing remaining vs consumed
-            VStack(spacing: 8) {
-                HStack {
-                    Text("Original: \(detail.originalQuantity) uds")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    Text("\(detail.remainingPercent)% remaining")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(detail.quantity > 0 ? .green : .red)
-                }
-                
-                GeometryReader { geometry in
-                    let remaining = detail.originalQuantity > 0
-                        ? CGFloat(detail.quantity) / CGFloat(detail.originalQuantity)
-                        : 0
-                    ZStack(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(Color(.systemGray4))
-                            .frame(height: 8)
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(remaining > 0.5 ? Color.green : remaining > 0.2 ? Color.orange : Color.red)
-                            .frame(width: geometry.size.width * remaining, height: 8)
-                    }
-                }
-                .frame(height: 8)
-                
-                HStack {
-                    Label("\(detail.quantity) remaining", systemImage: "cube.box")
-                        .font(.caption)
-                        .foregroundStyle(.green)
-                    Spacer()
-                    Label("\(detail.totalConsumed) consumed", systemImage: "arrow.right.circle")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+
+            // An old lot may report original 0; never let the bar's total be 0.
+            ProgressView(value: Double(detail.quantity), total: Double(max(detail.originalQuantity, detail.quantity, 1))) {
+                Text("\(detail.quantity) de \(detail.originalQuantity) restantes")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+            } currentValueLabel: {
+                Text("\(detail.totalConsumed) salieron")
+                    .font(.caption)
             }
         }
-        .padding()
-        .background(Color(.systemGray6))
-        .clipShape(.rect(cornerRadius: 16))
+        .card()
     }
-    
-    // MARK: - Consumption Card
-    
-    private func consumptionCard(_ detail: BatchDetail) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+
+    // MARK: - History (newest first)
+
+    private func historyCard(_ detail: BatchDetail) -> some View {
+        VStack(alignment: .leading, spacing: DS.Spacing.m) {
             HStack {
-                Image(systemName: "list.bullet.rectangle")
-                    .foregroundStyle(.blue)
-                Text("Consumption History")
-                    .font(.headline)
+                cardTitle("Movimientos", systemImage: "list.bullet.rectangle", color: .blue)
                 Spacer()
-                Text("\(detail.consumptionCount) events")
+                Text("\(detail.consumptionCount)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            
+
             Divider()
-            
+
             if detail.consumptions.isEmpty {
-                VStack(spacing: 8) {
-                    Image(systemName: "tray")
-                        .font(.title3)
-                        .foregroundStyle(.secondary)
-                    Text("No consumption records yet")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    Text("This batch hasn't been consumed by any sales or adjustments")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
+                ContentUnavailableView(
+                    "Sin movimientos",
+                    systemImage: "tray",
+                    description: Text("Ninguna venta ni ajuste ha tomado piezas de este lote.")
+                )
             } else {
-                ForEach(detail.consumptions) { consumption in
-                    HStack(spacing: 10) {
-                        // Type icon
-                        Image(systemName: consumption.typeIcon)
-                            .font(.caption)
-                            .foregroundStyle(consumption.typeColor)
-                            .frame(width: 20)
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            HStack {
-                                Text(consumption.typeLabel)
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                                if let sale = consumption.sale {
-                                    Text("(#\(sale.squareId.suffix(6)))")
-                                        .font(.caption2)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                            Text(consumption.consumedAt.formatted(date: .abbreviated, time: .shortened))
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
-                        
-                        Spacer()
-                        
-                        VStack(alignment: .trailing, spacing: 2) {
-                            Text("-\(consumption.quantity) uds")
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(.red)
-                            Text(consumption.formattedTotalCost)
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    
-                    if consumption.id != detail.consumptions.last?.id {
+                let rows = Array(detail.consumptions.reversed())
+                ForEach(rows) { consumption in
+                    historyRow(consumption)
+                    if consumption.id != rows.last?.id {
                         Divider()
                     }
                 }
             }
         }
-        .padding()
-        .background(Color(.systemGray6))
-        .clipShape(.rect(cornerRadius: 16))
+        .card()
     }
-    
+
+    private func historyRow(_ consumption: BatchConsumption) -> some View {
+        HStack(spacing: DS.Spacing.m) {
+            Image(systemName: consumption.typeIcon)
+                .font(.caption)
+                .foregroundStyle(consumption.typeTone.color)
+                .frame(width: DS.Spacing.xl)
+
+            VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
+                HStack(spacing: DS.Spacing.xs) {
+                    Text(consumption.typeLabel)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                    if let sale = consumption.sale {
+                        Text("#\(sale.squareId.suffix(6))")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Text(consumption.consumedAt.formatted(date: .abbreviated, time: .shortened))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: DS.Spacing.xxs) {
+                Text(StockImpact(before: nil, change: -consumption.quantity)?.changeText ?? "\(consumption.quantity)")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                Text(consumption.formattedTotalCost)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
     // MARK: - Helpers
-    
-    private func metricBox(value: String, label: String, color: Color) -> some View {
-        VStack(spacing: 4) {
+
+    private func cardTitle(_ title: String, systemImage: String, color: Color) -> some View {
+        Label {
+            Text(title).font(.headline)
+        } icon: {
+            Image(systemName: systemImage).foregroundStyle(color)
+        }
+    }
+
+    private func metricBox(value: String, label: String, tone: Tone) -> some View {
+        VStack(spacing: DS.Spacing.xs) {
             Text(value)
-                .font(.title3)
-                .fontWeight(.bold)
-                .foregroundStyle(color)
+                .font(.headline)
+                .foregroundStyle(tone == .neutral ? Color.primary : tone.color)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
             Text(label)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
-        .background(color.opacity(0.08))
-        .clipShape(.rect(cornerRadius: 10))
+        .padding(.vertical, DS.Spacing.s)
+        .background(.fill.tertiary, in: .rect(cornerRadius: DS.Radius.m))
     }
-    
-    private func infoRow(icon: String, label: String, value: String, color: Color) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.caption)
-                .foregroundStyle(color)
-                .frame(width: 16)
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .frame(width: 100, alignment: .leading)
+
+    private func infoRow(icon: String, label: String, value: String, color: Color = .secondary) -> some View {
+        LabeledContent {
             Text(value)
-                .font(.caption)
                 .fontWeight(.medium)
-            Spacer()
+                .foregroundStyle(.primary)
+                .multilineTextAlignment(.trailing)
+        } label: {
+            Label {
+                Text(label).foregroundStyle(.secondary)
+            } icon: {
+                Image(systemName: icon).foregroundStyle(color)
+            }
         }
+        .font(.caption)
     }
 }
 
@@ -391,14 +304,14 @@ class BatchDetailViewModel: ObservableObject {
     @Published var batchDetail: BatchDetail?
     @Published var isLoading = false
     @Published var errorMessage: String?
-    
+
     private let apiClient = APIClient.shared
-    
+
     func loadBatchDetail(batchId: String) async {
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
-        
+
         do {
             let response: BatchDetailResponse = try await apiClient.request(
                 endpoint: .batchDetail(batchId: batchId)

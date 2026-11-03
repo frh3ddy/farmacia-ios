@@ -74,35 +74,7 @@ struct ProductValuation: Decodable, Identifiable {
     var id: String { productId }
 }
 
-struct BatchValuation: Decodable, Identifiable {
-    let batchId: String
-    let quantity: Int
-    let unitCost: String
-    let value: String
-    let receivedAt: Date
-    let age: Int  // days since received
-    
-    // Batch-level metadata (from linked InventoryReceiving)
-    let source: String?            // "PURCHASE", "OPENING_BALANCE", "ADJUSTMENT"
-    let batchNumber: String?       // Lot/batch number from supplier
-    let expiryDate: Date?          // Product expiration date
-    let manufacturingDate: Date?   // Manufacturing date if known
-    let invoiceNumber: String?     // Supplier invoice number
-    let supplierId: String?        // Supplier ID
-    let supplierName: String?      // Supplier display name
-    
-    var id: String { batchId }
-    
-    /// Expired → critical, within `Expiry.warningDays` → caution; nil without an expiry date.
-    var expiryTone: Tone? {
-        expiryDate.map { Expiry.tone(daysUntil: Expiry.daysUntil($0)) }
-    }
-    
-    /// Human-readable source label
-    var sourceLabel: String {
-        BatchSource.label(source)
-    }
-}
+// BatchValuation (one FIFO lot) lives in FarmaciaKit.
 
 // MARK: - Profit Margin Report
 // Backend returns: { period, locationId, overallMargin, byProduct, trends }
