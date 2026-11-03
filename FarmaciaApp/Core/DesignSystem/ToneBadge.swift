@@ -16,7 +16,7 @@ struct ToneBadge: View {
         self.init(text, color: tone.color, systemImage: systemImage)
     }
 
-    /// For colors that aren't a `Tone` yet (e.g. `InventoryRiskLevel.color`).
+    /// For identity colors that aren't a status (e.g. a role or expense type).
     init(_ text: String, color: Color, systemImage: String? = nil) {
         self.text = text
         self.color = color

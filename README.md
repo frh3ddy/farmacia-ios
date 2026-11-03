@@ -142,7 +142,7 @@ Opened from a product (Productos → product → Recibir Inventario / Ajustar In
 
 ### Design system
 - Status colors come from meaning (`Tone`: positive/caution/critical/info/neutral) across Productos, Lotes, Gastos,
-  Empleados and Nómina; empty and error screens use the standard iOS layout with a retry where loading can fail
+  Empleados, Nómina, aging risk (Alto and Crítico both red) and gain/loss figures; empty and error screens use the standard iOS layout with a retry where loading can fail
 
 ### Employee Management (Owner only)
 - Add/edit employees

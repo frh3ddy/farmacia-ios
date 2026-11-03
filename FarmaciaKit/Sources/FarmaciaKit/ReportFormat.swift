@@ -25,6 +25,11 @@ public enum ReportFormat {
         return String(format: "%.1f%%", doubleValue)
     }
 
+    /// Gain or zero → positive, loss → critical.
+    public static func tone(_ amount: String) -> Tone {
+        isNonNegative(amount) ? .positive : .critical
+    }
+
     /// Gain or zero (shown green) vs. loss (shown red). Unparseable counts as zero.
     public static func isNonNegative(_ amount: String) -> Bool {
         (Double(amount) ?? 0) >= 0

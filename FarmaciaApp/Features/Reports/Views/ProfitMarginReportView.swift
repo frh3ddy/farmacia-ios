@@ -148,7 +148,7 @@ struct TrendRow: View {
                 Text(formatCurrency(trend.profit))
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                    .foregroundStyle(ReportFormat.isNonNegative(trend.profit) ? .green : .red)
+                    .foregroundStyle(ReportFormat.tone(trend.profit).color)
 
                 Text(formatPercent(trend.marginPercent))
                     .font(.caption)

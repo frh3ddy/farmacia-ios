@@ -232,7 +232,7 @@ struct GlobalActivityItem: Identifiable {
     }
     
     var quantityColor: Color {
-        quantity > 0 ? .green : .red
+        StockChange(quantity: quantity).tone.color
     }
 }
 

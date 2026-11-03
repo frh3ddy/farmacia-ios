@@ -207,7 +207,7 @@ struct DashboardView: View {
                     title: "Ganancia Neta",
                     value: formatCurrency(netProfit.amount),
                     icon: "banknote.fill",
-                    color: ReportFormat.isNonNegative(netProfit.amount) ? .green : .red
+                    color: ReportFormat.tone(netProfit.amount).color
                 )
             }
         }
@@ -226,7 +226,7 @@ struct DashboardView: View {
                 }
                 if let grossProfit = report.sales.grossProfit {
                     summaryRow(label: "Ganancia Bruta", value: formatCurrency(grossProfit),
-                               valueColor: ReportFormat.isNonNegative(grossProfit) ? .green : .red)
+                               valueColor: ReportFormat.tone(grossProfit).color)
                 }
                 if let margin = report.sales.grossMarginPercent {
                     summaryRow(label: "Margen Bruto", value: ReportFormat.percent(margin))
@@ -348,7 +348,7 @@ struct DashboardView: View {
                         Spacer()
                         Text(formatCurrency(netImpact))
                             .fontWeight(.bold)
-                            .foregroundStyle(ReportFormat.isNonNegative(netImpact) ? .green : .red)
+                            .foregroundStyle(ReportFormat.tone(netImpact).color)
                     }
                 }
             }
@@ -401,7 +401,7 @@ struct DashboardView: View {
                     Text(formatCurrency(netProfit.amount))
                         .font(.title3)
                         .fontWeight(.bold)
-                        .foregroundStyle(ReportFormat.isNonNegative(netProfit.amount) ? .green : .red)
+                        .foregroundStyle(ReportFormat.tone(netProfit.amount).color)
                 }
             }
             .padding()

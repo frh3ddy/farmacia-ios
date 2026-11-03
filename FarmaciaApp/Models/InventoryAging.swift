@@ -43,48 +43,9 @@ struct AgingOverviewResponse: Decodable {
 
 // MARK: - Product Aging Analysis (GET /inventory/aging/products)
 
-enum InventoryRiskLevel: String, Decodable, CaseIterable {
-    case low = "LOW"
-    case medium = "MEDIUM"
-    case high = "HIGH"
-    case critical = "CRITICAL"
-    
-    var displayName: String {
-        switch self {
-        case .low: return "Bajo"
-        case .medium: return "Medio"
-        case .high: return "Alto"
-        case .critical: return "Crítico"
-        }
-    }
-    
-    var icon: String {
-        switch self {
-        case .low: return "checkmark.shield"
-        case .medium: return "exclamationmark.triangle"
-        case .high: return "exclamationmark.triangle.fill"
-        case .critical: return "xmark.octagon.fill"
-        }
-    }
-    
-    var color: Color {
-        switch self {
-        case .low: return .green
-        case .medium: return .yellow
-        case .high: return .orange
-        case .critical: return .red
-        }
-    }
-    
-    /// Sort priority (lower = more severe = appears first)
-    var sortOrder: Int {
-        switch self {
-        case .critical: return 0
-        case .high: return 1
-        case .medium: return 2
-        case .low: return 3
-        }
-    }
+// InventoryRiskLevel lives in FarmaciaKit; its color is its tone's.
+extension InventoryRiskLevel {
+    var color: Color { tone.color }
 }
 
 struct ProductAgingAnalysis: Decodable, Identifiable {
