@@ -1,5 +1,8 @@
 # Epic: form UX polish (pilots: Nuevo Producto, Recibir Inventario)
 
+> **Superseded (2026-11-04)** for these two forms by `tasks/inventory-forms-redesign-epic.md`: the Más detalles
+> accordion and the toolbar Guardar/Crear are gone (bottom action bar, validate on submit).
+
 **Branch:** `feature/form-ux-polish`
 
 ## Decisions

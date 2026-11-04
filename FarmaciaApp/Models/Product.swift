@@ -1,4 +1,5 @@
 import Foundation
+import FarmaciaKit
 
 // MARK: - Product
 
@@ -30,21 +31,12 @@ struct Product: Codable, Identifiable, Equatable, Hashable {
     var gtin: String? = nil
     
     var displayName: String {
-        // Use Square product name, then variation name, then fallback to name
-        let cleanSquareName = squareProductName?.trimmingCharacters(in: .whitespaces)
-        let cleanVarName = squareVariationName?.trimmingCharacters(in: .whitespaces)
-        
-        if let sqName = cleanSquareName, !sqName.isEmpty, 
-           !sqName.lowercased().contains("sin variaci"),
-           !sqName.lowercased().contains("no variation") {
-            return sqName
-        }
-        if let varName = cleanVarName, !varName.isEmpty,
-           !varName.lowercased().contains("sin variaci"),
-           !varName.lowercased().contains("no variation") {
-            return varName
-        }
-        return name
+        ProductName.display(name: name, item: squareProductName, variation: squareVariationName)
+    }
+
+    /// Item and variation ("Buscapina (10 mg 12 tab)"), so variations tell apart.
+    var fullName: String {
+        ProductName.full(name: name, item: squareProductName, variation: squareVariationName)
     }
     
     var displayDescription: String? {
@@ -82,8 +74,8 @@ struct Product: Codable, Identifiable, Equatable, Hashable {
     
     /// Profit margin percentage
     var profitMargin: Double? {
-        guard let price = sellingPrice, let cost = averageCost, price > 0 else { return nil }
-        return ((price - cost) / price) * 100
+        guard let price = sellingPrice, let cost = averageCost else { return nil }
+        return Margin.percent(price: price, cost: cost)
     }
     
     // NOTE: deliberately NO custom `==` — the synthesized memberwise equality

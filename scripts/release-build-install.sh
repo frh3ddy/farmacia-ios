@@ -28,10 +28,16 @@ rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR"
 
 step "Finding a connected, available iPhone"
+# Pick a specific phone with DEVICE_UDID=<udid> (see `xcrun devicectl list devices`).
+if [ -n "${DEVICE_UDID:-}" ]; then
+  DEVICE_LINE="$(xcrun devicectl list devices 2>/dev/null | grep "$DEVICE_UDID" || true)"
+  [ -n "$DEVICE_LINE" ] || fail "Device $DEVICE_UDID not found"
+else
 DEVICE_LINE="$(xcrun devicectl list devices 2>/dev/null | grep -i "iPhone" | grep -v "simulated" | grep -E "connected|available \(paired\)" | head -n1 || true)"
 [ -n "$DEVICE_LINE" ] || fail "No connected/available iPhone found. Is it connected, unlocked, and trusted?"
 DEVICE_UDID="$(echo "$DEVICE_LINE" | grep -oE '[0-9A-Fa-f]{8}-([0-9A-Fa-f]{16}|[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})' || true)"
 [ -n "$DEVICE_UDID" ] || fail "Couldn't read the device id from: $DEVICE_LINE"
+fi
 ok "Using device: $DEVICE_UDID"
 echo "$DEVICE_LINE"
 

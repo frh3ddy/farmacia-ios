@@ -3,8 +3,12 @@ import FarmaciaKit
 
 // MARK: - Receive Inventory Form View
 //
-// Design-system pilot (tasks/design-system-epic.md): AmountField, Margin/Tone,
-// .formKeyboard; the supplier is chosen by a push, so the form presents nothing.
+// Layout (tasks/inventory-forms-redesign-epic.md), in the order the paperwork
+// is read: what's arriving and how many (the hero) → who sent it, the invoice
+// and the cost (the same piece of paper; supplier first, since it fills the
+// cost) → sale price → lot and expiry → notes. One action at the bottom,
+// always enabled; what's missing shows on the field after a tap.
+// The supplier is chosen by a push, so the form presents nothing.
 
 struct ReceiveInventoryFormView: View {
     @Environment(\.dismiss) var dismiss
@@ -20,6 +24,7 @@ struct ReceiveInventoryFormView: View {
     @State private var receivingCost = ReceivingCost()
     @State private var updateSellingPrice = false
     @State private var newSellingPrice: Double?
+    @State private var marginPick = MarginPick()
     @State private var invoiceNumber = ""
     @State private var batchNumber = ""
     @State private var hasExpiry = false
@@ -28,6 +33,16 @@ struct ReceiveInventoryFormView: View {
     @State private var notes = ""
     /// One per receiving being entered: a retry (or the offline queue's replay) reuses it.
     @State private var clientRequestId = UUID().uuidString
+
+    /// Failed taps on the button: errors show from the first one, and each one
+    /// shakes the fields still missing.
+    @State private var attempts = 0
+    /// Saved: the button shows a checkmark for a moment before the sheet closes.
+    @State private var isDone = false
+    /// A receiving that changes the price is reviewed before it's posted;
+    /// the owner picks there whether the price applies at every store.
+    @State private var showReview = false
+    @State private var priceAtAllLocations = false
 
     /// The form as it opened, kept in step with what it fills in itself (the
     /// preferred supplier and its last cost): the baseline for unsaved changes.
@@ -57,23 +72,19 @@ struct ReceiveInventoryFormView: View {
     }
 
     private enum Field: Hashable {
-        case quantity, boxes, perBox, unitCost, sellingPrice, invoiceNumber, batchNumber, notes
+        case quantity, boxes, perBox, invoiceNumber, unitCost, sellingPrice, batchNumber, notes
     }
     @State private var receivesByBox = false
     @State private var boxes: Int?
     @State private var perBox: Int?
     @FocusState private var focusedField: Field?
 
-    /// Más detalles: price update, invoice, batch, notes.
-    @State private var showsDetails = false
-
     /// Top to bottom, skipping rows that aren't shown.
     private var focusOrder: FocusOrder<Field> {
-        let amounts: [Field] = (receivesByBox ? [.boxes, .perBox] : [.quantity]) + [.unitCost]
-        guard showsDetails else { return FocusOrder(amounts) }
-        return FocusOrder(amounts
+        FocusOrder((receivesByBox ? [.boxes, .perBox] : [.quantity])
+            + [.invoiceNumber, .unitCost]
             + (updateSellingPrice ? [.sellingPrice] : [])
-            + [.invoiceNumber, .batchNumber, .notes])
+            + [.batchNumber, .notes])
     }
 
     // Supplier intelligence
@@ -82,15 +93,16 @@ struct ReceiveInventoryFormView: View {
     @State private var storeStock: [StoreStock] = []
     @State private var isLoadingSuppliers = false
     @State private var supplierLastCost: Double?
-    @State private var supplierCostNote: String?
+    /// The cost was filled in from the supplier's last one.
+    @State private var costFromSupplier = false
 
     private func fillQuantityFromBoxes() {
         guard receivesByBox else { return }
         quantity = PackQuantity.total(boxes: boxes, perBox: perBox)
     }
 
-    private var isValid: Bool {
-        ReceivingForm.canSave(
+    private var issues: [ReceivingForm.Issue] {
+        ReceivingForm.issues(
             quantity: quantity,
             unitCost: receivingCost.value,
             updatesPrice: updateSellingPrice,
@@ -98,87 +110,98 @@ struct ReceiveInventoryFormView: View {
         )
     }
 
+    /// Where a missing quantity is fixed: the hero, or — by the box, with boxes
+    /// typed — the units per box.
+    private var quantityField: Field {
+        guard receivesByBox else { return .quantity }
+        return (boxes ?? 0) > 0 ? .perBox : .boxes
+    }
+
+    private func field(for issue: ReceivingForm.Issue) -> Field {
+        switch issue {
+        case .quantity: quantityField
+        case .cost: .unitCost
+        case .price: .sellingPrice
+        }
+    }
+
+    /// The message under `field`, once the user has tried to save.
+    private func error(_ field: Field) -> String? {
+        guard attempts > 0, let issue = issues.first(where: { self.field(for: $0) == field }) else { return nil }
+        // By the box, with boxes typed, what's missing is the box size.
+        return field == .perBox ? "Indica cuántas unidades trae cada caja" : issue.message
+    }
+
     /// This store's stock: from the fresh fetch when it's in, else the cached product's.
     private var currentStock: Int? {
         StoreStock.here(storeStock, currentLocationId: authManager.currentLocation?.id) ?? product.totalInventory
     }
 
+    private var costChange: CostChange? {
+        supplierLastCost.flatMap { CostChange(current: receivingCost.value, last: $0) }
+    }
+
+    /// The margin the product had at the old cost: the "Actual" chip.
+    private var currentMargin: Double? {
+        guard let price = product.sellingPrice,
+              let oldCost = ReceivingPrice.oldCost(supplierLast: supplierLastCost, average: product.averageCost),
+              let margin = Margin.percent(price: price, cost: oldCost),
+              margin > 0
+        else { return nil }
+        return margin
+    }
+
+    private var marginOptions: [MarginChips.Option] {
+        let cost = receivingCost.value
+        var options: [MarginChips.Option] = []
+        if let currentMargin {
+            options.append(.init(
+                label: "Actual",
+                margin: currentMargin,
+                price: ReceivingPrice.keepingMargin(
+                    currentPrice: product.sellingPrice,
+                    oldCost: ReceivingPrice.oldCost(supplierLast: supplierLastCost, average: product.averageCost),
+                    newCost: cost
+                )
+            ))
+        }
+        options += PriceSuggestion.chips.map { margin in
+            .init(label: "\(Int(margin))%", margin: margin,
+                  price: cost.flatMap { PriceSuggestion.price(cost: $0, marginPercent: margin) })
+        }
+        return options
+    }
+
+    /// Above the button: what's missing after a failed tap, else the total.
+    private var summary: (text: String, tone: Tone)? {
+        if attempts > 0, let missing = ReceivingForm.summary(issues) {
+            return (missing, .critical)
+        }
+        guard let qty = quantity, qty > 0, let cost = receivingCost.value else { return nil }
+        return ("\(qty) uds × \(cost.mxn) · Total \((Double(qty) * cost).mxn)", .neutral)
+    }
+
     var body: some View {
         NavigationStack {
-            // Layout (tasks/form-ux-polish-epic.md): what's being received on top,
-            // then the receiving itself, supplier, expiry (kept visible: it
-            // matters for a pharmacy), and everything optional under Más detalles.
             Form {
                 Section {
                     ProductSummaryRow(product: product, stock: currentStock)
                 }
 
-                Section {
-                    // By the box: Cajas × Piezas por caja fills Cantidad (no mental math).
-                    Toggle("Por cajas", isOn: $receivesByBox)
-                    if receivesByBox {
-                        AmountField("Cajas", unit: "CAJAS", value: $boxes, focus: $focusedField, field: .boxes)
-                        AmountField("Piezas por caja", unit: "UDS", value: $perBox, focus: $focusedField, field: .perBox)
-                        LabeledContent("Cantidad", value: quantity.map { "\($0) UDS" } ?? "—")
-                    } else {
-                        AmountField(
-                            "Cantidad",
-                            unit: "UDS",
-                            value: $quantity,
-                            focus: $focusedField,
-                            field: .quantity
-                        )
-                    }
-
-                    AmountField(
-                        "Costo unitario",
-                        unit: "MXN",
-                        value: $receivingCost.value,
-                        focus: $focusedField,
-                        field: .unitCost
-                    )
-
-                    if let summary = StoreStock.summary(storeStock, currentLocationId: authManager.currentLocation?.id) {
-                        Label(summary, systemImage: "building.2")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .accessibilityLabel("Existencia por tienda: \(summary)")
-                    }
-
-                    if let qty = quantity, qty > 0,
-                       let cost = receivingCost.value, cost > 0 {
-                        LabeledContent("Costo total") {
-                            Text("$\(String(format: "%.2f", Double(qty) * cost))")
-                                .bold()
-                        }
-                    }
-                } footer: {
-                    // What Guardar does to this store's stock.
-                    if let impact = StockImpact(before: currentStock, change: quantity) {
-                        StatusLabel(
-                            [authManager.currentLocation?.name, impact.summary]
-                                .compactMap { $0 }.joined(separator: " · "),
-                            tone: impact.tone,
-                            systemImage: "arrow.up.circle.fill"
-                        )
-                        .monospacedDigit()
-                    }
-                }
-                // Typing boxes fills Cantidad. Turning the switch on keeps a typed
-                // quantity until the boxes add up to one; turning it off keeps the
-                // total, ready to edit.
-                .onChange(of: boxes) { fillQuantityFromBoxes() }
-                .onChange(of: perBox) { fillQuantityFromBoxes() }
-                .onChange(of: receivesByBox) {
-                    if let total = PackQuantity.total(boxes: boxes, perBox: perBox), receivesByBox {
-                        quantity = total
-                    }
-                }
-
+                quantitySection
                 supplierSection
+                priceSection
 
-                Section {
-                    Toggle("Tiene fecha de vencimiento", isOn: $hasExpiry)
+                Section("Lote y caducidad") {
+                    LabeledContent("Lote") {
+                        TextField("Lote", text: $batchNumber, prompt: Text("Número"))
+                            .multilineTextAlignment(.trailing)
+                            .formField(.batchNumber, focus: $focusedField)
+                    }
+                    // Row-level id: .formKeyboard scrolls to it (see .fieldError).
+                    .id(Field.batchNumber)
+
+                    Toggle("Tiene caducidad", isOn: $hasExpiry.animation())
 
                     if hasExpiry {
                         DatePicker("Vence", selection: $expiryDate, displayedComponents: .date)
@@ -186,60 +209,26 @@ struct ReceiveInventoryFormView: View {
                 }
 
                 Section {
-                    DisclosureGroup(isExpanded: $showsDetails) {
-                        Toggle("Actualizar precio de venta", isOn: $updateSellingPrice)
-
-                        if updateSellingPrice {
-                            AmountField(
-                                "Nuevo precio",
-                                unit: "MXN",
-                                value: $newSellingPrice,
-                                focus: $focusedField,
-                                field: .sellingPrice
-                            )
-
-                            if let currentPrice = product.sellingPrice {
-                                LabeledContent("Precio actual", value: "$\(String(format: "%.2f", currentPrice)) MXN")
-                            }
-
-                            if let cost = receivingCost.value, cost > 0,
-                               let newPrice = newSellingPrice,
-                               let margin = Margin.percent(price: newPrice, cost: cost) {
-                                LabeledContent("Nuevo margen") {
-                                    Text(String(format: "%.1f%%", margin))
-                                        .foregroundStyle(Margin.tone(forPercent: margin).color)
-                                        .bold()
-                                }
-                            }
-                        }
-
-                        LabeledContent("Factura") {
-                            TextField("Factura", text: $invoiceNumber, prompt: Text("Número"))
-                                .multilineTextAlignment(.trailing)
-                                .formField(.invoiceNumber, focus: $focusedField)
-                        }
-
-                        LabeledContent("Lote") {
-                            TextField("Lote", text: $batchNumber, prompt: Text("Número"))
-                                .multilineTextAlignment(.trailing)
-                                .formField(.batchNumber, focus: $focusedField)
-                        }
-
-                        TextField("Notas", text: $notes, axis: .vertical)
-                            .lineLimit(2...5)
-                            .formField(.notes, focus: $focusedField)
-                    } label: {
-                        MoreDetailsLabel(hasHiddenDetails: !showsDetails && draft.hasDetails)
-                    }
-                } footer: {
-                    if showsDetails && updateSellingPrice {
-                        Text("El precio también se actualiza en Square POS.")
-                    }
+                    TextField("Notas", text: $notes, prompt: Text("Algo que deba saber el equipo"), axis: .vertical)
+                        .lineLimit(2...5)
+                        .formField(.notes, focus: $focusedField)
+                } header: {
+                    OptionalHeader(title: "Notas")
                 }
             }
             // No edits while a save is in flight.
-            .disabled(viewModel.isSubmitting)
-            .navigationTitle("Recibir Inventario")
+            .disabled(viewModel.isSubmitting || isDone)
+            .primaryActionBar(PrimaryActionBar(
+                title: "Recibir inventario",
+                doneTitle: "Inventario recibido",
+                summary: summary?.text,
+                summaryTone: summary?.tone ?? .neutral,
+                isSubmitting: viewModel.isSubmitting,
+                isDone: isDone,
+                action: submit
+            ))
+            .sensoryFeedback(.error, trigger: attempts)
+            .navigationTitle("Recibir inventario")
             .navigationBarTitleDisplayMode(.inline)
             .formKeyboard(focus: $focusedField, order: focusOrder)
             // Swiping the sheet down would lose what's been entered, or
@@ -254,30 +243,23 @@ struct ReceiveInventoryFormView: View {
                             dismiss()
                         }
                     }
-                    .disabled(viewModel.isSubmitting)
-                }
-
-                ToolbarItem(placement: .confirmationAction) {
-                    // While saving, the button becomes a spinner in its place
-                    // (the Mail/Settings pattern) and turns back on failure.
-                    if viewModel.isSubmitting {
-                        ProgressView()
-                            .accessibilityLabel("Guardando")
-                    } else {
-                        Button("Guardar") {
-                            // Set before the Task runs, so a second tap can't slip in first
-                            guard !viewModel.isSubmitting else { return }
-                            viewModel.isSubmitting = true
-                            Task { await saveReceiving() }
-                        }
-                        .disabled(!isValid)
-                    }
+                    .disabled(viewModel.isSubmitting || isDone)
                 }
             }
             .alert("No se pudo guardar", isPresented: $viewModel.showSaveError) {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(viewModel.saveError ?? "")
+            }
+            .sheet(isPresented: $showReview) {
+                if let reviewSummary {
+                    ReceivingReviewSheet(
+                        summary: reviewSummary,
+                        canApplyToAllLocations: PriceEditing.canApplyToAllLocations(isOwner: authManager.isOwner),
+                        priceAtAllLocations: $priceAtAllLocations,
+                        onConfirm: startSave
+                    )
+                }
             }
             .task {
                 if start == nil { start = draft }
@@ -294,27 +276,8 @@ struct ReceiveInventoryFormView: View {
             .onChange(of: viewModel.suppliers.map(\.id)) {
                 applyPreferredSupplier()
             }
-            .onChange(of: selectedSupplier) { oldValue, newValue in
-                // When supplier changes, update last cost display
-                if let supplier = newValue {
-                    if let ps = productSuppliers.first(where: { $0.id == supplier.id }) {
-                        supplierLastCost = ps.costDouble
-                        // Auto-fill unit cost if empty
-                        if receivingCost.offerSupplierCost(ps.costDouble, forProductId: product.id) {
-                            // Filled in by the form, not the user: not an unsaved change.
-                            start?.unitCost = receivingCost.value
-                            supplierCostNote = "Costo auto-completado del último precio del proveedor"
-                        } else {
-                            supplierCostNote = nil
-                        }
-                    } else {
-                        supplierLastCost = nil
-                        supplierCostNote = nil
-                    }
-                } else {
-                    supplierLastCost = nil
-                    supplierCostNote = nil
-                }
+            .onChange(of: selectedSupplier) { _, supplier in
+                supplierChanged(to: supplier)
             }
         }
         // On the NavigationStack, not the Cancelar button: attached to the button,
@@ -335,6 +298,65 @@ struct ReceiveInventoryFormView: View {
 
     // MARK: - Sections
 
+    private var quantitySection: some View {
+        Section {
+            Picker("Recibir por", selection: $receivesByBox.animation()) {
+                Text("Unidades").tag(false)
+                Text("Cajas").tag(true)
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+
+            QuantityStepper(
+                value: receivesByBox ? $boxes : $quantity,
+                unit: receivesByBox ? "cajas" : "unidades",
+                focus: $focusedField,
+                field: receivesByBox ? .boxes : .quantity
+            )
+            .fieldError(error(receivesByBox ? .boxes : .quantity), shake: attempts, field: receivesByBox ? Field.boxes : .quantity)
+
+            if receivesByBox {
+                AmountField("Unidades por caja", unit: "UDS", value: $perBox, focus: $focusedField, field: .perBox)
+                    .fieldError(error(.perBox), shake: attempts, field: Field.perBox)
+
+                // The arithmetic, so nobody multiplies in their head.
+                if let boxes, let perBox, let total = PackQuantity.total(boxes: boxes, perBox: perBox) {
+                    LabeledContent("Total", value: "\(boxes) × \(perBox) = \(total) uds")
+                        .monospacedDigit()
+                }
+            }
+        } header: {
+            Text("Cantidad recibida")
+        } footer: {
+            VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+                // What saving does to this store's stock.
+                if let impact = StockImpact(before: currentStock, change: quantity) {
+                    StatusLabel(
+                        [authManager.currentLocation?.name, impact.summary]
+                            .compactMap { $0 }.joined(separator: " · "),
+                        tone: impact.tone,
+                        systemImage: "arrow.up.circle.fill"
+                    )
+                    .monospacedDigit()
+                }
+                if let summary = StoreStock.summary(storeStock, currentLocationId: authManager.currentLocation?.id) {
+                    Label(summary, systemImage: "building.2")
+                        .accessibilityLabel("Existencia por tienda: \(summary)")
+                }
+            }
+        }
+        // Typing boxes fills the quantity. Switching to Cajas keeps a typed
+        // quantity until the boxes add up to one; back to Unidades keeps the
+        // total, ready to edit.
+        .onChange(of: boxes) { fillQuantityFromBoxes() }
+        .onChange(of: perBox) { fillQuantityFromBoxes() }
+        .onChange(of: receivesByBox) {
+            if let total = PackQuantity.total(boxes: boxes, perBox: perBox), receivesByBox {
+                quantity = total
+            }
+        }
+    }
+
     private var supplierSection: some View {
         Section {
             NavigationLink {
@@ -343,75 +365,208 @@ struct ReceiveInventoryFormView: View {
                     selectedSupplier: $selectedSupplier
                 )
             } label: {
-                HStack {
+                LabeledContent {
                     if isLoadingSuppliers {
                         ProgressView()
                             .controlSize(.small)
-                        Text("Cargando proveedores...")
-                            .foregroundStyle(.secondary)
-                    } else if let supplier = selectedSupplier {
-                        VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
-                            HStack(spacing: DS.Spacing.s) {
-                                Text(supplier.name)
-                                    .foregroundStyle(.primary)
-                                if let ps = productSuppliers.first(where: { $0.id == supplier.id }), ps.isPreferred {
-                                    Text("Preferido")
-                                        .font(.caption)
-                                        .padding(.horizontal, DS.Spacing.xs)
-                                        .padding(.vertical, DS.Spacing.xxs)
-                                        .background(Tone.info.color.opacity(0.15), in: .rect(cornerRadius: DS.Radius.s))
-                                        .foregroundStyle(Tone.info.color)
-                                }
-                            }
-                            if let lastCost = supplierLastCost {
-                                HStack(spacing: DS.Spacing.xs) {
-                                    Text("Último costo: $\(String(format: "%.2f", lastCost))")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                    if let currentCost = receivingCost.value, currentCost > 0 {
-                                        let diff = currentCost - lastCost
-                                        let pct = lastCost > 0 ? (diff / lastCost) * 100 : 0
-                                        if abs(diff) > 0.01 {
-                                            Text(diff > 0 ? "\u{2191}\(String(format: "+%.1f%%", pct))" : "\u{2193}\(String(format: "%.1f%%", pct))")
-                                                .font(.caption)
-                                                .foregroundStyle((diff > 0 ? Tone.critical : .positive).color)
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                            .accessibilityLabel("Cargando proveedores")
                     } else {
-                        LabeledContent("Proveedor", value: "Ninguno")
+                        Text(selectedSupplier?.name ?? "Sin proveedor")
                     }
-                    Spacer()
-                    if selectedSupplier != nil {
-                        Button {
-                            selectedSupplier = nil
-                            supplierLastCost = nil
-                            supplierCostNote = nil
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundStyle(.secondary)
+                } label: {
+                    HStack(spacing: DS.Spacing.s) {
+                        Text("Proveedor")
+                        if isPreferred {
+                            Text("Preferido")
+                                .font(.caption)
+                                .padding(.horizontal, DS.Spacing.xs)
+                                .padding(.vertical, DS.Spacing.xxs)
+                                .background(Tone.info.color.opacity(0.15), in: .rect(cornerRadius: DS.Radius.s))
+                                .foregroundStyle(Tone.info.color)
                         }
-                        .buttonStyle(.borderless)
-                        .accessibilityLabel("Quitar proveedor")
                     }
                 }
             }
 
-            if let note = supplierCostNote {
-                Label(note, systemImage: "info.circle")
-                    .font(.caption)
-                    .foregroundStyle(Tone.info.color)
+            LabeledContent("Factura") {
+                TextField("Factura", text: $invoiceNumber, prompt: Text("Número"))
+                    .multilineTextAlignment(.trailing)
+                    .formField(.invoiceNumber, focus: $focusedField)
             }
+            // Row-level id: .formKeyboard scrolls to it (see .fieldError).
+            .id(Field.invoiceNumber)
+
+            VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
+                AmountField(
+                    "Costo unitario",
+                    prefix: "$",
+                    unit: "MXN",
+                    value: $receivingCost.value,
+                    focus: $focusedField,
+                    field: .unitCost
+                )
+                // Catches supplier increases and typos; the arrow says it without color.
+                if let costChange {
+                    Text(costChange.text)
+                        .font(.footnote)
+                        .monospacedDigit()
+                        .foregroundStyle(costChange.tone.color)
+                }
+            }
+            .fieldError(error(.unitCost), shake: attempts, field: Field.unitCost)
         } header: {
-            Text("Proveedor")
+            Text("Proveedor y costo")
         } footer: {
-            if !productSuppliers.isEmpty && selectedSupplier == nil {
+            if costFromSupplier, let supplier = selectedSupplier {
+                Text("Costo tomado del último precio de \(supplier.name).")
+            } else if !productSuppliers.isEmpty && selectedSupplier == nil {
                 Text(productSuppliers.count == 1
                     ? "1 proveedor disponible para este producto."
                     : "\(productSuppliers.count) proveedores disponibles para este producto.")
             }
+        }
+        .onChange(of: receivingCost.value) { _, cost in
+            // A picked margin follows the cost.
+            if updateSellingPrice, let price = marginPick.price(forCost: cost) {
+                newSellingPrice = price
+            }
+        }
+    }
+
+    /// The new price's margin and profit at this cost, for the chips' header.
+    private var newMarginResult: (margin: Double, profit: Double)? {
+        guard let cost = receivingCost.value, let price = newSellingPrice,
+              let margin = Margin.percent(price: price, cost: cost) else { return nil }
+        return (margin, price - cost)
+    }
+
+    private var isPreferred: Bool {
+        guard let id = selectedSupplier?.id else { return false }
+        return productSuppliers.first { $0.id == id }?.isPreferred == true
+    }
+
+    @ViewBuilder
+    private var priceSection: some View {
+        if let currentPrice = product.sellingPrice {
+            Section {
+                LabeledContent {
+                    Text(currentPrice.mxn)
+                        .strikethrough(updateSellingPrice && newSellingPrice != nil)
+                        .monospacedDigit()
+                } label: {
+                    Text(updateSellingPrice ? "Precio actual" : "Precio")
+                    if let cost = receivingCost.value, let margin = Margin.percent(price: currentPrice, cost: cost) {
+                        Text("Margen \(Int(margin.rounded()))% con este costo")
+                            .foregroundStyle(Margin.tone(forPercent: margin).color)
+                    }
+                }
+
+                Toggle("Cambiar precio", isOn: $updateSellingPrice.animation())
+
+                if updateSellingPrice {
+                    MarginChips(
+                        options: marginOptions,
+                        selected: marginPick.selected,
+                        onSelect: { margin in
+                            marginPick.selected = margin
+                            newSellingPrice = marginPick.price(forCost: receivingCost.value)
+                        },
+                        onOther: {
+                            marginPick.selected = nil
+                            focusedField = .sellingPrice
+                        },
+                        result: newMarginResult,
+                        onRelease: { marginPick.selected = nil }
+                    )
+
+                    LabeledContent {
+                        AmountField(prefix: "$", unit: "MXN", value: $newSellingPrice, focus: $focusedField,
+                                    field: .sellingPrice, alignment: .trailing)
+                    } label: {
+                        Text("Nuevo precio")
+                    }
+                    .fieldError(error(.sellingPrice), shake: attempts, field: Field.sellingPrice)
+                }
+            } header: {
+                Text("Precio de venta")
+            } footer: {
+                if updateSellingPrice {
+                    Text("Con un margen elegido, el precio sigue al costo; escribe un precio para fijarlo. Antes de guardar revisas el cambio\(PriceEditing.canApplyToAllLocations(isOwner: authManager.isOwner) ? " y eliges si aplica en todas las sucursales" : "").")
+                } else if costChange?.isUp == true {
+                    Text("El costo subió: revisa el precio.")
+                }
+            }
+            .onChange(of: updateSellingPrice) { _, on in
+                // Keeping the margin is the usual reaction to a cost increase: one tap.
+                guard on, newSellingPrice == nil, let currentMargin else { return }
+                marginPick.selected = currentMargin
+                newSellingPrice = marginPick.price(forCost: receivingCost.value)
+            }
+            .onChange(of: newSellingPrice) { _, price in
+                marginPick.priceTyped(price, cost: receivingCost.value)
+            }
+        }
+    }
+
+    // MARK: - Actions
+
+    private func submit() {
+        guard !viewModel.isSubmitting, !isDone else { return }
+        if let first = issues.first {
+            attempts += 1
+            // Focus scrolls the field into view (.formKeyboard) and opens its keyboard.
+            focusedField = field(for: first)
+            if let missing = ReceivingForm.summary(issues) {
+                AccessibilityNotification.Announcement(missing).post()
+            }
+            return
+        }
+        focusedField = nil
+        // Changing the price is the consequential part (Square POS, maybe
+        // every store): review it first. A plain receiving posts in one tap.
+        if updateSellingPrice {
+            showReview = true
+        } else {
+            startSave()
+        }
+    }
+
+    private func startSave() {
+        guard !viewModel.isSubmitting, !isDone else { return }
+        // Set before the Task runs, so a second tap can't slip in first
+        viewModel.isSubmitting = true
+        Task { await saveReceiving() }
+    }
+
+    private var reviewSummary: ReceivingReviewSheet.Summary? {
+        guard let qty = quantity, let cost = receivingCost.value, let newPrice = newSellingPrice else { return nil }
+        return .init(
+            productName: product.displayName,
+            quantity: qty,
+            unitCost: cost,
+            supplierName: selectedSupplier?.name,
+            storeName: authManager.currentLocation?.name ?? "esta sucursal",
+            stockImpact: StockImpact(before: currentStock, change: qty),
+            currentPrice: product.sellingPrice,
+            newPrice: newPrice
+        )
+    }
+
+    private func supplierChanged(to supplier: Supplier?) {
+        guard let supplier,
+              let ps = productSuppliers.first(where: { $0.id == supplier.id }) else {
+            supplierLastCost = nil
+            costFromSupplier = false
+            return
+        }
+        supplierLastCost = ps.costDouble
+        // Auto-fill unit cost if empty
+        if receivingCost.offerSupplierCost(ps.costDouble, forProductId: product.id) {
+            // Filled in by the form, not the user: not an unsaved change.
+            start?.unitCost = receivingCost.value
+            costFromSupplier = true
+        } else {
+            costFromSupplier = false
         }
     }
 
@@ -466,11 +621,15 @@ struct ReceiveInventoryFormView: View {
             expiryDate: hasExpiry ? expiryDate : nil,
             notes: notes,
             sellingPrice: updateSellingPrice ? newSellingPrice : nil,
+            priceAtAllLocations: updateSellingPrice && priceAtAllLocations,
             clientRequestId: clientRequestId
         ))
 
         if success {
+            isDone = true
             onComplete?()
+            // Long enough to read the checkmark, short enough not to wait on.
+            try? await Task.sleep(for: .milliseconds(600))
             dismiss()
         }
     }

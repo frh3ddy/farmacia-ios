@@ -1,16 +1,22 @@
 import SwiftUI
+import CodeScanner
 import FarmaciaKit
 
 // MARK: - Create Product View
 //
-// Design-system pilot (tasks/design-system-epic.md): DS tokens, AmountField,
-// Margin/Tone, .formKeyboard. Presentation rules:
+// Layout (tasks/inventory-forms-redesign-epic.md): photo beside the name (as in
+// Contacts) → Precio (cost → margin → price) → Identificación → Inventario
+// inicial → Disponibilidad → Descripción. Required sections have no marker;
+// optional ones say "Opcional". One action at the bottom, always enabled;
+// what's missing shows on the field after a tap.
+// Presentation rules:
 //   - The photo flow (camera/library → crop → preview) is FarmaciaKit
 //     `PhotoFlow` on one full-screen cover (`.productPhotoFlow`), shared with
 //     the product detail.
 //   - The photo source is a `Menu` (no dialog to animate away before the camera
 //     or library can open).
-//   - The supplier is chosen by a push, not a sheet.
+//   - The supplier is chosen by a push, not a sheet. The barcode scanner sheet
+//     hangs off its own row, away from the photo flow's presentations.
 
 struct CreateProductView: View {
     @EnvironmentObject var authManager: AuthManager
@@ -25,6 +31,12 @@ struct CreateProductView: View {
     @State private var isLiftingSubject = false
     @State private var photoFlow = PhotoFlow<UIImage>()
     @State private var showDiscardConfirmation = false
+    @State private var showScanner = false
+
+    /// The margin chip picked; the price follows the cost while it's on.
+    @State private var marginPick = MarginPick()
+    /// Failed taps on Crear: errors show from the first one; each one shakes.
+    @State private var attempts = 0
 
     /// Anything entered (photo included): the sheet can't be swiped away and
     /// Cancelar asks before discarding it.
@@ -33,25 +45,34 @@ struct CreateProductView: View {
     }
 
     private enum Field: Hashable {
-        case name, sku, gtin, sellingPrice, quantity, unitCost, description
+        case name, unitCost, sellingPrice, sku, gtin, quantity, description
     }
     @FocusState private var focusedField: Field?
 
-    /// Más detalles: the optional fields, collapsed unless they already hold
-    /// something — `ProductDraft.hasDetails`.
-    @State private var showsDetails: Bool
+    /// Top to bottom.
+    private let focusOrder = FocusOrder<Field>([.name, .unitCost, .sellingPrice, .sku, .gtin, .quantity, .description])
 
-    /// Top to bottom, skipping rows that aren't shown.
-    private var focusOrder: FocusOrder<Field> {
-        FocusOrder([.name, .sku, .gtin, .sellingPrice, .quantity, .unitCost]
-            + (showsDetails ? [.description] : []))
+    private func field(for issue: ProductDraft.Issue) -> Field {
+        switch issue {
+        case .nameMissing: .name
+        case .costNeeded: .unitCost
+        case .priceMissing, .priceNotPositive: .sellingPrice
+        case .barcodeInvalid: .gtin
+        }
     }
 
-    // Optional prefilled SKU (e.g. from barcode scanner) — seeded directly
-    // into the StateObject at construction time rather than via .onAppear,
-    // since .onAppear on a Form inside a freshly-presented sheet doesn't
-    // reliably fire in time on the very first presentation, leaving the
-    // SKU field blank on the first scan.
+    /// The message under `field`, once the user has tried to create.
+    private func error(_ field: Field) -> String? {
+        guard attempts > 0 else { return nil }
+        return viewModel.issues.first { self.field(for: $0) == field }?.message
+    }
+
+    private var createsStock: Bool { (viewModel.initialStock ?? 0) > 0 }
+
+    // Optional prefilled barcode (from the scanner) — seeded directly into the
+    // StateObject at construction time rather than via .onAppear, since
+    // .onAppear on a Form inside a freshly-presented sheet doesn't reliably
+    // fire in time on the very first presentation.
     /// The created product, so the list it was opened from shows it right
     /// away (ProductsViewModel.insertProduct).
     private let onCreated: ((Product) -> Void)?
@@ -59,121 +80,47 @@ struct CreateProductView: View {
     init(prefillBarcode: String? = nil, onCreated: ((Product) -> Void)? = nil) {
         self.onCreated = onCreated
         _viewModel = StateObject(wrappedValue: CreateProductViewModel(prefillBarcode: prefillBarcode))
-        _showsDetails = State(initialValue: ProductDraft(prefillBarcode: prefillBarcode).hasDetails)
     }
 
     var body: some View {
         NavigationStack {
-            // Layout (tasks/form-ux-polish-epic.md): essentials first — photo,
-            // name, price — as labelled rows; initial stock behind its switch;
-            // everything optional under Más detalles.
             Form {
-                photoSection
+                identitySection
+                priceSection
+                identificationSection
+                initialStockSection
 
                 Section {
-                    LabeledContent("Nombre") {
-                        TextField("Nombre", text: $viewModel.name, prompt: Text("Ej. Paracetamol 500 mg"))
-                            .multilineTextAlignment(.trailing)
-                            .textInputAutocapitalization(.words)
-                            .formField(.name, focus: $focusedField)
-                    }
-
-                    // With the essentials, not under Más detalles: empty shows
-                    // "Automático", so a missing SKU is visible at a glance.
-                    LabeledContent("SKU") {
-                        TextField("SKU", text: $viewModel.sku, prompt: Text("Automático"))
-                            .multilineTextAlignment(.trailing)
-                            .textInputAutocapitalization(.characters)
-                            .autocorrectionDisabled()
-                            .formField(.sku, focus: $focusedField)
-                    }
-
-                    LabeledContent("Código de barras") {
-                        TextField("Código de barras", text: $viewModel.gtin, prompt: Text("Opcional"))
-                            .multilineTextAlignment(.trailing)
-                            .keyboardType(.numberPad)
-                            .formField(.gtin, focus: $focusedField)
-                    }
-
-                    AmountField(
-                        "Precio",
-                        prefix: "$",
-                        unit: "MXN",
-                        value: $viewModel.sellingPrice,
-                        focus: $focusedField,
-                        field: .sellingPrice
-                    )
-                } footer: {
-                    VStack(alignment: .leading, spacing: DS.Spacing.xs) {
-                        issueHints([.barcodeInvalid, .priceNotPositive])
-                        Text("Sin SKU, se genera uno automáticamente. El precio es el que los clientes pagan en caja.")
-                    }
-                }
-
-                // No switch: most new products arrive with stock, so the fields
-                // are always here and a quantity is what creates it
-                // (ProductDraft.createsInitialStock).
-                Section {
-                    AmountField(
-                        "Cantidad",
-                        unit: "UDS",
-                        value: $viewModel.initialStock,
-                        focus: $focusedField,
-                        field: .quantity
-                    )
-
-                    AmountField(
-                        "Costo por unidad",
-                        unit: "MXN",
-                        value: $viewModel.costPrice,
-                        focus: $focusedField,
-                        field: .unitCost
-                    )
-
-                    NavigationLink {
-                        SupplierPickerView(
-                            suppliers: $viewModel.suppliers,
-                            selectedSupplier: $viewModel.selectedSupplier
-                        )
-                    } label: {
-                        LabeledContent("Proveedor", value: viewModel.selectedSupplier?.name ?? "Ninguno")
-                    }
+                    Toggle("Vender en todas las sucursales", isOn: $viewModel.soldAtAllLocations)
+                    Toggle("Sincronizar con Square", isOn: $viewModel.syncToSquare)
                 } header: {
-                    Text("Inventario inicial")
+                    Text("Disponibilidad")
                 } footer: {
-                    VStack(alignment: .leading, spacing: DS.Spacing.xs) {
-                        issueHints([.quantityNeeded, .costNeeded])
-                        Text("Sin cantidad, el producto se crea sin existencias. Con cantidad, se registra como saldo inicial en esta sucursal.")
-                    }
-                }
-
-                if viewModel.showMarginPreview {
-                    Section("Margen") {
-                        marginPreviewRow
-                    }
+                    Text(availabilityFooter)
                 }
 
                 Section {
-                    DisclosureGroup(isExpanded: $showsDetails) {
-                        TextField("Descripción", text: $viewModel.description, axis: .vertical)
-                            .lineLimit(2...4)
-                            .formField(.description, focus: $focusedField)
-
-                        Toggle("Vender en todas las sucursales", isOn: $viewModel.soldAtAllLocations)
-
-                        Toggle("Sincronizar con Square", isOn: $viewModel.syncToSquare)
-                    } label: {
-                        MoreDetailsLabel(hasHiddenDetails: !showsDetails && viewModel.hasDetails)
-                    }
-                } footer: {
-                    if showsDetails {
-                        Text(detailsFooter)
-                    }
+                    TextField("Descripción", text: $viewModel.description, prompt: Text("Presentación, uso, notas"), axis: .vertical)
+                        .lineLimit(2...4)
+                        .formField(.description, focus: $focusedField)
+                } header: {
+                    OptionalHeader(title: "Descripción")
                 }
             }
+            .disabled(viewModel.isSubmitting || viewModel.isDone)
+            .primaryActionBar(PrimaryActionBar(
+                title: "Crear producto",
+                doneTitle: "Producto creado",
+                summary: attempts > 0 && !viewModel.issues.isEmpty ? "Revisa los campos marcados" : nil,
+                summaryTone: .critical,
+                isSubmitting: viewModel.isSubmitting,
+                isDone: viewModel.isDone,
+                action: submit
+            ))
+            .sensoryFeedback(.error, trigger: attempts)
             .formKeyboard(focus: $focusedField, order: focusOrder)
             // Swiping the sheet down would lose what's been entered.
-            .interactiveDismissDisabled(hasUnsavedChanges)
+            .interactiveDismissDisabled(hasUnsavedChanges || viewModel.isSubmitting)
             .productPhotoFlow($photoFlow, onCropped: photoCropped) {
                 if let originalCroppedImage {
                     ProductPhotoPreviewView(
@@ -196,7 +143,13 @@ struct CreateProductView: View {
             .onChange(of: viewModel.createdProduct) { _, product in
                 if let product { onCreated?(product) }
             }
-            .navigationTitle("Nuevo Producto")
+            .task(id: viewModel.isDone) {
+                guard viewModel.isDone else { return }
+                // Long enough to read the checkmark, short enough not to wait on.
+                try? await Task.sleep(for: .milliseconds(600))
+                dismiss()
+            }
+            .navigationTitle("Nuevo producto")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -207,20 +160,7 @@ struct CreateProductView: View {
                             dismiss()
                         }
                     }
-                }
-
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Crear") {
-                        Task {
-                            await createProduct()
-                        }
-                    }
-                    .disabled(!viewModel.isValid || viewModel.isSubmitting)
-                }
-            }
-            .overlay {
-                if viewModel.isSubmitting {
-                    loadingOverlay
+                    .disabled(viewModel.isSubmitting || viewModel.isDone)
                 }
             }
             .alert("Error", isPresented: $viewModel.showError) {
@@ -229,7 +169,7 @@ struct CreateProductView: View {
                 Text(viewModel.errorMessage)
             }
             .alert(
-                viewModel.successMessage.hasPrefix("Sin conexión") ? "Sin conexión" : "Producto Creado",
+                viewModel.successMessage.hasPrefix("Sin conexión") ? "Sin conexión" : "Producto creado",
                 isPresented: $viewModel.showSuccess
             ) {
                 Button("OK") {
@@ -255,8 +195,8 @@ struct CreateProductView: View {
         }
     }
 
-    /// What the Más detalles settings mean, for the choices made.
-    private var detailsFooter: String {
+    /// What the Disponibilidad switches mean, for the choices made.
+    private var availabilityFooter: String {
         var lines: [String] = []
         if !viewModel.soldAtAllLocations {
             lines.append("Solo se vende en esta sucursal; no aparece en las demás.")
@@ -267,65 +207,235 @@ struct CreateProductView: View {
         return lines.joined(separator: " ")
     }
 
-    // MARK: - Photo
+    // MARK: - Sections
 
-    private var photoSection: some View {
+    private var identitySection: some View {
         Section {
-            HStack {
-                Spacer()
-                ZStack(alignment: .bottomTrailing) {
-                    if let image = selectedImage {
-                        Button {
-                            photoFlow.step = .preview
-                        } label: {
-                            Image(uiImage: image)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: 100, height: 100)
-                                .clipShape(.rect(cornerRadius: DS.Radius.xl))
-                        }
-                        .accessibilityLabel("Ver foto del producto")
-                    } else {
-                        Menu {
-                            photoSourceItems
-                        } label: {
-                            VStack(spacing: DS.Spacing.xs) {
-                                Image(systemName: "camera.fill")
-                                    .font(.title2)
-                                Text("Agregar Foto")
-                                    .font(.caption)
-                            }
-                            .foregroundStyle(.secondary)
-                            .frame(width: 100, height: 100)
-                            .background(.fill.tertiary, in: .rect(cornerRadius: DS.Radius.xl))
-                        }
-                    }
+            HStack(alignment: .top, spacing: DS.Spacing.m) {
+                photoButton
 
-                    Menu {
-                        photoSourceItems
-                    } label: {
-                        Image(systemName: selectedImage != nil ? "pencil.circle.fill" : "plus.circle.fill")
-                            .font(.title3)
-                            .foregroundStyle(.white)
-                            .background(Circle().fill(.tint).frame(width: 28, height: 28))
-                            // Same look as before; the tap area grows to 44pt.
-                            .frame(width: DS.minTapSize, height: DS.minTapSize)
-                            .contentShape(.rect)
-                    }
-                    .accessibilityLabel(selectedImage != nil ? "Cambiar foto" : "Agregar foto")
-                    .offset(x: DS.Spacing.xs, y: DS.Spacing.xs)
+                VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+                    // Wraps and grows, so a long medicine name stays readable.
+                    // Return moves on instead of adding a line break.
+                    TextField("Nombre", text: $viewModel.name, prompt: Text("Nombre del producto"), axis: .vertical)
+                        .font(.title3.weight(.semibold))
+                        .textInputAutocapitalization(.words)
+                        .formField(.name, focus: $focusedField)
+                        .onChange(of: viewModel.name) { _, name in
+                            guard name.contains("\n") else { return }
+                            viewModel.name = name.replacing("\n", with: "")
+                            focusedField = .unitCost
+                        }
 
-                    if isLiftingSubject {
-                        ProgressView()
-                            .frame(width: 100, height: 100)
-                            .background(Color.black.opacity(0.3), in: .rect(cornerRadius: DS.Radius.xl))
+                    if let hint = ProductName.lengthHint(viewModel.name) {
+                        Text(hint.text)
+                            .font(.caption)
+                            .monospacedDigit()
+                            .foregroundStyle(hint.tone == .neutral ? .secondary : hint.tone.color)
                     }
                 }
-                .buttonStyle(.plain)
-                Spacer()
+                .frame(minHeight: 64, alignment: .center)
             }
-            .listRowBackground(Color.clear)
+            .fieldError(error(.name), shake: attempts, field: Field.name)
         }
+    }
+
+    private var priceSection: some View {
+        Section {
+            AmountField(
+                "Costo por unidad",
+                prefix: "$",
+                unit: "MXN",
+                value: $viewModel.costPrice,
+                focus: $focusedField,
+                field: .unitCost
+            )
+            .fieldError(error(.unitCost), shake: attempts, field: Field.unitCost)
+
+            if let cost = viewModel.costPrice, cost > 0 {
+                    MarginChips(
+                        options: PriceSuggestion.chips.map { margin in
+                            .init(label: "\(Int(margin))%", margin: margin,
+                                  price: PriceSuggestion.price(cost: cost, marginPercent: margin))
+                        },
+                        selected: marginPick.selected,
+                        onSelect: { margin in
+                            marginPick.selected = margin
+                            viewModel.sellingPrice = marginPick.price(forCost: cost)
+                        },
+                        onOther: {
+                            marginPick.selected = nil
+                            focusedField = .sellingPrice
+                        },
+                        result: viewModel.sellingPrice.flatMap { price in
+                            Margin.percent(price: price, cost: cost).map { ($0, price - cost) }
+                        },
+                        onRelease: { marginPick.selected = nil }
+                    )
+                    .transition(.opacity)
+            }
+
+            AmountField(
+                "Precio de venta",
+                prefix: "$",
+                unit: "MXN",
+                value: $viewModel.sellingPrice,
+                focus: $focusedField,
+                field: .sellingPrice
+            )
+            .fieldError(error(.sellingPrice), shake: attempts, field: Field.sellingPrice)
+        } header: {
+            Text("Precio")
+        } footer: {
+            Text(marginPick.selected == nil
+                ? "Lo que paga el cliente en caja y en Square POS."
+                : "Sugerido con el margen elegido, redondeado a $0.50. Si cambias el costo, el precio se recalcula; escribe un precio para fijarlo.")
+        }
+        .animation(.default, value: viewModel.costPrice != nil)
+        .onChange(of: viewModel.costPrice) { _, cost in
+            if let price = marginPick.price(forCost: cost) {
+                viewModel.sellingPrice = price
+            }
+        }
+        .onChange(of: viewModel.sellingPrice) { _, price in
+            marginPick.priceTyped(price, cost: viewModel.costPrice)
+        }
+    }
+
+    private var identificationSection: some View {
+        Section {
+            LabeledContent("SKU") {
+                TextField("SKU", text: $viewModel.sku, prompt: Text("Automático"))
+                    .multilineTextAlignment(.trailing)
+                    .textInputAutocapitalization(.characters)
+                    .autocorrectionDisabled()
+                    .formField(.sku, focus: $focusedField)
+            }
+            // Row-level id: .formKeyboard scrolls to it (see .fieldError).
+            .id(Field.sku)
+
+            HStack(spacing: DS.Spacing.s) {
+                LabeledContent("Código de barras") {
+                    TextField("Código de barras", text: $viewModel.gtin, prompt: Text("Opcional"))
+                        .multilineTextAlignment(.trailing)
+                        .keyboardType(.numberPad)
+                        .formField(.gtin, focus: $focusedField)
+                }
+                Button("Escanear código de barras", systemImage: "barcode.viewfinder") {
+                    focusedField = nil
+                    showScanner = true
+                }
+                .labelStyle(.iconOnly)
+                .font(.title3)
+                .frame(width: DS.minTapSize, height: DS.minTapSize)
+                .buttonStyle(.borderless)
+            }
+            .fieldError(error(.gtin), shake: attempts, field: Field.gtin)
+            // On this row, not the Form: the Form hosts the photo flow's cover.
+            .sheet(isPresented: $showScanner) { barcodeScanner }
+        } header: {
+            OptionalHeader(title: "Identificación")
+        } footer: {
+            Text("Escanea el código del empaque. Sin SKU, se genera uno automáticamente.")
+        }
+    }
+
+    private var initialStockSection: some View {
+        Section {
+            AmountField(
+                "Cantidad",
+                unit: "UDS",
+                value: $viewModel.initialStock,
+                focus: $focusedField,
+                field: .quantity
+            )
+
+            // Only meaningful with stock to record.
+            if createsStock {
+                NavigationLink {
+                    SupplierPickerView(
+                        suppliers: $viewModel.suppliers,
+                        selectedSupplier: $viewModel.selectedSupplier
+                    )
+                } label: {
+                    LabeledContent("Proveedor", value: viewModel.selectedSupplier?.name ?? "Sin proveedor")
+                }
+            }
+        } header: {
+            OptionalHeader(title: "Inventario inicial")
+        } footer: {
+            Text(createsStock
+                ? "Se registra como saldo inicial en esta sucursal, al costo por unidad de Precio."
+                : "Sin cantidad, el producto se crea sin existencias.")
+        }
+        .animation(.default, value: createsStock)
+    }
+
+    private var barcodeScanner: some View {
+        NavigationStack {
+            CodeScannerView(
+                codeTypes: [.ean13, .ean8, .upce, .code128, .code39, .code93, .itf14],
+                scanMode: .once,
+                showViewfinder: true,
+                shouldVibrateOnSuccess: true
+            ) { result in
+                if case .success(let scan) = result {
+                    // A 14-digit read of an EAN-13 is saved as the 13 digits on the box.
+                    viewModel.gtin = BarcodeLookup.newProductBarcode(scan.string)
+                }
+                showScanner = false
+            }
+            .ignoresSafeArea(edges: .bottom)
+            .navigationTitle("Escanear código")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancelar") { showScanner = false }
+                }
+            }
+        }
+    }
+
+    // MARK: - Photo
+
+    /// 64pt, beside the name. A menu: take, choose, view or remove.
+    private var photoButton: some View {
+        Menu {
+            if selectedImage != nil {
+                Button("Ver foto", systemImage: "eye") {
+                    photoFlow.step = .preview
+                }
+            }
+            photoSourceItems
+        } label: {
+            Group {
+                if let image = selectedImage {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } else {
+                    VStack(spacing: DS.Spacing.xxs) {
+                        Image(systemName: "camera.fill")
+                            .font(.title3)
+                        Text("Foto")
+                            .font(.caption2)
+                    }
+                    .foregroundStyle(.tint)
+                }
+            }
+            .frame(width: 64, height: 64)
+            .background(.fill.tertiary)
+            .clipShape(.rect(cornerRadius: DS.Radius.l))
+            .overlay {
+                if isLiftingSubject {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color.black.opacity(0.3), in: .rect(cornerRadius: DS.Radius.l))
+                }
+            }
+        }
+        .buttonStyle(.borderless)
+        .accessibilityLabel(selectedImage != nil ? "Foto del producto" : "Agregar foto")
     }
 
     @ViewBuilder
@@ -369,94 +479,28 @@ struct CreateProductView: View {
         }
     }
 
-    /// The section's share of `ProductDraft.issues`, in words next to the fields they're about.
-    private func issueHints(_ shown: [ProductDraft.Issue]) -> some View {
-        ForEach(viewModel.issues.filter(shown.contains), id: \.self) { issue in
-            StatusLabel(issue.message, tone: .caution)
-        }
-    }
-
-    // MARK: - Margin Preview
-
-    private var marginPreviewRow: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: DS.Spacing.xs) {
-                Text("Ganancia por Unidad")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-
-                if let profit = viewModel.profitPerUnit {
-                    Text(formatCurrency(profit))
-                        .font(.headline)
-                        .foregroundStyle((profit >= 0 ? Tone.positive : .critical).color)
-                }
-            }
-
-            Spacer()
-
-            VStack(alignment: .trailing, spacing: DS.Spacing.xs) {
-                Text("Margen")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-
-                if let margin = viewModel.marginPercent {
-                    Text(String(format: "%.1f%%", margin))
-                        .font(.headline)
-                        .foregroundStyle(Margin.tone(forPercent: margin).color)
-                }
-            }
-        }
-    }
-
-    // MARK: - Loading Overlay
-
-    private var loadingOverlay: some View {
-        ZStack {
-            Color.black.opacity(0.3)
-                .ignoresSafeArea()
-
-            VStack(spacing: DS.Spacing.l) {
-                ProgressView()
-                    .controlSize(.large)
-
-                Text("Creando producto...")
-                    .font(.headline)
-
-                if selectedImage != nil {
-                    Text("Se subirá la imagen después de crear...")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                } else if viewModel.syncToSquare {
-                    Text("Sincronizando con Square...")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .padding(DS.Spacing.xxxl)
-            .background(.regularMaterial, in: .rect(cornerRadius: DS.Radius.xl))
-        }
-    }
-
     // MARK: - Actions
 
-    private func createProduct() async {
+    private func submit() {
+        guard !viewModel.isSubmitting, !viewModel.isDone else { return }
+        if let first = viewModel.issues.first {
+            attempts += 1
+            // Focus scrolls the field into view (.formKeyboard) and opens its keyboard.
+            focusedField = field(for: first)
+            AccessibilityNotification.Announcement(first.message).post()
+            return
+        }
         guard let locationId = authManager.currentLocation?.id else {
             viewModel.errorMessage = "No hay una sucursal seleccionada"
             viewModel.showError = true
             return
         }
-
-        await viewModel.createProduct(locationId: locationId, image: selectedImage)
-    }
-
-    // MARK: - Helpers
-
-    private func formatCurrency(_ value: Double) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "MXN"
-        formatter.locale = Locale(identifier: "es_MX")
-        return formatter.string(from: NSNumber(value: value)) ?? "$\(value)"
+        // Set before the Task runs, so a second tap can't slip in first.
+        viewModel.isSubmitting = true
+        focusedField = nil
+        Task {
+            await viewModel.createProduct(locationId: locationId, image: selectedImage)
+        }
     }
 }
 

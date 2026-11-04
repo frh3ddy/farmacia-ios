@@ -44,8 +44,12 @@ class InventoryViewModel: ObservableObject {
                 endpoint: .receiveInventory,
                 body: request
             )
-            successMessage = response.message
-            showSuccess = true
+            // The form's button shows the checkmark; an alert only when there's
+            // something to read: Square didn't take the new stock.
+            if let sync = response.data.squareSync, !sync.isSuccess {
+                successMessage = response.message
+                showSuccess = true
+            }
 
             // Write-through: update cache with fresh product data from response
             if let updatedProduct = response.data.product {
