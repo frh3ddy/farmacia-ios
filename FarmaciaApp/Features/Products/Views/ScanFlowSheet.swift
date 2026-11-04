@@ -51,8 +51,9 @@ struct ScanFlowSheet: View {
                 )
                 .transition(.push(from: .trailing))
             case .create(let code):
-                // The 14-digit read of an EAN-13 is saved as the 13 digits on the box.
-                CreateProductView(prefillSku: BarcodeLookup.newProductSku(code), onCreated: onCreated)
+                // The code is the new product's barcode (the server makes the SKU); a
+                // 14-digit read of an EAN-13 is saved as the 13 digits on the box.
+                CreateProductView(prefillBarcode: BarcodeLookup.newProductBarcode(code), onCreated: onCreated)
                     .transition(.push(from: .trailing))
             }
         }

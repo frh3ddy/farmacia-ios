@@ -124,7 +124,9 @@ Opened from a product (Productos → product → Recibir Inventario / Ajustar In
 
 ### Products
 - The on-device product cache (used by the barcode scanner) stays current with a delta sync (`GET /products/sync`): opening Productos fetches only what changed since the last sync; the full catalog is downloaded once per store
-- Scanning a barcode finds the product by SKU whether it was saved as the 13 digits on the box or the 14-digit form the iPhone sometimes reads (`03664798067460` = `3664798067460`, `BarcodeLookup.codeVariants`); a new product from a scan gets the 13-digit SKU
+- Products carry their barcode (`gtin`, Square's GTIN field), shown in product detail
+- Scanning a barcode finds the product by SKU or barcode, whether saved as the 13 digits on the box or the 14-digit form the iPhone sometimes reads (`03664798067460` = `3664798067460`, `BarcodeLookup.codeVariants`/`matches`), offline from the on-device cache too
+- Nuevo Producto has a "Código de barras" field (8, 12, 13 or 14 digits, sent to Square as the item's barcode); a scan that finds nothing fills it with the 13 digits on the box and leaves the SKU for the server to generate
 - The Products stats row reads "X de Y sincronizados con Square", both from the server's catalog counts
 - Catalog counts (stock chips, synced, stock alerts) come from the server for every role; a cashier's have no low-margin count, since it's worked out from cost
 - Product list badges in Spanish ("Agotado" at 0, "Bajo" at 1–9, the API's stock-filter cutoffs); filter chip, margin and lot-age colors follow what they mean (`StockLevel`, `ProductFilter.tone`, `BatchAge.tone` in FarmaciaKit)

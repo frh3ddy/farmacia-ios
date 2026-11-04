@@ -609,18 +609,24 @@ struct ProductsView: View {
     }
     
     /// What a scanned code is: one product (open it), several (choose), or
-    /// none (create one with the code as SKU). Loaded products and the on-device
-    /// cache first; the server's exact search when they can't settle it. Every
-    /// GTIN form of the code counts (13 or 14 digits: BarcodeLookup.codeVariants).
+    /// none (create one with the code as its barcode). Loaded products and the
+    /// on-device cache first; the server's exact search when they can't settle it.
+    /// A product matches by SKU or barcode, in every GTIN form of the code (13 or
+    /// 14 digits: BarcodeLookup.codeVariants).
     private func lookupScannedCode(_ code: String) async -> ScanOutcome {
         let variants = BarcodeLookup.codeVariants(code)
 
         // LEVEL 1a: loaded products in memory (instant), then LEVEL 1b: the SwiftData
         // cache (whole catalog, indexed). Open a product only if it's the one match:
         // a barcode shared by several goes to the server, which lists them all.
-        let keys = Set(variants.map { $0.lowercased() })
-        let inMemory = viewModel.products.filter { $0.sku.map { keys.contains($0.lowercased()) } ?? false }
-        let cached = variants.flatMap { ProductCacheManager.shared.findBySku($0) }
+        let inMemory = viewModel.products.filter {
+            BarcodeLookup.matches(sku: $0.sku, gtin: $0.gtin, variants: variants)
+        }
+        let cache = ProductCacheManager.shared
+        var seen = Set<String>()
+        let cached = variants
+            .flatMap { cache.findBySku($0) + cache.findByGtin($0) }
+            .filter { seen.insert($0.id).inserted }
         // The cache can know a second product with this barcode that isn't loaded yet.
         let matches = cached.count > inMemory.count ? cached : inMemory
         if BarcodeLookup.cacheDecision(matchCount: matches.count) == .open, let match = matches.first {
@@ -628,7 +634,7 @@ struct ProductsView: View {
         }
 
         // LEVEL 2 + 3: Server search with exact=true (does NOT touch the product list),
-        // one form at a time until one matches a SKU exactly; else the scanned code's
+        // one form at a time until one matches a SKU or barcode exactly; else the scanned code's
         // fallback results.
         guard let locationId = authManager.currentLocation?.id else { return .create }
         do {

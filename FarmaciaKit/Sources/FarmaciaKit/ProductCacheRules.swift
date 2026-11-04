@@ -16,8 +16,9 @@ public struct ProductCacheScope: Equatable, Sendable {
     }
 
     /// Stored next to the cache (SyncMetadata). Its format differs from any older
-    /// rule's key, so a cache saved under one (which may hold costs) is cleared.
-    public var key: String { "store:\(locationId)" }
+    /// rule's key, so a cache saved under one is cleared and downloaded again: one
+    /// that may hold costs, or rows saved before products carried a barcode.
+    public var key: String { "store:\(locationId)|gtin" }
 
     /// Rows saved for another store, or for an unknown scope (an older cache),
     /// must not be shown.
@@ -56,7 +57,7 @@ public enum BarcodeLookup {
     /// zero-padded forms (the iPhone can read an EAN-13 as 14 digits, and products
     /// were saved with either). Anything else is only itself.
     public static func codeVariants(_ code: String) -> [String] {
-        guard gtinLengths.contains(code.count), code.allSatisfy(\.isASCIIDigit) else { return [code] }
+        guard isGTIN(code) else { return [code] }
         let core = code.drop(while: { $0 == "0" })
         let padded = gtinLengths
             .filter { $0 >= core.count }
@@ -64,9 +65,22 @@ public enum BarcodeLookup {
         return [code] + padded.filter { $0 != code }
     }
 
-    /// The SKU a new product gets from a scan: the 14-digit form of an EAN-13 loses
-    /// its leading zero, so it matches the box and Square's register scanner.
-    public static func newProductSku(_ code: String) -> String {
+    /// 8, 12, 13 or 14 digits.
+    public static func isGTIN(_ code: String) -> Bool {
+        gtinLengths.contains(code.count) && code.allSatisfy(\.isASCIIDigit)
+    }
+
+    /// Whether a product is one of a scan's matches: its SKU (any letter case) or its
+    /// barcode is one of the scan's `codeVariants`.
+    public static func matches(sku: String?, gtin: String?, variants: [String]) -> Bool {
+        if let gtin, variants.contains(gtin) { return true }
+        guard let sku = sku?.lowercased() else { return false }
+        return variants.contains { $0.lowercased() == sku }
+    }
+
+    /// The barcode a new product gets from a scan: the 14-digit form of an EAN-13
+    /// loses its leading zero, so it matches the box and Square's register scanner.
+    public static func newProductBarcode(_ code: String) -> String {
         code.count == 14 && code.hasPrefix("0") && code.allSatisfy(\.isASCIIDigit) ? String(code.dropFirst()) : code
     }
 

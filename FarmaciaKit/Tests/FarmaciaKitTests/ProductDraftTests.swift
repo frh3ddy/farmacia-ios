@@ -6,9 +6,9 @@ import Testing
 /// discarding, once it holds something the user entered. What the form started
 /// with (a SKU from the barcode scanner, the default switches) isn't a change.
 struct ProductDraftTests {
-    @Test("given a fresh form with only a scanned SKU, should have no changes")
+    @Test("given a fresh form with only a scanned barcode, should have no changes")
     func scannedSkuOnly() {
-        let start = ProductDraft(prefillSku: "7501008496725")
+        let start = ProductDraft(prefillBarcode: "7501008496725")
         #expect(!start.hasChanges(from: start))
     }
 
@@ -31,16 +31,16 @@ struct ProductDraftTests {
 
     @Test("given a name typed and then cleared, should have no changes")
     func undone() {
-        let start = ProductDraft(prefillSku: "123")
+        let start = ProductDraft(prefillBarcode: "123")
         var draft = start
         draft.name = "Algo"
         draft.name = ""
         #expect(!draft.hasChanges(from: start))
     }
 
-    @Test("given a scanned SKU, should keep Más detalles closed (the SKU shows with the essentials)")
+    @Test("given a scanned barcode, should keep Más detalles closed (the SKU shows with the essentials)")
     func scannedSkuKeepsDetailsClosed() {
-        #expect(!ProductDraft(prefillSku: "7501008496725").hasDetails)
+        #expect(!ProductDraft(prefillBarcode: "7501008496725").hasDetails)
     }
 
     @Test("given a description, should open Más detalles")
@@ -184,5 +184,35 @@ struct ProductDraftIssueTests {
         #expect(ProductDraft.Issue.quantityNeeded.message == "Indica la cantidad para registrar este costo, o borra el costo.")
         #expect(ProductDraft.Issue.costNeeded.message == "Indica el costo unitario de esta cantidad (0 si fue regalo).")
         #expect(ProductDraft.Issue.priceNotPositive.message == "El precio debe ser mayor a $0.")
+    }
+
+    @Test("given a scan, should fill the barcode and leave the SKU empty (the server makes one)")
+    func scanFillsBarcode() {
+        let draft = ProductDraft(prefillBarcode: "3664798067460")
+        #expect(draft.gtin == "3664798067460" && draft.sku.isEmpty)
+    }
+
+    @Test("given a barcode that isn't 8, 12, 13 or 14 digits, Crear should be off and say why",
+          arguments: ["12345", "36647980674", "366479806746A", "036647980674601"])
+    func invalidBarcode(gtin: String) {
+        var draft = ProductDraft(prefillBarcode: gtin)
+        draft.name = "Buscapina"
+        draft.sellingPrice = 220
+        #expect(!draft.canSave)
+        #expect(draft.issues == [.barcodeInvalid])
+    }
+
+    @Test("given a valid barcode, or none, Crear should be on", arguments: ["", "  ", "96385074", "012345678905", "3664798067460", "03664798067460", " 3664798067460 "])
+    func validBarcode(gtin: String) {
+        var draft = ProductDraft(prefillBarcode: gtin)
+        draft.name = "Buscapina"
+        draft.sellingPrice = 220
+        #expect(draft.canSave)
+        #expect(draft.issues.isEmpty)
+    }
+
+    @Test("given a scanned barcode, Más detalles should stay closed")
+    func barcodeNotDetail() {
+        #expect(!ProductDraft(prefillBarcode: "3664798067460").hasDetails)
     }
 }

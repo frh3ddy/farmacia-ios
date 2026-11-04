@@ -23,6 +23,11 @@ struct ProductCacheScopeTests {
         #expect(centro.needsClear(storedKey: nil))
     }
 
+    @Test("given a cache saved before products carried a barcode, should clear (download it again with barcodes)")
+    func beforeBarcodes() {
+        #expect(centro.needsClear(storedKey: "store:centro"))
+    }
+
     @Test("given a key stored by the previous version of this rule (store plus cost visibility), should clear")
     func previousRuleKey() {
         #expect(centro.needsClear(storedKey: "centro|costs"))
@@ -97,13 +102,38 @@ struct BarcodeVariantsTests {
         #expect(BarcodeLookup.codeVariants(code) == [code])
     }
 
-    @Test("given the 14-digit form, a new product's SKU should be the 13 digits printed on the box")
+    @Test("given the 14-digit form, a new product's barcode should be the 13 digits printed on the box")
     func prefillDropsZero() {
-        #expect(BarcodeLookup.newProductSku("03664798067460") == "3664798067460")
+        #expect(BarcodeLookup.newProductBarcode("03664798067460") == "3664798067460")
     }
 
-    @Test("given any other code, a new product's SKU should be the code as scanned", arguments: ["3664798067460", "13664798067467", "ABC-123"])
+    @Test("given any other code, a new product's barcode should be the code as scanned", arguments: ["3664798067460", "13664798067467", "ABC-123"])
     func prefillUnchanged(code: String) {
-        #expect(BarcodeLookup.newProductSku(code) == code)
+        #expect(BarcodeLookup.newProductBarcode(code) == code)
+    }
+}
+
+/// A scan matches a product by SKU (any letter case) or barcode, in any GTIN form.
+struct BarcodeMatchTests {
+    let scan = BarcodeLookup.codeVariants("03664798067460")
+
+    @Test("given the barcode in the GTIN field and another SKU, should match")
+    func byGtin() {
+        #expect(BarcodeLookup.matches(sku: "8857379", gtin: "3664798067460", variants: scan))
+    }
+
+    @Test("given the barcode as the SKU, should match")
+    func bySku() {
+        #expect(BarcodeLookup.matches(sku: "3664798067460", gtin: nil, variants: scan))
+    }
+
+    @Test("given a SKU in other letter case, should match")
+    func skuCase() {
+        #expect(BarcodeLookup.matches(sku: "abc-1", gtin: nil, variants: ["ABC-1"]))
+    }
+
+    @Test("given neither, should not match")
+    func neither() {
+        #expect(!BarcodeLookup.matches(sku: "8857379", gtin: nil, variants: scan))
     }
 }
