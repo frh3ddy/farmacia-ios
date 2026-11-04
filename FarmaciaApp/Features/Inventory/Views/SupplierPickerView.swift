@@ -42,6 +42,27 @@ struct SupplierPickerView: View {
                 }
             } else {
                 List {
+                    // A normal choice, not a clear button next to the chevron.
+                    if searchText.isEmpty {
+                        Button {
+                            selectedSupplier = nil
+                            dismiss()
+                        } label: {
+                            HStack {
+                                Text("Sin proveedor")
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                                if selectedSupplier == nil {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(.tint)
+                                }
+                            }
+                            .contentShape(.rect)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(selectedSupplier == nil ? .isSelected : [])
+                    }
+
                     ForEach(filteredSuppliers) { supplier in
                         Button {
                             selectedSupplier = supplier
@@ -63,12 +84,13 @@ struct SupplierPickerView: View {
 
                                 if selectedSupplier?.id == supplier.id {
                                     Image(systemName: "checkmark")
-                                        .foregroundStyle(.blue)
+                                        .foregroundStyle(.tint)
                                 }
                             }
                             .contentShape(.rect)
                         }
                         .buttonStyle(.plain)
+                        .accessibilityAddTraits(selectedSupplier?.id == supplier.id ? .isSelected : [])
                     }
                 }
                 .searchable(text: $searchText, prompt: "Buscar proveedores")

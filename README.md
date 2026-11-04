@@ -115,9 +115,15 @@ Opened from a product (Productos → product → Recibir Inventario / Ajustar In
 - Quick adjustments (damage, theft, expired, found, etc.); an adjustment that adds stock uses the product's last cost, and asks for a unit cost only when the product has none on record
 - Count correction by counted total against the store's live stock (needs a connection)
 - Before saving, adjustments, counts and receivings show what they do to this store's stock ("Centro · 42 → 39 (−3)"), and warn when a removal is more than the stock on hand; the product row at the top shows the same fresh stock
-- Receive by the box: Cajas × Piezas por caja fills Cantidad
+- Recibir inventario puts the quantity first: a large number with −/+ (hold to repeat), Unidades / Cajas, and with Cajas the arithmetic shown ("3 × 12 = 36 uds")
+- Supplier, invoice and unit cost sit together (one piece of paper); the supplier's last cost fills the cost, and a change shows as "▲ 8% vs último $16.50"; "Sin proveedor" is a choice in the picker
+- Changing the sale price while receiving offers margin chips: "Actual" (the margin at the supplier's last cost, kept at the new cost) pre-selected, then 30 · 40 · 50 %, each showing its price (rounded up to $0.50)
+- Lot and expiry share a section; notes come last
+- A receiving that changes the price shows a review first (stock before → after, cost, old → new price and margin); the owner chooses there whether the new price applies at every store
+- Both inventory forms have one full-width button at the bottom that is always enabled; a tap with something missing focuses the first problem field, shows the message under it and shakes it (not with Reduce Motion), and the line above the button says what's missing ("Falta cantidad y costo")
 - Lot expiry shows in words and an icon, not just color ("2 vencidos", "1 por vencer"; caution from 90 days)
-- Nuevo Producto says next to the field why Crear is off (price 0, a quantity without cost, a cost without quantity)
+- Nuevo producto: photo beside a wrapping name (counter from 28 characters; Square POS and receipts show ~32), then Precio (cost → margin chips → price; the price follows the cost while a chip is picked), Identificación (SKU, barcode with a scan button), Inventario inicial (supplier only with a quantity; uses the cost from Precio), Disponibilidad and Descripción. A cost without a quantity is allowed (it only suggests the price)
+- After creating, the button shows a checkmark and the sheet closes; an alert appears only when there's something to read (offline queue, photo not uploaded, Square POS not reached)
 - Switching store returns the other tabs to their first screen, so nothing from the previous store or role stays open
 - Receiving and adjustment history (product activity and global history)
 - Square sync status on each receiving and adjustment; the owner can retry a failed sync from product activity or global history

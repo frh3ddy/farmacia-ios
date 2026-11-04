@@ -155,6 +155,8 @@ struct AdjustmentFormView: View {
                             .multilineTextAlignment(.trailing)
                             .formField(.reason, focus: $focusedField)
                     }
+                    // Row-level id: .formKeyboard scrolls to it (see .fieldError).
+                    .id(Field.reason)
                     TextField("Notas", text: $notes, axis: .vertical)
                         .lineLimit(1...4)
                         .formField(.notes, focus: $focusedField)

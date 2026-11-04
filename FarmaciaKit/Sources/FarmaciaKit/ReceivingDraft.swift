@@ -29,16 +29,6 @@ public struct ReceivingDraft: Equatable, Sendable {
         self.expiryDate = expiryDate
     }
 
-    /// Whether the optional fields (Más detalles: price update, invoice, batch,
-    /// notes) hold anything — the section opens on its own then. The expiry
-    /// date isn't one of them: it stays visible (it matters for a pharmacy).
-    public var hasDetails: Bool {
-        updatesPrice
-            || !invoiceNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            || !batchNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            || !notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
     public func hasChanges(from start: ReceivingDraft) -> Bool {
         saved != start.saved
     }

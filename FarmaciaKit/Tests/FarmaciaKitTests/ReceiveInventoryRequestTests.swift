@@ -15,6 +15,7 @@ struct ReceiveInventoryRequestTests {
         notes: String = "",
         expiryDate: Date? = nil,
         sellingPrice: Double? = nil,
+        priceAtAllLocations: Bool = false,
         clientRequestId: String = "req-1"
     ) -> ReceiveInventoryRequest {
         ReceiveInventoryRequest(
@@ -28,6 +29,7 @@ struct ReceiveInventoryRequestTests {
             expiryDate: expiryDate,
             notes: notes,
             sellingPrice: sellingPrice,
+            priceAtAllLocations: priceAtAllLocations,
             clientRequestId: clientRequestId
         )
     }
@@ -59,5 +61,16 @@ struct ReceiveInventoryRequestTests {
     func withPrice() throws {
         let body = try json(request(sellingPrice: 45))
         #expect(body["sellingPrice"] as? Double == 45 && body["syncPriceToSquare"] as? Bool == true)
+    }
+
+    @Test("given a new price for every store, should ask the API to apply it at every store")
+    func priceEverywhere() throws {
+        #expect(try json(request(sellingPrice: 45, priceAtAllLocations: true))["applyPriceToAllLocations"] as? Bool == true)
+    }
+
+    @Test("given every store but no new price, or this store only, should leave the flag out",
+          arguments: [(nil, true), (45.0, false)] as [(Double?, Bool)])
+    func flagAbsent(price: Double?, everywhere: Bool) throws {
+        #expect(try json(request(sellingPrice: price, priceAtAllLocations: everywhere))["applyPriceToAllLocations"] == nil)
     }
 }

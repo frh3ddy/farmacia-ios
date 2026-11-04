@@ -39,31 +39,21 @@ public struct ProductDraft: Equatable, Sendable {
     }
 
     /// Crear: a name and a positive price; with a quantity, its cost too
-    /// (0 is fine). A cost without a quantity blocks saving instead of being
-    /// dropped silently.
-    public var canSave: Bool {
-        guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              let price = sellingPrice, price > 0,
-              barcodeIsValid
-        else { return false }
-        if createsInitialStock {
-            guard let cost = costPrice, cost >= 0 else { return false }
-        } else if costPrice != nil {
-            return false
-        }
-        return true
-    }
+    /// (0 is fine). A cost without a quantity is fine: it drives the suggested
+    /// price and isn't sent (no stock to cost).
+    public var canSave: Bool { issues.isEmpty }
 
-    /// Why Crear is off, for values the user entered — shown under the field
-    /// that fixes it. Empty required fields aren't listed: their labels say so.
+    /// What Crear needs, shown under the field that fixes it after the first
+    /// tap. Form order: name, cost, price, barcode — focus goes to the first.
     public enum Issue: Hashable, Sendable {
-        case priceNotPositive, quantityNeeded, costNeeded, barcodeInvalid
+        case nameMissing, costNeeded, priceMissing, priceNotPositive, barcodeInvalid
 
         public var message: String {
             switch self {
+            case .nameMissing: "Escribe el nombre del producto."
+            case .costNeeded: "Indica el costo por unidad del inventario inicial (0 si fue regalo)."
+            case .priceMissing: "Indica el precio de venta."
             case .priceNotPositive: "El precio debe ser mayor a $0."
-            case .quantityNeeded: "Indica la cantidad para registrar este costo, o borra el costo."
-            case .costNeeded: "Indica el costo unitario de esta cantidad (0 si fue regalo)."
             case .barcodeInvalid: "El código de barras debe tener 8, 12, 13 o 14 dígitos."
             }
         }
@@ -71,20 +61,15 @@ public struct ProductDraft: Equatable, Sendable {
 
     public var issues: [Issue] {
         var issues: [Issue] = []
+        if name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { issues.append(.nameMissing) }
+        if createsInitialStock, (costPrice ?? -1) < 0 { issues.append(.costNeeded) }
+        if let price = sellingPrice {
+            if price <= 0 { issues.append(.priceNotPositive) }
+        } else {
+            issues.append(.priceMissing)
+        }
         if !barcodeIsValid { issues.append(.barcodeInvalid) }
-        if let price = sellingPrice, price <= 0 { issues.append(.priceNotPositive) }
-        if createsInitialStock, costPrice == nil { issues.append(.costNeeded) }
-        if !createsInitialStock, costPrice != nil { issues.append(.quantityNeeded) }
         return issues
-    }
-
-    /// Whether the optional fields (Más detalles: description, stores, Square)
-    /// hold anything. The SKU and barcode aren't among them: they show with the
-    /// essentials (SKU "Automático" when empty).
-    public var hasDetails: Bool {
-        !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            || !soldAtAllLocations
-            || !syncToSquare
     }
 
     /// Text is compared trimmed: spaces alone aren't work worth protecting.

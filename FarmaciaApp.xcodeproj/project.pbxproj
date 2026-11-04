@@ -42,7 +42,11 @@
 		EE00000100000004 /* UIImage+Resize.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000004 /* UIImage+Resize.swift */; };
 		EE00000100000005 /* KeyboardHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000005 /* KeyboardHelpers.swift */; };
 		EE00000100000006 /* StateViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000200000006 /* StateViews.swift */; };
-		DD00000100000003 /* MoreDetailsLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000003 /* MoreDetailsLabel.swift */; };
+		DD00000100000003 /* PrimaryActionBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000003 /* PrimaryActionBar.swift */; };
+		DD000001000000F3 /* OptionalHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD000002000000F3 /* OptionalHeader.swift */; };
+		DD000001000000F2 /* MarginChips.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD000002000000F2 /* MarginChips.swift */; };
+		DD000001000000F1 /* QuantityStepper.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD000002000000F1 /* QuantityStepper.swift */; };
+		DD000001000000F0 /* FieldError.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD000002000000F0 /* FieldError.swift */; };
 		DD0000010000000A /* StatusLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000020000000A /* StatusLabel.swift */; };
 		DD0000010000000B /* ToneBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000020000000B /* ToneBadge.swift */; };
 		DD00000100000009 /* ProductSummaryRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000009 /* ProductSummaryRow.swift */; };
@@ -88,6 +92,7 @@
 		F000000100000039 /* ExpenseSummaryReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000039 /* ExpenseSummaryReportView.swift */; };
 		F000000100000040 /* InventoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000040 /* InventoryViewModel.swift */; };
 		F000000100000042 /* ReceiveInventoryFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000042 /* ReceiveInventoryFormView.swift */; };
+		DD000001000000F4 /* ReceivingReviewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD000002000000F4 /* ReceivingReviewSheet.swift */; };
 		F000000100000044 /* SupplierPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000044 /* SupplierPickerView.swift */; };
 		F000000100000046 /* AdjustmentFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000046 /* AdjustmentFormView.swift */; };
 		F000000100000048 /* StatCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000048 /* StatCard.swift */; };
@@ -152,7 +157,11 @@
 		EE00000200000004 /* UIImage+Resize.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIImage+Resize.swift"; sourceTree = "<group>"; };
 		EE00000200000005 /* KeyboardHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardHelpers.swift; sourceTree = "<group>"; };
 		EE00000200000006 /* StateViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StateViews.swift; sourceTree = "<group>"; };
-		DD00000200000003 /* MoreDetailsLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoreDetailsLabel.swift; sourceTree = "<group>"; };
+		DD00000200000003 /* PrimaryActionBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrimaryActionBar.swift; sourceTree = "<group>"; };
+		DD000002000000F3 /* OptionalHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OptionalHeader.swift; sourceTree = "<group>"; };
+		DD000002000000F2 /* MarginChips.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarginChips.swift; sourceTree = "<group>"; };
+		DD000002000000F1 /* QuantityStepper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuantityStepper.swift; sourceTree = "<group>"; };
+		DD000002000000F0 /* FieldError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FieldError.swift; sourceTree = "<group>"; };
 		DD0000020000000A /* StatusLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusLabel.swift; sourceTree = "<group>"; };
 		DD0000020000000B /* ToneBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToneBadge.swift; sourceTree = "<group>"; };
 		DD00000200000009 /* ProductSummaryRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductSummaryRow.swift; sourceTree = "<group>"; };
@@ -200,6 +209,7 @@
 		F100000100000039 /* ExpenseSummaryReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseSummaryReportView.swift; sourceTree = "<group>"; };
 		F100000100000040 /* InventoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryViewModel.swift; sourceTree = "<group>"; };
 		F100000100000042 /* ReceiveInventoryFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiveInventoryFormView.swift; sourceTree = "<group>"; };
+		DD000002000000F4 /* ReceivingReviewSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceivingReviewSheet.swift; sourceTree = "<group>"; };
 		F100000100000044 /* SupplierPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupplierPickerView.swift; sourceTree = "<group>"; };
 		F100000100000046 /* AdjustmentFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdjustmentFormView.swift; sourceTree = "<group>"; };
 		F100000100000048 /* StatCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatCard.swift; sourceTree = "<group>"; };
@@ -355,7 +365,11 @@
 		DD00000300000001 /* DesignSystem */ = {
 			isa = PBXGroup;
 			children = (
-				DD00000200000003 /* MoreDetailsLabel.swift */,
+				DD00000200000003 /* PrimaryActionBar.swift */,
+				DD000002000000F3 /* OptionalHeader.swift */,
+				DD000002000000F2 /* MarginChips.swift */,
+				DD000002000000F1 /* QuantityStepper.swift */,
+				DD000002000000F0 /* FieldError.swift */,
 				DD0000020000000A /* StatusLabel.swift */,
 				DD0000020000000B /* ToneBadge.swift */,
 				DD00000200000009 /* ProductSummaryRow.swift */,
@@ -512,6 +526,7 @@
 			children = (
 				F100000100000040 /* InventoryViewModel.swift */,
 				F100000100000042 /* ReceiveInventoryFormView.swift */,
+				DD000002000000F4 /* ReceivingReviewSheet.swift */,
 				F100000100000044 /* SupplierPickerView.swift */,
 				F100000100000046 /* AdjustmentFormView.swift */,
 			);
@@ -694,6 +709,7 @@
 				F000000100000056 /* MoreView.swift in Sources */,
 				F000000100000040 /* InventoryViewModel.swift in Sources */,
 				F000000100000042 /* ReceiveInventoryFormView.swift in Sources */,
+				DD000001000000F4 /* ReceivingReviewSheet.swift in Sources */,
 				F000000100000044 /* SupplierPickerView.swift in Sources */,
 				F000000100000046 /* AdjustmentFormView.swift in Sources */,
 				F000000100000015 /* ReportsView.swift in Sources */,
@@ -731,7 +747,11 @@
 				EE00000100000004 /* UIImage+Resize.swift in Sources */,
 				EE00000100000005 /* KeyboardHelpers.swift in Sources */,
 				EE00000100000006 /* StateViews.swift in Sources */,
-				DD00000100000003 /* MoreDetailsLabel.swift in Sources */,
+				DD00000100000003 /* PrimaryActionBar.swift in Sources */,
+				DD000001000000F3 /* OptionalHeader.swift in Sources */,
+				DD000001000000F2 /* MarginChips.swift in Sources */,
+				DD000001000000F1 /* QuantityStepper.swift in Sources */,
+				DD000001000000F0 /* FieldError.swift in Sources */,
 				DD0000010000000A /* StatusLabel.swift in Sources */,
 				DD0000010000000B /* ToneBadge.swift in Sources */,
 				DD00000100000009 /* ProductSummaryRow.swift in Sources */,

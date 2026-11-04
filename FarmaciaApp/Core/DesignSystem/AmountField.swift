@@ -18,6 +18,7 @@ struct AmountField<Field: Hashable, Value: AmountValue>: View {
     @Binding private var value: Value?
     private let focus: FocusState<Field?>.Binding
     private let field: Field
+    private let alignment: TextAlignment?
 
     @State private var text = ""
 
@@ -28,7 +29,8 @@ struct AmountField<Field: Hashable, Value: AmountValue>: View {
         unit: String? = nil,
         value: Binding<Value?>,
         focus: FocusState<Field?>.Binding,
-        field: Field
+        field: Field,
+        alignment: TextAlignment? = nil
     ) {
         self.label = label
         self.prefix = prefix
@@ -36,6 +38,7 @@ struct AmountField<Field: Hashable, Value: AmountValue>: View {
         self._value = value
         self.focus = focus
         self.field = field
+        self.alignment = alignment
     }
 
     var body: some View {
@@ -49,7 +52,7 @@ struct AmountField<Field: Hashable, Value: AmountValue>: View {
             }
             TextField(Value.placeholder, text: $text)
                 .keyboardType(Value.keyboard)
-                .multilineTextAlignment(label == nil ? .leading : .trailing)
+                .multilineTextAlignment(alignment ?? (label == nil ? .leading : .trailing))
                 .focused(focus, equals: field)
             if let unit {
                 Text(unit)

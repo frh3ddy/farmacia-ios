@@ -23,8 +23,12 @@ class CreateProductViewModel: ObservableObject {
     @Published var isSubmitting = false
     @Published var showError = false
     @Published var errorMessage = ""
+    /// Something to read after creating (offline queue, photo trouble):
+    /// shown as an alert instead of the button's checkmark.
     @Published var showSuccess = false
     @Published var successMessage = ""
+    /// Created with nothing to report: the button shows a checkmark, then the sheet closes.
+    @Published var isDone = false
     @Published var suppliers: [Supplier] = []
     /// The product the server created (not set when the create was queued
     /// offline): the view reports it so Productos lists it right away.
@@ -60,9 +64,6 @@ class CreateProductViewModel: ObservableObject {
         draft(hasPhoto: hasPhoto).hasChanges(from: start)
     }
 
-    /// The optional fields (Más detalles) hold something.
-    var hasDetails: Bool { draft(hasPhoto: false).hasDetails }
-
     private func draft(hasPhoto: Bool) -> ProductDraft {
         var draft = ProductDraft()
         draft.name = name
@@ -81,27 +82,10 @@ class CreateProductViewModel: ObservableObject {
 
     // MARK: - Computed Properties
 
-    /// Crear's rule (FarmaciaKit `ProductDraft.canSave`): name and price; a
-    /// quantity creates initial stock and then needs its cost.
-    var isValid: Bool { draft(hasPhoto: false).canSave }
-
-    /// Why Crear is off, shown under the field that fixes it.
+    /// What Crear still needs, in form order (FarmaciaKit `ProductDraft.issues`):
+    /// a name and a price; a quantity creates initial stock and then needs its cost.
     var issues: [ProductDraft.Issue] { draft(hasPhoto: false).issues }
 
-    var showMarginPreview: Bool {
-        sellingPrice != nil && costPrice != nil
-    }
-    
-    var profitPerUnit: Double? {
-        guard let price = sellingPrice, let cost = costPrice else { return nil }
-        return price - cost
-    }
-    
-    var marginPercent: Double? {
-        guard let price = sellingPrice, let cost = costPrice else { return nil }
-        return Margin.percent(price: price, cost: cost)
-    }
-    
     // MARK: - Actions
     
     func createProduct(locationId: String, image: UIImage? = nil) async {
@@ -131,13 +115,6 @@ class CreateProductViewModel: ObservableObject {
             
             let data = try response.requireData()
             createdProduct = data.product
-            var message = "Producto \"\(name)\" creado."
-            if data.squareSynced {
-                message += "\n✓ Sincronizado con Square POS"
-            }
-            if data.inventoryCreated {
-                message += "\n✓ Inventario inicial agregado"
-            }
             
             // Upload image if one was selected (resized to 1600px ceiling first)
             if let image = image, let imageData = image.jpegDataForUpload() {
@@ -147,7 +124,6 @@ class CreateProductViewModel: ObservableObject {
                         imageData: imageData,
                         filename: "product_\(data.product.id).jpg"
                     )
-                    message += "\n✓ Imagen subida"
                     // Report the product again with its image URL, so Productos'
                     // copy gets the thumbnail (it listed the photo-less one).
                     if let refreshed: ProductDetailResponse = try? await apiClient.request(
@@ -157,13 +133,20 @@ class CreateProductViewModel: ObservableObject {
                         createdProduct = refreshed.data
                     }
                 } catch {
-                    message += "\n⚠ No se pudo subir la imagen (el producto sí se creó)"
                     print("Failed to upload product image: \(error)")
+                    successMessage = "\"\(name)\" se creó, pero no se pudo subir la foto. Agrégala desde el producto."
+                    showSuccess = true
+                    isSubmitting = false
+                    return
                 }
             }
-            
-            successMessage = message
-            showSuccess = true
+
+            if syncToSquare && !data.squareSynced {
+                successMessage = "\"\(name)\" se creó, pero no se pudo agregar a Square POS: por ahora solo existe en la app."
+                showSuccess = true
+            } else {
+                isDone = true
+            }
         } catch NetworkError.queuedForSync {
             // The queued replay carries this create's clientRequestId, so it
             // can't duplicate itself; creating the product again from a new

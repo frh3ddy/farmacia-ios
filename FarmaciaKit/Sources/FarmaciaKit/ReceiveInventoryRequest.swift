@@ -19,6 +19,8 @@ public struct ReceiveInventoryRequest: Encodable, Equatable, Sendable {
     public let syncToSquare: Bool
     public let sellingPrice: Double?
     public let syncPriceToSquare: Bool?
+    /// The new price at every store (owner only); absent means this store only.
+    public let applyPriceToAllLocations: Bool?
     public let clientRequestId: String
 
     /// Blank text fields are sent as absent; a new selling price is always synced to Square.
@@ -33,6 +35,7 @@ public struct ReceiveInventoryRequest: Encodable, Equatable, Sendable {
         expiryDate: Date?,
         notes: String,
         sellingPrice: Double?,
+        priceAtAllLocations: Bool = false,
         clientRequestId: String
     ) {
         self.locationId = locationId
@@ -47,6 +50,7 @@ public struct ReceiveInventoryRequest: Encodable, Equatable, Sendable {
         self.syncToSquare = true
         self.sellingPrice = sellingPrice
         self.syncPriceToSquare = sellingPrice != nil ? true : nil
+        self.applyPriceToAllLocations = sellingPrice != nil && priceAtAllLocations ? true : nil
         self.clientRequestId = clientRequestId
     }
 }
