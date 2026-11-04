@@ -27,6 +27,12 @@ enum ProductSortOption: String, CaseIterable {
     case priceDesc = "Precio (Mayor)"
 }
 
+// Cards (default) or the dense rows; each phone remembers its choice.
+enum ProductsLayout: String, CaseIterable {
+    case cards = "Tarjetas"
+    case list = "Lista"
+}
+
 // MARK: - Products Sheet
 // What Productos presents, on one `sheet(item:)`: a new product, or the scan
 // flow (which itself goes on to the candidates or a new product with the
@@ -58,6 +64,7 @@ struct ProductsView: View {
     @State private var searchText = ""
     @State private var activeFilter: ProductFilter = .all
     @State private var sortOption: ProductSortOption = .name
+    @AppStorage("productsLayout") private var layout: ProductsLayout = .cards
 
     // A scanned product opens here (the scan flow closes its sheet first)
     @State private var scannedProduct: Product? = nil
@@ -304,6 +311,12 @@ struct ProductsView: View {
             if !isSearching {
                 Section {
                     VStack(alignment: .leading, spacing: 0) {
+                        Picker("Vista", selection: $layout) {
+                            ForEach(ProductsLayout.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                        }
+                        .pickerStyle(.segmented)
+                        .padding(.bottom, DS.Spacing.m)
+
                         filterChips
                             .padding(.bottom, 14)
 
@@ -359,11 +372,20 @@ struct ProductsView: View {
                                 }
                             )
                         } label: {
-                            ProductRow(
-                                product: product,
-                                riskLevel: agingViewModel.productRiskLevels[product.id],
-                                showsMargin: authManager.canViewCosts
-                            )
+                            switch layout {
+                            case .cards:
+                                ProductCard(
+                                    product: product,
+                                    riskLevel: agingViewModel.productRiskLevels[product.id],
+                                    canViewCosts: authManager.canViewCosts
+                                )
+                            case .list:
+                                ProductRow(
+                                    product: product,
+                                    riskLevel: agingViewModel.productRiskLevels[product.id],
+                                    showsMargin: authManager.canViewCosts
+                                )
+                            }
                         }
                         .onAppear {
                             // Infinite scroll: trigger load-more when near the end
@@ -420,6 +442,8 @@ struct ProductsView: View {
         // that's what was creating the large empty band above the product
         // cards. Compact it so the info block sits close to the list.
         .listSectionSpacing(.compact)
+        // Cards: a gap between rows, so each product sits in its own rounded cell.
+        .listRowSpacing(layout == .cards ? DS.Spacing.m : nil)
         // Docked outside the List's own content (rather than as a Section row)
         // so it never inserts/removes a row — which was reflowing every row
         // below it and producing a visible jump each time cache warm-up
