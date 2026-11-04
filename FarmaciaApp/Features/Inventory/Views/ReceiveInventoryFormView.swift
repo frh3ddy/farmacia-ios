@@ -433,6 +433,13 @@ struct ReceiveInventoryFormView: View {
         }
     }
 
+    /// The new price's margin and profit at this cost, for the chips' header.
+    private var newMarginResult: (margin: Double, profit: Double)? {
+        guard let cost = receivingCost.value, let price = newSellingPrice,
+              let margin = Margin.percent(price: price, cost: cost) else { return nil }
+        return (margin, price - cost)
+    }
+
     private var isPreferred: Bool {
         guard let id = selectedSupplier?.id else { return false }
         return productSuppliers.first { $0.id == id }?.isPreferred == true
@@ -467,7 +474,9 @@ struct ReceiveInventoryFormView: View {
                         onOther: {
                             marginPick.selected = nil
                             focusedField = .sellingPrice
-                        }
+                        },
+                        result: newMarginResult,
+                        onRelease: { marginPick.selected = nil }
                     )
 
                     LabeledContent {
@@ -475,11 +484,6 @@ struct ReceiveInventoryFormView: View {
                                     field: .sellingPrice, alignment: .trailing)
                     } label: {
                         Text("Nuevo precio")
-                        if let cost = receivingCost.value, let price = newSellingPrice,
-                           let margin = Margin.percent(price: price, cost: cost) {
-                            Text("Margen \(Int(margin.rounded()))%")
-                                .foregroundStyle(Margin.tone(forPercent: margin).color)
-                        }
                     }
                     .fieldError(error(.sellingPrice), shake: attempts, field: Field.sellingPrice)
                 }

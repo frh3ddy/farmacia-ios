@@ -10,6 +10,9 @@ import FarmaciaKit
 //   - Backed by text, read on every keystroke (`AmountText`), so the form's
 //     Crear/Guardar enables while typing. A value set from elsewhere (e.g. a
 //     prefilled supplier cost) still shows up in the field.
+//   - While focused and holding a value, a ⊗ inside the row empties it — the
+//     iOS clear button (`clearButtonMode = .whileEditing`), so idle rows stay
+//     clean. Not on the centered quantity hero, which has its own −/+.
 
 struct AmountField<Field: Hashable, Value: AmountValue>: View {
     private let label: String?
@@ -41,6 +44,10 @@ struct AmountField<Field: Hashable, Value: AmountValue>: View {
         self.alignment = alignment
     }
 
+    private var showsClearButton: Bool {
+        alignment != .center && focus.wrappedValue == field && !text.isEmpty
+    }
+
     var body: some View {
         HStack(spacing: DS.Spacing.s) {
             if let label {
@@ -54,12 +61,20 @@ struct AmountField<Field: Hashable, Value: AmountValue>: View {
                 .keyboardType(Value.keyboard)
                 .multilineTextAlignment(alignment ?? (label == nil ? .leading : .trailing))
                 .focused(focus, equals: field)
+            if showsClearButton {
+                Button("Borrar", systemImage: "xmark.circle.fill") { text = "" }
+                    .labelStyle(.iconOnly)
+                    .foregroundStyle(.secondary)
+                    .buttonStyle(.borderless)
+                    .transition(.opacity)
+            }
             if let unit {
                 Text(unit)
                     .foregroundStyle(.secondary)
             }
         }
         .frame(minHeight: DS.minTapSize)
+        .animation(.default, value: showsClearButton)
         .contentShape(.rect)
         .onTapGesture { focus.wrappedValue = field }
         .id(field)  // .formKeyboard scrolls the focused row into place

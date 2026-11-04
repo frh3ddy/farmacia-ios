@@ -116,7 +116,9 @@ private struct PrimaryActionBarModifier: ViewModifier {
             options: PriceSuggestion.chips.map { .init(label: "\(Int($0))%", margin: $0, price: PriceSuggestion.price(cost: 12, marginPercent: $0)) },
             selected: pick,
             onSelect: { pick = $0 },
-            onOther: { pick = nil }
+            onOther: { pick = nil },
+            result: (40, 8),
+            onRelease: { pick = nil }
         )
         Text("Costo").fieldError("Indica el costo unitario (0 si fue regalo)", shake: 1, field: 1)
     }

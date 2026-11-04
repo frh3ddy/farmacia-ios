@@ -244,3 +244,12 @@ New `.swift` files under `FarmaciaApp/` must be registered in `project.pbxproj` 
     for the owner "Aplicar en todas las sucursales". Shown only when the receiving changes the price; a plain
     receiving still posts in one tap.
     Smoke: owner changes price → review → toggle on → price changes at another store too; manager sees no toggle.
+16. [x] **In-control clear and release** (rule: an action that can live inside the control it affects goes there and
+    costs no layout; only the primary action earns its own row).
+    - `AmountField`: while focused and holding a value, a ⊗ between the number and the unit empties it (the iOS
+      `.whileEditing` clear button). Not on the centered quantity hero (it has −/+).
+    - `MarginChips` owns the header "Margen · 40% · ganas $8.00"; while a chip is applied a ⊗ releases it and the
+      price stays as a manual price (was a dead end: no way back to manual without retyping). Recibir's chips get the
+      same header; the duplicate "Margen X%" under its Nuevo precio is gone.
+    Smoke: focus cost → ⊗ appears → tap empties it; pick 40% → ⊗ in the header → tap → chip released, price kept,
+    a cost change no longer moves the price.

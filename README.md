@@ -120,6 +120,7 @@ Opened from a product (Productos → product → Recibir Inventario / Ajustar In
 - Changing the sale price while receiving offers margin chips: "Actual" (the margin at the supplier's last cost, kept at the new cost) pre-selected, then 30 · 40 · 50 %, each showing its price (rounded up to $0.50)
 - Lot and expiry share a section; notes come last
 - A receiving that changes the price shows a review first (stock before → after, cost, old → new price and margin); the owner chooses there whether the new price applies at every store
+- Money fields show a ⊗ while editing to empty them; an applied margin chip can be released with the ⊗ next to the margin, keeping the price as a manual price
 - Both inventory forms have one full-width button at the bottom that is always enabled; a tap with something missing focuses the first problem field, shows the message under it and shakes it (not with Reduce Motion), and the line above the button says what's missing ("Falta cantidad y costo")
 - Lot expiry shows in words and an icon, not just color ("2 vencidos", "1 por vencer"; caution from 90 days)
 - Nuevo producto: photo beside a wrapping name (counter from 28 characters; Square POS and receipts show ~32), then Precio (cost → margin chips → price; the price follows the cost while a chip is picked), Identificación (SKU, barcode with a scan button), Inventario inicial (supplier only with a quantity; uses the cost from Precio), Disponibilidad and Descripción. A cost without a quantity is allowed (it only suggests the price)

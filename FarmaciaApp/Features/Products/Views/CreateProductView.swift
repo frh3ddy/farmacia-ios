@@ -253,18 +253,6 @@ struct CreateProductView: View {
             .fieldError(error(.unitCost), shake: attempts, field: Field.unitCost)
 
             if let cost = viewModel.costPrice, cost > 0 {
-                VStack(alignment: .leading, spacing: DS.Spacing.s) {
-                    LabeledContent("Margen") {
-                        if let price = viewModel.sellingPrice, let margin = Margin.percent(price: price, cost: cost) {
-                            Text("\(Int(margin.rounded()))% · ganas \((price - cost).mxn)")
-                                .monospacedDigit()
-                                .foregroundStyle(Margin.tone(forPercent: margin).color)
-                        } else {
-                            Text("Elige uno para sugerir precio")
-                                .font(.footnote)
-                        }
-                    }
-
                     MarginChips(
                         options: PriceSuggestion.chips.map { margin in
                             .init(label: "\(Int(margin))%", margin: margin,
@@ -278,10 +266,13 @@ struct CreateProductView: View {
                         onOther: {
                             marginPick.selected = nil
                             focusedField = .sellingPrice
-                        }
+                        },
+                        result: viewModel.sellingPrice.flatMap { price in
+                            Margin.percent(price: price, cost: cost).map { ($0, price - cost) }
+                        },
+                        onRelease: { marginPick.selected = nil }
                     )
-                }
-                .transition(.opacity)
+                    .transition(.opacity)
             }
 
             AmountField(
