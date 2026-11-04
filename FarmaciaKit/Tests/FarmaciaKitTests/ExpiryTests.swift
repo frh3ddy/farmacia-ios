@@ -92,3 +92,10 @@ struct ExpiryToneTests {
     @Test("given 91 days left, should be neutral")
     func laterIsNeutral() { #expect(Expiry.tone(daysUntil: 91) == .neutral) }
 }
+
+extension ExpiryTests {
+    @Test("given any phone language, should show the expiry day in Spanish")
+    func spanishByDefault() {
+        #expect(Expiry.display(ISO8601DateFormatter().date(from: "2027-01-01T18:00:00Z")!) == "1 ene 2027")
+    }
+}

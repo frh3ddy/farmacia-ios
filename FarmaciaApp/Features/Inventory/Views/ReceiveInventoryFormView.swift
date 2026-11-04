@@ -6,7 +6,9 @@ import FarmaciaKit
 // Layout (tasks/inventory-forms-redesign-epic.md), in the order the paperwork
 // is read: what's arriving and how many (the hero) → who sent it, the invoice
 // and the cost (the same piece of paper; supplier first, since it fills the
-// cost) → sale price → lot and expiry → notes. One action at the bottom,
+// cost) → sale price → lot and expiry → notes. Lot and expiry move up, right
+// after the quantity, for products that expire (`ExpiryPlacement`, from the
+// latest receiving; tasks/lot-expiry-capture-epic.md). One action at the bottom,
 // always enabled; what's missing shows on the field after a tap.
 // The supplier is chosen by a push, so the form presents nothing.
 
@@ -27,8 +29,11 @@ struct ReceiveInventoryFormView: View {
     @State private var marginPick = MarginPick()
     @State private var invoiceNumber = ""
     @State private var batchNumber = ""
-    @State private var hasExpiry = false
-    @State private var expiryDate = Date().addingTimeInterval(365 * 24 * 60 * 60) // 1 year
+    /// Empty means no expiry. Saved as the 1st of the month.
+    @State private var expiryMonth: MonthYear?
+    /// Up top until the latest receiving says the product doesn't expire.
+    @State private var expiryPlacement = ExpiryPlacement.prominent
+    @State private var showLotScanner = false
     @State private var selectedSupplier: Supplier?
     @State private var notes = ""
     /// One per receiving being entered: a retry (or the offline queue's replay) reuses it.
@@ -50,7 +55,7 @@ struct ReceiveInventoryFormView: View {
     @State private var showDiscardConfirmation = false
 
     private var draft: ReceivingDraft {
-        var draft = ReceivingDraft(expiryDate: expiryDate)
+        var draft = ReceivingDraft(expiryDate: expiryMonth?.firstDay() ?? .distantPast)
         draft.quantity = quantity
         draft.boxes = receivesByBox ? boxes : nil
         draft.perBox = receivesByBox ? perBox : nil
@@ -60,7 +65,7 @@ struct ReceiveInventoryFormView: View {
         draft.supplierId = selectedSupplier?.id
         draft.invoiceNumber = invoiceNumber
         draft.batchNumber = batchNumber
-        draft.hasExpiry = hasExpiry
+        draft.hasExpiry = expiryMonth != nil
         draft.notes = notes
         return draft
     }
@@ -81,10 +86,13 @@ struct ReceiveInventoryFormView: View {
 
     /// Top to bottom, skipping rows that aren't shown.
     private var focusOrder: FocusOrder<Field> {
-        FocusOrder((receivesByBox ? [.boxes, .perBox] : [.quantity])
+        let lotUpTop = expiryPlacement == .prominent
+        return FocusOrder((receivesByBox ? [.boxes, .perBox] : [.quantity])
+            + (lotUpTop ? [.batchNumber] : [])
             + [.invoiceNumber, .unitCost]
             + (updateSellingPrice ? [.sellingPrice] : [])
-            + [.batchNumber, .notes])
+            + (lotUpTop ? [] : [.batchNumber])
+            + [.notes])
     }
 
     // Supplier intelligence
@@ -189,24 +197,10 @@ struct ReceiveInventoryFormView: View {
                 }
 
                 quantitySection
+                if expiryPlacement == .prominent { lotSection }
                 supplierSection
                 priceSection
-
-                Section("Lote y caducidad") {
-                    LabeledContent("Lote") {
-                        TextField("Lote", text: $batchNumber, prompt: Text("Número"))
-                            .multilineTextAlignment(.trailing)
-                            .formField(.batchNumber, focus: $focusedField)
-                    }
-                    // Row-level id: .formKeyboard scrolls to it (see .fieldError).
-                    .id(Field.batchNumber)
-
-                    Toggle("Tiene caducidad", isOn: $hasExpiry.animation())
-
-                    if hasExpiry {
-                        DatePicker("Vence", selection: $expiryDate, displayedComponents: .date)
-                    }
-                }
+                if expiryPlacement == .optional { lotSection }
 
                 Section {
                     TextField("Notas", text: $notes, prompt: Text("Algo que deba saber el equipo"), axis: .vertical)
@@ -266,6 +260,17 @@ struct ReceiveInventoryFormView: View {
                 // Fetch the product's suppliers to auto-pick the preferred one
                 receivingCost.productChanged(to: product.id)
                 await loadProductSuppliers(for: product.id)
+            }
+            // At the form's level, not on the Lote section: presented from a
+            // Form cell it closed right away and took the receiving sheet with it.
+            .fullScreenCover(isPresented: $showLotScanner) {
+                LotScannerView { scan in
+                    if let lot = scan.lot { batchNumber = lot }
+                    if let expiry = scan.expiry { expiryMonth = expiry }
+                }
+            }
+            .task {
+                expiryPlacement = await loadExpiryPlacement()
             }
             .task {
                 guard StoreStock.isExpected(tracksInventory: product.tracksInventory,
@@ -602,6 +607,48 @@ struct ReceiveInventoryFormView: View {
         start?.supplierId = selectedSupplier?.id
     }
 
+    /// Expiry first when it's up top: on a medication box it's what matters.
+    private var lotSection: some View {
+        Section {
+            if expiryPlacement == .prominent { expiryRow }
+            LabeledContent("Lote") {
+                HStack(spacing: DS.Spacing.s) {
+                    TextField("Lote", text: $batchNumber, prompt: Text("Número"))
+                        .multilineTextAlignment(.trailing)
+                        .formField(.batchNumber, focus: $focusedField)
+                    if LotScannerView.isSupported {
+                        Button("Escanear lote y caducidad", systemImage: "camera.viewfinder") {
+                            showLotScanner = true
+                        }
+                        .labelStyle(.iconOnly)
+                        .buttonStyle(.borderless)
+                    }
+                }
+            }
+            // Row-level id: .formKeyboard scrolls to it (see .fieldError).
+            .id(Field.batchNumber)
+            if expiryPlacement == .optional { expiryRow }
+        } header: {
+            Text("Lote y caducidad")
+        } footer: {
+            if expiryPlacement == .prominent && expiryMonth == nil {
+                Text("Vacío si no tiene caducidad.")
+            }
+        }
+    }
+
+    private var expiryRow: some View {
+        MonthYearPicker(title: "Vence", value: $expiryMonth.animation())
+    }
+
+    /// From the product's latest receiving; up top if it can't be loaded.
+    private func loadExpiryPlacement() async -> ExpiryPlacement {
+        let response: ReceivingExpiriesResponse? = try? await APIClient.shared.request(
+            endpoint: .listReceivingsByProduct(productId: product.id)
+        )
+        return ExpiryPlacement(expiriesNewestFirst: response?.data.map(\.expiryDate) ?? [])
+    }
+
     private func saveReceiving() async {
         guard let qty = quantity,
               let cost = receivingCost.value,
@@ -618,7 +665,7 @@ struct ReceiveInventoryFormView: View {
             supplierId: selectedSupplier?.id,
             invoiceNumber: invoiceNumber,
             batchNumber: batchNumber,
-            expiryDate: hasExpiry ? expiryDate : nil,
+            expiryDate: expiryMonth?.firstDay(),
             notes: notes,
             sellingPrice: updateSellingPrice ? newSellingPrice : nil,
             priceAtAllLocations: updateSellingPrice && priceAtAllLocations,
@@ -633,4 +680,10 @@ struct ReceiveInventoryFormView: View {
             dismiss()
         }
     }
+}
+
+/// GET /inventory/receive/product/:id, newest first: only whether each had an expiry.
+private struct ReceivingExpiriesResponse: Decodable {
+    struct Row: Decodable { let expiryDate: Date? }
+    let data: [Row]
 }

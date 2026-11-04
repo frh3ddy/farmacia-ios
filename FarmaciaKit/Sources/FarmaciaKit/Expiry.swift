@@ -22,7 +22,7 @@ public enum Expiry {
     }
 
     /// Short status for a lot, from the server's day count.
-    public static func label(daysUntil: Int, isExpired: Bool, expiry: Date, locale: Locale = .current) -> String {
+    public static func label(daysUntil: Int, isExpired: Bool, expiry: Date, locale: Locale = MonthYear.locale) -> String {
         if isExpired {
             return daysUntil == 0 ? "Venció hoy" : "Venció hace \(abs(daysUntil))d"
         } else if daysUntil <= 30 {
@@ -33,7 +33,7 @@ public enum Expiry {
     }
 
     /// The expiry day as text, e.g. "15 nov 2026".
-    public static func display(_ expiry: Date, locale: Locale = .current) -> String {
+    public static func display(_ expiry: Date, locale: Locale = MonthYear.locale) -> String {
         expiry.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted, locale: locale, timeZone: TimeZone(identifier: "UTC")!))
     }
 

@@ -118,7 +118,9 @@ Opened from a product (Productos → product → Recibir Inventario / Ajustar In
 - Recibir inventario puts the quantity first: a large number with −/+ (hold to repeat), Unidades / Cajas, and with Cajas the arithmetic shown ("3 × 12 = 36 uds")
 - Supplier, invoice and unit cost sit together (one piece of paper); the supplier's last cost fills the cost, and a change shows as "▲ 8% vs último $16.50"; "Sin proveedor" is a choice in the picker
 - Changing the sale price while receiving offers margin chips: "Actual" (the margin at the supplier's last cost, kept at the new cost) pre-selected, then 30 · 40 · 50 %, each showing its price (rounded up to $0.50)
-- Lot and expiry share a section; notes come last
+- Lot and expiry share a section; notes come last. For a product whose latest receiving had an expiry (or that was never received) the section sits right after the quantity, expiry first; otherwise it's at the bottom
+- Expiry is picked as month and year (two wheels, no day calendar) and saved as the 1st of that month, so there's time to sell the lot at a discount; it starts empty, and empty means no expiry. A month that has already started warns that the lot saves as expired
+- A camera button in the Lote row reads the lot and expiry off the box (VisionKit live text, or exactly from a GS1 DataMatrix when there is one), fills both and closes; device only
 - A receiving that changes the price shows a review first (stock before → after, cost, old → new price and margin); the owner chooses there whether the new price applies at every store
 - Money fields show a ⊗ while editing to empty them; an applied margin chip can be released with the ⊗ next to the margin, keeping the price as a manual price
 - Both inventory forms have one full-width button at the bottom that is always enabled; a tap with something missing focuses the first problem field, shows the message under it and shakes it (not with Reduce Motion), and the line above the button says what's missing ("Falta cantidad y costo")

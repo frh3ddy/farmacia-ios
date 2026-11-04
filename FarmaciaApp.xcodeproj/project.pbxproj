@@ -45,6 +45,7 @@
 		DD00000100000003 /* PrimaryActionBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000003 /* PrimaryActionBar.swift */; };
 		DD000001000000F3 /* OptionalHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD000002000000F3 /* OptionalHeader.swift */; };
 		DD000001000000F2 /* MarginChips.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD000002000000F2 /* MarginChips.swift */; };
+		DD000001000000F5 /* MonthYearPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD000002000000F5 /* MonthYearPicker.swift */; };
 		DD000001000000F1 /* QuantityStepper.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD000002000000F1 /* QuantityStepper.swift */; };
 		DD000001000000F0 /* FieldError.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD000002000000F0 /* FieldError.swift */; };
 		DD0000010000000A /* StatusLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000020000000A /* StatusLabel.swift */; };
@@ -93,6 +94,7 @@
 		F000000100000040 /* InventoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000040 /* InventoryViewModel.swift */; };
 		F000000100000042 /* ReceiveInventoryFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000042 /* ReceiveInventoryFormView.swift */; };
 		DD000001000000F4 /* ReceivingReviewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD000002000000F4 /* ReceivingReviewSheet.swift */; };
+		DD000001000000F6 /* LotScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD000002000000F6 /* LotScannerView.swift */; };
 		F000000100000044 /* SupplierPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000044 /* SupplierPickerView.swift */; };
 		F000000100000046 /* AdjustmentFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000046 /* AdjustmentFormView.swift */; };
 		F000000100000048 /* StatCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000048 /* StatCard.swift */; };
@@ -160,6 +162,7 @@
 		DD00000200000003 /* PrimaryActionBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrimaryActionBar.swift; sourceTree = "<group>"; };
 		DD000002000000F3 /* OptionalHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OptionalHeader.swift; sourceTree = "<group>"; };
 		DD000002000000F2 /* MarginChips.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarginChips.swift; sourceTree = "<group>"; };
+		DD000002000000F5 /* MonthYearPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthYearPicker.swift; sourceTree = "<group>"; };
 		DD000002000000F1 /* QuantityStepper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuantityStepper.swift; sourceTree = "<group>"; };
 		DD000002000000F0 /* FieldError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FieldError.swift; sourceTree = "<group>"; };
 		DD0000020000000A /* StatusLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusLabel.swift; sourceTree = "<group>"; };
@@ -210,6 +213,7 @@
 		F100000100000040 /* InventoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryViewModel.swift; sourceTree = "<group>"; };
 		F100000100000042 /* ReceiveInventoryFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiveInventoryFormView.swift; sourceTree = "<group>"; };
 		DD000002000000F4 /* ReceivingReviewSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceivingReviewSheet.swift; sourceTree = "<group>"; };
+		DD000002000000F6 /* LotScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LotScannerView.swift; sourceTree = "<group>"; };
 		F100000100000044 /* SupplierPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupplierPickerView.swift; sourceTree = "<group>"; };
 		F100000100000046 /* AdjustmentFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdjustmentFormView.swift; sourceTree = "<group>"; };
 		F100000100000048 /* StatCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatCard.swift; sourceTree = "<group>"; };
@@ -368,6 +372,7 @@
 				DD00000200000003 /* PrimaryActionBar.swift */,
 				DD000002000000F3 /* OptionalHeader.swift */,
 				DD000002000000F2 /* MarginChips.swift */,
+				DD000002000000F5 /* MonthYearPicker.swift */,
 				DD000002000000F1 /* QuantityStepper.swift */,
 				DD000002000000F0 /* FieldError.swift */,
 				DD0000020000000A /* StatusLabel.swift */,
@@ -527,6 +532,7 @@
 				F100000100000040 /* InventoryViewModel.swift */,
 				F100000100000042 /* ReceiveInventoryFormView.swift */,
 				DD000002000000F4 /* ReceivingReviewSheet.swift */,
+				DD000002000000F6 /* LotScannerView.swift */,
 				F100000100000044 /* SupplierPickerView.swift */,
 				F100000100000046 /* AdjustmentFormView.swift */,
 			);
@@ -710,6 +716,7 @@
 				F000000100000040 /* InventoryViewModel.swift in Sources */,
 				F000000100000042 /* ReceiveInventoryFormView.swift in Sources */,
 				DD000001000000F4 /* ReceivingReviewSheet.swift in Sources */,
+				DD000001000000F6 /* LotScannerView.swift in Sources */,
 				F000000100000044 /* SupplierPickerView.swift in Sources */,
 				F000000100000046 /* AdjustmentFormView.swift in Sources */,
 				F000000100000015 /* ReportsView.swift in Sources */,
@@ -750,6 +757,7 @@
 				DD00000100000003 /* PrimaryActionBar.swift in Sources */,
 				DD000001000000F3 /* OptionalHeader.swift in Sources */,
 				DD000001000000F2 /* MarginChips.swift in Sources */,
+				DD000001000000F5 /* MonthYearPicker.swift in Sources */,
 				DD000001000000F1 /* QuantityStepper.swift in Sources */,
 				DD000001000000F0 /* FieldError.swift in Sources */,
 				DD0000010000000A /* StatusLabel.swift in Sources */,
