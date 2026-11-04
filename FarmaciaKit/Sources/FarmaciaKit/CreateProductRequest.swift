@@ -10,6 +10,8 @@ import Foundation
 public struct CreateProductRequest: Encodable, Equatable, Sendable {
     public let name: String
     public let sku: String?
+    /// The barcode (8/12/13/14 digits); the server sends it to Square as the variation's `upc`.
+    public let gtin: String?
     public let description: String?
     public let sellingPrice: Double
     public let costPrice: Double?
@@ -23,6 +25,7 @@ public struct CreateProductRequest: Encodable, Equatable, Sendable {
     public init(
         name: String,
         sku: String?,
+        gtin: String? = nil,
         description: String?,
         sellingPrice: Double,
         costPrice: Double?,
@@ -35,6 +38,7 @@ public struct CreateProductRequest: Encodable, Equatable, Sendable {
     ) {
         self.name = name
         self.sku = sku
+        self.gtin = gtin
         self.description = description
         self.sellingPrice = sellingPrice
         self.costPrice = costPrice

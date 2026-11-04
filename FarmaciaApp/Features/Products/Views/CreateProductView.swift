@@ -33,17 +33,17 @@ struct CreateProductView: View {
     }
 
     private enum Field: Hashable {
-        case name, sku, sellingPrice, quantity, unitCost, description
+        case name, sku, gtin, sellingPrice, quantity, unitCost, description
     }
     @FocusState private var focusedField: Field?
 
     /// Más detalles: the optional fields, collapsed unless they already hold
-    /// something (e.g. a scanned SKU) — `ProductDraft.hasDetails`.
+    /// something — `ProductDraft.hasDetails`.
     @State private var showsDetails: Bool
 
     /// Top to bottom, skipping rows that aren't shown.
     private var focusOrder: FocusOrder<Field> {
-        FocusOrder([.name, .sku, .sellingPrice, .quantity, .unitCost]
+        FocusOrder([.name, .sku, .gtin, .sellingPrice, .quantity, .unitCost]
             + (showsDetails ? [.description] : []))
     }
 
@@ -56,10 +56,10 @@ struct CreateProductView: View {
     /// away (ProductsViewModel.insertProduct).
     private let onCreated: ((Product) -> Void)?
 
-    init(prefillSku: String? = nil, onCreated: ((Product) -> Void)? = nil) {
+    init(prefillBarcode: String? = nil, onCreated: ((Product) -> Void)? = nil) {
         self.onCreated = onCreated
-        _viewModel = StateObject(wrappedValue: CreateProductViewModel(prefillSku: prefillSku))
-        _showsDetails = State(initialValue: ProductDraft(prefillSku: prefillSku).hasDetails)
+        _viewModel = StateObject(wrappedValue: CreateProductViewModel(prefillBarcode: prefillBarcode))
+        _showsDetails = State(initialValue: ProductDraft(prefillBarcode: prefillBarcode).hasDetails)
     }
 
     var body: some View {
@@ -88,6 +88,13 @@ struct CreateProductView: View {
                             .formField(.sku, focus: $focusedField)
                     }
 
+                    LabeledContent("Código de barras") {
+                        TextField("Código de barras", text: $viewModel.gtin, prompt: Text("Opcional"))
+                            .multilineTextAlignment(.trailing)
+                            .keyboardType(.numberPad)
+                            .formField(.gtin, focus: $focusedField)
+                    }
+
                     AmountField(
                         "Precio",
                         prefix: "$",
@@ -98,7 +105,7 @@ struct CreateProductView: View {
                     )
                 } footer: {
                     VStack(alignment: .leading, spacing: DS.Spacing.xs) {
-                        issueHints([.priceNotPositive])
+                        issueHints([.barcodeInvalid, .priceNotPositive])
                         Text("Sin SKU, se genera uno automáticamente. El precio es el que los clientes pagan en caja.")
                     }
                 }

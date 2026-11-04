@@ -8,6 +8,7 @@ class CreateProductViewModel: ObservableObject {
     // Form fields
     @Published var name = ""
     @Published var sku = ""
+    @Published var gtin = ""
     @Published var description = ""
     @Published var sellingPrice: Double?
     @Published var costPrice: Double?
@@ -41,15 +42,15 @@ class CreateProductViewModel: ObservableObject {
         }
     }
 
-    /// How the form started (e.g. with a scanned SKU): the baseline for
+    /// How the form started (e.g. with a scanned barcode): the baseline for
     /// "has the user entered anything?".
     private let start: ProductDraft
 
-    init(prefillSku: String? = nil) {
-        let prefill = prefillSku?.isEmpty == false ? prefillSku : nil
-        start = ProductDraft(prefillSku: prefill)
+    init(prefillBarcode: String? = nil) {
+        let prefill = prefillBarcode?.isEmpty == false ? prefillBarcode : nil
+        start = ProductDraft(prefillBarcode: prefill)
         if let prefill {
-            sku = prefill
+            gtin = prefill
         }
     }
 
@@ -66,6 +67,7 @@ class CreateProductViewModel: ObservableObject {
         var draft = ProductDraft()
         draft.name = name
         draft.sku = sku
+        draft.gtin = gtin
         draft.description = description
         draft.sellingPrice = sellingPrice
         draft.costPrice = costPrice
@@ -110,6 +112,7 @@ class CreateProductViewModel: ObservableObject {
             let request = CreateProductRequest(
                 name: name.trimmingCharacters(in: .whitespaces),
                 sku: sku.isEmpty ? nil : sku.trimmingCharacters(in: .whitespaces),
+                gtin: gtin.trimmingCharacters(in: .whitespaces).isEmpty ? nil : gtin.trimmingCharacters(in: .whitespaces),
                 description: description.isEmpty ? nil : description.trimmingCharacters(in: .whitespaces),
                 sellingPrice: sellingPrice ?? 0,
                 costPrice: createsStock ? costPrice : nil,

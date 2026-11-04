@@ -10,6 +10,8 @@ final class CachedProduct {
     var sku: String?
     /// Lowercased SKU for indexed barcode lookup (SwiftData predicates don't support lowercased())
     var normalizedSku: String?
+    /// The barcode (digits, so no normalizing) for the scanner's lookup.
+    var gtin: String?
     var categoryId: String?
     var categoryName: String?
     
@@ -43,6 +45,7 @@ final class CachedProduct {
         self.name = product.name
         self.sku = product.sku
         self.normalizedSku = product.sku?.lowercased()
+        self.gtin = product.gtin
         self.categoryId = product.categoryId
         self.categoryName = product.category?.name
         self.squareProductName = product.squareProductName
@@ -65,6 +68,7 @@ final class CachedProduct {
         name = product.name
         sku = product.sku
         normalizedSku = product.sku?.lowercased()
+        gtin = product.gtin
         categoryId = product.categoryId
         categoryName = product.category?.name
         squareProductName = product.squareProductName
@@ -104,7 +108,8 @@ final class CachedProduct {
             totalInventory: totalInventory,
             averageCost: nil,
             hasSquareSync: hasSquareSync,
-            tracksInventory: tracksInventory
+            tracksInventory: tracksInventory,
+            gtin: gtin
         )
     }
 }

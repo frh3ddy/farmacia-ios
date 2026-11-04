@@ -61,6 +61,18 @@ final class ProductCacheManager {
     /// Indexed lookup on normalizedSku — no full-table scan, no in-memory filtering.
     /// NOTE: rows cached before normalizedSku existed have nil and are missed;
     /// the server exact-search (level 2) covers them, and warm-up repopulates.
+    /// Products with this barcode, up to `limit` (like findBySku).
+    func findByGtin(_ gtin: String, limit: Int = 2) -> [Product] {
+        guard let context = modelContext else { return [] }
+        var descriptor = FetchDescriptor<CachedProduct>(
+            predicate: #Predicate<CachedProduct> { cached in
+                cached.gtin == gtin
+            }
+        )
+        descriptor.fetchLimit = limit
+        return ((try? context.fetch(descriptor)) ?? []).map { $0.toProduct() }
+    }
+
     func findBySku(_ sku: String, limit: Int = 2) -> [Product] {
         guard let context = modelContext else { return [] }
         let lowered = sku.lowercased()

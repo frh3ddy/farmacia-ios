@@ -303,6 +303,12 @@ struct ProductDetailView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
+            if let gtin = displayProduct.gtin, !gtin.isEmpty {
+                Label(gtin, systemImage: "barcode")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .accessibilityLabel("Código de barras \(gtin)")
+            }
             
             // Stats row: STOCK | PRICE | LATEST COST
             HStack(spacing: 0) {

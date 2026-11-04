@@ -609,35 +609,55 @@ struct ProductsView: View {
     }
     
     /// What a scanned code is: one product (open it), several (choose), or
-    /// none (create one with the code as SKU). Loaded products and the on-device
-    /// cache first; the server's exact search when they can't settle it.
+    /// none (create one with the code as its barcode). Loaded products and the
+    /// on-device cache first; the server's exact search when they can't settle it.
+    /// A product matches by SKU or barcode, in every GTIN form of the code (13 or
+    /// 14 digits: BarcodeLookup.codeVariants).
     private func lookupScannedCode(_ code: String) async -> ScanOutcome {
+        let variants = BarcodeLookup.codeVariants(code)
+
         // LEVEL 1a: loaded products in memory (instant), then LEVEL 1b: the SwiftData
         // cache (whole catalog, indexed). Open a product only if it's the one match:
         // a barcode shared by several goes to the server, which lists them all.
-        let lowered = code.lowercased()
-        let inMemory = viewModel.products.filter { $0.sku?.lowercased() == lowered }
-        let cached = ProductCacheManager.shared.findBySku(code)
+        let inMemory = viewModel.products.filter {
+            BarcodeLookup.matches(sku: $0.sku, gtin: $0.gtin, variants: variants)
+        }
+        let cache = ProductCacheManager.shared
+        var seen = Set<String>()
+        let cached = variants
+            .flatMap { cache.findBySku($0) + cache.findByGtin($0) }
+            .filter { seen.insert($0.id).inserted }
         // The cache can know a second product with this barcode that isn't loaded yet.
         let matches = cached.count > inMemory.count ? cached : inMemory
         if BarcodeLookup.cacheDecision(matchCount: matches.count) == .open, let match = matches.first {
             return .open(match)
         }
 
-        // LEVEL 2 + 3: Server search with exact=true (does NOT touch the product list)
+        // LEVEL 2 + 3: Server search with exact=true (does NOT touch the product list),
+        // one form at a time until one matches a SKU or barcode exactly; else the scanned code's
+        // fallback results.
         guard let locationId = authManager.currentLocation?.id else { return .create }
         do {
-            let response = try await viewModel.searchExact(locationId: locationId, code: code)
-            switch BarcodeLookup.serverDecision(exactMatch: response.exactMatch, resultCount: response.data.count) {
-            case .open:
-                return response.data.first.map(ScanOutcome.open) ?? .create
-            case .choose:
-                return .choose(response.data)
-            case .create:
-                return .create
+            var fallback: ProductListResponse?
+            for variant in variants {
+                let response = try await viewModel.searchExact(locationId: locationId, code: variant)
+                if response.exactMatch == true, !response.data.isEmpty { return outcome(of: response) }
+                if fallback == nil { fallback = response }
             }
+            return fallback.map(outcome(of:)) ?? .create
         } catch {
             // Network error — offer to create anyway
+            return .create
+        }
+    }
+
+    private func outcome(of response: ProductListResponse) -> ScanOutcome {
+        switch BarcodeLookup.serverDecision(exactMatch: response.exactMatch, resultCount: response.data.count) {
+        case .open:
+            return response.data.first.map(ScanOutcome.open) ?? .create
+        case .choose:
+            return .choose(response.data)
+        case .create:
             return .create
         }
     }

@@ -40,4 +40,13 @@ struct CreateProductRequestTests {
         let body = try json(request())
         #expect(body["initialStock"] == nil && body["costPrice"] == nil && body["supplierId"] == nil)
     }
+
+    @Test("given a barcode, should send it as gtin; given none, should leave it out")
+    func gtin() throws {
+        let with = CreateProductRequest(name: "Buscapina", sku: nil, gtin: "3664798067460", description: nil, sellingPrice: 220,
+                                        costPrice: nil, initialStock: nil, supplierId: nil, locationId: "centro",
+                                        syncToSquare: true, clientRequestId: "id")
+        #expect(try json(with)["gtin"] as? String == "3664798067460")
+        #expect(try json(request())["gtin"] == nil)
+    }
 }

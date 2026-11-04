@@ -26,6 +26,8 @@ struct Product: Codable, Identifiable, Equatable, Hashable {
     let tracksInventory: Bool?
     /// Set: sold only at this store (hidden at the others); nil: every store.
     var soldOnlyAtLocationId: String? = nil
+    /// The barcode (Square's GTIN / `upc`), when known. Several products can share one.
+    var gtin: String? = nil
     
     var displayName: String {
         // Use Square product name, then variation name, then fallback to name
