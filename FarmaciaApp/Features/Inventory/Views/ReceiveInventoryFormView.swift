@@ -44,10 +44,6 @@ struct ReceiveInventoryFormView: View {
     @State private var attempts = 0
     /// Saved: the button shows a checkmark for a moment before the sheet closes.
     @State private var isDone = false
-    /// A receiving that changes the price is reviewed before it's posted;
-    /// the owner picks there whether the price applies at every store.
-    @State private var showReview = false
-    @State private var priceAtAllLocations = false
 
     /// The form as it opened, kept in step with what it fills in itself (the
     /// preferred supplier and its last cost): the baseline for unsaved changes.
@@ -244,16 +240,6 @@ struct ReceiveInventoryFormView: View {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(viewModel.saveError ?? "")
-            }
-            .sheet(isPresented: $showReview) {
-                if let reviewSummary {
-                    ReceivingReviewSheet(
-                        summary: reviewSummary,
-                        canApplyToAllLocations: PriceEditing.canApplyToAllLocations(isOwner: authManager.isOwner),
-                        priceAtAllLocations: $priceAtAllLocations,
-                        onConfirm: startSave
-                    )
-                }
             }
             .task {
                 if start == nil { start = draft }
@@ -496,7 +482,10 @@ struct ReceiveInventoryFormView: View {
                 Text("Precio de venta")
             } footer: {
                 if updateSellingPrice {
-                    Text("Con un margen elegido, el precio sigue al costo; escribe un precio para fijarlo. Antes de guardar revisas el cambio\(PriceEditing.canApplyToAllLocations(isOwner: authManager.isOwner) ? " y eliges si aplica en todas las sucursales" : "").")
+                    Text("Con un margen elegido, el precio sigue al costo; escribe un precio para fijarlo. "
+                         + PriceEditing.scopeNote(allLocations: priceAtAllLocations, syncToSquare: true,
+                                                  storeName: authManager.currentLocation?.name ?? "esta sucursal",
+                                                  isOwner: authManager.isOwner))
                 } else if costChange?.isUp == true {
                     Text("El costo subió: revisa el precio.")
                 }
@@ -527,34 +516,16 @@ struct ReceiveInventoryFormView: View {
             return
         }
         focusedField = nil
-        // Changing the price is the consequential part (Square POS, maybe
-        // every store): review it first. A plain receiving posts in one tap.
-        if updateSellingPrice {
-            showReview = true
-        } else {
-            startSave()
-        }
-    }
-
-    private func startSave() {
-        guard !viewModel.isSubmitting, !isDone else { return }
         // Set before the Task runs, so a second tap can't slip in first
         viewModel.isSubmitting = true
         Task { await saveReceiving() }
     }
 
-    private var reviewSummary: ReceivingReviewSheet.Summary? {
-        guard let qty = quantity, let cost = receivingCost.value, let newPrice = newSellingPrice else { return nil }
-        return .init(
-            productName: product.displayName,
-            quantity: qty,
-            unitCost: cost,
-            supplierName: selectedSupplier?.name,
-            storeName: authManager.currentLocation?.name ?? "esta sucursal",
-            stockImpact: StockImpact(before: currentStock, change: qty),
-            currentPrice: product.sellingPrice,
-            newPrice: newPrice
-        )
+    /// A new price goes to every store for the owner, no question asked
+    /// (tasks/price-all-locations-epic.md); Editar Precio sets one store's.
+    private var priceAtAllLocations: Bool {
+        PriceEditing.appliesToAllLocations(isOwner: authManager.isOwner,
+                                           soldOnlyAtLocationId: product.soldOnlyAtLocationId)
     }
 
     private func supplierChanged(to supplier: Supplier?) {

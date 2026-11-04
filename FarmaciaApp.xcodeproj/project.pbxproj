@@ -93,7 +93,6 @@
 		F000000100000039 /* ExpenseSummaryReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000039 /* ExpenseSummaryReportView.swift */; };
 		F000000100000040 /* InventoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000040 /* InventoryViewModel.swift */; };
 		F000000100000042 /* ReceiveInventoryFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000042 /* ReceiveInventoryFormView.swift */; };
-		DD000001000000F4 /* ReceivingReviewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD000002000000F4 /* ReceivingReviewSheet.swift */; };
 		DD000001000000F6 /* LotScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD000002000000F6 /* LotScannerView.swift */; };
 		F000000100000044 /* SupplierPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000044 /* SupplierPickerView.swift */; };
 		F000000100000046 /* AdjustmentFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000046 /* AdjustmentFormView.swift */; };
@@ -212,7 +211,6 @@
 		F100000100000039 /* ExpenseSummaryReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseSummaryReportView.swift; sourceTree = "<group>"; };
 		F100000100000040 /* InventoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryViewModel.swift; sourceTree = "<group>"; };
 		F100000100000042 /* ReceiveInventoryFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiveInventoryFormView.swift; sourceTree = "<group>"; };
-		DD000002000000F4 /* ReceivingReviewSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceivingReviewSheet.swift; sourceTree = "<group>"; };
 		DD000002000000F6 /* LotScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LotScannerView.swift; sourceTree = "<group>"; };
 		F100000100000044 /* SupplierPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupplierPickerView.swift; sourceTree = "<group>"; };
 		F100000100000046 /* AdjustmentFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdjustmentFormView.swift; sourceTree = "<group>"; };
@@ -531,7 +529,6 @@
 			children = (
 				F100000100000040 /* InventoryViewModel.swift */,
 				F100000100000042 /* ReceiveInventoryFormView.swift */,
-				DD000002000000F4 /* ReceivingReviewSheet.swift */,
 				DD000002000000F6 /* LotScannerView.swift */,
 				F100000100000044 /* SupplierPickerView.swift */,
 				F100000100000046 /* AdjustmentFormView.swift */,
@@ -715,7 +712,6 @@
 				F000000100000056 /* MoreView.swift in Sources */,
 				F000000100000040 /* InventoryViewModel.swift in Sources */,
 				F000000100000042 /* ReceiveInventoryFormView.swift in Sources */,
-				DD000001000000F4 /* ReceivingReviewSheet.swift in Sources */,
 				DD000001000000F6 /* LotScannerView.swift in Sources */,
 				F000000100000044 /* SupplierPickerView.swift in Sources */,
 				F000000100000046 /* AdjustmentFormView.swift in Sources */,

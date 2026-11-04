@@ -14,13 +14,22 @@ struct EditPriceView: View {
 
     @State private var newPrice: Double?
     @State private var syncToSquare = true
-    @State private var applyToAllLocations = false
+    /// The owner's "every store" switch: on unless turned off (tasks/price-all-locations-epic.md).
+    @State private var everyStore = true
     @State private var isSubmitting = false
     @State private var showError = false
     @State private var errorMessage = ""
 
     private enum Field: Hashable { case price }
     @FocusState private var focusedField: Field?
+
+    /// Owner, and a product sold at more than one store: the switch shows, starting on.
+    private var canChooseStores: Bool {
+        PriceEditing.appliesToAllLocations(isOwner: authManager.isOwner,
+                                           soldOnlyAtLocationId: product.soldOnlyAtLocationId)
+    }
+
+    private var applyToAllLocations: Bool { canChooseStores && everyStore }
 
     private var canSave: Bool {
         PriceEditing.canSave(newPrice: newPrice, currentPrice: product.sellingPrice)
@@ -42,24 +51,19 @@ struct EditPriceView: View {
                         focus: $focusedField,
                         field: .price
                     )
+                } footer: {
+                    Text(PriceEditing.scopeNote(allLocations: applyToAllLocations, syncToSquare: syncToSquare,
+                                                storeName: authManager.currentLocation?.name ?? "esta sucursal",
+                                                isOwner: authManager.isOwner))
                 }
 
-                if product.hasSquareSync == true {
+                if canChooseStores || product.hasSquareSync == true {
                     Section {
-                        Toggle("Actualizar en Square", isOn: $syncToSquare)
-
-                        if syncToSquare && PriceEditing.canApplyToAllLocations(isOwner: authManager.isOwner) {
-                            Toggle("Aplicar a todas las sucursales", isOn: $applyToAllLocations)
+                        if canChooseStores {
+                            Toggle("Aplicar en todas las sucursales", isOn: $everyStore)
                         }
-                    } footer: {
-                        if syncToSquare {
-                            if applyToAllLocations {
-                                Text("Se actualiza en Square POS en todas las sucursales de inmediato.")
-                            } else {
-                                Text("Se actualiza en Square POS solo en esta sucursal.")
-                            }
-                        } else {
-                            Text("Solo se actualiza aquí; Square POS sigue mostrando el precio anterior.")
+                        if product.hasSquareSync == true {
+                            Toggle("Actualizar en Square", isOn: $syncToSquare)
                         }
                     }
                 }
@@ -132,7 +136,7 @@ struct EditPriceView: View {
                 sellingPrice: price,
                 locationId: locationId,
                 syncToSquare: syncToSquare,
-                applyToAllLocations: syncToSquare ? applyToAllLocations : nil
+                applyToAllLocations: applyToAllLocations
             )
             
             let response: APIResponse<UpdatePriceResponse> = try await APIClient.shared.request(

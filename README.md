@@ -121,7 +121,8 @@ Opened from a product (Productos → product → Recibir Inventario / Ajustar In
 - Lot and expiry share a section; notes come last. For a product whose latest receiving had an expiry (or that was never received) the section sits right after the quantity, expiry first; otherwise it's at the bottom
 - Expiry is picked as month and year (two wheels, no day calendar) and saved as the 1st of that month, so there's time to sell the lot at a discount; it starts empty, and empty means no expiry. A month that has already started warns that the lot saves as expired
 - A camera button in the Lote row reads the lot and expiry off the box (VisionKit live text, or exactly from a GS1 DataMatrix when there is one), fills both and closes; device only
-- A receiving that changes the price shows a review first (stock before → after, cost, old → new price and margin); the owner chooses there whether the new price applies at every store
+- A price changed while receiving goes to every store (and Square POS) when the owner changes it, to the current store when a manager does; a note under Nuevo precio says which. The receiving saves straight from the button, no review step
+- Editar Precio: the owner's "Aplicar en todas las sucursales" starts on (turn it off to price one store), also when the change doesn't go to Square; a manager prices their own store. A product sold at only one store has no switch
 - Money fields show a ⊗ while editing to empty them; an applied margin chip can be released with the ⊗ next to the margin, keeping the price as a manual price
 - Both inventory forms have one full-width button at the bottom that is always enabled; a tap with something missing focuses the first problem field, shows the message under it and shakes it (not with Reduce Motion), and the line above the button says what's missing ("Falta cantidad y costo")
 - Lot expiry shows in words and an icon, not just color ("2 vencidos", "1 por vencer"; caution from 90 days)
