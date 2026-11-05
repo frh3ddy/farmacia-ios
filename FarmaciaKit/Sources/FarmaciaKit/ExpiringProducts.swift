@@ -7,7 +7,7 @@ import Foundation
 
 public struct ExpiringBatchInfo: Decodable, Identifiable, Sendable {
     public let batchId: String
-    public let receivingId: String
+    // receivingId isn't read: a lot set by a Conteo inicial has none (null), and decoding it broke the list.
     public let quantity: Int
     public let unitCost: Double?
     public let cashValue: Double?

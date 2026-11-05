@@ -34,6 +34,23 @@ struct AdjustmentFormView: View {
     /// The store's open Conteo inicial. While there is one, a count goes to it
     /// instead of Corrección de Conteo, so it stays out of shrinkage.
     @State private var session: StockCountSession?
+    /// Lots in a Conteo inicial, pre-filled with the product's current ones. Shown only once that read
+    /// succeeds, so lots are never typed against an API that would drop them.
+    @State private var lots: [CountLot] = []
+    @State private var originalLots: [CountLot] = []
+    @State private var lotsAvailable = false
+    /// This product's count earlier in the open Conteo inicial (counts span days).
+    @State private var countedEntry: CountedEntry?
+    /// The lot row a camera scan of the box fills (receiving's `LotScannerView`).
+    @State private var scanningLotId: UUID?
+    @State private var showLotScanner = false
+    private var countLots: CountLots { CountLots(lots, original: originalLots) }
+    private var lotsCheck: LotsCheck { countLots.check(counted: newCount) }
+    private var lotsBlock: Bool {
+        if case .mismatch = lotsCheck { return true }
+        return false
+    }
+
     private var countSave: CountSave {
         CountSave.action(matches: countMatches, inOpeningCount: session != nil)
     }
@@ -48,7 +65,7 @@ struct AdjustmentFormView: View {
     @State private var costRequired = false
     @State private var reason = ""
     @State private var notes = ""
-    private enum Field: Hashable { case quantity, newCount, unitCost, reason, notes }
+    private enum Field: Hashable { case quantity, newCount, unitCost, reason, notes, lotQuantity(UUID) }
     @FocusState private var focusedField: Field?
 
     /// Top to bottom, skipping rows that aren't shown.
@@ -93,7 +110,9 @@ struct AdjustmentFormView: View {
 
     private var isValid: Bool {
         if adjustmentType.isVariable {
-            return network.isConnected && (countChange != nil || (session != nil && countMatches))
+            return network.isConnected
+                && CountSave.canSave(change: countChange, matches: countMatches, inOpeningCount: session != nil)
+                && !lotsBlock
         }
         return (quantity ?? 0) != 0
     }
@@ -107,8 +126,13 @@ struct AdjustmentFormView: View {
                 Section {
                     ProductSummaryRow(product: product, stock: adjustmentType.isVariable ? nil : currentStock)
                 } footer: {
-                    if let note {
-                        Label(note, systemImage: "info.circle")
+                    VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+                        if let note {
+                            Label(note, systemImage: "info.circle")
+                        }
+                        if let countedEntry {
+                            Label(countedEntry.note(), systemImage: "checkmark.circle")
+                        }
                     }
                 }
 
@@ -129,13 +153,29 @@ struct AdjustmentFormView: View {
                             }
                         }
 
-                        AmountField(
-                            "Nueva cantidad",
-                            unit: "UDS",
-                            value: $newCount,
-                            focus: $focusedField,
-                            field: .newCount
-                        )
+                        if adjustmentType == .countCorrection {
+                            // The receiving form's hero stepper: counting is mostly ± from the shelf.
+                            QuantityStepper(value: $newCount, unit: "unidades", focus: $focusedField, field: .newCount)
+                            if let stock = CountSave.quickMatch(liveStock: liveStock, inOpeningCount: session != nil) {
+                                Button {
+                                    saveUnchanged(stock)
+                                } label: {
+                                    Label("Sin cambios: hay \(stock)", systemImage: "checkmark.circle")
+                                        .frame(maxWidth: .infinity)
+                                }
+                                .buttonStyle(.bordered)
+                                .disabled(viewModel.isSubmitting || !network.isConnected
+                                          || countLots.quickMatchBlocker(stock: stock) != nil)
+                            }
+                        } else {
+                            AmountField(
+                                "Nueva cantidad",
+                                unit: "UDS",
+                                value: $newCount,
+                                focus: $focusedField,
+                                field: .newCount
+                            )
+                        }
                     } else {
                         AmountField(
                             "Cantidad",
@@ -163,6 +203,10 @@ struct AdjustmentFormView: View {
                             }
                         }
                     }
+                }
+
+                if session != nil, lotsAvailable {
+                    lotsSection
                 }
 
                 if asksForCost {
@@ -227,6 +271,14 @@ struct AdjustmentFormView: View {
                     }
                 }
             }
+            // At the form's level, not on the lots section: presented from a Form cell it closed
+            // right away and took the sheet with it (see ReceiveInventoryFormView).
+            .fullScreenCover(isPresented: $showLotScanner) {
+                LotScannerView { scan in
+                    guard let id = scanningLotId, let index = lots.firstIndex(where: { $0.id == id }) else { return }
+                    lots[index] = lots[index].applying(scan)
+                }
+            }
             .alert("No se pudo guardar", isPresented: $viewModel.showSaveError) {
                 Button("OK", role: .cancel) {}
             } message: {
@@ -257,6 +309,7 @@ struct AdjustmentFormView: View {
                     )
                     guard !Task.isCancelled else { return }
                     session = active.data
+                    if active.data == nil { lotsAvailable = false }
                 } catch let error where StockCountSession.noCountOnServer(error) {
                     session = nil
                 }
@@ -269,10 +322,101 @@ struct AdjustmentFormView: View {
             // overwrite the newer one's state — URLSession may finish or fail anyway.
             guard !Task.isCancelled else { return }
             liveStock = response.data.totalInventory ?? 0
+            // Already counted in this session? Nothing shows if the read fails (an API without it).
+            if let session {
+                let entry: APIResponse<CountedEntry>? = try? await APIClient.shared.request(
+                    endpoint: .stockCountProductEntry(id: session.id),
+                    queryParams: ["productId": product.id, "locationId": locationId]
+                )
+                guard !Task.isCancelled else { return }
+                countedEntry = entry?.data
+            } else {
+                countedEntry = nil
+            }
+            // The product's lots, once per form: a later reload must not wipe what was edited.
+            if session != nil, !lotsAvailable {
+                let current: APIResponse<[CurrentLot]>? = try? await APIClient.shared.request(
+                    endpoint: .inventoryLots,
+                    queryParams: ["productId": product.id, "locationId": locationId]
+                )
+                guard !Task.isCancelled else { return }
+                if let rows = current?.data?.map(\.row) {
+                    lots = rows
+                    originalLots = rows
+                    lotsAvailable = true
+                }
+            }
+            // A count starts at the stock, so it's ± from what's on record.
+            if adjustmentType == .countCorrection {
+                newCount = CountSave.startValue(liveStock: liveStock, typed: newCount)
+            }
         } catch {
             guard !Task.isCancelled else { return }
             liveStockFailed = true
         }
+    }
+
+    /// Caducidad is what matters; the lote is optional. Lots may cover less than the count (the rest
+    /// stays without lot info), never more.
+    private var lotsSection: some View {
+        Section {
+            ForEach($lots) { $lot in
+                VStack(spacing: DS.Spacing.s) {
+                    MonthYearPicker(title: "Vence", value: $lot.expiry)
+                    AmountField("Cantidad", unit: "UDS", value: $lot.quantity,
+                                focus: $focusedField, field: .lotQuantity(lot.id))
+                    LabeledContent("Lote") {
+                        HStack(spacing: DS.Spacing.s) {
+                            TextField("Lote", text: $lot.batchNumber, prompt: Text("Opcional"))
+                                .multilineTextAlignment(.trailing)
+                            if LotScannerView.isSupported {
+                                Button("Escanear lote y caducidad", systemImage: "camera.viewfinder") {
+                                    scanLot(into: lot.id)
+                                }
+                                .labelStyle(.iconOnly)
+                                .buttonStyle(.borderless)
+                            }
+                        }
+                    }
+                }
+            }
+            .onDelete { lots.remove(atOffsets: $0) }
+            Button("Agregar lote", systemImage: "plus") { lots.append(CountLot()) }
+            if LotScannerView.isSupported {
+                // The fast path on the shelf: a new row filled from the box.
+                Button("Escanear caja", systemImage: "camera.viewfinder") {
+                    let row = CountLot()
+                    lots.append(row)
+                    scanLot(into: row.id)
+                }
+            }
+        } header: {
+            Text("Lotes y caducidad")
+        } footer: {
+            switch lotsCheck {
+            case .mismatch(let reason):
+                StatusLabel(reason, tone: .caution)
+            case .partial(let rest):
+                Text(rest)
+            case .none, .matches:
+                if lots.isEmpty { Text("Opcional. Basta con la caducidad; el lote puede quedar vacío.") }
+            }
+        }
+    }
+
+    private func scanLot(into id: UUID) {
+        focusedField = nil
+        scanningLotId = id
+        showLotScanner = true
+    }
+
+    /// Conteo inicial's one tap: the shelf matches the stock, so save it as the count.
+    private func saveUnchanged(_ stock: Int) {
+        guard !viewModel.isSubmitting else { return }
+        newCount = stock
+        focusedField = nil
+        viewModel.isSubmitting = true
+        Task { await saveAdjustment() }
     }
 
     private func saveAdjustment() async {
@@ -282,7 +426,8 @@ struct AdjustmentFormView: View {
                 productId: product.id,
                 countedQuantity: newCount,
                 unitCost: asksForCost ? unitCost : nil,
-                clientRequestId: clientRequestId
+                clientRequestId: clientRequestId,
+                lots: lotsAvailable ? countLots.requestLots() : nil
             )
             finish(outcome)
             // The owner may have ended the count since the form opened: reload, so the
