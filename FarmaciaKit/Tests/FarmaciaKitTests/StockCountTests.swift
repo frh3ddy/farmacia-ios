@@ -130,3 +130,181 @@ struct ZeroBatchTests {
         #expect(ZeroOutcome(done, stoppedBy: "Sin conexión").message == "Se detuvo: Sin conexión. Los que faltan siguen en la lista.")
     }
 }
+
+struct CountSaveValidityTests {
+    @Test("given a Conteo inicial and a count equal to stock, should be savable; given a correction, not")
+    func matchSavableOnlyInOpeningCount() {
+        #expect(CountSave.canSave(change: nil, matches: true, inOpeningCount: true))
+        #expect(!CountSave.canSave(change: nil, matches: true, inOpeningCount: false))
+    }
+
+    @Test("given a count that changes the stock, should be savable either way; with no count, neither", arguments: [true, false])
+    func change(inOpeningCount: Bool) {
+        #expect(CountSave.canSave(change: -2, matches: false, inOpeningCount: inOpeningCount))
+        #expect(!CountSave.canSave(change: nil, matches: false, inOpeningCount: inOpeningCount))
+    }
+
+    @Test("given a Conteo inicial and stock 12, the one-tap Sin cambios should save 12")
+    func quickMatch() {
+        #expect(CountSave.quickMatch(liveStock: 12, inOpeningCount: true) == 12)
+    }
+
+    @Test("given a correction, or stock not loaded yet, there should be no one-tap Sin cambios")
+    func noQuickMatch() {
+        #expect(CountSave.quickMatch(liveStock: 12, inOpeningCount: false) == nil)
+        #expect(CountSave.quickMatch(liveStock: nil, inOpeningCount: true) == nil)
+    }
+}
+
+struct CountLotsTests {
+    private let jan = MonthYear(year: 2027, month: 1)
+    private let mar = MonthYear(year: 2027, month: 3)
+
+    @Test("given a row with 4 and ene-2027, should count, lote or not; without caducidad, should not")
+    func rowCompleteness() {
+        #expect(CountLot(quantity: 4, expiry: jan).isComplete)
+        #expect(CountLot(quantity: 4, expiry: jan, batchNumber: "A12").isComplete)
+        #expect(!CountLot(quantity: 4, batchNumber: "A12").isComplete)
+        #expect(!CountLot(quantity: 4).isComplete)
+        #expect(CountLot().isBlank)
+    }
+
+    @Test("given lots 4 + 6 and a count of 10, should match")
+    func matches() {
+        #expect(CountLots([CountLot(quantity: 4, expiry: jan), CountLot(quantity: 6, expiry: mar)]).check(counted: 10) == .matches)
+    }
+
+    @Test("given no lots, or only blank rows, there's nothing to check")
+    func none() {
+        #expect(CountLots([]).check(counted: 10) == .none)
+        #expect(CountLots([CountLot()]).check(counted: 10) == .none)
+    }
+
+    @Test("given lots over the count, should block with by how much")
+    func over() {
+        let lots = CountLots([CountLot(quantity: 4, expiry: jan), CountLot(quantity: 8, expiry: mar)])
+        #expect(lots.check(counted: 10) == .mismatch("Los lotes suman 12 de 10: sobran 2"))
+    }
+
+    @Test("given lots under the count, should allow it and say how many units stay without a lot")
+    func under() {
+        let lots = CountLots([CountLot(quantity: 4, expiry: jan), CountLot(quantity: 3, expiry: mar)])
+        #expect(lots.check(counted: 10) == .partial("3 unidades sin lote"))
+        #expect(CountLots([CountLot(quantity: 9, expiry: jan)]).check(counted: 10) == .partial("1 unidad sin lote"))
+    }
+
+    @Test("given a lot without caducidad (even with a lote), should point it out")
+    func incompleteRow() {
+        let lots = CountLots([CountLot(quantity: 4, expiry: jan), CountLot(quantity: 6, batchNumber: "A12")])
+        #expect(lots.check(counted: 10) == .mismatch("Cada lote necesita su caducidad"))
+    }
+
+    @Test("given ene-2027 × 4 with lote A12, should send it like receiving does")
+    func request() throws {
+        let mx = try #require(TimeZone(identifier: "America/Mexico_City"))
+        let lots = CountLots([CountLot(quantity: 4, expiry: jan, batchNumber: " A12 "), CountLot()]).requestLots(timeZone: mx)
+        #expect(lots == [StockCountLot(quantity: 4, expiryDate: "2027-01-01", batchNumber: "A12")])
+    }
+
+    @Test("given no lots, the entry should carry no lots key at all")
+    func noLotsKey() throws {
+        let body = StockCountEntryRequest(productId: "p1", countedQuantity: 5, unitCost: nil, clientRequestId: "r",
+                                          lots: CountLots([]).requestLots())
+        let json = try #require(try JSONSerialization.jsonObject(with: JSONEncoder().encode(body)) as? [String: Any])
+        #expect(json["lots"] == nil)
+    }
+}
+
+struct CountPrefillTests {
+    private let jan = MonthYear(year: 2027, month: 1)
+
+    @Test("given stock 64 loads and nothing typed, the stepper should start at 64")
+    func startsAtStock() {
+        #expect(CountSave.startValue(liveStock: 64, typed: nil) == 64)
+    }
+
+    @Test("given the user already typed 60, a stock (re)load should not overwrite it")
+    func keepsTyped() {
+        #expect(CountSave.startValue(liveStock: 64, typed: 60) == 60)
+        #expect(CountSave.startValue(liveStock: nil, typed: nil) == nil)
+    }
+
+    @Test("given the product's current lots, should pre-fill rows with month and lote")
+    func prefillRows() throws {
+        let current = try JSONDecoder().decode([CurrentLot].self, from: Data(#"[{"quantity":4,"expiryDate":"2027-01-01","batchNumber":"A12"},{"quantity":6,"expiryDate":"2027-03-15","batchNumber":null}]"#.utf8))
+        let rows = current.map(\.row)
+        #expect(rows.map(\.quantity) == [4, 6])
+        #expect(rows.map(\.expiry) == [jan, MonthYear(year: 2027, month: 3)])
+        #expect(rows.map(\.batchNumber) == ["A12", ""])
+    }
+
+    @Test("given pre-filled lots left untouched, should send no lots and check nothing, even if they don't add up")
+    func untouchedPrefill() {
+        let prefilled = [CountLot(quantity: 4, expiry: jan)]
+        let lots = CountLots(prefilled, original: prefilled)
+        #expect(lots.requestLots() == nil)
+        #expect(lots.check(counted: 64) == .none)
+    }
+
+    @Test("given a pre-filled lot edited, should check and send all the rows")
+    func editedPrefill() {
+        let prefilled = [CountLot(quantity: 4, expiry: jan)]
+        var edited = prefilled
+        edited[0].quantity = 5
+        let lots = CountLots(edited, original: prefilled)
+        #expect(lots.check(counted: 5) == .matches)
+        #expect(lots.requestLots()?.map(\.quantity) == [5])
+    }
+
+    @Test("given Sin cambios with edited lots over the stock, should block it; under the stock is fine")
+    func quickMatchWithLots() {
+        #expect(CountLots([CountLot(quantity: 12, expiry: jan)]).quickMatchBlocker(stock: 10) == "Los lotes suman 12 de 10: sobran 2")
+        #expect(CountLots([CountLot(quantity: 4, expiry: jan)]).quickMatchBlocker(stock: 10) == nil)
+        #expect(CountLots([]).quickMatchBlocker(stock: 10) == nil)
+    }
+}
+
+struct CountLotScanTests {
+    private let today = MonthYear(year: 2026, month: 11)
+
+    @Test("given a scan with lote and caducidad, should fill both and keep the row's quantity")
+    func fillsBoth() {
+        let scan = LotScan(lines: ["LOTE: A12B", "CAD: 03/2028"], barcodes: [], today: today)
+        let row = CountLot(quantity: 4).applying(scan)
+        #expect(row.batchNumber == scan.lot ?? "")
+        #expect(row.expiry == scan.expiry)
+        #expect(row.quantity == 4)
+        #expect(scan.isComplete)
+    }
+
+    @Test("given a scan that only read the lote, should keep the caducidad already picked")
+    func keepsWhatScanMissed() {
+        let picked = MonthYear(year: 2027, month: 1)
+        let scan = LotScan(lines: ["LOTE: A12B"], barcodes: [], today: today)
+        let row = CountLot(quantity: 4, expiry: picked).applying(scan)
+        #expect(row.expiry == picked)
+        #expect(!row.batchNumber.isEmpty)
+    }
+}
+
+struct CountedEntryTests {
+    private let mx = TimeZone(identifier: "America/Mexico_City")!
+
+    private func decode(_ json: String) throws -> CountedEntry {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601 // as APIClient
+        return try decoder.decode(CountedEntry.self, from: Data(json.utf8))
+    }
+
+    @Test("given a product counted at 10 on Nov 5 by Fredy, should say so")
+    func note() throws {
+        let entry = try decode(#"{"countedQuantity":10,"countedAt":"2026-11-05T18:00:00.000Z","countedByName":"Fredy"}"#)
+        #expect(entry.note(timeZone: mx) == "Ya contado en este conteo: 10 · 5 nov, Fredy")
+    }
+
+    @Test("given a late-evening count in Mexico City, should show the local day, not the UTC one")
+    func localDay() throws {
+        let entry = try decode(#"{"countedQuantity":3,"countedAt":"2026-11-06T04:30:00.000Z","countedByName":null}"#)
+        #expect(entry.note(timeZone: mx) == "Ya contado en este conteo: 3 · 5 nov")
+    }
+}

@@ -132,8 +132,12 @@ enum APIEndpoint {
     case stockCountActive
     case stockCountEnd(id: String)
     case stockCountEntry(id: String)
+    /// One product's entry in the session (`?productId=`), or null when it isn't counted yet.
+    case stockCountProductEntry(id: String)
     case stockCountUncounted(id: String)
     case stockCountZero(id: String)
+    /// The product's lots at the store (remaining units by caducidad + lote), to pre-fill a count.
+    case inventoryLots
     
     // MARK: - Properties
     
@@ -247,9 +251,10 @@ enum APIEndpoint {
         case .stockCountStart: return "/inventory/stock-counts"
         case .stockCountActive: return "/inventory/stock-counts/active"
         case .stockCountEnd(let id): return "/inventory/stock-counts/\(id)/end"
-        case .stockCountEntry(let id): return "/inventory/stock-counts/\(id)/entries"
+        case .stockCountEntry(let id), .stockCountProductEntry(let id): return "/inventory/stock-counts/\(id)/entries"
         case .stockCountUncounted(let id): return "/inventory/stock-counts/\(id)/uncounted"
         case .stockCountZero(let id): return "/inventory/stock-counts/\(id)/zero"
+        case .inventoryLots: return "/inventory/lots"
         }
     }
     
@@ -346,7 +351,7 @@ enum APIEndpoint {
             return .get
 
         // Conteo inicial
-        case .stockCountActive, .stockCountUncounted:
+        case .stockCountActive, .stockCountUncounted, .inventoryLots, .stockCountProductEntry:
             return .get
         case .stockCountStart, .stockCountEnd, .stockCountEntry, .stockCountZero:
             return .post
