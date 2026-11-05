@@ -4,6 +4,11 @@ Branch: `fix/receive-before-suppliers-load`
 
 **Status:** ✅ steps 1–5 done (uncommitted). Step 1: with a 6 s delay on the iPhone 13 Pro, an early tap showed "Falta costo" and the supplier and cost still filled in afterwards, so the only cause was validating too early. After the fix, the same early tap shows the spinner and saves with Catesa's $0.33 (checked on the phone). Delay removed. Not checked: the failed-load message (needs the request to fail).
 
+**Review follow-ups** (branch `fix/receive-review-followups`):
+- ✅ The wait also covers the full supplier list (`viewModel.suppliers`). Without the list, the preferred supplier can't be picked, so a tap before it arrived still showed "Falta costo" (test: *given the product's suppliers loaded but not the supplier list, should wait*). The form loads the list itself if the product page hasn't, which replaces the sheet's fallback `.task` in `ProductDetailView`.
+- ✅ `ReceivingSubmit.Action.showIssues` carries the first issue, and the form acts on the kit's answer instead of deciding again.
+- ✅ The price note (`PriceEditing.scopeNote`, `inSquare:`) doesn't mention Square POS for a product that isn't in Square, in Editar Precio or in a receiving.
+
 ## Bug
 
 Open Recibir inventario and tap the button before the supplier list has loaded. "Falta costo" shows, and Proveedor and Costo unitario are empty.

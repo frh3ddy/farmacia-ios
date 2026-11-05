@@ -98,6 +98,9 @@ struct ReceiveInventoryFormView: View {
     /// True from the start: the load begins as the form opens, and a tap before
     /// the task runs must wait too.
     @State private var isLoadingSuppliers = true
+    /// The full supplier list (normally loaded by the product page): the preferred
+    /// supplier can't be picked without it, so a tap waits for it too.
+    @State private var isLoadingSupplierList = true
     /// A tap came in while the supplier's cost was loading: it continues once loaded.
     @State private var waitingForSupplier = false
     /// The product's suppliers didn't load: say so, or the empty fields look like a bug.
@@ -253,6 +256,7 @@ struct ReceiveInventoryFormView: View {
                 receivingCost.productChanged(to: product.id)
                 await loadProductSuppliers(for: product.id)
             }
+            .task { await loadSupplierList() }
             // At the form's level, not on the Lote section: presented from a
             // Form cell it closed right away and took the receiving sheet with it.
             .fullScreenCover(isPresented: $showLotScanner) {
@@ -276,7 +280,7 @@ struct ReceiveInventoryFormView: View {
             .onChange(of: selectedSupplier) { _, supplier in
                 supplierChanged(to: supplier)
             }
-            .onChange(of: isLoadingSuppliers) { _, loading in
+            .onChange(of: isLoadingSuppliers || isLoadingSupplierList) { _, loading in
                 guard !loading, waitingForSupplier else { return }
                 waitingForSupplier = false
                 // In a Task: the preferred supplier is picked in the same update,
@@ -499,6 +503,7 @@ struct ReceiveInventoryFormView: View {
                 if updateSellingPrice {
                     Text("Con un margen elegido, el precio sigue al costo; escribe un precio para fijarlo. "
                          + PriceEditing.scopeNote(allLocations: priceAtAllLocations, syncToSquare: true,
+                                                  inSquare: product.hasSquareSync == true,
                                                   storeName: authManager.currentLocation?.name ?? "esta sucursal",
                                                   isOwner: authManager.isOwner))
                 } else if costChange?.isUp == true {
@@ -521,28 +526,25 @@ struct ReceiveInventoryFormView: View {
 
     private func submit() {
         guard !viewModel.isSubmitting, !isDone, !waitingForSupplier else { return }
-        switch ReceivingSubmit.action(isLoadingSupplierCost: isLoadingSuppliers,
+        switch ReceivingSubmit.action(isLoadingProductSuppliers: isLoadingSuppliers,
+                                      isLoadingSupplierList: isLoadingSupplierList,
                                       unitCost: receivingCost.value, issues: issues) {
         case .wait:
             focusedField = nil
             waitingForSupplier = true
-            return
-        case .showIssues, .save:
-            break
-        }
-        if let first = issues.first {
+        case .showIssues(let first):
             attempts += 1
             // Focus scrolls the field into view (.formKeyboard) and opens its keyboard.
             focusedField = field(for: first)
             if let missing = ReceivingForm.summary(issues) {
                 AccessibilityNotification.Announcement(missing).post()
             }
-            return
+        case .save:
+            focusedField = nil
+            // Set before the Task runs, so a second tap can't slip in first
+            viewModel.isSubmitting = true
+            Task { await saveReceiving() }
         }
-        focusedField = nil
-        // Set before the Task runs, so a second tap can't slip in first
-        viewModel.isSubmitting = true
-        Task { await saveReceiving() }
     }
 
     /// A new price goes to every store for the owner, no question asked
@@ -589,6 +591,15 @@ struct ReceiveInventoryFormView: View {
             // Supplier loading is optional, don't block the form
             print("Failed to load product suppliers: \(error)")
         }
+    }
+
+    /// Loads the full supplier list only if the product page hasn't (it usually has).
+    private func loadSupplierList() async {
+        defer { isLoadingSupplierList = false }
+        guard viewModel.suppliers.isEmpty else { return }
+        await viewModel.loadSuppliers()
+        // Picked here, in the same update that ends the wait, like the product's suppliers.
+        applyPreferredSupplier()
     }
 
     /// Selects the product's preferred supplier once both lists are in. Runs when

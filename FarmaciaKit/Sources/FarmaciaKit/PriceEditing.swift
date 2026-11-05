@@ -20,9 +20,11 @@ public enum PriceEditing {
     }
 
     /// Under the price, in Editar Precio and in a receiving: where the new price applies.
-    public static func scopeNote(allLocations: Bool, syncToSquare: Bool, storeName: String, isOwner: Bool) -> String {
+    /// `inSquare`: the product is in Square (`hasSquareSync`); if not, Square isn't mentioned.
+    public static func scopeNote(allLocations: Bool, syncToSquare: Bool, inSquare: Bool, storeName: String, isOwner: Bool) -> String {
         let stores = allLocations ? "Se aplica en todas las sucursales" : "Solo cambia en \(storeName)"
-        let square = !syncToSquare ? "; Square POS sigue mostrando el precio anterior."
+        let square = !inSquare ? "."
+            : !syncToSquare ? "; Square POS sigue mostrando el precio anterior."
             : allLocations ? " y en Square POS." : " y en su Square POS."
         let others = isOwner ? "" : " El precio de las demás sucursales lo cambia el dueño."
         return stores + square + others
