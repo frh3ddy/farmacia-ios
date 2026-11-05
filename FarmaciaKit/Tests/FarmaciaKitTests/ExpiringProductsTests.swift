@@ -50,4 +50,11 @@ struct ExpiringProductsTests {
         #expect(product.batches.first?.cashValue == 150)
         #expect(response.summary.totalCashAtRisk == 150)
     }
+
+    @Test("given a lot set by a Conteo inicial (no receiving, receivingId null), the whole list should still decode")
+    func countedLot() throws {
+        let body = ownerBody.replacingOccurrences(of: #""receivingId":"r1""#, with: #""receivingId":null"#)
+        let response = try decode(body)
+        #expect(response.products.first?.batches.first?.quantity == 12)
+    }
 }
