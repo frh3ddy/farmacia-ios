@@ -244,6 +244,8 @@ New `.swift` files under `FarmaciaApp/` must be registered in `project.pbxproj` 
     for the owner "Aplicar en todas las sucursales". Shown only when the receiving changes the price; a plain
     receiving still posts in one tap.
     Smoke: owner changes price → review → toggle on → price changes at another store too; manager sees no toggle.
+    *Later removed* (tasks/price-all-locations-epic.md): a new price now goes to every store for the owner by
+    default, so the sheet had nothing left to ask; the receiving posts in one tap again.
 16. [x] **In-control clear and release** (rule: an action that can live inside the control it affects goes there and
     costs no layout; only the primary action earns its own row).
     - `AmountField`: while focused and holding a value, a ⊗ between the number and the unit empties it (the iOS

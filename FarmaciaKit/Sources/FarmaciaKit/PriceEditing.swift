@@ -12,9 +12,20 @@ public enum PriceEditing {
         (isOwner || isManager) && tracksInventory != false
     }
 
-    /// Only the owner may change the price at every store; a manager prices their own store.
-    public static func canApplyToAllLocations(isOwner: Bool) -> Bool {
-        isOwner
+    /// Where a new price goes: every store for the owner (tasks/price-all-locations-epic.md),
+    /// unless the product is sold at one store only. A manager prices their own store.
+    /// A receiving uses it as is; Editar Precio starts its switch from it.
+    public static func appliesToAllLocations(isOwner: Bool, soldOnlyAtLocationId: String?) -> Bool {
+        isOwner && soldOnlyAtLocationId == nil
+    }
+
+    /// Under the price, in Editar Precio and in a receiving: where the new price applies.
+    public static func scopeNote(allLocations: Bool, syncToSquare: Bool, storeName: String, isOwner: Bool) -> String {
+        let stores = allLocations ? "Se aplica en todas las sucursales" : "Solo cambia en \(storeName)"
+        let square = !syncToSquare ? "; Square POS sigue mostrando el precio anterior."
+            : allLocations ? " y en Square POS." : " y en su Square POS."
+        let others = isOwner ? "" : " El precio de las demás sucursales lo cambia el dueño."
+        return stores + square + others
     }
 
     /// Editar Precio's Guardar: a positive price that differs from the current
