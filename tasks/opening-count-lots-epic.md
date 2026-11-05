@@ -37,7 +37,9 @@ Branches: `feature/opening-count-lots` in **farmacia-ios**; the API part is owne
   from the API session; 200 with null when not counted); shows nothing if the read fails. Smoked (local API
   on the API's branch): Aspirina's form showed "Ya contado en este conteo: 9 · 5 nov, Fredy"; a product with
   no lots shows "Agregar lote" with the "Basta con la caducidad" hint.
-- Waiting: the API's production "live", then a release on every device (receivingId fix).
+- Released 2026-11-05: API `1a4ed42` live; app main `8aa745f` installed on iPhone lolita and iPhone 13 Pro.
+  **iPad not updated (user's call):** its build can't load Lolita's adjustment history (OPENING_COUNT) or the
+  expiring list once a counted lot exists. Update it before relying on the iPad for those screens.
 
 ## Problem
 
