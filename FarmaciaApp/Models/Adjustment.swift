@@ -1,99 +1,26 @@
 import Foundation
+import FarmaciaKit
 
 // MARK: - Adjustment Type
+// The type itself lives in FarmaciaKit; the SF Symbol stays app-side.
 
-enum AdjustmentType: String, Codable, CaseIterable, Identifiable {
-    var id: String { rawValue }
-    
-    case damage = "DAMAGE"
-    case theft = "THEFT"
-    case expired = "EXPIRED"
-    case countCorrection = "COUNT_CORRECTION"
-    case found = "FOUND"
-    case returnType = "RETURN"
-    case transferOut = "TRANSFER_OUT"
-    case transferIn = "TRANSFER_IN"
-    case writeOff = "WRITE_OFF"
-    case other = "OTHER"
-    case breakBulkOut = "BREAK_BULK_OUT"
-    case breakBulkIn = "BREAK_BULK_IN"
-    case autoSaleCover = "AUTO_SALE_COVER"
-
-    var displayName: String {
-        switch self {
-        case .damage: return "Daño"
-        case .theft: return "Robo"
-        case .expired: return "Vencido"
-        case .countCorrection: return "Corrección de Conteo"
-        case .found: return "Encontrado"
-        case .returnType: return "Devolución"
-        case .transferOut: return "Transferencia Salida"
-        case .transferIn: return "Transferencia Entrada"
-        case .writeOff: return "Baja"
-        case .other: return "Otro"
-        case .breakBulkOut: return "Desglose (Caja)"
-        case .breakBulkIn: return "Desglose (Piezas Sueltas)"
-        case .autoSaleCover: return "Cobertura Automática de Venta"
-        }
-    }
-
-    /// Spanish name for a raw server type ("DAMAGE" → "Daño"); unknown types pass through.
-    static func label(_ raw: String) -> String {
-        AdjustmentType(rawValue: raw)?.displayName ?? raw
-    }
-
+extension AdjustmentType {
     var icon: String {
         switch self {
-        case .damage: return "exclamationmark.triangle"
-        case .theft: return "lock.slash"
-        case .expired: return "calendar.badge.exclamationmark"
-        case .countCorrection: return "number"
-        case .found: return "magnifyingglass"
-        case .returnType: return "arrow.uturn.backward"
-        case .transferOut: return "arrow.right.square"
-        case .transferIn: return "arrow.left.square"
-        case .writeOff: return "xmark.circle"
-        case .other: return "ellipsis.circle"
-        case .breakBulkOut: return "shippingbox"
-        case .breakBulkIn: return "shippingbox.fill"
-        case .autoSaleCover: return "wand.and.stars"
-        }
-    }
-
-    var isPositive: Bool {
-        switch self {
-        case .found, .returnType, .transferIn, .countCorrection, .breakBulkIn, .autoSaleCover:
-            return true
-        default:
-            return false
-        }
-    }
-
-    var isNegative: Bool {
-        switch self {
-        case .damage, .theft, .expired, .transferOut, .writeOff, .breakBulkOut:
-            return true
-        default:
-            return false
-        }
-    }
-    
-    var isVariable: Bool {
-        switch self {
-        case .countCorrection, .other:
-            return true
-        default:
-            return false
-        }
-    }
-    
-    var color: String {
-        if isPositive {
-            return "green"
-        } else if isNegative {
-            return "red"
-        } else {
-            return "orange"
+        case .damage: "exclamationmark.triangle"
+        case .theft: "lock.slash"
+        case .expired: "calendar.badge.exclamationmark"
+        case .countCorrection: "number"
+        case .openingCount: "checklist"
+        case .found: "magnifyingglass"
+        case .returnType: "arrow.uturn.backward"
+        case .transferOut: "arrow.right.square"
+        case .transferIn: "arrow.left.square"
+        case .writeOff: "xmark.circle"
+        case .other, .unknown: "ellipsis.circle"
+        case .breakBulkOut: "shippingbox"
+        case .breakBulkIn: "shippingbox.fill"
+        case .autoSaleCover: "wand.and.stars"
         }
     }
 }

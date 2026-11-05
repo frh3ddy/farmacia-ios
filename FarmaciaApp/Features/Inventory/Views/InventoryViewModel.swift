@@ -18,6 +18,9 @@ class InventoryViewModel: ObservableObject {
     }
     @Published var successMessage: String?
     @Published var showSuccess = false
+    /// A Conteo inicial saved that Square didn't take; the host (detail screen, scanner) shows it.
+    @Published var squareWarning: String?
+    @Published var showsSquareWarning = false
 
     // MARK: - Dependencies
     private let apiClient = APIClient.shared
@@ -129,6 +132,37 @@ class InventoryViewModel: ObservableObject {
             return .saved
         } catch {
             return report(SaveOutcome(error: error, fallback: "Error al crear ajuste"))
+        }
+    }
+
+    /// A count during a Conteo inicial: saved even when it matches the stock (it marks
+    /// the product counted). The server derives the change under a lock.
+    func recordOpeningCount(
+        sessionId: String,
+        productId: String,
+        countedQuantity: Int,
+        unitCost: Double?,
+        clientRequestId: String
+    ) async -> SaveOutcome {
+        isSubmitting = true
+        defer { isSubmitting = false }
+        do {
+            let response: APIResponse<StockCountEntryResult> = try await apiClient.request(
+                endpoint: .stockCountEntry(id: sessionId),
+                body: StockCountEntryRequest(
+                    productId: productId,
+                    countedQuantity: countedQuantity,
+                    unitCost: unitCost,
+                    clientRequestId: clientRequestId
+                )
+            )
+            if let warning = response.data?.squareWarning {
+                squareWarning = warning
+                showsSquareWarning = true
+            }
+            return .saved
+        } catch {
+            return report(SaveOutcome(error: error, fallback: "Error al guardar el conteo"))
         }
     }
 

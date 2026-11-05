@@ -42,6 +42,9 @@ struct ScanFlowSheet: View {
     @State private var isLookingUp = false
     /// The last receive or count, and its product (the strip opens it).
     @State private var recent: (save: RecentScanSave, product: Product)?
+    /// The store's open Conteo inicial, so counters see that Contar is going to it.
+    @State private var openCount: StockCountSession?
+    @EnvironmentObject private var authManager: AuthManager
 
     private var mode: FarmaciaKit.ScanMode {
         FarmaciaKit.ScanMode.effective(saved: savedMode, canManageInventory: canManageInventory)
@@ -103,6 +106,12 @@ struct ScanFlowSheet: View {
                 .transition(.push(from: .trailing))
             }
         }
+        // Not on the scanner itself: it's swapped out while a form is showing.
+        .alert("Square", isPresented: $inventoryViewModel.showsSquareWarning) {
+            Button("OK") {}
+        } message: {
+            Text(inventoryViewModel.squareWarning ?? "")
+        }
         // Here, not on the strip: the strip appears with the save already in it.
         // Counts only: the receive form's button already plays it on save.
         .sensoryFeedback(.success, trigger: recent?.save) { _, save in
@@ -135,16 +144,31 @@ struct ScanFlowSheet: View {
             }
             .safeAreaInset(edge: .top) {
                 if canManageInventory {
-                    Picker("Modo", selection: $savedMode) {
-                        ForEach(FarmaciaKit.ScanMode.allCases, id: \.self) { mode in
-                            Text(mode.title).tag(mode)
+                    VStack(spacing: DS.Spacing.xs) {
+                        Picker("Modo", selection: $savedMode) {
+                            ForEach(FarmaciaKit.ScanMode.allCases, id: \.self) { mode in
+                                Text(mode.title).tag(mode)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        if mode == .count, openCount != nil {
+                            Label("Conteo inicial en curso", systemImage: "checklist")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.tint)
                         }
                     }
-                    .pickerStyle(.segmented)
                     .padding(.horizontal)
                     .padding(.vertical, DS.Spacing.s)
                     .background(.bar)
                 }
+            }
+            .task(id: mode) {
+                guard mode == .count, let locationId = authManager.currentLocation?.id else { return }
+                let active: APIResponse<StockCountSession>? = try? await APIClient.shared.request(
+                    endpoint: .stockCountActive,
+                    queryParams: ["locationId": locationId]
+                )
+                openCount = active?.data
             }
             .navigationTitle("Escanear Código")
             .navigationBarTitleDisplayMode(.inline)

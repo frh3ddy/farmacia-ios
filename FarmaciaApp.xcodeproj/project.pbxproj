@@ -106,6 +106,7 @@
 		F000000100000055 /* AlertsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000055 /* AlertsView.swift */; };
 		F000000100000056 /* MoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000056 /* MoreView.swift */; };
 		F000000100000057 /* DeviceManagementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000057 /* DeviceManagementView.swift */; };
+		F000000100000058 /* OpeningCountSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000058 /* OpeningCountSection.swift */; };
 		F54D97249C9261EDD5DE1FF9 /* ProductsAgingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F07F452947561CD91FFF44E /* ProductsAgingViewModel.swift */; };
 		FF00000100000001 /* CodeScanner in Frameworks */ = {isa = PBXBuildFile; productRef = FF00000200000001 /* CodeScanner */; };
 		FF00000100000002 /* SwiftyCrop in Frameworks */ = {isa = PBXBuildFile; productRef = FF00000200000002 /* SwiftyCrop */; };
@@ -224,6 +225,7 @@
 		F100000100000055 /* AlertsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertsView.swift; sourceTree = "<group>"; };
 		F100000100000056 /* MoreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoreView.swift; sourceTree = "<group>"; };
 		F100000100000057 /* DeviceManagementView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceManagementView.swift; sourceTree = "<group>"; };
+		F100000100000058 /* OpeningCountSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpeningCountSection.swift; sourceTree = "<group>"; };
 		GG00000200000001 /* Payroll.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Payroll.swift; sourceTree = "<group>"; };
 		GG00000200000002 /* PayrollView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PayrollView.swift; sourceTree = "<group>"; };
 		GG00000200000003 /* PayrollViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PayrollViewModel.swift; sourceTree = "<group>"; };
@@ -519,6 +521,7 @@
 				F100000100000049 /* DashboardViewModel.swift */,
 				F100000100000013 /* SettingsView.swift */,
 				F100000100000057 /* DeviceManagementView.swift */,
+				F100000100000058 /* OpeningCountSection.swift */,
 				F100000100000056 /* MoreView.swift */,
 			);
 			path = Views;
@@ -709,6 +712,7 @@
 				F000000100000055 /* AlertsView.swift in Sources */,
 				F000000100000013 /* SettingsView.swift in Sources */,
 				F000000100000057 /* DeviceManagementView.swift in Sources */,
+				F000000100000058 /* OpeningCountSection.swift in Sources */,
 				F000000100000056 /* MoreView.swift in Sources */,
 				F000000100000040 /* InventoryViewModel.swift in Sources */,
 				F000000100000042 /* ReceiveInventoryFormView.swift in Sources */,

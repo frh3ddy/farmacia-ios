@@ -178,6 +178,11 @@ struct ProductDetailView: View {
                 Task { await refreshDependentData() }
             }
         }
+        .alert("Square", isPresented: $inventoryViewModel.showsSquareWarning) {
+            Button("OK") {}
+        } message: {
+            Text(inventoryViewModel.squareWarning ?? "")
+        }
         .alert("Éxito", isPresented: $inventoryViewModel.showSuccess) {
             Button("OK") {}
         } message: {
