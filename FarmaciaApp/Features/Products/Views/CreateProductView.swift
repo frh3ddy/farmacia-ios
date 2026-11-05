@@ -49,8 +49,10 @@ struct CreateProductView: View {
     }
     @FocusState private var focusedField: Field?
 
-    /// Top to bottom.
-    private let focusOrder = FocusOrder<Field>([.name, .unitCost, .sellingPrice, .sku, .gtin, .quantity, .description])
+    /// Top to bottom, skipping Inventario inicial when it's hidden.
+    private var focusOrder: FocusOrder<Field> {
+        FocusOrder([.name, .unitCost, .sellingPrice, .sku, .gtin] + (showsInitialStock ? [.quantity] : []) + [.description])
+    }
 
     private func field(for issue: ProductDraft.Issue) -> Field {
         switch issue {
@@ -76,10 +78,23 @@ struct CreateProductView: View {
     /// The created product, so the list it was opened from shows it right
     /// away (ProductsViewModel.insertProduct).
     private let onCreated: ((Product) -> Void)?
+    /// Set by the scanner: closing goes back to it (with the product the server
+    /// created; nil when cancelled or queued offline) instead of dismissing its whole sheet.
+    private let onClose: ((Product?) -> Void)?
+    /// False from the scanner's Recibir/Contar: the receive or count form that opens
+    /// next takes the stock, so entering it here too would add it twice.
+    private let showsInitialStock: Bool
 
-    init(prefillBarcode: String? = nil, onCreated: ((Product) -> Void)? = nil) {
+    init(prefillBarcode: String? = nil, showsInitialStock: Bool = true,
+         onCreated: ((Product) -> Void)? = nil, onClose: ((Product?) -> Void)? = nil) {
+        self.showsInitialStock = showsInitialStock
         self.onCreated = onCreated
+        self.onClose = onClose
         _viewModel = StateObject(wrappedValue: CreateProductViewModel(prefillBarcode: prefillBarcode))
+    }
+
+    private func close() {
+        if let onClose { onClose(viewModel.createdProduct) } else { dismiss() }
     }
 
     var body: some View {
@@ -88,7 +103,7 @@ struct CreateProductView: View {
                 identitySection
                 priceSection
                 identificationSection
-                initialStockSection
+                if showsInitialStock { initialStockSection }
 
                 Section {
                     Toggle("Vender en todas las sucursales", isOn: $viewModel.soldAtAllLocations)
@@ -147,7 +162,7 @@ struct CreateProductView: View {
                 guard viewModel.isDone else { return }
                 // Long enough to read the checkmark, short enough not to wait on.
                 try? await Task.sleep(for: .milliseconds(600))
-                dismiss()
+                close()
             }
             .navigationTitle("Nuevo producto")
             .navigationBarTitleDisplayMode(.inline)
@@ -157,7 +172,7 @@ struct CreateProductView: View {
                         if hasUnsavedChanges {
                             showDiscardConfirmation = true
                         } else {
-                            dismiss()
+                            close()
                         }
                     }
                     .disabled(viewModel.isSubmitting || viewModel.isDone)
@@ -173,7 +188,7 @@ struct CreateProductView: View {
                 isPresented: $viewModel.showSuccess
             ) {
                 Button("OK") {
-                    dismiss()
+                    close()
                 }
             } message: {
                 Text(viewModel.successMessage)
@@ -188,7 +203,7 @@ struct CreateProductView: View {
             isPresented: $showDiscardConfirmation,
             titleVisibility: .visible
         ) {
-            Button("Descartar", role: .destructive) { dismiss() }
+            Button("Descartar", role: .destructive) { close() }
             Button("Seguir editando", role: .cancel) {}
         } message: {
             Text("Se perderá la información que ingresaste.")

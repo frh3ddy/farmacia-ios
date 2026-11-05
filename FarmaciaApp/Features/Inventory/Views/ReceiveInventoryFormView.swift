@@ -17,10 +17,18 @@ struct ReceiveInventoryFormView: View {
     @EnvironmentObject var authManager: AuthManager
     @ObservedObject var viewModel: InventoryViewModel
 
-    /// The product being received (the form opens from its detail screen).
+    /// The product being received (from its detail screen, or the scanner's Recibir).
     let product: Product
-    /// Called after a successful receive so the parent can refresh data
-    var onComplete: (() -> Void)?
+    /// Called after a successful receive with the quantity, so the parent can refresh data
+    var onComplete: ((Int) -> Void)?
+    /// Set by the scanner: closing goes back to it instead of dismissing its whole sheet.
+    var onClose: (() -> Void)? = nil
+    /// A reminder shown under the product (the scanner's "Ya recibiste…").
+    var note: String? = nil
+
+    private func close() {
+        if let onClose { onClose() } else { dismiss() }
+    }
 
     @State private var quantity: Int?
     @State private var receivingCost = ReceivingCost()
@@ -199,6 +207,10 @@ struct ReceiveInventoryFormView: View {
             Form {
                 Section {
                     ProductSummaryRow(product: product, stock: currentStock)
+                } footer: {
+                    if let note {
+                        Label(note, systemImage: "info.circle")
+                    }
                 }
 
                 quantitySection
@@ -239,7 +251,7 @@ struct ReceiveInventoryFormView: View {
                         if hasUnsavedChanges {
                             showDiscardConfirmation = true
                         } else {
-                            dismiss()
+                            close()
                         }
                     }
                     .disabled(viewModel.isSubmitting || isDone)
@@ -297,7 +309,7 @@ struct ReceiveInventoryFormView: View {
             isPresented: $showDiscardConfirmation,
             titleVisibility: .visible
         ) {
-            Button("Descartar", role: .destructive) { dismiss() }
+            Button("Descartar", role: .destructive) { close() }
             Button("Seguir editando", role: .cancel) {}
         } message: {
             Text("Se perderá la información que ingresaste.")
@@ -683,10 +695,10 @@ struct ReceiveInventoryFormView: View {
 
         if success {
             isDone = true
-            onComplete?()
+            onComplete?(qty)
             // Long enough to read the checkmark, short enough not to wait on.
             try? await Task.sleep(for: .milliseconds(600))
-            dismiss()
+            close()
         }
     }
 }
