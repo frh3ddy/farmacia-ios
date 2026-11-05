@@ -95,7 +95,13 @@ struct ReceiveInventoryFormView: View {
     @State private var productSuppliers: [ProductSupplier] = []
     /// Every store's stock, to split the delivery; empty (hidden) if the fetch fails.
     @State private var storeStock: [StoreStock] = []
-    @State private var isLoadingSuppliers = false
+    /// True from the start: the load begins as the form opens, and a tap before
+    /// the task runs must wait too.
+    @State private var isLoadingSuppliers = true
+    /// A tap came in while the supplier's cost was loading: it continues once loaded.
+    @State private var waitingForSupplier = false
+    /// The product's suppliers didn't load: say so, or the empty fields look like a bug.
+    @State private var suppliersFailed = false
     @State private var supplierLastCost: Double?
     /// The cost was filled in from the supplier's last one.
     @State private var costFromSupplier = false
@@ -207,13 +213,13 @@ struct ReceiveInventoryFormView: View {
                 }
             }
             // No edits while a save is in flight.
-            .disabled(viewModel.isSubmitting || isDone)
+            .disabled(viewModel.isSubmitting || isDone || waitingForSupplier)
             .primaryActionBar(PrimaryActionBar(
                 title: "Recibir inventario",
                 doneTitle: "Inventario recibido",
                 summary: summary?.text,
                 summaryTone: summary?.tone ?? .neutral,
-                isSubmitting: viewModel.isSubmitting,
+                isSubmitting: viewModel.isSubmitting || waitingForSupplier,
                 isDone: isDone,
                 action: submit
             ))
@@ -269,6 +275,13 @@ struct ReceiveInventoryFormView: View {
             }
             .onChange(of: selectedSupplier) { _, supplier in
                 supplierChanged(to: supplier)
+            }
+            .onChange(of: isLoadingSuppliers) { _, loading in
+                guard !loading, waitingForSupplier else { return }
+                waitingForSupplier = false
+                // In a Task: the preferred supplier is picked in the same update,
+                // and its cost fills in its own onChange; the tap runs after both.
+                Task { submit() }
             }
         }
         // On the NavigationStack, not the Cancelar button: attached to the button,
@@ -408,7 +421,9 @@ struct ReceiveInventoryFormView: View {
         } header: {
             Text("Proveedor y costo")
         } footer: {
-            if costFromSupplier, let supplier = selectedSupplier {
+            if suppliersFailed && selectedSupplier == nil {
+                Text("No se pudieron cargar los proveedores; elige uno o escribe el costo.")
+            } else if costFromSupplier, let supplier = selectedSupplier {
                 Text("Costo tomado del último precio de \(supplier.name).")
             } else if !productSuppliers.isEmpty && selectedSupplier == nil {
                 Text(productSuppliers.count == 1
@@ -505,7 +520,16 @@ struct ReceiveInventoryFormView: View {
     // MARK: - Actions
 
     private func submit() {
-        guard !viewModel.isSubmitting, !isDone else { return }
+        guard !viewModel.isSubmitting, !isDone, !waitingForSupplier else { return }
+        switch ReceivingSubmit.action(isLoadingSupplierCost: isLoadingSuppliers,
+                                      unitCost: receivingCost.value, issues: issues) {
+        case .wait:
+            focusedField = nil
+            waitingForSupplier = true
+            return
+        case .showIssues, .save:
+            break
+        }
         if let first = issues.first {
             attempts += 1
             // Focus scrolls the field into view (.formKeyboard) and opens its keyboard.
@@ -558,7 +582,10 @@ struct ReceiveInventoryFormView: View {
             )
             productSuppliers = response.suppliers
             applyPreferredSupplier()
+        } catch is CancellationError {
+            // The form closed: nothing to show.
         } catch {
+            suppliersFailed = true
             // Supplier loading is optional, don't block the form
             print("Failed to load product suppliers: \(error)")
         }
