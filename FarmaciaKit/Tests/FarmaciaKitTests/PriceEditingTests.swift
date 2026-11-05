@@ -64,25 +64,36 @@ struct PriceScopeTests {
 struct PriceScopeNoteTests {
     @Test("given all stores with Square on, should say every store and Square POS")
     func everywhere() {
-        #expect(PriceEditing.scopeNote(allLocations: true, syncToSquare: true, storeName: "Centro", isOwner: true)
+        #expect(PriceEditing.scopeNote(allLocations: true, syncToSquare: true, inSquare: true, storeName: "Centro", isOwner: true)
                 == "Se aplica en todas las sucursales y en Square POS.")
     }
 
     @Test("given one store, should name it")
     func oneStore() {
-        #expect(PriceEditing.scopeNote(allLocations: false, syncToSquare: true, storeName: "Centro", isOwner: true)
+        #expect(PriceEditing.scopeNote(allLocations: false, syncToSquare: true, inSquare: true, storeName: "Centro", isOwner: true)
                 == "Solo cambia en Centro y en su Square POS.")
     }
 
     @Test("given a manager, should say only their store, and that the owner changes the others")
     func manager() {
-        #expect(PriceEditing.scopeNote(allLocations: false, syncToSquare: true, storeName: "Centro", isOwner: false)
+        #expect(PriceEditing.scopeNote(allLocations: false, syncToSquare: true, inSquare: true, storeName: "Centro", isOwner: false)
                 == "Solo cambia en Centro y en su Square POS. El precio de las demás sucursales lo cambia el dueño.")
     }
 
     @Test("given Square off, should say Square POS keeps the old price")
     func squareOff() {
-        #expect(PriceEditing.scopeNote(allLocations: true, syncToSquare: false, storeName: "Centro", isOwner: true)
+        #expect(PriceEditing.scopeNote(allLocations: true, syncToSquare: false, inSquare: true, storeName: "Centro", isOwner: true)
                 == "Se aplica en todas las sucursales; Square POS sigue mostrando el precio anterior.")
+    }
+
+    @Test("given a product that isn't in Square, should not mention Square POS",
+          arguments: [true, false])
+    func notInSquare(syncToSquare: Bool) {
+        #expect(PriceEditing.scopeNote(allLocations: true, syncToSquare: syncToSquare, inSquare: false,
+                                       storeName: "Centro", isOwner: true)
+                == "Se aplica en todas las sucursales.")
+        #expect(PriceEditing.scopeNote(allLocations: false, syncToSquare: syncToSquare, inSquare: false,
+                                       storeName: "Centro", isOwner: false)
+                == "Solo cambia en Centro. El precio de las demás sucursales lo cambia el dueño.")
     }
 }

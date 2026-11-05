@@ -135,12 +135,6 @@ struct ProductDetailView: View {
                         Task { await refreshDependentData() }
                     }
                 )
-                .task {
-                    // Only if the parent's initial load didn't already populate it
-                    if inventoryViewModel.suppliers.isEmpty {
-                        await inventoryViewModel.loadSuppliers()
-                    }
-                }
             case .adjust(let type):
                 AdjustmentFormView(
                     adjustmentType: type,

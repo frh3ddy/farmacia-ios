@@ -53,6 +53,7 @@ struct EditPriceView: View {
                     )
                 } footer: {
                     Text(PriceEditing.scopeNote(allLocations: applyToAllLocations, syncToSquare: syncToSquare,
+                                                inSquare: product.hasSquareSync == true,
                                                 storeName: authManager.currentLocation?.name ?? "esta sucursal",
                                                 isOwner: authManager.isOwner))
                 }
