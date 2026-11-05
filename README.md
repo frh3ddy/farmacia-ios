@@ -131,6 +131,7 @@ Opened from a product (Productos → product → Recibir Inventario / Ajustar In
 - After creating, the button shows a checkmark and the sheet closes; an alert appears only when there's something to read (offline queue, photo not uploaded, Square POS not reached)
 - Switching store returns the other tabs to their first screen, so nothing from the previous store or role stays open
 - Receiving and adjustment history (product activity and global history)
+- Conteo inicial (owner, Ajustes): a store-wide recount that fixes the stock the migration loaded without counting as shrinkage. While it's open, every count at the store (scanner Contar shows "Conteo inicial en curso", and the detail screen's Corrección de Conteo) is saved as Conteo inicial, including a count that matches the stock, so the product counts as counted. "Ver no contados" lists products still showing stock that nobody counted (largest value first) with "Poner en 0" per row and "Poner todos en 0" after a confirmation (`3 productos · 8 unidades · $80.00`). Units and Valor de inventario change; P&L, Ganancia neta and the loss report don't (`StockCountSession`, `CountSave`, `UncountedSummary`)
 - Square sync status on each receiving and adjustment; the owner can retry a failed sync from product activity or global history
 
 ### Products

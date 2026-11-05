@@ -98,6 +98,10 @@ struct SettingsView: View {
                 }
             }
 
+            if authManager.isOwner {
+                OpeningCountSection()
+            }
+
             // Session Info Section
             Section("Sesión") {
                 if let expiresAt = authManager.sessionExpiresAt {

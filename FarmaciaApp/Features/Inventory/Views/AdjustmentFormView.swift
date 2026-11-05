@@ -25,9 +25,17 @@ struct AdjustmentFormView: View {
         if let onClose { onClose() } else { dismiss() }
     }
 
-    /// A count that agrees with the stock: Guardar becomes "Sin cambios" and just closes.
+    /// A count that agrees with the stock: Guardar becomes "Sin cambios" and just closes,
+    /// except in a Conteo inicial, where saving it marks the product counted.
     private var countMatches: Bool {
         adjustmentType.isVariable && CountCorrection.matches(counted: newCount, current: liveStock)
+    }
+
+    /// The store's open Conteo inicial. While there is one, a count goes to it
+    /// instead of Corrección de Conteo, so it stays out of shrinkage.
+    @State private var session: StockCountSession?
+    private var countSave: CountSave {
+        CountSave.action(matches: countMatches, inOpeningCount: session != nil)
     }
 
     @Environment(\.dismiss) var dismiss
@@ -85,7 +93,7 @@ struct AdjustmentFormView: View {
 
     private var isValid: Bool {
         if adjustmentType.isVariable {
-            return network.isConnected && countChange != nil
+            return network.isConnected && (countChange != nil || (session != nil && countMatches))
         }
         return (quantity ?? 0) != 0
     }
@@ -138,6 +146,9 @@ struct AdjustmentFormView: View {
                         )
                     }
                 } footer: {
+                    if session != nil {
+                        Label("Conteo inicial: corrige existencias de la migración, no cuenta como merma.", systemImage: "checklist")
+                    }
                     if let impact = stockImpact {
                         VStack(alignment: .leading, spacing: DS.Spacing.xs) {
                             StatusLabel(
@@ -183,7 +194,7 @@ struct AdjustmentFormView: View {
             }
             // No edits while a save is in flight.
             .disabled(viewModel.isSubmitting)
-            .navigationTitle(adjustmentType.displayName)
+            .navigationTitle(session != nil ? AdjustmentType.openingCount.displayName : adjustmentType.displayName)
             .navigationBarTitleDisplayMode(.inline)
             .formKeyboard(focus: $focusedField, order: focusOrder)
             .interactiveDismissDisabled(viewModel.isSubmitting)
@@ -200,7 +211,7 @@ struct AdjustmentFormView: View {
                     if viewModel.isSubmitting {
                         ProgressView()
                             .accessibilityLabel("Guardando")
-                    } else if countMatches, let newCount {
+                    } else if countSave == .closeWithoutSaving, let newCount {
                         Button("Sin cambios") {
                             onCounted?(liveStock, newCount)
                             close()
@@ -230,11 +241,26 @@ struct AdjustmentFormView: View {
 
     private func loadLiveStock() async {
         liveStock = nil
+        session = nil
         liveStockFailed = false
         guard network.isConnected,
               let locationId = authManager.currentLocation?.id else { return }
 
         do {
+            // A count can't be saved without knowing whether a Conteo inicial is open:
+            // guessing "no" would book migration fixes as shrinkage.
+            if adjustmentType == .countCorrection {
+                do {
+                    let active: APIResponse<StockCountSession> = try await APIClient.shared.request(
+                        endpoint: .stockCountActive,
+                        queryParams: ["locationId": locationId]
+                    )
+                    guard !Task.isCancelled else { return }
+                    session = active.data
+                } catch let error where StockCountSession.noCountOnServer(error) {
+                    session = nil
+                }
+            }
             let response: ProductDetailResponse = try await APIClient.shared.request(
                 endpoint: .getProduct(id: product.id),
                 queryParams: ["locationId": locationId]
@@ -250,6 +276,21 @@ struct AdjustmentFormView: View {
     }
 
     private func saveAdjustment() async {
+        if let session, adjustmentType == .countCorrection, let newCount {
+            let outcome = await viewModel.recordOpeningCount(
+                sessionId: session.id,
+                productId: product.id,
+                countedQuantity: newCount,
+                unitCost: asksForCost ? unitCost : nil,
+                clientRequestId: clientRequestId
+            )
+            finish(outcome)
+            // The owner may have ended the count since the form opened: reload, so the
+            // next Guardar goes to whatever is open now (the title follows).
+            if case .failed = outcome { await loadLiveStock() }
+            return
+        }
+
         // Variable types (count correction) send the counted total and the
         // previewed change; the API derives the real change from its own stock.
         // Fixed-sign types only ever collect a magnitude — the server
@@ -279,6 +320,13 @@ struct AdjustmentFormView: View {
             clientRequestId: clientRequestId
         )
 
+        finish(outcome)
+        // The API refuses a correction while a Conteo inicial is open (one may have started
+        // since the form loaded): reload, so the next Guardar goes to the count.
+        if case .failed = outcome, adjustmentType == .countCorrection { await loadLiveStock() }
+    }
+
+    private func finish(_ outcome: SaveOutcome) {
         switch outcome {
         case .saved:
             onComplete?()

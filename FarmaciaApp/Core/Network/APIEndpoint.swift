@@ -126,6 +126,14 @@ enum APIEndpoint {
     // MARK: - Supplier Endpoints
     case listSuppliers
     case createSupplier
+
+    // MARK: - Conteo inicial (stock counts)
+    case stockCountStart
+    case stockCountActive
+    case stockCountEnd(id: String)
+    case stockCountEntry(id: String)
+    case stockCountUncounted(id: String)
+    case stockCountZero(id: String)
     
     // MARK: - Properties
     
@@ -234,6 +242,14 @@ enum APIEndpoint {
             
         // Suppliers
         case .listSuppliers, .createSupplier: return "/admin/inventory/cutover/suppliers"
+
+        // Conteo inicial
+        case .stockCountStart: return "/inventory/stock-counts"
+        case .stockCountActive: return "/inventory/stock-counts/active"
+        case .stockCountEnd(let id): return "/inventory/stock-counts/\(id)/end"
+        case .stockCountEntry(let id): return "/inventory/stock-counts/\(id)/entries"
+        case .stockCountUncounted(let id): return "/inventory/stock-counts/\(id)/uncounted"
+        case .stockCountZero(let id): return "/inventory/stock-counts/\(id)/zero"
         }
     }
     
@@ -328,6 +344,12 @@ enum APIEndpoint {
         // Suppliers
         case .listSuppliers:
             return .get
+
+        // Conteo inicial
+        case .stockCountActive, .stockCountUncounted:
+            return .get
+        case .stockCountStart, .stockCountEnd, .stockCountEntry, .stockCountZero:
+            return .post
         }
     }
     
