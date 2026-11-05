@@ -131,7 +131,7 @@ struct ProductDetailView: View {
                 ReceiveInventoryFormView(
                     viewModel: inventoryViewModel,
                     product: displayProduct,
-                    onComplete: {
+                    onComplete: { _ in
                         Task { await refreshDependentData() }
                     }
                 )

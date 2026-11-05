@@ -158,3 +158,36 @@ Three jobs share one button:
 - A scan button on the product detail screen (to scan the next item while in Consultar).
 - Telling apart a save queued offline in the strip — the connectivity banner already says it'll sync.
 
+
+## Status (2026-11-04, uncommitted on `feature/scan-modes`)
+
+- ✅ 1–3 Logic: `ScanMode`, `ScanNext`, `RecentScanSave` (`FarmaciaKit/Sources/FarmaciaKit/ScanFlow.swift`,
+  `ScanFlowTests.swift`), plus `CountCorrection.matches` for "Sin cambios".
+  Changed from the plan: the form events became one `.closed` (a form's save and its
+  Cancelar both arrive through `onClose`), and Consultar + `.closed` closes the flow as before.
+- ✅ 4–6 Embeddable forms: `onClose` on Recibir inventario, Corrección de Conteo, Nuevo Producto;
+  `note:` for the repeat reminder; receive `onComplete` passes the quantity; count `onCounted`.
+- ✅ 7–9 `ScanFlowSheet`: mode picker, `.receive` / `.count` steps routed by `ScanNext`, one
+  `InventoryViewModel` per run, strip with a success haptic.
+- ✅ 10 Productos refreshes a received/counted product's row (`refreshRow`).
+- ✅ 11 Simulator scan code: `xcrun simctl spawn booted defaults write com.farmacia.ios.dev simScanCode <code>` (DEBUG only).
+- ✅ 12 README.
+- Dropped: the strip note for a product created offline. Nuevo Producto's own "Sin conexión" alert already says it.
+- ✅ Simulator smoke tests (2026-11-04, local API, Abatelenguas Madera `7501281200101`):
+  - Recibir: scan → receive form, no detail screen → +5 saved once → scanner back with `+5 uds`, row 86 → 91.
+  - Repeat scan shows "Ya recibiste 5 uds…"; Cancelar goes back to the scanner.
+  - Contar: count 91 → "Sin cambios" → `91, sin cambios`; count 90 → `91 → 90 (−1)`, row 90; repeat note shown.
+  - Strip tap opens the detail screen. The mode is remembered between scanner openings.
+  - Consultar opens the detail screen as before.
+  - Detail screen → Recibir Inventario → Cancelar → Descartar closes the sheet.
+  - Not smoked: saving a receive from the detail screen (the simulator's keypad covered the button; the same
+    `close()` path was exercised by the scanner saves), and unknown code → Nuevo Producto (would create a real product).
+
+## Review fixes (/tdd-review, 2026-11-04)
+
+- ✅ Nuevo Producto opened from Recibir/Contar hides "Inventario inicial" (`showsInitialStock`); the
+  receive/count form that follows takes the stock, so it was added twice.
+- ✅ One success haptic per receive: the scanner's haptic plays for counts only (the receive form's
+  button already plays it).
+- ✅ The repeat note is worked out when the form opens (`Step.receive/count(_, note:)`), so it no
+  longer appears on the product just saved during the checkmark.

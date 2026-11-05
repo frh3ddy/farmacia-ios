@@ -222,11 +222,15 @@ struct ProductsView: View {
                 case .scan:
                     ScanFlowSheet(
                         lookup: lookupScannedCode,
+                        canManageInventory: authManager.canManageInventory,
                         onOpen: { product in
                             scannedProduct = product
                             navigateToScannedProduct = true
                         },
-                        onCreated: viewModel.upsertProduct
+                        onCreated: viewModel.upsertProduct,
+                        onStockChanged: { product in
+                            Task { await refreshRow(product) }
+                        }
                     )
                 }
             }
@@ -637,6 +641,17 @@ struct ProductsView: View {
     /// on-device cache first; the server's exact search when they can't settle it.
     /// A product matches by SKU or barcode, in every GTIN form of the code (13 or
     /// 14 digits: BarcodeLookup.codeVariants).
+    /// A receive or count from the scanner changed this product's stock: refetch
+    /// it for this store, so its row is current when the scanner closes.
+    private func refreshRow(_ product: Product) async {
+        guard let locationId = authManager.currentLocation?.id,
+              let response: ProductDetailResponse = try? await APIClient.shared.request(
+                  endpoint: .getProduct(id: product.id),
+                  queryParams: ["locationId": locationId]
+              ) else { return }
+        viewModel.updateProduct(response.data)
+    }
+
     private func lookupScannedCode(_ code: String) async -> ScanOutcome {
         let variants = BarcodeLookup.codeVariants(code)
 

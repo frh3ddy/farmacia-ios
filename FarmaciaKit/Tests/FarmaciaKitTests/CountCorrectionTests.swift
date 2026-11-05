@@ -21,4 +21,15 @@ struct CountCorrectionTests {
     func noCount() {
         #expect(CountCorrection.preview(counted: nil, current: 15) == nil)
     }
+
+    @Test("given counted equal to the loaded stock, should be a match (nothing to save, but an answer)")
+    func countMatchesStock() {
+        #expect(CountCorrection.matches(counted: 15, current: 15))
+    }
+
+    @Test("given a different count, no count, or stock not loaded, should not be a match",
+          arguments: [(Int?(12), Int?(15)), (nil, 15), (15, nil)])
+    func noMatch(counted: Int?, current: Int?) {
+        #expect(!CountCorrection.matches(counted: counted, current: current))
+    }
 }

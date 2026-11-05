@@ -10,10 +10,25 @@ struct AdjustmentFormView: View {
     let adjustmentType: AdjustmentType
     @ObservedObject var viewModel: InventoryViewModel
 
-    /// The product being adjusted (the form opens from its detail screen).
+    /// The product being adjusted (from its detail screen, or the scanner's Contar).
     let product: Product
     /// Called after a successful adjustment so the parent can refresh data
     var onComplete: (() -> Void)?
+    /// A count saved, or matched the stock: (live stock it was compared to, counted).
+    var onCounted: ((Int?, Int) -> Void)? = nil
+    /// Set by the scanner: closing goes back to it instead of dismissing its whole sheet.
+    var onClose: (() -> Void)? = nil
+    /// A reminder shown under the product (the scanner's "Ya contaste…").
+    var note: String? = nil
+
+    private func close() {
+        if let onClose { onClose() } else { dismiss() }
+    }
+
+    /// A count that agrees with the stock: Guardar becomes "Sin cambios" and just closes.
+    private var countMatches: Bool {
+        adjustmentType.isVariable && CountCorrection.matches(counted: newCount, current: liveStock)
+    }
 
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var authManager: AuthManager
@@ -83,6 +98,10 @@ struct AdjustmentFormView: View {
             Form {
                 Section {
                     ProductSummaryRow(product: product, stock: adjustmentType.isVariable ? nil : currentStock)
+                } footer: {
+                    if let note {
+                        Label(note, systemImage: "info.circle")
+                    }
                 }
 
                 Section {
@@ -171,7 +190,7 @@ struct AdjustmentFormView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancelar") {
-                        dismiss()
+                        close()
                     }
                     .disabled(viewModel.isSubmitting)
                 }
@@ -181,6 +200,11 @@ struct AdjustmentFormView: View {
                     if viewModel.isSubmitting {
                         ProgressView()
                             .accessibilityLabel("Guardando")
+                    } else if countMatches, let newCount {
+                        Button("Sin cambios") {
+                            onCounted?(liveStock, newCount)
+                            close()
+                        }
                     } else {
                         Button("Guardar") {
                             // Set before the Task runs, so a second tap can't slip in first
@@ -258,7 +282,8 @@ struct AdjustmentFormView: View {
         switch outcome {
         case .saved:
             onComplete?()
-            dismiss()
+            if adjustmentType == .countCorrection, let newCount { onCounted?(liveStock, newCount) }
+            close()
         case .costRequired:
             costRequired = true
         case .failed:
