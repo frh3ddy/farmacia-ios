@@ -36,9 +36,17 @@ struct AdjustmentFormView: View {
     @State private var session: StockCountSession?
     /// Lots in a Conteo inicial, pre-filled with the product's current ones. Shown only once that read
     /// succeeds, so lots are never typed against an API that would drop them.
-    @State private var lots: [CountLot] = []
+    @State private var lotSplit = LotSplit()
+    private var lots: [CountLot] { lotSplit.rows }
     @State private var originalLots: [CountLot] = []
-    @State private var lotsAvailable = false
+    @State private var lotsLoad = CountLotsLoad()
+    /// The lots section shows, and its lots are sent, only for the store and count they were read for.
+    private var lotsAvailable: Bool {
+        guard let locationId = authManager.currentLocation?.id else { return false }
+        return lotsLoad.isAvailable(locationId: locationId, session: session)
+    }
+    /// Bumped to reload through `.task(id:)`, which cancels a load still running.
+    @State private var reloadID = 0
     /// This product's count earlier in the open Conteo inicial (counts span days).
     @State private var countedEntry: CountedEntry?
     /// The lot row a camera scan of the box fills (receiving's `LotScannerView`).
@@ -46,6 +54,10 @@ struct AdjustmentFormView: View {
     @State private var showLotScanner = false
     private var countLots: CountLots { CountLots(lots, original: originalLots) }
     private var lotsCheck: LotsCheck { countLots.check(counted: newCount) }
+    /// Only a Conteo inicial sends Razón/Notas to the endpoint that caps them.
+    private var notesProblem: String? {
+        session != nil ? CountNotes.problem(reason: reason, notes: notes) : nil
+    }
     private var lotsBlock: Bool {
         if case .mismatch = lotsCheck { return true }
         return false
@@ -113,6 +125,7 @@ struct AdjustmentFormView: View {
             return network.isConnected
                 && CountSave.canSave(change: countChange, matches: countMatches, inOpeningCount: session != nil)
                 && !lotsBlock
+                && notesProblem == nil
         }
         return (quantity ?? 0) != 0
     }
@@ -132,6 +145,9 @@ struct AdjustmentFormView: View {
                         }
                         if let countedEntry {
                             Label(countedEntry.note(), systemImage: "checkmark.circle")
+                            if let remarks = countedEntry.remarks {
+                                Text(remarks)
+                            }
                         }
                     }
                 }
@@ -146,7 +162,7 @@ struct AdjustmentFormView: View {
                                     .foregroundStyle(Tone.caution.color)
                             } else if liveStockFailed {
                                 Button("Reintentar") {
-                                    Task { await loadLiveStock() }
+                                    reloadID += 1
                                 }
                             } else {
                                 ProgressView()
@@ -155,7 +171,12 @@ struct AdjustmentFormView: View {
 
                         if adjustmentType == .countCorrection {
                             // The receiving form's hero stepper: counting is mostly ± from the shelf.
-                            QuantityStepper(value: $newCount, unit: "unidades", focus: $focusedField, field: .newCount)
+                            // Only the counter's changes split the count over the lots; the stock loading
+                            // and "Sin cambios" set `newCount` directly, so pre-filled lots stay as they are.
+                            QuantityStepper(value: Binding { newCount } set: {
+                                lotSplit.countChanged(from: newCount, to: $0)
+                                newCount = $0
+                            }, unit: "unidades", focus: $focusedField, field: .newCount)
                             if let stock = CountSave.quickMatch(liveStock: liveStock, inOpeningCount: session != nil) {
                                 Button {
                                     saveUnchanged(stock)
@@ -165,7 +186,7 @@ struct AdjustmentFormView: View {
                                 }
                                 .buttonStyle(.bordered)
                                 .disabled(viewModel.isSubmitting || !network.isConnected
-                                          || countLots.quickMatchBlocker(stock: stock) != nil)
+                                          || countLots.quickMatchBlocker(stock: stock) != nil || notesProblem != nil)
                             }
                         } else {
                             AmountField(
@@ -205,7 +226,7 @@ struct AdjustmentFormView: View {
                     }
                 }
 
-                if session != nil, lotsAvailable {
+                if lotsAvailable {
                     lotsSection
                 }
 
@@ -234,6 +255,10 @@ struct AdjustmentFormView: View {
                     TextField("Notas", text: $notes, axis: .vertical)
                         .lineLimit(1...4)
                         .formField(.notes, focus: $focusedField)
+                } footer: {
+                    if let notesProblem {
+                        StatusLabel(notesProblem, tone: .caution)
+                    }
                 }
             }
             // No edits while a save is in flight.
@@ -276,7 +301,7 @@ struct AdjustmentFormView: View {
             .fullScreenCover(isPresented: $showLotScanner) {
                 LotScannerView { scan in
                     guard let id = scanningLotId, let index = lots.firstIndex(where: { $0.id == id }) else { return }
-                    lots[index] = lots[index].applying(scan)
+                    lotSplit.rows[index] = lots[index].applying(scan)
                 }
             }
             .alert("No se pudo guardar", isPresented: $viewModel.showSaveError) {
@@ -285,7 +310,7 @@ struct AdjustmentFormView: View {
                 Text(viewModel.saveError ?? "")
             }
             // Reloads when the location changes or the connection comes back
-            .task(id: [authManager.currentLocation?.id, String(network.isConnected)]) {
+            .task(id: [authManager.currentLocation?.id, String(network.isConnected), String(reloadID)]) {
                 await loadLiveStock()
             }
         }
@@ -301,50 +326,39 @@ struct AdjustmentFormView: View {
         do {
             // A count can't be saved without knowing whether a Conteo inicial is open:
             // guessing "no" would book migration fixes as shrinkage.
+            var open: StockCountSession?
             if adjustmentType == .countCorrection {
                 do {
                     let active: APIResponse<StockCountSession> = try await APIClient.shared.request(
                         endpoint: .stockCountActive,
                         queryParams: ["locationId": locationId]
                     )
-                    guard !Task.isCancelled else { return }
-                    session = active.data
-                    if active.data == nil { lotsAvailable = false }
+                    open = active.data
                 } catch let error where StockCountSession.noCountOnServer(error) {
-                    session = nil
+                    open = nil
                 }
+                guard !Task.isCancelled else { return }
             }
+            // Once the count is known the rest is read at the same time: in a store-wide
+            // count this runs for every product scanned.
+            let count = open // a let: the concurrent reads can't capture a var
+            async let entry = readCountedEntry(in: count, locationId: locationId)
+            async let lots = readLots(in: count, locationId: locationId)
             let response: ProductDetailResponse = try await APIClient.shared.request(
                 endpoint: .getProduct(id: product.id),
                 queryParams: ["locationId": locationId]
             )
+            let (counted, rows) = await (entry, lots)
             // A superseded load (location or connection changed) must not
             // overwrite the newer one's state — URLSession may finish or fail anyway.
             guard !Task.isCancelled else { return }
+            session = open
             liveStock = response.data.totalInventory ?? 0
-            // Already counted in this session? Nothing shows if the read fails (an API without it).
-            if let session {
-                let entry: APIResponse<CountedEntry>? = try? await APIClient.shared.request(
-                    endpoint: .stockCountProductEntry(id: session.id),
-                    queryParams: ["productId": product.id, "locationId": locationId]
-                )
-                guard !Task.isCancelled else { return }
-                countedEntry = entry?.data
-            } else {
-                countedEntry = nil
-            }
-            // The product's lots, once per form: a later reload must not wipe what was edited.
-            if session != nil, !lotsAvailable {
-                let current: APIResponse<[CurrentLot]>? = try? await APIClient.shared.request(
-                    endpoint: .inventoryLots,
-                    queryParams: ["productId": product.id, "locationId": locationId]
-                )
-                guard !Task.isCancelled else { return }
-                if let rows = current?.data?.map(\.row) {
-                    lots = rows
-                    originalLots = rows
-                    lotsAvailable = true
-                }
+            countedEntry = counted
+            if let rows {
+                lotSplit = LotSplit(prefilled: rows, stock: response.data.totalInventory ?? 0)
+                originalLots = rows
+                lotsLoad.loaded(locationId: locationId, session: open)
             }
             // A count starts at the stock, so it's ± from what's on record.
             if adjustmentType == .countCorrection {
@@ -356,15 +370,41 @@ struct AdjustmentFormView: View {
         }
     }
 
+    /// This product's count earlier in the open Conteo inicial. Nothing shows if the read fails (an API without it).
+    private func readCountedEntry(in session: StockCountSession?, locationId: String) async -> CountedEntry? {
+        guard let session else { return nil }
+        let entry: APIResponse<CountedEntry>? = try? await APIClient.shared.request(
+            endpoint: .stockCountProductEntry(id: session.id),
+            queryParams: ["productId": product.id, "locationId": locationId]
+        )
+        return entry?.data
+    }
+
+    /// The product's lots, once per store and count (`CountLotsLoad`); nil when already read or the read fails.
+    private func readLots(in session: StockCountSession?, locationId: String) async -> [CountLot]? {
+        guard lotsLoad.needsLoad(locationId: locationId, session: session) else { return nil }
+        let current: APIResponse<[CurrentLot]>? = try? await APIClient.shared.request(
+            endpoint: .inventoryLots,
+            queryParams: ["productId": product.id, "locationId": locationId]
+        )
+        return current?.data?.map(\.row)
+    }
+
     /// Caducidad is what matters; the lote is optional. Lots may cover less than the count (the rest
     /// stays without lot info), never more.
     private var lotsSection: some View {
         Section {
-            ForEach($lots) { $lot in
+            ForEach($lotSplit.rows) { $lot in
                 VStack(spacing: DS.Spacing.s) {
                     MonthYearPicker(title: "Vence", value: $lot.expiry)
-                    AmountField("Cantidad", unit: "UDS", value: $lot.quantity,
-                                focus: $focusedField, field: .lotQuantity(lot.id))
+                    let quantity = Binding<Int?> { lot.quantity } set: { lotSplit.setQuantity($0, of: lot.id) }
+                    HStack {
+                        AmountField("Cantidad", unit: "UDS", value: quantity,
+                                    focus: $focusedField, field: .lotQuantity(lot.id))
+                        Stepper("Cantidad", value: Binding { quantity.wrappedValue ?? 0 } set: { quantity.wrappedValue = $0 },
+                                in: 0...Int.max)
+                            .labelsHidden()
+                    }
                     LabeledContent("Lote") {
                         HStack(spacing: DS.Spacing.s) {
                             TextField("Lote", text: $lot.batchNumber, prompt: Text("Opcional"))
@@ -378,17 +418,23 @@ struct AdjustmentFormView: View {
                             }
                         }
                     }
+                    if let hint = lot.ignoredHint {
+                        StatusLabel(hint, tone: .caution)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                 }
             }
-            .onDelete { lots.remove(atOffsets: $0) }
-            Button("Agregar lote", systemImage: "plus") { lots.append(CountLot()) }
+            .onDelete { lotSplit.remove(atOffsets: $0, count: newCount) }
+            Button("Agregar lote", systemImage: "plus") { lotSplit.add(CountLot(), count: newCount) }
+                .disabled(!CountLots.canAdd(to: lots))
             if LotScannerView.isSupported {
                 // The fast path on the shelf: a new row filled from the box.
                 Button("Escanear caja", systemImage: "camera.viewfinder") {
                     let row = CountLot()
-                    lots.append(row)
+                    lotSplit.add(row, count: newCount)
                     scanLot(into: row.id)
                 }
+                .disabled(!CountLots.canAdd(to: lots))
             }
         } header: {
             Text("Lotes y caducidad")
@@ -427,12 +473,15 @@ struct AdjustmentFormView: View {
                 countedQuantity: newCount,
                 unitCost: asksForCost ? unitCost : nil,
                 clientRequestId: clientRequestId,
-                lots: lotsAvailable ? countLots.requestLots() : nil
+                lots: lotsAvailable ? countLots.requestLots() : nil,
+                locationId: authManager.currentLocation?.id,
+                reason: reason,
+                notes: notes
             )
             finish(outcome)
             // The owner may have ended the count since the form opened: reload, so the
             // next Guardar goes to whatever is open now (the title follows).
-            if case .failed = outcome { await loadLiveStock() }
+            if case .failed = outcome { reloadID += 1 }
             return
         }
 
@@ -468,7 +517,7 @@ struct AdjustmentFormView: View {
         finish(outcome)
         // The API refuses a correction while a Conteo inicial is open (one may have started
         // since the form loaded): reload, so the next Guardar goes to the count.
-        if case .failed = outcome, adjustmentType == .countCorrection { await loadLiveStock() }
+        if case .failed = outcome, adjustmentType == .countCorrection { reloadID += 1 }
     }
 
     private func finish(_ outcome: SaveOutcome) {

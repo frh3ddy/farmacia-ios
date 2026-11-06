@@ -11,6 +11,8 @@ struct OpeningCountSection: View {
     @EnvironmentObject private var authManager: AuthManager
     @State private var session: StockCountSession?
     @State private var loaded = false
+    /// The store `session` belongs to: a switch clears it, so another store's count (and its Terminar) never shows.
+    @State private var loadedLocationId: String?
     @State private var loadFailed = false
     @State private var isWorking = false
     @State private var confirmStart = false
@@ -70,6 +72,10 @@ struct OpeningCountSection: View {
 
     private func load() async {
         guard let locationId = authManager.currentLocation?.id else { return }
+        if loadedLocationId != locationId {
+            session = nil
+            loaded = false
+        }
         loadFailed = false
         do {
             let response: APIResponse<StockCountSession> = try await APIClient.shared.request(
@@ -78,18 +84,25 @@ struct OpeningCountSection: View {
             )
             session = response.data
             loaded = true
+            loadedLocationId = locationId
         } catch {
+            // No alert: this reloads each time Ajustes appears. A first load that fails shows
+            // Reintentar; a reload that fails keeps what's on screen for this store.
             guard !Task.isCancelled else { return }
             loadFailed = !loaded
-            self.error = (error as? NetworkError)?.errorDescription ?? "No se pudo cargar el conteo inicial"
         }
+    }
+
+    /// Writes name the store shown, so they never land on the login session's store if the two differ.
+    private var locationBody: [String: String]? {
+        authManager.currentLocation.map { ["locationId": $0.id] }
     }
 
     private func run(_ endpoint: APIEndpoint) async {
         isWorking = true
         defer { isWorking = false }
         do {
-            try await APIClient.shared.requestVoid(endpoint: endpoint)
+            try await APIClient.shared.requestVoid(endpoint: endpoint, body: locationBody)
             await load()
         } catch {
             self.error = (error as? NetworkError)?.errorDescription ?? "No se pudo completar"
@@ -109,6 +122,7 @@ struct UncountedListView: View {
     /// "Poniendo en 0… 150 de 1900" while a long run goes batch by batch.
     @State private var zeroProgress: String?
     @State private var confirmAll = false
+    @State private var loadFailed = false
     @State private var error: String? {
         didSet { showsError = error != nil }
     }
@@ -144,7 +158,13 @@ struct UncountedListView: View {
             }
         }
         .overlay {
-            if rows == nil {
+            if rows == nil, loadFailed {
+                ContentUnavailableView {
+                    Label("No se pudo cargar", systemImage: "wifi.exclamationmark")
+                } actions: {
+                    Button("Reintentar") { Task { await load() } }
+                }
+            } else if rows == nil {
                 ProgressView()
             } else if let zeroProgress {
                 ProgressView(zeroProgress)
@@ -183,8 +203,10 @@ struct UncountedListView: View {
                 queryParams: ["locationId": locationId]
             )
             rows = response.data ?? []
+            loadFailed = false
         } catch {
             guard !Task.isCancelled else { return }
+            loadFailed = true
             self.error = (error as? NetworkError)?.errorDescription ?? "No se pudo cargar la lista"
         }
     }
@@ -204,7 +226,7 @@ struct UncountedListView: View {
             do {
                 let response: APIResponse<[StockCountZeroResult]> = try await APIClient.shared.request(
                     endpoint: .stockCountZero(id: sessionId),
-                    body: StockCountZeroRequest(productIds: batch)
+                    body: StockCountZeroRequest(productIds: batch, locationId: authManager.currentLocation?.id)
                 )
                 results += response.data ?? []
             } catch {
