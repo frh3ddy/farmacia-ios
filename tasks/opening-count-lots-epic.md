@@ -158,6 +158,7 @@ same product with different expiries (4 vencen ene-2027, 6 vencen mar-2027).
 - **Release order:** farmacia-ops `feature/stock-count-notes` to production before this branch ships; until then Razón/Notas are ignored.
 - ✅ **End-to-end check:** a "Sin cambios" count with Razón against the local API showed the Razón under "Ya contado" when the form was reopened (2026-11-05, simulator).
 - **Device check:** clear the count and type a single digit (the simulator tool couldn't clear the centered field); lots should re-split.
+- ✅ **Released 2026-11-05:** `main` `4fed1a9` (Release build, production API) installed on the iPhone 15 Pro and the iPhone 13 Pro.
 - **iPad:** the lots release was never installed on the iPad (`95bd06a`); this branch isn't either. The iPad (A16) is paired; install after review and once the API is deployed (`scripts/release-build-install.sh` picks an iPhone; pass `DEVICE_UDID`).
 - ✅ **Pre-filled lots keep their quantities** (`LotSplit(prefilled:stock:)`); only a single lot that is the whole stock follows the count. Lots the counter adds share the rest.
 - ✅ **Hint on a lot with a caducidad or lote but no units:** "Sin cantidad: este lote no se guardará" (`CountLot.ignoredHint`).
@@ -165,6 +166,10 @@ same product with different expiries (4 vencen ene-2027, 6 vencen mar-2027).
 - ✅ **Razón/Notas cap (500 characters, from the review nit):** Guardar and Sin cambios are blocked, with a hint under Notas (`CountNotes.problem`).
 - ✅ **50-lot cap** (API 400 past it): Guardar blocked past 50, and Agregar lote / Escanear caja disabled at 50 (`CountLots.maxLots`).
 - **Untested view rules:** Ajustes' clear-on-store-switch and "No contados" Reintentar are small and stay in the views; move them into FarmaciaKit if they grow.
+
+## ✅ Lot camera: caducidad alone is accepted (2026-11-06, `feature/lot-scan-expiry-only`)
+
+When the scan reads a caducidad but no lote, it no longer waits for Usar: after `LotScan.lotGrace` (1 s) of a steady reading it fills the caducidad and closes. Both read → closes right away, as before; a lote alone still waits for Usar. Applies to receiving and Conteo inicial. Device-only check: a box whose lote the camera can't read closes after ~1 s with only Vence filled.
 
 ## Migration (migrate-as-touched)
 
