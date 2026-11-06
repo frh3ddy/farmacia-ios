@@ -137,7 +137,34 @@ same product with different expiries (4 vencen ene-2027, 6 vencen mar-2027).
    when edited lots don't add up to the stock.
    Smoke: count 10, lots 4 ene-2027 + 6 mar-2027 → saved; 4 + 3 → blocked with "faltan 3"; Alertas shows the lots.
 
+8a. **Count split over lots** (`CountLots.split`, rules in `LotSplit`; the view only forwards user events): a changed count, "Agregar lote", "Escanear caja" or a
+   deleted lot spreads the count over the rows (1 lot = all, N lots = even, remainder first); each lot row
+   has a ± stepper. A lot typed or stepped by hand is kept; the others share the rest of the count. The form loading the stock and "Sin cambios" don't re-split, so pre-filled lots stay untouched.
+   Smoke: count 10 → Agregar lote → 10; Agregar lote → 5 + 5; + on one → 6 + 5; Agregar lote → 6 + 2 + 2 (edited lot kept).
+
+8b. **Workflow review fixes** (2026-11-05, on `feature/count-lot-split`):
+   - A lot at 0 units is ignored; lots over the count say "sobran N" before asking for a caducidad (`CountLots.check`).
+   - An added lot takes its share of the count, so it needs its caducidad; deleting it gives the share back.
+   - Razón/Notas are sent with the entry (API: farmacia-ops `feature/stock-count-notes`, ≤500 chars).
+   - Entries, start, end and "Poner en 0" send `locationId` (the store shown, not the session's).
+   - Lots are read once per store and Conteo inicial (`CountLotsLoad`), so a store switch never shows stale lots.
+   - The form's reads run in parallel once the count is known; reloads go through `.task(id:)` (`reloadID`), so a stale one is cancelled.
+   - Ajustes: no alert on background reload failures; a store switch clears the previous store's count. "No contados": a failed first load shows Reintentar.
+
 9. **Docs:** README (Conteo inicial bullet), this epic's status; `graphify update .`.
+
+## 📋 Follow-ups (2026-11-05)
+
+- **Release order:** farmacia-ops `feature/stock-count-notes` to production before this branch ships; until then Razón/Notas are ignored.
+- ✅ **End-to-end check:** a "Sin cambios" count with Razón against the local API showed the Razón under "Ya contado" when the form was reopened (2026-11-05, simulator).
+- **Device check:** clear the count and type a single digit (the simulator tool couldn't clear the centered field); lots should re-split.
+- **iPad:** the lots release was never installed on the iPad (`95bd06a`); this branch isn't either. The iPad (A16) is paired; install after review and once the API is deployed (`scripts/release-build-install.sh` picks an iPhone; pass `DEVICE_UDID`).
+- ✅ **Pre-filled lots keep their quantities** (`LotSplit(prefilled:stock:)`); only a single lot that is the whole stock follows the count. Lots the counter adds share the rest.
+- ✅ **Hint on a lot with a caducidad or lote but no units:** "Sin cantidad: este lote no se guardará" (`CountLot.ignoredHint`).
+- ✅ **Notes on a matching count** show under "Ya contado" (`CountedEntry.remarks`; API GET entries returns reason/notes on `feature/stock-count-notes`).
+- ✅ **Razón/Notas cap (500 characters, from the review nit):** Guardar and Sin cambios are blocked, with a hint under Notas (`CountNotes.problem`).
+- ✅ **50-lot cap** (API 400 past it): Guardar blocked past 50, and Agregar lote / Escanear caja disabled at 50 (`CountLots.maxLots`).
+- **Untested view rules:** Ajustes' clear-on-store-switch and "No contados" Reintentar are small and stay in the views; move them into FarmaciaKit if they grow.
 
 ## Migration (migrate-as-touched)
 
