@@ -27,4 +27,32 @@ struct LotScanTests {
         #expect(scan.lot == "A23B45")
         #expect(scan.expiry == MonthYear(year: 2027, month: 3))
     }
+
+    @Test("given both the lot and the caducidad, should accept right away")
+    func bothNow() {
+        let scan = LotScan(lines: ["LOTE: A23B45", "CAD 03/2027"], barcodes: [], today: today)
+        #expect(scan.autoAccept == .now)
+    }
+
+    @Test("given only the caducidad, should accept it after a short wait for the lot")
+    func expiryOnlyAfterGrace() {
+        let scan = LotScan(lines: ["CAD 03/2027"], barcodes: [], today: today)
+        #expect(scan.expiry == MonthYear(year: 2027, month: 3))
+        #expect(scan.lot == nil)
+        #expect(scan.autoAccept == .afterGrace)
+    }
+
+    @Test("given only a lot, or nothing, should wait for Usar")
+    func lotOnlyWaits() {
+        #expect(LotScan(lines: ["LOTE: A23B45"], barcodes: [], today: today).autoAccept == .no)
+        #expect(LotScan(lines: [], barcodes: [], today: today).autoAccept == .no)
+    }
+
+    @Test("given a box with FAB and CAD dates and no readable lote, should take the caducidad alone, never the FAB date")
+    func fabAndCadNoLot() {
+        let scan = LotScan(lines: ["FAB 01/2025", "CAD 01/2028"], barcodes: [], today: today)
+        #expect(scan.expiry == MonthYear(year: 2028, month: 1))
+        #expect(scan.autoAccept == .afterGrace)
+        #expect(LotScan(lines: ["ELAB 10/2026"], barcodes: [], today: today).autoAccept == .no)
+    }
 }
