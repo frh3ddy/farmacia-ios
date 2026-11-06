@@ -143,7 +143,10 @@ class InventoryViewModel: ObservableObject {
         countedQuantity: Int,
         unitCost: Double?,
         clientRequestId: String,
-        lots: [StockCountLot]?
+        lots: [StockCountLot]?,
+        locationId: String?,
+        reason: String,
+        notes: String
     ) async -> SaveOutcome {
         isSubmitting = true
         defer { isSubmitting = false }
@@ -155,7 +158,10 @@ class InventoryViewModel: ObservableObject {
                     countedQuantity: countedQuantity,
                     unitCost: unitCost,
                     clientRequestId: clientRequestId,
-                    lots: lots
+                    lots: lots,
+                    locationId: locationId,
+                    reason: reason,
+                    notes: notes
                 )
             )
             if let warning = response.data?.squareWarning {

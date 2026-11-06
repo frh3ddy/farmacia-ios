@@ -307,4 +307,276 @@ struct CountedEntryTests {
         let entry = try decode(#"{"countedQuantity":3,"countedAt":"2026-11-06T04:30:00.000Z","countedByName":null}"#)
         #expect(entry.note(timeZone: mx) == "Ya contado en este conteo: 3 · 5 nov")
     }
+    @Test("given the earlier count's Razón and Notas, should show them, so a matching count's notes aren't lost")
+    func remarks() throws {
+        let entry = try decode(#"{"countedQuantity":3,"countedAt":"2026-11-05T18:00:00.000Z","countedByName":null,"reason":"Caja rota","notes":"en bodega"}"#)
+        #expect(entry.remarks == "Caja rota · en bodega")
+    }
+
+    @Test("given a server without them, or empty ones, should show nothing")
+    func noRemarks() throws {
+        #expect(try decode(#"{"countedQuantity":3,"countedAt":"2026-11-05T18:00:00.000Z","countedByName":null}"#).remarks == nil)
+        #expect(try decode(#"{"countedQuantity":3,"countedAt":"2026-11-05T18:00:00.000Z","countedByName":null,"reason":null,"notes":""}"#).remarks == nil)
+    }
+}
+
+struct CountLotsSplitTests {
+    private let jan = MonthYear(year: 2027, month: 1)
+
+    @Test("given one lot, should take the whole count")
+    func one() {
+        let rows = CountLots.split(10, across: [CountLot(quantity: 3, expiry: jan)])
+        #expect(rows.map(\.quantity) == [10])
+        #expect(rows[0].expiry == jan)
+    }
+
+    @Test("given several lots, should split evenly, the remainder to the first ones, adding up to the count")
+    func several() {
+        #expect(CountLots.split(10, across: [CountLot(), CountLot()]).map(\.quantity) == [5, 5])
+        #expect(CountLots.split(10, across: [CountLot(), CountLot(), CountLot()]).map(\.quantity) == [4, 3, 3])
+        #expect(CountLots.split(1, across: [CountLot(), CountLot()]).map(\.quantity) == [1, 0])
+    }
+
+    @Test("given no lots or no count, should leave the rows as they are")
+    func nothing() {
+        #expect(CountLots.split(10, across: []).isEmpty)
+        let rows = [CountLot(quantity: 2)]
+        #expect(CountLots.split(nil, across: rows) == rows)
+    }
+}
+
+struct CountLotsSplitKeepingTests {
+    @Test("given a lot edited by hand, should keep it and split the rest of the count over the others")
+    func keepsEdited() {
+        let edited = CountLot(quantity: 6)
+        let rows = CountLots.split(10, across: [edited, CountLot(), CountLot()], keeping: [edited.id])
+        #expect(rows.map(\.quantity) == [6, 2, 2])
+    }
+
+    @Test("given edited lots over the count, should leave the others at 0, so the footer shows the mismatch")
+    func editedOver() {
+        let edited = CountLot(quantity: 12)
+        #expect(CountLots.split(10, across: [edited, CountLot()], keeping: [edited.id]).map(\.quantity) == [12, 0])
+    }
+
+    @Test("given every lot edited, should change nothing")
+    func allEdited() {
+        let rows = [CountLot(quantity: 6), CountLot(quantity: 4)]
+        #expect(CountLots.split(20, across: rows, keeping: Set(rows.map(\.id))) == rows)
+    }
+}
+
+struct LotSplitTests {
+    @Test("given the field echoing the same count back, should leave the lots as they are")
+    func echo() {
+        var split = LotSplit([CountLot(quantity: 6), CountLot(quantity: 4)])
+        split.countChanged(from: 10, to: 10)
+        #expect(split.rows.map(\.quantity) == [6, 4])
+    }
+
+    @Test("given a count typed after clearing the field (nil → 8), should split it")
+    func typedAfterClearing() {
+        var split = LotSplit([CountLot(), CountLot()])
+        split.countChanged(from: nil, to: 8)
+        #expect(split.rows.map(\.quantity) == [4, 4])
+    }
+
+    @Test("given the quantity field writing back the same value, should not pin the lot")
+    func sameValueNotPinned() {
+        var split = LotSplit([CountLot(quantity: 10)])
+        split.setQuantity(10, of: split.rows[0].id)
+        split.add(CountLot(), count: 10)
+        #expect(split.rows.map(\.quantity) == [5, 5])
+    }
+
+    @Test("given a lot edited by hand, should keep it when a lot is added or the count changes")
+    func editedKept() {
+        var split = LotSplit([CountLot(quantity: 5), CountLot(quantity: 5)])
+        split.setQuantity(6, of: split.rows[0].id)
+        split.add(CountLot(), count: 10)
+        #expect(split.rows.map(\.quantity) == [6, 2, 2])
+        split.countChanged(from: 10, to: 12)
+        #expect(split.rows.map(\.quantity) == [6, 3, 3])
+    }
+
+    @Test("given a lot removed, should split the count over the rest")
+    func removed() {
+        var split = LotSplit([CountLot(), CountLot(), CountLot()])
+        split.countChanged(from: 0, to: 9)
+        split.remove(atOffsets: [0], count: 9)
+        #expect(split.rows.map(\.quantity) == [5, 4])
+    }
+}
+
+// MARK: - Workflow review fixes
+
+struct CountLotsZeroQuantityTests {
+    private let jan = MonthYear(year: 2027, month: 1)
+    private let mar = MonthYear(year: 2027, month: 3)
+
+    @Test("given a lot split down to 0 units, should ignore it, not block Guardar for a caducidad it has")
+    func zeroLotIgnored() {
+        let lots = CountLots([CountLot(quantity: 1, expiry: jan), CountLot(quantity: 0, expiry: mar)])
+        #expect(lots.check(counted: 1) == .matches)
+        #expect(lots.requestLots()?.count == 1)
+    }
+
+    @Test("given lots over the count, should say so before asking for a caducidad")
+    func overBeforeCaducidad() {
+        let lots = CountLots([CountLot(quantity: 12, expiry: jan), CountLot(quantity: 1)])
+        #expect(lots.check(counted: 10) == .mismatch("Los lotes suman 13 de 10: sobran 3"))
+    }
+
+    @Test("given a lot with units and no caducidad within the count, should ask for its caducidad")
+    func stillAsksCaducidad() {
+        #expect(CountLots([CountLot(quantity: 4)]).check(counted: 10) == .mismatch("Cada lote necesita su caducidad"))
+    }
+}
+
+struct StockCountRequestStoreTests {
+    private func json(_ value: some Encodable) throws -> [String: Any] {
+        try JSONSerialization.jsonObject(with: JSONEncoder().encode(value)) as! [String: Any]
+    }
+
+    @Test("given a count entry, should name the store and send Razón and Notas trimmed")
+    func entryBody() throws {
+        let body = try json(StockCountEntryRequest(productId: "p1", countedQuantity: 5, unitCost: nil, clientRequestId: "r",
+                                                   locationId: "l1", reason: "  Caja rota ", notes: "en bodega"))
+        #expect(body["locationId"] as? String == "l1")
+        #expect(body["reason"] as? String == "Caja rota")
+        #expect(body["notes"] as? String == "en bodega")
+    }
+
+    @Test("given blank Razón and Notas, should leave them out")
+    func blankNotes() throws {
+        let body = try json(StockCountEntryRequest(productId: "p1", countedQuantity: 5, unitCost: nil, clientRequestId: "r",
+                                                   reason: "  ", notes: ""))
+        #expect(body["reason"] == nil)
+        #expect(body["notes"] == nil)
+    }
+
+    @Test("given Poner en 0, should name the store")
+    func zeroBody() throws {
+        #expect(try json(StockCountZeroRequest(productIds: ["p1"], locationId: "l1"))["locationId"] as? String == "l1")
+    }
+}
+
+struct CountLotsLoadTests {
+    private let session = StockCountSession(id: "c1", startedAt: .now, countedProducts: 0)
+
+    @Test("given an open count and no lots read yet, should read them, and not show them until then")
+    func needsFirstLoad() {
+        let load = CountLotsLoad()
+        #expect(load.needsLoad(locationId: "l1", session: session))
+        #expect(!load.isAvailable(locationId: "l1", session: session))
+    }
+
+    @Test("given lots read for this store and count, should not read them again, so edits survive a reload")
+    func loadedOnce() {
+        var load = CountLotsLoad()
+        load.loaded(locationId: "l1", session: session)
+        #expect(!load.needsLoad(locationId: "l1", session: session))
+        #expect(load.isAvailable(locationId: "l1", session: session))
+    }
+
+    @Test("given another store, or another count, should hide the old lots and read them again")
+    func otherStoreOrCount() {
+        var load = CountLotsLoad()
+        load.loaded(locationId: "l1", session: session)
+        let other = StockCountSession(id: "c2", startedAt: .now, countedProducts: 0)
+        #expect(load.needsLoad(locationId: "l2", session: session))
+        #expect(!load.isAvailable(locationId: "l2", session: session))
+        #expect(load.needsLoad(locationId: "l1", session: other))
+    }
+
+    @Test("given no open count, should neither read nor show lots")
+    func noCount() {
+        var load = CountLotsLoad()
+        load.loaded(locationId: "l1", session: session)
+        #expect(!load.needsLoad(locationId: "l1", session: nil))
+        #expect(!load.isAvailable(locationId: "l1", session: nil))
+    }
+}
+
+struct LotSplitPrefilledTests {
+    private let jan = MonthYear(year: 2027, month: 1)
+    private let mar = MonthYear(year: 2027, month: 3)
+
+    @Test("given several pre-filled lots, should keep their quantities when the count changes")
+    func severalKept() {
+        var split = LotSplit(prefilled: [CountLot(quantity: 6, expiry: jan), CountLot(quantity: 4, expiry: mar)], stock: 10)
+        split.countChanged(from: 10, to: 11)
+        #expect(split.rows.map(\.quantity) == [6, 4])
+    }
+
+    @Test("given pre-filled lots kept, should give a new lot the rest of the count")
+    func newLotGetsRest() {
+        var split = LotSplit(prefilled: [CountLot(quantity: 6, expiry: jan), CountLot(quantity: 4, expiry: mar)], stock: 10)
+        split.countChanged(from: 10, to: 11)
+        split.add(CountLot(), count: 11)
+        #expect(split.rows.map(\.quantity) == [6, 4, 1])
+    }
+
+    @Test("given one pre-filled lot under the stock (the rest has no lot), should keep it, not label the rest")
+    func partialLotKept() {
+        var split = LotSplit(prefilled: [CountLot(quantity: 40, expiry: jan)], stock: 65)
+        split.countChanged(from: 65, to: 66)
+        #expect(split.rows.map(\.quantity) == [40])
+    }
+
+    @Test("given one pre-filled lot that is the whole stock, should follow the count")
+    func wholeStockFollows() {
+        var split = LotSplit(prefilled: [CountLot(quantity: 65, expiry: jan)], stock: 65)
+        split.countChanged(from: 65, to: 66)
+        #expect(split.rows.map(\.quantity) == [66])
+    }
+}
+
+struct CountLotIgnoredHintTests {
+    private let jan = MonthYear(year: 2027, month: 1)
+
+    @Test("given a lot with a caducidad or lote but no units, should say it won't be saved")
+    func hint() {
+        #expect(CountLot(quantity: 0, expiry: jan).ignoredHint == "Sin cantidad: este lote no se guardará")
+        #expect(CountLot(quantity: nil, batchNumber: "A1").ignoredHint == "Sin cantidad: este lote no se guardará")
+    }
+
+    @Test("given a lot with units, or an empty row, should say nothing")
+    func noHint() {
+        #expect(CountLot(quantity: 3, expiry: jan).ignoredHint == nil)
+        #expect(CountLot().ignoredHint == nil)
+    }
+}
+
+struct CountLotsLimitTests {
+    private let jan = MonthYear(year: 2027, month: 1)
+
+    @Test("given more than 50 lots, should block Guardar with the API's limit")
+    func overLimit() {
+        let rows = (0..<51).map { _ in CountLot(quantity: 1, expiry: jan) }
+        #expect(CountLots(rows).check(counted: 51) == .mismatch("Un conteo puede tener como máximo 50 lotes"))
+    }
+
+    @Test("given 50 lots, should allow them, and say no more can be added")
+    func atLimit() {
+        let rows = (0..<50).map { _ in CountLot(quantity: 1, expiry: jan) }
+        #expect(CountLots(rows).check(counted: 50) == .matches)
+        #expect(!CountLots.canAdd(to: rows))
+        #expect(CountLots.canAdd(to: Array(rows.dropLast())))
+    }
+}
+
+struct CountNotesLimitTests {
+    @Test("given Razón or Notas over 500 characters (after trimming), should say so, as the API would refuse it")
+    func tooLong() {
+        let long = String(repeating: "a", count: 501)
+        #expect(CountNotes.problem(reason: long, notes: "") == "La razón y las notas deben tener 500 caracteres o menos")
+        #expect(CountNotes.problem(reason: "", notes: long) != nil)
+    }
+
+    @Test("given 500 characters, or spaces around a short text, should allow it")
+    func withinLimit() {
+        #expect(CountNotes.problem(reason: String(repeating: "a", count: 500), notes: "") == nil)
+        #expect(CountNotes.problem(reason: "  ok  " + String(repeating: " ", count: 600), notes: "") == nil)
+    }
 }

@@ -93,20 +93,48 @@ public struct StockCountEntryRequest: Encodable, Sendable {
     public let clientRequestId: String
     /// The counted lots (Conteo inicial); nil leaves the product's lots as they are.
     public let lots: [StockCountLot]?
+    /// The store the form shows, so the count never lands on the session's store if they differ.
+    public let locationId: String?
+    /// Razón and Notas, trimmed; blank ones are left out.
+    public let reason: String?
+    public let notes: String?
 
-    public init(productId: String, countedQuantity: Int, unitCost: Double?, clientRequestId: String, lots: [StockCountLot]? = nil) {
+    public init(productId: String, countedQuantity: Int, unitCost: Double?, clientRequestId: String,
+                lots: [StockCountLot]? = nil, locationId: String? = nil, reason: String? = nil, notes: String? = nil) {
         self.productId = productId
         self.countedQuantity = countedQuantity
         self.unitCost = unitCost
         self.clientRequestId = clientRequestId
         self.lots = lots
+        self.locationId = locationId
+        self.reason = Self.text(reason)
+        self.notes = Self.text(notes)
+    }
+
+    private static func text(_ value: String?) -> String? {
+        guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty else { return nil }
+        return trimmed
+    }
+}
+
+/// Razón and Notas within the API's limit (it refuses more with a 400), checked before Guardar.
+public enum CountNotes {
+    public static let maxLength = 500
+
+    public static func problem(reason: String, notes: String) -> String? {
+        let tooLong = [reason, notes].contains { $0.trimmingCharacters(in: .whitespacesAndNewlines).count > maxLength }
+        return tooLong ? "La razón y las notas deben tener \(maxLength) caracteres o menos" : nil
     }
 }
 
 /// `POST /inventory/stock-counts/:id/zero`.
 public struct StockCountZeroRequest: Encodable, Sendable {
     public let productIds: [String]
-    public init(productIds: [String]) { self.productIds = productIds }
+    public let locationId: String?
+    public init(productIds: [String], locationId: String? = nil) {
+        self.productIds = productIds
+        self.locationId = locationId
+    }
 }
 
 /// One product of a "Poner en 0" run.
@@ -194,8 +222,9 @@ public struct CountLot: Identifiable, Equatable, Sendable {
 
     private var lot: String { batchNumber.trimmingCharacters(in: .whitespaces) }
 
-    /// Nothing typed: ignored, so an empty "Agregar lote" row never blocks Guardar.
-    public var isBlank: Bool { (quantity ?? 0) == 0 && expiry == nil && lot.isEmpty }
+    /// No units: ignored, so a lot the split left at 0 (or an empty row) never blocks Guardar.
+    /// A new "Agregar lote" row takes its share of the count, so it needs its caducidad; deleting it gives the share back.
+    public var isBlank: Bool { (quantity ?? 0) == 0 }
 
     /// The row after a camera scan of the box: what the scan read replaces the field, what it
     /// missed keeps what was there; the quantity stays.
@@ -206,8 +235,87 @@ public struct CountLot: Identifiable, Equatable, Sendable {
         return row
     }
 
+    /// Under a row with details but no units: such a row is ignored (`isBlank`), so it isn't saved.
+    public var ignoredHint: String? {
+        isBlank && (expiry != nil || !lot.isEmpty) ? "Sin cantidad: este lote no se guardará" : nil
+    }
+
     /// The caducidad is what matters; the lote number is optional.
     public var isComplete: Bool { (quantity ?? 0) > 0 && expiry != nil }
+}
+
+/// The count form's lot rows and when the count is spread over them (`CountLots.split`).
+/// The view forwards user events only: setting the count programmatically (the stock loading,
+/// "Sin cambios") isn't an event, so pre-filled lots stay as they are.
+public struct LotSplit: Sendable {
+    public var rows: [CountLot]
+    /// Rows whose quantity was changed by hand: a split leaves them as they are.
+    private var edited: Set<UUID> = []
+
+    public init(_ rows: [CountLot] = []) { self.rows = rows }
+
+    /// The product's current lots. They keep their quantities when the count changes (they're what
+    /// the store knows about its caducidades), except a single lot that is the whole stock: it
+    /// follows the count. Lots the counter adds share whatever the pre-filled ones don't cover.
+    public init(prefilled rows: [CountLot], stock: Int?) {
+        self.rows = rows
+        let followsCount = rows.count == 1 && rows[0].quantity == stock
+        if !followsCount { edited = Set(rows.map(\.id)) }
+    }
+
+    /// The counter changed the count. A field echoing the same value back is no change.
+    public mutating func countChanged(from old: Int?, to new: Int?) {
+        guard old != new else { return }
+        split(new)
+    }
+
+    /// A quantity typed or ±'d on a row. The field writing back what it shows doesn't pin it.
+    public mutating func setQuantity(_ quantity: Int?, of id: UUID) {
+        guard let index = rows.firstIndex(where: { $0.id == id }), rows[index].quantity != quantity else { return }
+        rows[index].quantity = quantity
+        edited.insert(id)
+    }
+
+    public mutating func add(_ row: CountLot, count: Int?) {
+        rows.append(row)
+        split(count)
+    }
+
+    public mutating func remove(atOffsets offsets: IndexSet, count: Int?) {
+        for index in offsets.sorted(by: >) { edited.remove(rows.remove(at: index).id) }
+        split(count)
+    }
+
+    private mutating func split(_ count: Int?) {
+        rows = CountLots.split(count, across: rows, keeping: edited)
+    }
+}
+
+/// When the count form reads the product's lots: once per store and Conteo inicial, so a reload
+/// (connection back) keeps what was edited, while another store or count never shows stale lots.
+public struct CountLotsLoad: Equatable, Sendable {
+    private var loadedFor: String?
+
+    public init() {}
+
+    private static func key(_ locationId: String, _ session: StockCountSession?) -> String? {
+        session.map { "\(locationId)|\($0.id)" }
+    }
+
+    public func needsLoad(locationId: String, session: StockCountSession?) -> Bool {
+        guard let key = Self.key(locationId, session) else { return false }
+        return key != loadedFor
+    }
+
+    /// The lots section shows, and its lots are sent, only for the store and count they were read for.
+    public func isAvailable(locationId: String, session: StockCountSession?) -> Bool {
+        guard let key = Self.key(locationId, session) else { return false }
+        return key == loadedFor
+    }
+
+    public mutating func loaded(locationId: String, session: StockCountSession?) {
+        loadedFor = Self.key(locationId, session)
+    }
 }
 
 /// A lot as `POST …/entries` takes it: `expiryDate` (always set; lote optional) like receiving (`LocalDay` of the month's first day).
@@ -238,6 +346,12 @@ public struct CountLots: Sendable {
         self.original = original
     }
 
+    /// The API's cap on lots in one count (a 400 past it).
+    public static let maxLots = 50
+
+    /// "Agregar lote" / "Escanear caja" stay available while there's room.
+    public static func canAdd(to rows: [CountLot]) -> Bool { rows.count < maxLots }
+
     private var untouched: Bool { rows == original }
 
     private var entered: [CountLot] { untouched ? [] : rows.filter { !$0.isBlank } }
@@ -245,17 +359,42 @@ public struct CountLots: Sendable {
     public func check(counted: Int?) -> LotsCheck {
         let entered = entered
         guard !entered.isEmpty else { return .none }
-        guard entered.allSatisfy(\.isComplete) else {
-            return .mismatch("Cada lote necesita su caducidad")
+        if entered.count > Self.maxLots {
+            return .mismatch("Un conteo puede tener como máximo \(Self.maxLots) lotes")
         }
         let total = entered.reduce(0) { $0 + ($1.quantity ?? 0) }
         let counted = counted ?? 0
+        if total > counted {
+            return .mismatch("Los lotes suman \(total) de \(counted): sobran \(total - counted)")
+        }
+        guard entered.allSatisfy(\.isComplete) else {
+            return .mismatch("Cada lote necesita su caducidad")
+        }
         guard total != counted else { return .matches }
         guard total > counted else {
             let rest = counted - total
             return .partial(rest == 1 ? "1 unidad sin lote" : "\(rest) unidades sin lote")
         }
         return .mismatch("Los lotes suman \(total) de \(counted): sobran \(total - counted)")
+    }
+
+    /// The count spread over the lot rows: one row takes it all, several split it evenly (the
+    /// remainder to the first rows), so the lots add up to the count before any ± on a row.
+    /// Rows in `keeping` (edited by hand) stay as they are; the rest of the count goes to the others.
+    /// No count or no rows to fill: unchanged.
+    public static func split(_ counted: Int?, across rows: [CountLot], keeping: Set<UUID> = []) -> [CountLot] {
+        let open = rows.filter { !keeping.contains($0.id) }
+        guard let counted, !open.isEmpty else { return rows }
+        let kept = rows.filter { keeping.contains($0.id) }.reduce(0) { $0 + ($1.quantity ?? 0) }
+        let (share, extra) = max(0, counted - kept).quotientAndRemainder(dividingBy: open.count)
+        var index = 0
+        return rows.map { row in
+            guard !keeping.contains(row.id) else { return row }
+            var row = row
+            row.quantity = share + (index < extra ? 1 : 0)
+            index += 1
+            return row
+        }
     }
 
     /// What keeps "Sin cambios" from saving: edited lots over the stock (or a lot missing its details).
@@ -304,6 +443,15 @@ public struct CountedEntry: Decodable, Equatable, Sendable {
     public let countedQuantity: Int
     public let countedAt: Date
     public let countedByName: String?
+    /// The earlier count's Razón and Notas (absent on servers from before them).
+    public let reason: String?
+    public let notes: String?
+
+    /// "Caja rota · en bodega" under the "Ya contado" line; nil when there are none.
+    public var remarks: String? {
+        let parts = [reason, notes].compactMap { $0 }.filter { !$0.isEmpty }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
 
     /// "Ya contado en este conteo: 10 · 5 nov, Fredy", the day in the store's time zone.
     public func note(timeZone: TimeZone = .current, locale: Locale = Locale(identifier: "es_MX")) -> String {
