@@ -7,7 +7,8 @@ import FarmaciaKit
 // Point the camera at the box: reads the lot and the expiry from the printed
 // text, or exactly from a GS1 DataMatrix when the box has one (`LotScan`).
 // Once it has both it fills them in and closes; the user checks them in the
-// form. With only one found, "Usar" takes what it has.
+// form. A caducidad alone is taken too, after `LotScan.lotGrace` (the lote is
+// optional). A lote alone waits for "Usar".
 
 struct LotScannerView: View {
     /// What was found; called once, then the sheet closes.
@@ -25,7 +26,15 @@ struct LotScannerView: View {
         NavigationStack {
             LiveTextScanner { lines, barcodes in
                 scan = LotScan(lines: lines, barcodes: barcodes, today: MonthYear(date: .now))
-                if scan.isComplete { use() }
+                if scan.autoAccept == .now { use() }
+            }
+            // A caducidad with no lot: give the lot a moment to be read, then take what's there.
+            // Restarts when the reading changes, so only a steady caducidad is taken.
+            .task(id: scan.expiry) {
+                guard scan.autoAccept == .afterGrace else { return }
+                try? await Task.sleep(for: LotScan.lotGrace)
+                guard !Task.isCancelled, scan.expiry != nil else { return }
+                use()
             }
             .ignoresSafeArea(edges: .bottom)
             .overlay(alignment: .bottom) { foundCard }
@@ -37,7 +46,7 @@ struct LotScannerView: View {
                 }
             }
         }
-        .sensoryFeedback(.success, trigger: scan.isComplete) { _, done in done }
+        .sensoryFeedback(.success, trigger: used) { _, done in done }
     }
 
     private var foundCard: some View {
