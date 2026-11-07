@@ -34,12 +34,12 @@ struct LotScanTests {
         #expect(scan.autoAccept == .now)
     }
 
-    @Test("given only the caducidad, should accept it after a short wait for the lot")
-    func expiryOnlyAfterGrace() {
+    @Test("given only the caducidad, should accept it right away: some boxes show it for a split second")
+    func expiryOnlyNow() {
         let scan = LotScan(lines: ["CAD 03/2027"], barcodes: [], today: today)
         #expect(scan.expiry == MonthYear(year: 2027, month: 3))
         #expect(scan.lot == nil)
-        #expect(scan.autoAccept == .afterGrace)
+        #expect(scan.autoAccept == .now)
     }
 
     @Test("given only a lot, or nothing, should wait for Usar")
@@ -52,7 +52,7 @@ struct LotScanTests {
     func fabAndCadNoLot() {
         let scan = LotScan(lines: ["FAB 01/2025", "CAD 01/2028"], barcodes: [], today: today)
         #expect(scan.expiry == MonthYear(year: 2028, month: 1))
-        #expect(scan.autoAccept == .afterGrace)
+        #expect(scan.autoAccept == .now)
         #expect(LotScan(lines: ["ELAB 10/2026"], barcodes: [], today: today).autoAccept == .no)
     }
 }

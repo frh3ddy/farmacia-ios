@@ -7,8 +7,9 @@ import FarmaciaKit
 // Point the camera at the box: reads the lot and the expiry from the printed
 // text, or exactly from a GS1 DataMatrix when the box has one (`LotScan`).
 // Once it has both it fills them in and closes; the user checks them in the
-// form. A caducidad alone is taken too, after `LotScan.lotGrace` (the lote is
-// optional). A lote alone waits for "Usar".
+// form. The caducidad is what matters: as soon as one is read it's taken (with
+// the lote if read too), since some boxes show it for a split second. A lote
+// alone waits for "Usar".
 
 struct LotScannerView: View {
     /// What was found; called once, then the sheet closes.
@@ -27,14 +28,6 @@ struct LotScannerView: View {
             LiveTextScanner { lines, barcodes in
                 scan = LotScan(lines: lines, barcodes: barcodes, today: MonthYear(date: .now))
                 if scan.autoAccept == .now { use() }
-            }
-            // A caducidad with no lot: give the lot a moment to be read, then take what's there.
-            // Restarts when the reading changes, so only a steady caducidad is taken.
-            .task(id: scan.expiry) {
-                guard scan.autoAccept == .afterGrace else { return }
-                try? await Task.sleep(for: LotScan.lotGrace)
-                guard !Task.isCancelled, scan.expiry != nil else { return }
-                use()
             }
             .ignoresSafeArea(edges: .bottom)
             .overlay(alignment: .bottom) { foundCard }
@@ -122,16 +115,23 @@ private struct LiveTextScanner: UIViewControllerRepresentable {
         }
 
         private func report(_ items: [RecognizedItem]) {
-            var lines: [String] = []
+            var blocks: [(text: String, frame: CGRect)] = []
             var barcodes: [String] = []
             for item in items {
                 switch item {
-                case .text(let text): lines += text.transcript.components(separatedBy: .newlines)
+                case .text(let text): blocks.append((text.transcript, Self.frame(of: text.bounds)))
                 case .barcode(let code): if let payload = code.payloadStringValue { barcodes.append(payload) }
                 @unknown default: break
                 }
             }
-            onChange(lines, barcodes)
+            // Read like a page: the lote is found by its place next to the caducidad.
+            onChange(ReadingOrder.lines(blocks), barcodes)
+        }
+
+        private static func frame(of bounds: RecognizedItem.Bounds) -> CGRect {
+            let xs = [bounds.topLeft.x, bounds.topRight.x, bounds.bottomLeft.x, bounds.bottomRight.x]
+            let ys = [bounds.topLeft.y, bounds.topRight.y, bounds.bottomLeft.y, bounds.bottomRight.y]
+            return CGRect(x: xs.min()!, y: ys.min()!, width: xs.max()! - xs.min()!, height: ys.max()! - ys.min()!)
         }
     }
 }

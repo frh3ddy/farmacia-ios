@@ -169,7 +169,21 @@ same product with different expiries (4 vencen ene-2027, 6 vencen mar-2027).
 
 ## ✅ Lot camera: caducidad alone is accepted (2026-11-06, `feature/lot-scan-expiry-only`)
 
-When the scan reads a caducidad but no lote, it no longer waits for Usar: after `LotScan.lotGrace` (1 s) of a steady reading it fills the caducidad and closes. Both read → closes right away, as before; a lote alone still waits for Usar. Applies to receiving and Conteo inicial. Device-only check: a box whose lote the camera can't read closes after ~1 s with only Vence filled.
+When the scan reads a caducidad but no lote, it no longer waits for Usar. ~~First after a 1 s grace~~; since 2026-11-06 (user: "some read it for a split second and get lost") it fills the caducidad and closes as soon as one is read, with the lote if read in the same moment. A lote alone still waits for Usar. Applies to receiving and Conteo inicial.
+
+## ✅ Lot camera: header labels, dot-matrix (2026-11-06, `feature/lot-scan-header-labels`)
+
+From 8 photos of boxes the scanner struggled with (IMG_5659–5666, as tests in `LotScanPhotoTests`): "Lote:" and "Caducidad:" printed in a header, values inkjet-printed elsewhere, so neither was beside its label.
+- Lote with no value beside a label (labels in a header, or no labels at all — the "Lote" requirement was dropped 2026-11-06 at the user's request): the first lot-looking number (5–20 characters, at least 3 digits, not an amount like 700MG) before the caducidad on its line, else on one of the two lines above (`LotNumber.unlabeled`).
+- Text blocks are read in page order, rows top to bottom and left to right (`ReadingOrder`, from VisionKit's bounds).
+- Spaced dot-matrix joined ("2 5 0 1 0 1 7 8" → 25010178, "E N E 2 7" → ENE27); months read with a zero ("0CT", "AG0", "N0V"); a lote glued to the month ("254875AG0 27"); prices are never dates ("$10.30").
+- Not a lote: the sanitary registration ("Reg. No. 123M2015 SSA", its line skipped) and barcode digits (12–14 digits). A lote glued to the month is split off only before a spaced 2-digit year, so a lote code with a month inside ("A23DIC45") isn't read as a date (review, dev-ee).
+- ~~A guessed lote waits like a caducidad alone~~: superseded, a caducidad now closes the scanner right away; the guessed lote is shown in the form to check.
+- Barcode digits and the registration number are rejected on the labeled path too ("Lote:" with the GTIN on the next line).
+- ✅ A lote printed before the keyword on the same line ("B24017 CAD 08/2027") is read (review nit).
+- With instant accept (review, dev-ee): a price line's number is never a date, even without "$" ("PRECIO MAX 12.50", "P.M.P. 12.50"); a date with no keyword more than 6 years away is ignored ("12.50" isn't Dec 2050); postal codes, phone numbers and the maker's "S.A. de C.V." line aren't lotes.
+- Real Vision OCR of the photos (run on the Mac, 2026-11-07; `LotScanVisionOutputTests`): AGO is read "A60 27" (now AGO when spaced from its year, never on a lote line) and "A6028" (left unread: it can't be told from a lote code like "A6029", review dev-79); a price read "< 10.00" was a second loose date (loose dates now within 6 years either way). IMG_5663 reads only at full resolution (closer helps). Not readable by Vision at all, even full resolution and blurred: IMG_5665's AGO, IMG_5669 (widely spaced dot-matrix: SAL/FLL/NAL/CAD block), and the embossed IMG_3410's "MAR" (read "AR", "M"/"R"); type those in.
+- Device check: scan each of the 8 boxes and confirm Lote and Vence.
 
 ## Migration (migrate-as-touched)
 
