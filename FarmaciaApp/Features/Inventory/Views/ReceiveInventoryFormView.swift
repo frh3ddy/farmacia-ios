@@ -44,6 +44,8 @@ struct ReceiveInventoryFormView: View {
     @State private var showLotScanner = false
     @State private var selectedSupplier: Supplier?
     @State private var notes = ""
+    /// "Count it first": shown when the store's open Conteo inicial hasn't counted this product.
+    @State private var countWarning: String?
     /// One per receiving being entered: a retry (or the offline queue's replay) reuses it.
     @State private var clientRequestId = UUID().uuidString
 
@@ -202,6 +204,19 @@ struct ReceiveInventoryFormView: View {
         return ("\(qty) uds × \(cost.mxn) · Total \((Double(qty) * cost).mxn)", .neutral)
     }
 
+    /// Nothing when there's no open count or a read fails: it's a hint, never a guess.
+    private func readCountWarning() async -> String? {
+        guard let locationId = authManager.currentLocation?.id,
+              let active: APIResponse<StockCountSession> = try? await APIClient.shared.request(
+                  endpoint: .stockCountActive, queryParams: ["locationId": locationId]),
+              let session = active.data,
+              let entry: APIResponse<CountedEntry> = try? await APIClient.shared.request(
+                  endpoint: .stockCountProductEntry(id: session.id),
+                  queryParams: ["productId": product.id, "locationId": locationId])
+        else { return nil }
+        return ReceiveCountWarning.text(countOpen: true, counted: entry.data != nil)
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -210,6 +225,10 @@ struct ReceiveInventoryFormView: View {
                 } footer: {
                     if let note {
                         Label(note, systemImage: "info.circle")
+                    }
+                    if let countWarning {
+                        Label(countWarning, systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(.orange)
                     }
                 }
 
@@ -269,6 +288,7 @@ struct ReceiveInventoryFormView: View {
                 await loadProductSuppliers(for: product.id)
             }
             .task { await loadSupplierList() }
+            .task(id: authManager.currentLocation?.id) { countWarning = await readCountWarning() }
             // At the form's level, not on the Lote section: presented from a
             // Form cell it closed right away and took the receiving sheet with it.
             .fullScreenCover(isPresented: $showLotScanner) {

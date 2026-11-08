@@ -32,6 +32,7 @@ struct CreateProductView: View {
     @State private var photoFlow = PhotoFlow<UIImage>()
     @State private var showDiscardConfirmation = false
     @State private var showScanner = false
+    @State private var showLotScanner = false
 
     /// The margin chip picked; the price follows the cost while it's on.
     @State private var marginPick = MarginPick()
@@ -45,13 +46,13 @@ struct CreateProductView: View {
     }
 
     private enum Field: Hashable {
-        case name, unitCost, sellingPrice, sku, gtin, quantity, description
+        case name, unitCost, sellingPrice, sku, gtin, quantity, batchNumber, description
     }
     @FocusState private var focusedField: Field?
 
     /// Top to bottom, skipping Inventario inicial when it's hidden.
     private var focusOrder: FocusOrder<Field> {
-        FocusOrder([.name, .unitCost, .sellingPrice, .sku, .gtin] + (showsInitialStock ? [.quantity] : []) + [.description])
+        FocusOrder([.name, .unitCost, .sellingPrice, .sku, .gtin] + (showsInitialStock ? [.quantity] + (createsStock ? [.batchNumber] : []) : []) + [.description])
     }
 
     private func field(for issue: ProductDraft.Issue) -> Field {
@@ -81,8 +82,9 @@ struct CreateProductView: View {
     /// Set by the scanner: closing goes back to it (with the product the server
     /// created; nil when cancelled or queued offline) instead of dismissing its whole sheet.
     private let onClose: ((Product?) -> Void)?
-    /// False from the scanner's Recibir/Contar: the receive or count form that opens
-    /// next takes the stock, so entering it here too would add it twice.
+    /// False from the scanner's Recibir: its receive form takes the stock, so entering it here
+    /// too would add it twice. Contar shows it (cost and supplier stick); the count form then
+    /// starts at that stock, and saving it marks the product counted.
     private let showsInitialStock: Bool
 
     init(prefillBarcode: String? = nil, showsInitialStock: Bool = true,
@@ -192,6 +194,14 @@ struct CreateProductView: View {
                 }
             } message: {
                 Text(viewModel.successMessage)
+            }
+        }
+        // On the NavigationStack: the Form already hosts the photo flow's cover, and
+        // a cover presented from a Form cell closes right away (see ReceiveInventoryFormView).
+        .fullScreenCover(isPresented: $showLotScanner) {
+            LotScannerView { scan in
+                if let lot = scan.lot { viewModel.batchNumber = lot }
+                if let expiry = scan.expiry { viewModel.expiryMonth = expiry }
             }
         }
         // On the NavigationStack, not the Cancelar button: attached to the button,
@@ -375,12 +385,31 @@ struct CreateProductView: View {
                 } label: {
                     LabeledContent("Proveedor", value: viewModel.selectedSupplier?.name ?? "Sin proveedor")
                 }
+                MonthYearPicker(title: "Vence", value: $viewModel.expiryMonth.animation())
+                LabeledContent("Lote") {
+                    HStack(spacing: DS.Spacing.s) {
+                        TextField("Lote", text: $viewModel.batchNumber, prompt: Text("Opcional"))
+                            .multilineTextAlignment(.trailing)
+                            .textInputAutocapitalization(.characters)
+                            .autocorrectionDisabled()
+                            .formField(.batchNumber, focus: $focusedField)
+                        if LotScannerView.isSupported {
+                            Button("Escanear lote y caducidad", systemImage: "camera.viewfinder") {
+                                focusedField = nil
+                                showLotScanner = true
+                            }
+                            .labelStyle(.iconOnly)
+                            .buttonStyle(.borderless)
+                        }
+                    }
+                }
+                .id(Field.batchNumber)
             }
         } header: {
             OptionalHeader(title: "Inventario inicial")
         } footer: {
             Text(createsStock
-                ? "Se registra como saldo inicial en esta sucursal, al costo por unidad de Precio."
+                ? "Se registra como saldo inicial en esta sucursal, al costo por unidad de Precio. Caducidad vacía si no tiene."
                 : "Sin cantidad, el producto se crea sin existencias.")
         }
         .animation(.default, value: createsStock)

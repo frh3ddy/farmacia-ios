@@ -13,6 +13,10 @@ public enum ScanMode: String, CaseIterable, Sendable {
     public static func effective(saved: ScanMode?, canManageInventory: Bool) -> ScanMode {
         canManageInventory ? saved ?? .consult : .consult
     }
+
+    /// Nuevo producto from the scanner: Recibir's form asks for quantity, cost and supplier itself;
+    /// Contar needs them on creation, or the typed cost is dropped and the count asks again.
+    public var createShowsInitialStock: Bool { self != .receive }
 }
 
 /// What just happened in the scan flow.

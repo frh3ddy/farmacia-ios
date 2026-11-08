@@ -16,6 +16,9 @@ class CreateProductViewModel: ObservableObject {
     @Published var syncToSquare = true
     @Published var soldAtAllLocations = true
     @Published var selectedSupplier: Supplier?
+    /// The initial stock's lote and caducidad; sent only with stock.
+    @Published var batchNumber = ""
+    @Published var expiryMonth: MonthYear?
     /// One per product being created: a retry (or the offline queue's replay) of this create reuses it.
     let clientRequestId = UUID().uuidString
 
@@ -105,6 +108,8 @@ class CreateProductViewModel: ObservableObject {
                 locationId: locationId,
                 syncToSquare: syncToSquare,
                 soldAtAllLocations: soldAtAllLocations,
+                batchNumber: batchNumber,
+                expiryDate: expiryMonth?.firstDay(),
                 clientRequestId: clientRequestId
             )
             
