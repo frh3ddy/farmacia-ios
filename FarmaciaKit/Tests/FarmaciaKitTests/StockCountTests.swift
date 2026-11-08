@@ -580,3 +580,26 @@ struct CountNotesLimitTests {
         #expect(CountNotes.problem(reason: "  ok  " + String(repeating: " ", count: 600), notes: "") == nil)
     }
 }
+
+struct ReceiveCountWarningTests {
+    @Test("given an open Conteo inicial and the product not counted yet, should warn that Poner en 0 would zero it")
+    func uncountedInOpenCount() {
+        #expect(ReceiveCountWarning.text(countOpen: true, counted: false)
+                == "Este producto aún no se cuenta en el conteo inicial: cuéntalo para que «Poner en 0» no lo deje en cero.")
+    }
+
+    @Test("given the product already counted in the open Conteo inicial, should not warn")
+    func alreadyCounted() {
+        #expect(ReceiveCountWarning.text(countOpen: true, counted: true) == nil)
+    }
+
+    @Test("given no open Conteo inicial, should not warn")
+    func noCount() {
+        #expect(ReceiveCountWarning.text(countOpen: false, counted: false) == nil)
+    }
+
+    @Test("given the counted read failed (unknown), should not warn, so a guess never nags")
+    func unknown() {
+        #expect(ReceiveCountWarning.text(countOpen: true, counted: nil) == nil)
+    }
+}

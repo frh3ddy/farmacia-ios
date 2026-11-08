@@ -158,6 +158,7 @@ same product with different expiries (4 vencen ene-2027, 6 vencen mar-2027).
 - **Release order:** farmacia-ops `feature/stock-count-notes` to production before this branch ships; until then Razón/Notas are ignored.
 - ✅ **End-to-end check:** a "Sin cambios" count with Razón against the local API showed the Razón under "Ya contado" when the form was reopened (2026-11-05, simulator).
 - **Device check:** clear the count and type a single digit (the simulator tool couldn't clear the centered field); lots should re-split.
+- ✅ **Released 2026-11-07:** local `main` `7e058cd` (lot camera: instant caducidad, header-label/unlabeled boxes) installed on the iPhone 15 Pro and iPhone 13 Pro; not pushed yet.
 - ✅ **Released 2026-11-05:** `main` `4fed1a9` (Release build, production API) installed on the iPhone 15 Pro and the iPhone 13 Pro.
 - **iPad:** the lots release was never installed on the iPad (`95bd06a`); this branch isn't either. The iPad (A16) is paired; install after review and once the API is deployed (`scripts/release-build-install.sh` picks an iPhone; pass `DEVICE_UDID`).
 - ✅ **Pre-filled lots keep their quantities** (`LotSplit(prefilled:stock:)`); only a single lot that is the whole stock follows the count. Lots the counter adds share the rest.
@@ -184,6 +185,17 @@ From 8 photos of boxes the scanner struggled with (IMG_5659–5666, as tests in 
 - With instant accept (review, dev-ee): a price line's number is never a date, even without "$" ("PRECIO MAX 12.50", "P.M.P. 12.50"); a date with no keyword more than 6 years away is ignored ("12.50" isn't Dec 2050); postal codes, phone numbers and the maker's "S.A. de C.V." line aren't lotes.
 - Real Vision OCR of the photos (run on the Mac, 2026-11-07; `LotScanVisionOutputTests`): AGO is read "A60 27" (now AGO when spaced from its year, never on a lote line) and "A6028" (left unread: it can't be told from a lote code like "A6029", review dev-79); a price read "< 10.00" was a second loose date (loose dates now within 6 years either way). IMG_5663 reads only at full resolution (closer helps). Not readable by Vision at all, even full resolution and blurred: IMG_5665's AGO, IMG_5669 (widely spaced dot-matrix: SAL/FLL/NAL/CAD block), and the embossed IMG_3410's "MAR" (read "AR", "M"/"R"); type those in.
 - Device check: scan each of the 8 boxes and confirm Lote and Vence.
+
+## Products zeroed by "Poner todos en 0" (2026-11-07, `feature/receive-uncounted-warning`)
+
+- Cause (API): Nuevo producto with initial stock never recorded a count entry, so 5 new products showed in No contados and were zeroed (and synced to Square). The API fix is on farmacia-ops `fix/created-mid-count-counted`. Products created from the Contar scanner were fine, since they go straight to the count form.
+- [x] Restore: recount the 5 in the open conteo (3/2/31/24/26), note "restaurado: Poner en 0 por error"
+- [x] Receiving into a product not counted yet in an open conteo warns to count it first (`ReceiveCountWarning`)
+- [x] Contar → Nuevo producto shows quantity, cost and supplier (`ScanMode.createShowsInitialStock`): the cost typed there was dropped and the count asked for it again, with no supplier
+- [x] Nuevo producto's initial stock takes a lote and caducidad, with the lot camera (`CreateProductRequest.batchNumber/expiryDate`). Live with farmacia-ops api 11af91e (2026-11-08)
+
+- [ ] Duplicate risk: "Catéter 20 Rosa" was created next to the 2021 item "Cateter 20 Rosa" (accent only), and its restore count went to the old one. Look at near-duplicate names in the scan and create path.
+- Release order: the Contar stock section waited for the API's mid-count fix (live in 11af91e).
 
 ## Migration (migrate-as-touched)
 

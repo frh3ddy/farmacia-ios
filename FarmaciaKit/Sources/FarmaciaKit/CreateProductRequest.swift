@@ -20,7 +20,12 @@ public struct CreateProductRequest: Encodable, Equatable, Sendable {
     public let locationId: String?
     public let syncToSquare: Bool
     public let soldAtAllLocations: Bool
+    /// The initial stock's lote and caducidad (LocalDay YYYY-MM-DD); only with stock, since the API refuses them without.
+    public let batchNumber: String?
+    public let expiryDate: String?
     public let clientRequestId: String
+    /// The server trims a lote, then keeps its first 100 characters.
+    public static let lotMaxLength = 100
 
     public init(
         name: String,
@@ -34,6 +39,8 @@ public struct CreateProductRequest: Encodable, Equatable, Sendable {
         locationId: String?,
         syncToSquare: Bool,
         soldAtAllLocations: Bool = true,
+        batchNumber: String = "",
+        expiryDate: Date? = nil,
         clientRequestId: String
     ) {
         self.name = name
@@ -47,6 +54,9 @@ public struct CreateProductRequest: Encodable, Equatable, Sendable {
         self.locationId = locationId
         self.syncToSquare = syncToSquare
         self.soldAtAllLocations = soldAtAllLocations
+        let lot = String(batchNumber.trimmingCharacters(in: .whitespaces).prefix(Self.lotMaxLength))
+        self.batchNumber = initialStock == nil || lot.isEmpty ? nil : lot
+        self.expiryDate = initialStock == nil ? nil : expiryDate.map { LocalDay.string(from: $0) }
         self.clientRequestId = clientRequestId
     }
 }

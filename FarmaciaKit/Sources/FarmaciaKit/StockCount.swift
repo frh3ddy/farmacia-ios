@@ -463,3 +463,13 @@ public struct CountedEntry: Decodable, Equatable, Sendable {
         return "Ya contado en este conteo: \(countedQuantity) · \(day)\(who)"
     }
 }
+
+/// Receiving into a product the open Conteo inicial hasn't counted: "Poner en 0" would zero the
+/// received units with the rest, so the form says to count it. `counted` nil = the read failed; no warning.
+public enum ReceiveCountWarning {
+    public static func text(countOpen: Bool, counted: Bool?) -> String? {
+        countOpen && counted == false
+            ? "Este producto aún no se cuenta en el conteo inicial: cuéntalo para que «Poner en 0» no lo deje en cero."
+            : nil
+    }
+}

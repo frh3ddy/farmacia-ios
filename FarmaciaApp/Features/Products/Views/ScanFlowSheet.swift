@@ -78,7 +78,7 @@ struct ScanFlowSheet: View {
                 // 14-digit read of an EAN-13 is saved as the 13 digits on the box.
                 CreateProductView(
                     prefillBarcode: BarcodeLookup.newProductBarcode(code),
-                    showsInitialStock: mode == .consult,
+                    showsInitialStock: mode.createShowsInitialStock,
                     onCreated: onCreated,
                     onClose: { product in
                         if let product { route(.created, product: product) } else { route(.closed) }

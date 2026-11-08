@@ -49,4 +49,37 @@ struct CreateProductRequestTests {
         #expect(try json(with)["gtin"] as? String == "3664798067460")
         #expect(try json(request())["gtin"] == nil)
     }
+
+    private func stocked(batchNumber: String, expiry: Date?, initialStock: Int? = 5) -> CreateProductRequest {
+        CreateProductRequest(name: "Óxido De Zinc", sku: nil, description: nil, sellingPrice: 45,
+                             costPrice: initialStock == nil ? nil : 20, initialStock: initialStock, supplierId: nil,
+                             locationId: "centro", syncToSquare: true, batchNumber: batchNumber, expiryDate: expiry,
+                             clientRequestId: "id")
+    }
+
+    @Test("given initial stock with a lote and caducidad, should send batchNumber and expiryDate as the local day")
+    func lotAndExpiry() throws {
+        let day = try #require(LocalDay.date(from: "2027-03-01"))
+        let body = try json(stocked(batchNumber: "  A23DIC  ", expiry: day))
+        #expect(body["batchNumber"] as? String == "A23DIC")
+        #expect(body["expiryDate"] as? String == "2027-03-01")
+    }
+
+    @Test("given an empty lote and no caducidad, should leave both out")
+    func noLot() throws {
+        let body = try json(stocked(batchNumber: " ", expiry: nil))
+        #expect(body["batchNumber"] == nil && body["expiryDate"] == nil)
+    }
+
+    @Test("given no initial stock, should leave the lote and caducidad out: there's no batch to put them on")
+    func lotNeedsStock() throws {
+        let body = try json(stocked(batchNumber: "A23DIC", expiry: LocalDay.date(from: "2027-03-01"), initialStock: nil))
+        #expect(body["batchNumber"] == nil && body["expiryDate"] == nil)
+    }
+
+    @Test("given a lote longer than the server's 100-character cap, should send its first 100, as the server keeps")
+    func lotCap() throws {
+        let body = try json(stocked(batchNumber: String(repeating: "A", count: 130), expiry: nil))
+        #expect((body["batchNumber"] as? String)?.count == 100)
+    }
 }
