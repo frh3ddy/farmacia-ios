@@ -248,8 +248,10 @@ struct ReceiveInventoryFormView: View {
             }
             // No edits while a save is in flight.
             .disabled(viewModel.isSubmitting || isDone || waitingForSupplier)
+            .storeStrip()
             .primaryActionBar(PrimaryActionBar(
-                title: "Recibir inventario",
+                // Names the store at the moment of saving (brief §D).
+                title: authManager.currentLocation.map { "Recibir en \($0.name)" } ?? "Recibir inventario",
                 doneTitle: "Inventario recibido",
                 summary: summary?.text,
                 summaryTone: summary?.tone ?? .neutral,

@@ -49,6 +49,7 @@
 		DD000001000000F1 /* QuantityStepper.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD000002000000F1 /* QuantityStepper.swift */; };
 		DD000001000000F0 /* FieldError.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD000002000000F0 /* FieldError.swift */; };
 		DD0000010000000A /* StatusLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000020000000A /* StatusLabel.swift */; };
+		DD000001000000F7 /* StoreStrip.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD000002000000F7 /* StoreStrip.swift */; };
 		DD0000010000000B /* ToneBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000020000000B /* ToneBadge.swift */; };
 		DD00000100000009 /* ProductSummaryRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000009 /* ProductSummaryRow.swift */; };
 		DD00000100000002 /* AmountField.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000002 /* AmountField.swift */; };
@@ -166,6 +167,7 @@
 		DD000002000000F1 /* QuantityStepper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuantityStepper.swift; sourceTree = "<group>"; };
 		DD000002000000F0 /* FieldError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FieldError.swift; sourceTree = "<group>"; };
 		DD0000020000000A /* StatusLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusLabel.swift; sourceTree = "<group>"; };
+		DD000002000000F7 /* StoreStrip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreStrip.swift; sourceTree = "<group>"; };
 		DD0000020000000B /* ToneBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToneBadge.swift; sourceTree = "<group>"; };
 		DD00000200000009 /* ProductSummaryRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductSummaryRow.swift; sourceTree = "<group>"; };
 		DD00000200000002 /* AmountField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmountField.swift; sourceTree = "<group>"; };
@@ -376,6 +378,7 @@
 				DD000002000000F1 /* QuantityStepper.swift */,
 				DD000002000000F0 /* FieldError.swift */,
 				DD0000020000000A /* StatusLabel.swift */,
+				DD000002000000F7 /* StoreStrip.swift */,
 				DD0000020000000B /* ToneBadge.swift */,
 				DD00000200000009 /* ProductSummaryRow.swift */,
 				DD00000200000002 /* AmountField.swift */,
@@ -761,6 +764,7 @@
 				DD000001000000F1 /* QuantityStepper.swift in Sources */,
 				DD000001000000F0 /* FieldError.swift in Sources */,
 				DD0000010000000A /* StatusLabel.swift in Sources */,
+				DD000001000000F7 /* StoreStrip.swift in Sources */,
 				DD0000010000000B /* ToneBadge.swift in Sources */,
 				DD00000100000009 /* ProductSummaryRow.swift in Sources */,
 				DD00000100000002 /* AmountField.swift in Sources */,

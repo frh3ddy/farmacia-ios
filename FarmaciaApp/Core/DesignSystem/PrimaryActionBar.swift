@@ -48,6 +48,9 @@ struct PrimaryActionBar: View {
                         Label(doneTitle, systemImage: "checkmark")
                     } else {
                         Text(title)
+                            // "Recibir en {tienda}" can be long: shrink a little before truncating the store name
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                     }
                 }
                 .font(.headline)

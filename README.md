@@ -114,6 +114,7 @@ Opened from a product (Productos → product → Recibir Inventario / Ajustar In
 - Receive new inventory with cost tracking
 - Quick adjustments (damage, theft, expired, found, etc.); an adjustment that adds stock uses the product's last cost, and asks for a unit cost only when the product has none on record
 - Count correction by counted total against the store's live stock (needs a connection)
+- Employees with more than one store see a thin strip in the store's color with its name under the nav bar of Recibir, Ajustar, the scanner and Nuevo producto, and Recibir's button names the store ("Recibir en Centro"), so stock doesn't land in the wrong store. Each store's color is derived from its id, so every device shows the same one
 - Before saving, adjustments, counts and receivings show what they do to this store's stock ("Centro · 42 → 39 (−3)"), and warn when a removal is more than the stock on hand; the product row at the top shows the same fresh stock
 - Recibir inventario puts the quantity first: a large number with −/+ (hold to repeat), Unidades / Cajas, and with Cajas the arithmetic shown ("3 × 12 = 36 uds")
 - Supplier, invoice and unit cost sit together (one piece of paper); the supplier's last cost fills the cost, and a change shows as "▲ 8% vs último $16.50"; "Sin proveedor" is a choice in the picker
