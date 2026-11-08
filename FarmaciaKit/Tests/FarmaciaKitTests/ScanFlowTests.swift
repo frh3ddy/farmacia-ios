@@ -101,3 +101,12 @@ struct RecentScanSaveTests {
         #expect(received.repeatNote(productId: "p1", mode: .count) == nil)
     }
 }
+
+struct ScanCreateStockTests {
+    @Test("given Consultar or Contar, Nuevo producto should show quantity, cost and supplier; given Recibir, its form asks for those")
+    func showsInitialStock() {
+        #expect(ScanMode.consult.createShowsInitialStock)
+        #expect(ScanMode.count.createShowsInitialStock)
+        #expect(!ScanMode.receive.createShowsInitialStock)
+    }
+}
