@@ -263,6 +263,7 @@ struct AdjustmentFormView: View {
             }
             // No edits while a save is in flight.
             .disabled(viewModel.isSubmitting)
+            .storeStrip()
             .navigationTitle(session != nil ? AdjustmentType.openingCount.displayName : adjustmentType.displayName)
             .navigationBarTitleDisplayMode(.inline)
             .formKeyboard(focus: $focusedField, order: focusOrder)

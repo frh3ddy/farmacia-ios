@@ -162,6 +162,8 @@ struct ScanFlowSheet: View {
                     .background(.bar)
                 }
             }
+            // After the mode picker's inset, so the strip sits above it.
+            .storeStrip()
             .task(id: mode) {
                 guard mode == .count, let locationId = authManager.currentLocation?.id else { return }
                 let active: APIResponse<StockCountSession>? = try? await APIClient.shared.request(

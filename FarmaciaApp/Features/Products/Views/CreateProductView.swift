@@ -125,6 +125,7 @@ struct CreateProductView: View {
                 }
             }
             .disabled(viewModel.isSubmitting || viewModel.isDone)
+            .storeStrip()
             .primaryActionBar(PrimaryActionBar(
                 title: "Crear producto",
                 doneTitle: "Producto creado",
