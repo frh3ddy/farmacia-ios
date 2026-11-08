@@ -1,6 +1,6 @@
 # Store Strip Epic
 
-**Status**: ✅ DONE (uncommitted) — verified on device (iPhone 13 Pro, Release/prod) 2026-11-08
+**Status**: ✅ DONE — `f5bfa41` — verified on device (iPhone 13 Pro, Release/prod) 2026-11-08
 **Branch**: `feature/store-strip` (farmacia-ios only; no API change)
 **Goal**: Anyone changing stock can see which store it lands in, at a glance and before saving.
 
