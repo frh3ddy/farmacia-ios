@@ -1,5 +1,6 @@
 import SwiftUI
 import CodeScanner
+import CoreImage
 import FarmaciaKit
 
 // MARK: - Create Product View
@@ -30,6 +31,14 @@ struct CreateProductView: View {
     @State private var backgroundRemoved = true
     @State private var isLiftingSubject = false
     @State private var photoFlow = PhotoFlow<UIImage>()
+    /// The name read from the photo when Nombre was already typed: offered, never forced.
+    @State private var nameSuggestion: String?
+    @State private var isReadingPhoto = false
+    @State private var photoReadTask: Task<Void, Never>?
+    /// What a photo put in Nombre / Descripción, so a new photo can replace its
+    /// own guess but never what was typed.
+    @State private var autoFilledName: String?
+    @State private var autoFilledDescription: String?
     @State private var showDiscardConfirmation = false
     @State private var showScanner = false
     @State private var showLotScanner = false
@@ -158,6 +167,10 @@ struct CreateProductView: View {
             .task {
                 await viewModel.loadSuppliers()
             }
+            // Load Apple Intelligence now, so the first photo isn't lost to a cold start.
+            .task { ModelProductNamer.prewarm() }
+            // Closing the sheet stops a photo reading still in flight.
+            .onDisappear { photoReadTask?.cancel() }
             .onChange(of: viewModel.createdProduct) { _, product in
                 if let product { onCreated?(product) }
             }
@@ -252,6 +265,22 @@ struct CreateProductView: View {
                             viewModel.name = name.replacing("\n", with: "")
                             focusedField = .unitCost
                         }
+
+                    if isReadingPhoto {
+                        Label("Leyendo foto…", systemImage: "text.viewfinder")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else if let nameSuggestion {
+                        // Borderless: in a Form row, a plain button would make the whole row tappable.
+                        Button("Sugerencia: \(nameSuggestion) · Usar", systemImage: "sparkles") {
+                            viewModel.name = nameSuggestion
+                            // Still the photo's guess: the next photo may replace it.
+                            autoFilledName = nameSuggestion
+                            self.nameSuggestion = nil
+                        }
+                        .font(.caption)
+                        .buttonStyle(.borderless)
+                    }
 
                     if let hint = ProductName.lengthHint(viewModel.name) {
                         Text(hint.text)
@@ -499,6 +528,10 @@ struct CreateProductView: View {
                 originalCroppedImage = nil
                 liftedImage = nil
                 backgroundRemoved = true
+                // A reading still in flight would otherwise name the product from a removed photo.
+                photoReadTask?.cancel()
+                nameSuggestion = nil
+                isReadingPhoto = false
             }
         }
     }
@@ -510,6 +543,7 @@ struct CreateProductView: View {
         liftedImage = nil
         backgroundRemoved = true
         selectedImage = croppedImage
+        readPhoto(croppedImage)
         Task {
             isLiftingSubject = true
             let lifted = await SubjectLifter.liftSubject(from: croppedImage)
@@ -521,6 +555,42 @@ struct CreateProductView: View {
                 selectedImage = lifted
             }
             isLiftingSubject = false
+        }
+    }
+
+    /// Names the product from its photo: Apple Intelligence where the phone has
+    /// it, else the label's text, else object + color. A new photo cancels the
+    /// previous reading so a late answer can't overwrite the new one.
+    private func readPhoto(_ image: UIImage) {
+        photoReadTask?.cancel()
+        nameSuggestion = nil
+        // Reset here: the cancelled reading returns early without clearing it.
+        isReadingPhoto = false
+        // A crop can be CIImage-backed, with no cgImage of its own.
+        guard let photo = image.cgImage
+                ?? image.ciImage.flatMap({ CIContext().createCGImage($0, from: $0.extent) })
+        else { return }
+        isReadingPhoto = true
+        photoReadTask = Task {
+            let reading = await ProductPhotoReader.read(photo)
+            let model = await ModelProductNamer.name(photo: photo, labelText: reading.lines.map(\.text))
+            guard !Task.isCancelled else { return }
+            isReadingPhoto = false
+            if let name = PhotoNameSuggestion.best(model: model?.name, label: reading.labelName, object: reading.objectName) {
+                switch PhotoNameSuggestion.action(currentName: viewModel.name, suggestion: name, autoFilled: autoFilledName) {
+                case .fill(let name):
+                    viewModel.name = name
+                    autoFilledName = name
+                case .suggest(let name): nameSuggestion = name
+                case .none: break
+                }
+            }
+            let presentation = PhotoNameSuggestion.presentation(vision: reading.presentation, model: model?.presentation)
+            if let description = PhotoNameSuggestion.description(current: viewModel.description, presentation: presentation,
+                                                                 autoFilled: autoFilledDescription) {
+                viewModel.description = description
+                autoFilledDescription = description
+            }
         }
     }
 
