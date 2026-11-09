@@ -78,18 +78,26 @@ Steps 1–5 are done in `FarmaciaKit/Sources/FarmaciaKit/LooseLink.swift`, teste
 
 ## UI (FarmaciaApp)
 
-6. **`Product` decodes `quantity: Int?` and `looseProductId: String?`.**
+6. ✅ **`Product` decodes `quantity: Int?` and `looseProductId: String?`.**
    - Both get `= nil` defaults so the cached JSON still decodes.
    - Add `APIEndpoint.setLooseLink(productId:)` (PATCH).
    - Smoke: none (build only).
-7. **`SueltosView` + `ProductSearchPicker`.**
+7. ✅ **`SueltosView` + `ProductSearchPicker`** (`Features/Products/Views/SueltosView.swift`, uncommitted).
    - **`StoreStrip`** (`Core/DesignSystem/StoreStrip.swift`) sits at the top, like the stock-changing sheets, so it's clear which store's link is being set.
    - **Piezas por caja gets a footnote: "Aplica en todas las sucursales."** The link is per store, but pieces per box is saved on the box for every store (review finding, 2026-11-09).
    - The picker searches the live API with a 300 ms debounce via `.task(id:)`. It doesn't use the product cache, because the cache isn't store-resolved for this field.
    - A linked box shows its current suelto at this store (`getProduct`), plus "Desvincular" with a `confirmationDialog`.
-   - **Switching store** while the screen is open resets the form and reloads, because the link differs per store.
+   - **Switching store needs no code**: the switch screen is Más → Ajustes, in the same stack, so getting there closes Sueltos, and it reopens fresh.
+   - A failed search says "No se pudo buscar…" instead of an empty list. Desvincular shows from the box's `looseProductId`, even before the current suelto's name loads.
    - Register the new files in `project.pbxproj`.
-8. **Más → "Sueltos"**, behind `authManager.isManager`.
+8. ✅ **Más → "Sueltos"**, behind `authManager.isManager`. Simulator smoke passed 2026-11-09 against the local API (ops migrated the local DB and added a second local store, "Oriente local"):
+   - empty submit → "Elige el producto de caja…"; box with no pieces per box → "Este producto no tiene cantidad…";
+   - link Aguja gris → Aguja rosa with 10 → success text names the store; the row then reads "cantidad 10 · ya vinculado" and shows "Suelto actual: Aguja rosa" + Desvincular;
+   - self-link → "Un producto no puede ser su propio producto suelto";
+   - at Oriente local the same box reads "cantidad 10" with **no** link; back at farmacia dev ops it's still linked;
+   - Desvincular → confirmation → "desvinculado en farmacia dev ops", and the server really cleared it (explicit null).
+   - **Not checked**: the cashier-hidden row (needs a cashier PIN), and "no se vende en", which the pickers can't reach since they only list this store's products (it stays a server-side fallback).
+   - Fixes found by the smoke: a "Listo" bar for the number pad and search fields that scroll clear of the keyboard (`.formKeyboard`), and Vincular pinned with `PrimaryActionBar` (it was below the fold).
    - **Simulator smoke** against the local API:
      - link at store A; switch to store B: the box shows **not** linked there;
      - link B to a different suelto;
