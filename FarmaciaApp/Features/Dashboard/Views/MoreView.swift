@@ -37,6 +37,14 @@ struct MoreView: View {
                     }
                 }
 
+                if authManager.isManager {
+                    NavigationLink {
+                        SueltosView()
+                    } label: {
+                        Label("Sueltos", systemImage: "shippingbox.and.arrow.backward")
+                    }
+                }
+
                 if authManager.canManageEmployees {
                     NavigationLink {
                         EmployeesView()

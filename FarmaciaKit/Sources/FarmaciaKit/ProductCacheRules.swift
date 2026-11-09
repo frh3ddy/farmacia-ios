@@ -65,6 +65,23 @@ public enum BarcodeLookup {
         return [code] + padded.filter { $0 != code }
     }
 
+    /// Searches the server one form of the code at a time (`codeVariants`) until one
+    /// is an exact SKU/barcode hit; otherwise returns the scanned form's response.
+    public static func searchVariants<Response>(
+        of code: String,
+        isExact: (Response) -> Bool,
+        _ search: (String) async throws -> Response
+    ) async throws -> (response: Response, exact: Bool) {
+        var first: Response?
+        for variant in codeVariants(code) {
+            let response = try await search(variant)
+            if isExact(response) { return (response, true) }
+            if first == nil { first = response }
+        }
+        // codeVariants always returns the code itself, so there's a first response.
+        return (first!, false)
+    }
+
     /// 8, 12, 13 or 14 digits.
     public static func isGTIN(_ code: String) -> Bool {
         gtinLengths.contains(code.count) && code.allSatisfy(\.isASCIIDigit)

@@ -677,13 +677,10 @@ struct ProductsView: View {
         // fallback results.
         guard let locationId = authManager.currentLocation?.id else { return .create }
         do {
-            var fallback: ProductListResponse?
-            for variant in variants {
-                let response = try await viewModel.searchExact(locationId: locationId, code: variant)
-                if response.exactMatch == true, !response.data.isEmpty { return outcome(of: response) }
-                if fallback == nil { fallback = response }
+            let found = try await BarcodeLookup.searchVariants(of: code, isExact: { $0.exactMatch == true && !$0.data.isEmpty }) {
+                try await viewModel.searchExact(locationId: locationId, code: $0)
             }
-            return fallback.map(outcome(of:)) ?? .create
+            return outcome(of: found.response)
         } catch {
             // Network error — offer to create anyway
             return .create

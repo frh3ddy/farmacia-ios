@@ -29,6 +29,10 @@ struct Product: Codable, Identifiable, Equatable, Hashable {
     var soldOnlyAtLocationId: String? = nil
     /// The barcode (Square's GTIN / `upc`), when known. Several products can share one.
     var gtin: String? = nil
+    /// Piezas por caja: a box product's pieces per box, the same at every store.
+    var quantity: Int? = nil
+    /// Sueltos: this store's loose product for this box (the API resolves it per store).
+    var looseProductId: String? = nil
     
     var displayName: String {
         ProductName.display(name: name, item: squareProductName, variation: squareVariationName)
