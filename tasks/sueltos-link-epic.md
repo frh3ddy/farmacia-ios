@@ -1,6 +1,6 @@
 # Sueltos Link Epic (per store)
 
-**Status**: 📋 PLANNED (2026-11-08). Blocked on the ops prerequisite (step 0): it's built on farmacia-ops `feature/per-store-loose-link` (2026-11-09) and waits for dev-67's review, the user's go, and the merge to main.
+**Status**: ✅ DONE (2026-11-09): steps 1–9 on `feature/sueltos-link` (e1ffc83, b0e82c7). The ops prerequisite (step 0) is merged in farmacia-ops.
 **Branch**: `feature/sueltos-link`. It needs an API change in farmacia-ops first.
 **Goal**: OWNER/MANAGER can link a box product to its loose (suelto) product **for the store they're logged into**, set the pieces per box, and unlink it. This mirrors the web's "Vincular caja con suelto" card.
 
@@ -82,7 +82,7 @@ Steps 1–5 are done in `FarmaciaKit/Sources/FarmaciaKit/LooseLink.swift`, teste
    - Both get `= nil` defaults so the cached JSON still decodes.
    - Add `APIEndpoint.setLooseLink(productId:)` (PATCH).
    - Smoke: none (build only).
-7. ✅ **`SueltosView` + `ProductSearchPicker`** (`Features/Products/Views/SueltosView.swift`, uncommitted).
+7. ✅ **`SueltosView` + `ProductSearchPicker`** (`Features/Products/Views/SueltosView.swift`, b0e82c7).
    - **`StoreStrip`** (`Core/DesignSystem/StoreStrip.swift`) sits at the top, like the stock-changing sheets, so it's clear which store's link is being set.
    - **Piezas por caja gets a footnote: "Aplica en todas las sucursales."** The link is per store, but pieces per box is saved on the box for every store (review finding, 2026-11-09).
    - The picker searches the live API with a 300 ms debounce via `.task(id:)`. It doesn't use the product cache, because the cache isn't store-resolved for this field.
@@ -106,7 +106,7 @@ Steps 1–5 are done in `FarmaciaKit/Sources/FarmaciaKit/LooseLink.swift`, teste
      - self-link and loop errors show the server message;
      - log in with a cashier PIN: the row is hidden.
    - Locally there's 1 store (PIN 1234), so the smoke needs a second store seeded first.
-9. **Docs**: README features + this epic (✅ + hashes); run `graphify update .`.
+9. ✅ **Docs**: README features + this epic (✅ + hashes); run `graphify update .`.
 
 ## Migrate-as-touched
 
