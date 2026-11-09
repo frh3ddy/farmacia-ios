@@ -72,6 +72,7 @@ Merged: `f580589` (merge `9fcbfc2`).
 
 - ✅ Given a create-product (or edit-price) response with no `data`, should show an error rather than nothing — `APIResponse.requireData()`, `4a4c45e`
 - ✅ Given an adjustment whose Square sync failed, should offer a retry somewhere reachable — see `tasks/square-sync-retry-epic.md` (also covers receivings)
+- ✅ Given an owner at Farmacia Lolita, product Actividad Reciente should show only Lolita's receivings/adjustments (it showed Oriente's Conteo inicial) — both product activity calls send `?locationId=`, `26cf20e`
 
 ---
 
