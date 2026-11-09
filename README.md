@@ -148,6 +148,7 @@ Opened from a product (Productos → product → Recibir Inventario / Ajustar In
 - Lot age colors, the 0–30d / 31–90d / 90+d counts and the aging chart use the API's aging buckets
 - Lotes FIFO lists lots in the order they sell (oldest first, "Sale siguiente" on the next one); the lot detail is in Spanish, with stock left as a progress bar, movements newest first and a retry on load errors
 - Product photo (camera or library): square crop → background removal → preview; the crop screen opens on the first try
+- In Nuevo producto, the photo also names the product: an empty Nombre is filled, a typed one gets a chip ("Sugerencia: X · Usar"), and an empty Descripción gets the presentation ("100 ml", "30 tabletas"). Apple Intelligence reads the photo itself where the phone has it (iOS 27, e.g. iPhone 15 Pro); otherwise Vision uses the label's biggest text, then the object and its color ("Caja blanca", "Lentes de sol negros"), from a short Spanish list of what a pharmacy stocks (`PhotoNameSuggestion`, `LabelName`, `Presentation`, `ObjectName`, `ColorName` in FarmaciaKit)
 
 ### Reports
 - Cost of Goods Sold (COGS)
