@@ -69,6 +69,22 @@ public enum LooseLinkForm {
         "\"\(box)\" desvinculado en \(store)."
     }
 
+    public enum ScanPick: Equatable, Sendable {
+        case select
+        case choose
+        case notFound(String)
+    }
+
+    /// A scanned code's exact search at this store: one match is picked, several are
+    /// listed (a box and its suelto can share a barcode), none says so.
+    public static func scanPick(code: String, resultCount: Int, store: String) -> ScanPick {
+        switch resultCount {
+        case 0: .notFound("Ningún producto con el código \(code) se vende en \(store).")
+        case 1: .select
+        default: .choose
+        }
+    }
+
     /// The "Suelto actual" row: its name, still loading, or a failed load.
     public static func currentSueltoText(name: String?, failed: Bool) -> String {
         name ?? (failed ? "No se pudo cargar" : "…")

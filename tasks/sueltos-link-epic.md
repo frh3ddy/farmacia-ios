@@ -112,6 +112,20 @@ Steps 1–5 are done in `FarmaciaKit/Sources/FarmaciaKit/LooseLink.swift`, teste
    - Locally there's 1 store (PIN 1234), so the smoke needs a second store seeded first.
 9. ✅ **Docs**: README features + this epic (✅ + hashes); run `graphify update .`.
 
+## Scan to pick (added 2026-11-09, `feature/sueltos-scan`)
+
+Each picker has a barcode button beside its search field (type or scan).
+- ✅ **`LooseLinkForm.scanPick(code:resultCount:store:)`** (3 tests). One match → selected; several → listed to choose from (a box and its suelto can share a barcode); none → "Ningún producto con el código <code> se vende en <tienda>."
+  - First test: *given a scan that matches one product, should select it*.
+- The lookup is the server's exact search (`exact=true`) at this store, in each GTIN form of the code (`BarcodeLookup.codeVariants`), like Productos' scanner. It reuses the CodeScanner view and the simulator's `simScanCode` (`ScanFlowSheet.simulatedCode`, now internal).
+- Simulator smoke (2026-11-09): scanning 4968420506013 selected Aguja gris and prefilled 10; scanning 7500000000017 showed the "Ningún producto…" notice. **Not checked**: several matches (no shared barcode locally).
+- **Review fixes (/tdd-review, 2026-11-09)**:
+  - ✅ The try-each-form loop moved from both screens into **`BarcodeLookup.searchVariants(of:isExact:_:)`** (3 tests: stops at the first exact form, finds the 14-digit form, else the scanned form's results). Productos' scanner uses it too; smoke: an unknown code still opens Nuevo Producto with the barcode.
+  - A scan's search runs in `.task(id:)` on the scan, so a new scan or typing cancels it instead of being overwritten by it. It has its own spinner flag, and a finished scan is cleared so "Cambiar" doesn't rerun it (smoke: scan → Cambiar leaves the field empty).
+  - A scanner error (e.g. no camera permission) says "No se pudo usar la cámara…" instead of closing silently.
+  - VoiceOver: the buttons read "Escanear caja" / "Escanear suelto".
+  - Kept: an unmatched GTIN still tries up to 4 forms one after another. In parallel it would send 4 requests on every scan, though the first form usually matches.
+
 ## Migrate-as-touched
 
 - `Product` stays in the app (formatters/UI). The epic only adds two decoded fields, and the new rules take primitives.

@@ -137,3 +137,43 @@ struct BarcodeMatchTests {
         #expect(!BarcodeLookup.matches(sku: "8857379", gtin: nil, variants: scan))
     }
 }
+
+struct BarcodeSearchVariantsTests {
+    /// A fake server search: each code's (exactMatch, results), and the codes asked for.
+    final class FakeServer: @unchecked Sendable {
+        let answers: [String: (Bool, [String])]
+        var asked: [String] = []
+        init(_ answers: [String: (Bool, [String])]) { self.answers = answers }
+        func search(_ code: String) -> (exact: Bool, results: [String]) {
+            asked.append(code)
+            let answer = answers[code] ?? (false, [])
+            return (answer.0, answer.1)
+        }
+    }
+
+    @Test("given the scanned form matches exactly, should stop there")
+    func firstFormExact() async throws {
+        let server = FakeServer(["4968420506013": (true, ["Aguja gris"])])
+        let found = try await BarcodeLookup.searchVariants(of: "4968420506013", isExact: { $0.exact }) { server.search($0) }
+        #expect(found.exact)
+        #expect(found.response.results == ["Aguja gris"])
+        #expect(server.asked == ["4968420506013"])
+    }
+
+    @Test("given only the 14-digit form matches exactly, should return that one as exact")
+    func paddedFormExact() async throws {
+        let server = FakeServer(["04968420506013": (true, ["Aguja gris"])])
+        let found = try await BarcodeLookup.searchVariants(of: "4968420506013", isExact: { $0.exact }) { server.search($0) }
+        #expect(found.exact)
+        #expect(found.response.results == ["Aguja gris"])
+    }
+
+    @Test("given no form matches exactly, should return the scanned form's results as not exact")
+    func noneExact() async throws {
+        let server = FakeServer(["4968420506013": (false, ["Aguja rosa"])])
+        let found = try await BarcodeLookup.searchVariants(of: "4968420506013", isExact: { $0.exact }) { server.search($0) }
+        #expect(!found.exact)
+        #expect(found.response.results == ["Aguja rosa"])
+        #expect(server.asked == BarcodeLookup.codeVariants("4968420506013"))
+    }
+}

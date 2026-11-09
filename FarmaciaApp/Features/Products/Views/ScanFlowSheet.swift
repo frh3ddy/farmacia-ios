@@ -239,7 +239,8 @@ struct ScanFlowSheet: View {
 
     /// The simulator has no camera: CodeScanner's simulated scan sends this code.
     /// Set it with `xcrun simctl spawn booted defaults write <bundle id> simScanCode <code>`.
-    private static var simulatedCode: String {
+    /// Sueltos' scanner uses it too.
+    static var simulatedCode: String {
         #if DEBUG
         UserDefaults.standard.string(forKey: "simScanCode") ?? ""
         #else
