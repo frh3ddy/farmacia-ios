@@ -54,7 +54,7 @@ The ops web screen is `apps/web/src/sections/ops/BreakBulkScreen.tsx` ("Sueltos"
 
 ## Logic (FarmaciaKit, Swift Testing)
 
-Steps 1–5 are done in `FarmaciaKit/Sources/FarmaciaKit/LooseLink.swift`, tested by `LooseLinkTests.swift` (14 tests), uncommitted. Extra cases beyond the plan: "2.5" is refused, and an empty field with a known box quantity sends no `quantity`.
+Steps 1–5 are done in `FarmaciaKit/Sources/FarmaciaKit/LooseLink.swift`, tested by `LooseLinkTests.swift` (14 tests), `e1ffc83`. Extra cases beyond the plan: "2.5" is refused, and an empty field with a known box quantity sends no `quantity`.
 
 1. ✅ **`LooseLinkRequest` encodes unlink as an explicit null.**
    - First test: *given an unlink, should encode `"looseProductId": null`*.
