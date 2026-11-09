@@ -844,7 +844,8 @@ struct ProductDetailView: View {
     }
     
     private func loadActivity() async {
-        await activityViewModel.loadActivity(productId: displayProduct.id)
+        guard let locationId = authManager.currentLocation?.id else { return }
+        await activityViewModel.loadActivity(productId: displayProduct.id, locationId: locationId)
     }
 
     /// Receiving and found/return adjustments only where the product is sold (the API refuses the rest).

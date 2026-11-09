@@ -76,23 +76,25 @@ class ProductActivityViewModel: ObservableObject {
         return items.sorted { $0.date > $1.date }
     }
     
-    func loadActivity(productId: String) async {
+    /// This store's activity only — without `locationId` the API gives an owner every store's rows.
+    func loadActivity(productId: String, locationId: String) async {
         isLoading = true
         defer { isLoading = false }
-        
+
         guard !Task.isCancelled else { return }
-        
+
         // Load both in parallel
-        async let receivingsResult: () = loadReceivings(productId: productId)
-        async let adjustmentsResult: () = loadAdjustments(productId: productId)
+        async let receivingsResult: () = loadReceivings(productId: productId, locationId: locationId)
+        async let adjustmentsResult: () = loadAdjustments(productId: productId, locationId: locationId)
 
         _ = await (receivingsResult, adjustmentsResult)
     }
 
-    private func loadReceivings(productId: String) async {
+    private func loadReceivings(productId: String, locationId: String) async {
         do {
             let response: ReceivingListResponse = try await apiClient.request(
-                endpoint: .listReceivingsByProduct(productId: productId)
+                endpoint: .listReceivingsByProduct(productId: productId),
+                queryParams: ["locationId": locationId]
             )
             receivings = response.data
         } catch {
@@ -101,10 +103,11 @@ class ProductActivityViewModel: ObservableObject {
         }
     }
 
-    private func loadAdjustments(productId: String) async {
+    private func loadAdjustments(productId: String, locationId: String) async {
         do {
             let response: AdjustmentListResponse = try await apiClient.request(
-                endpoint: .adjustmentsByProduct(productId: productId)
+                endpoint: .adjustmentsByProduct(productId: productId),
+                queryParams: ["locationId": locationId]
             )
             adjustments = response.data
         } catch {
