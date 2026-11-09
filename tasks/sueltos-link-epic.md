@@ -112,7 +112,7 @@ Steps 1–5 are done in `FarmaciaKit/Sources/FarmaciaKit/LooseLink.swift`, teste
    - Locally there's 1 store (PIN 1234), so the smoke needs a second store seeded first.
 9. ✅ **Docs**: README features + this epic (✅ + hashes); run `graphify update .`.
 
-## Scan to pick (added 2026-11-09, `feature/sueltos-scan`)
+## Scan to pick (added 2026-11-09, `e833b48`, merged as `683edf8`)
 
 Each picker has a barcode button beside its search field (type or scan).
 - ✅ **`LooseLinkForm.scanPick(code:resultCount:store:)`** (3 tests). One match → selected; several → listed to choose from (a box and its suelto can share a barcode); none → "Ningún producto con el código <code> se vende en <tienda>."
@@ -125,6 +125,8 @@ Each picker has a barcode button beside its search field (type or scan).
   - A scanner error (e.g. no camera permission) says "No se pudo usar la cámara…" instead of closing silently.
   - VoiceOver: the buttons read "Escanear caja" / "Escanear suelto".
   - Kept: an unmatched GTIN still tries up to 4 forms one after another. In parallel it would send 4 requests on every scan, though the first form usually matches.
+
+**Review**: dev-67 approved `c9a0be9..683edf8` (2026-11-09), with no blockers. Open gaps are in `tasks/sueltos-review-followups-epic.md`. The release build is installed on both iPhones.
 
 ## Migrate-as-touched
 
