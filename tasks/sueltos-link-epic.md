@@ -54,7 +54,7 @@ The ops web screen is `apps/web/src/sections/ops/BreakBulkScreen.tsx` ("Sueltos"
 
 ## Logic (FarmaciaKit, Swift Testing)
 
-Steps 1–5 are done in `FarmaciaKit/Sources/FarmaciaKit/LooseLink.swift`, tested by `LooseLinkTests.swift` (14 tests), `e1ffc83`. Extra cases beyond the plan: "2.5" is refused, and an empty field with a known box quantity sends no `quantity`.
+Steps 1–5 are done in `FarmaciaKit/Sources/FarmaciaKit/LooseLink.swift`, tested by `LooseLinkTests.swift` (17 tests), `e1ffc83`. Extra cases beyond the plan: "2.5" is refused, and an empty field with a known box quantity sends no `quantity`.
 
 1. ✅ **`LooseLinkRequest` encodes unlink as an explicit null.**
    - First test: *given an unlink, should encode `"looseProductId": null`*.
@@ -96,7 +96,11 @@ Steps 1–5 are done in `FarmaciaKit/Sources/FarmaciaKit/LooseLink.swift`, teste
    - self-link → "Un producto no puede ser su propio producto suelto";
    - at Oriente local the same box reads "cantidad 10" with **no** link; back at farmacia dev ops it's still linked;
    - Desvincular → confirmation → "desvinculado en farmacia dev ops", and the server really cleared it (explicit null).
-   - **Not checked**: the cashier-hidden row (needs a cashier PIN), and "no se vende en", which the pickers can't reach since they only list this store's products (it stays a server-side fallback).
+   - Cashier (PIN 2528, "Test", Cajero): Más shows only Ajustes, so the Sueltos row is hidden (checked 2026-11-09, after the review).
+   - **Not checked**: "no se vende en", which the pickers can't reach since they only list this store's products (it stays a server-side fallback).
+   - **Review fixes (/tdd-review, 2026-11-09)**:
+     - A failed load of the current suelto now reads "No se pudo cargar" instead of "…" forever (`LooseLinkForm.currentSueltoText`, 3 tests).
+     - Kept on purpose: picking another box overwrites Piezas por caja with that box's number (the number belongs to the box). A save keeps running if the screen closes: the server applies it either way, so cancelling it would only hide the result.
    - Fixes found by the smoke: a "Listo" bar for the number pad and search fields that scroll clear of the keyboard (`.formKeyboard`), and Vincular pinned with `PrimaryActionBar` (it was below the fold).
    - **Simulator smoke** against the local API:
      - link at store A; switch to store B: the box shows **not** linked there;

@@ -68,4 +68,9 @@ public enum LooseLinkForm {
     public static func unlinkedText(box: String, store: String) -> String {
         "\"\(box)\" desvinculado en \(store)."
     }
+
+    /// The "Suelto actual" row: its name, still loading, or a failed load.
+    public static func currentSueltoText(name: String?, failed: Bool) -> String {
+        name ?? (failed ? "No se pudo cargar" : "…")
+    }
 }

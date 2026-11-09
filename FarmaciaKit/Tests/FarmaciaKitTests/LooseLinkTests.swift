@@ -101,4 +101,19 @@ struct LooseLinkFormTests {
     func unlinkedText() {
         #expect(LooseLinkForm.unlinkedText(box: "Caja X", store: "Centro") == "\"Caja X\" desvinculado en Centro.")
     }
+
+    @Test("given the current suelto failed to load, should say so instead of loading forever")
+    func currentSueltoFailed() {
+        #expect(LooseLinkForm.currentSueltoText(name: nil, failed: true) == "No se pudo cargar")
+    }
+
+    @Test("given the current suelto is still loading, should show an ellipsis")
+    func currentSueltoLoading() {
+        #expect(LooseLinkForm.currentSueltoText(name: nil, failed: false) == "…")
+    }
+
+    @Test("given the current suelto loaded, should show its name")
+    func currentSueltoLoaded() {
+        #expect(LooseLinkForm.currentSueltoText(name: "Aguja rosa", failed: false) == "Aguja rosa")
+    }
 }

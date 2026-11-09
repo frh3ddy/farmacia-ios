@@ -15,6 +15,7 @@ struct SueltosView: View {
     @State private var suelto: Product?
     /// The box's suelto at this store, when it has one.
     @State private var currentSuelto: Product?
+    @State private var currentSueltoFailed = false
     @State private var quantityText = ""
     @State private var isSubmitting = false
     @State private var errorMessage: String?
@@ -45,7 +46,8 @@ struct SueltosView: View {
                                     field: .box, focus: $focusedField)
                 if box?.looseProductId != nil {
                     // The name loads after; unlinking doesn't need it.
-                    LabeledContent("Suelto actual", value: currentSuelto?.displayName ?? "…")
+                    LabeledContent("Suelto actual", value: LooseLinkForm.currentSueltoText(
+                        name: currentSuelto?.displayName, failed: currentSueltoFailed))
                     Button("Desvincular", role: .destructive) { confirmUnlink = true }
                         .disabled(isSubmitting)
                 }
@@ -88,13 +90,19 @@ struct SueltosView: View {
     private func boxChanged() async {
         quantityText = LooseLinkForm.prefill(boxQuantity: box?.quantity)
         currentSuelto = nil
+        currentSueltoFailed = false
         guard let looseId = box?.looseProductId, let locationId = authManager.currentLocation?.id else { return }
-        let response: ProductDetailResponse? = try? await APIClient.shared.request(
-            endpoint: .getProduct(id: looseId),
-            queryParams: ["locationId": locationId]
-        )
-        guard !Task.isCancelled else { return }
-        currentSuelto = response?.data
+        do {
+            let response: ProductDetailResponse = try await APIClient.shared.request(
+                endpoint: .getProduct(id: looseId),
+                queryParams: ["locationId": locationId]
+            )
+            guard !Task.isCancelled else { return }
+            currentSuelto = response.data
+        } catch {
+            guard !Task.isCancelled else { return }
+            currentSueltoFailed = true
+        }
     }
 
     private func link() async {
