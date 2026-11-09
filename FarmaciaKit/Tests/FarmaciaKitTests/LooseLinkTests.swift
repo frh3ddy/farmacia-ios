@@ -132,4 +132,34 @@ struct LooseLinkFormTests {
         #expect(LooseLinkForm.scanPick(code: "7501", resultCount: 0, store: "Centro")
                 == .notFound("Ningún producto con el código 7501 se vende en Centro."))
     }
+
+    @Test("given a linked pair with 10 pieces per box, should read \"10 piezas por caja\"")
+    func linkedRowDetail() {
+        #expect(LooseLinkForm.linkedRowDetail(quantity: 10) == "10 piezas por caja")
+    }
+
+    @Test("given a linked pair with 1 piece per box, should use the singular")
+    func linkedRowDetailOne() {
+        #expect(LooseLinkForm.linkedRowDetail(quantity: 1) == "1 pieza por caja")
+    }
+
+    @Test("given a linked pair whose box has no pieces per box, should say so")
+    func linkedRowDetailNone() {
+        #expect(LooseLinkForm.linkedRowDetail(quantity: nil) == "Sin cantidad")
+    }
+
+    @Test("given no links at Centro, should name the store")
+    func linkedEmpty() {
+        #expect(LooseLinkForm.linkedEmptyText(store: "Centro") == "Ningún producto vinculado en Centro.")
+    }
+
+    @Test("given 3 links at Centro, should title the section with the store and count")
+    func linkedHeader() {
+        #expect(LooseLinkForm.linkedHeader(store: "Centro", count: 3) == "Vinculados en Centro (3)")
+    }
+
+    @Test("given the links are still loading, should leave the count out instead of showing 0")
+    func linkedHeaderLoading() {
+        #expect(LooseLinkForm.linkedHeader(store: "Centro", count: nil) == "Vinculados en Centro")
+    }
 }

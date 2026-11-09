@@ -85,6 +85,23 @@ public enum LooseLinkForm {
         }
     }
 
+    // The "Vinculados en <tienda>" list.
+
+    public static func linkedRowDetail(quantity: Int?) -> String {
+        guard let quantity else { return "Sin cantidad" }
+        return quantity == 1 ? "1 pieza por caja" : "\(quantity) piezas por caja"
+    }
+
+    public static func linkedEmptyText(store: String) -> String {
+        "Ningún producto vinculado en \(store)."
+    }
+
+    /// `count` is nil while the list loads.
+    public static func linkedHeader(store: String, count: Int?) -> String {
+        guard let count else { return "Vinculados en \(store)" }
+        return "Vinculados en \(store) (\(count))"
+    }
+
     /// The "Suelto actual" row: its name, still loading, or a failed load.
     public static func currentSueltoText(name: String?, failed: Bool) -> String {
         name ?? (failed ? "No se pudo cargar" : "…")

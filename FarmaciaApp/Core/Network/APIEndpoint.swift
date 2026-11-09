@@ -114,6 +114,7 @@ enum APIEndpoint {
     case updateProductPrice(id: String)
     /// Sueltos: links (or with null, unlinks) a box to its suelto at the session's store.
     case setLooseLink(productId: String)
+    case listLooseLinks
     case uploadProductImage(id: String)
     case productSuppliers(productId: String)
     case productCostHistory(productId: String)
@@ -238,6 +239,7 @@ enum APIEndpoint {
         case .createProduct: return "/products"
         case .updateProductPrice(let id): return "/products/\(id)/price"
         case .setLooseLink(let id): return "/products/\(id)/loose-link"
+        case .listLooseLinks: return "/products/loose-links"
         case .uploadProductImage(let id): return "/products/\(id)/image"
         case .productSuppliers(let productId): return "/products/\(productId)/suppliers"
         case .productCostHistory(let productId): return "/products/\(productId)/cost-history"
@@ -340,7 +342,7 @@ enum APIEndpoint {
             
         // Products
         case .listProducts, .getProduct, .productSuppliers, .productCostHistory, .supplierCatalog,
-             .productCounts, .productDeltaSync, .productStock:
+             .productCounts, .productDeltaSync, .productStock, .listLooseLinks:
             return .get
         case .createProduct, .syncProductsToSquare, .createSupplier:
             return .post

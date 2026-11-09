@@ -22,18 +22,28 @@ struct SueltosView: View {
     @State private var errorMessage: String?
     @State private var successMessage: String?
     @State private var confirmUnlink = false
+    /// This store's linked pairs; nil until the first load.
+    @State private var links: [LooseLinkPair]?
+    @State private var linksFailed = false
 
     @FocusState private var focusedField: SueltosField?
 
     private var storeName: String { authManager.currentLocation?.name ?? "esta tienda" }
 
     var body: some View {
+        ScrollViewReader { proxy in
+            form(proxy)
+        }
+    }
+
+    private func form(_ proxy: ScrollViewProxy) -> some View {
         Form {
             Section {
                 Text("Se vincula solo en \(storeName); cada sucursal elige su propio suelto.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
+            .id(SueltosAnchor.top)
 
             if let errorMessage {
                 Section { StatusLabel(errorMessage, tone: .critical) }
@@ -68,6 +78,8 @@ struct SueltosView: View {
             } footer: {
                 Text("Aplica en todas las sucursales.")
             }
+
+            linkedSection(proxy)
         }
         // Pinned like the other forms' action, so it's never below the fold.
         .primaryActionBar(PrimaryActionBar(
@@ -80,6 +92,7 @@ struct SueltosView: View {
         .navigationTitle("Sueltos")
         .storeStrip()
         .task(id: box?.id) { await boxChanged() }
+        .task { await loadLinks() }
         .confirmationDialog("¿Desvincular el suelto en \(storeName)?", isPresented: $confirmUnlink, titleVisibility: .visible) {
             Button("Desvincular", role: .destructive) { Task { await unlink() } }
         } message: {
@@ -117,6 +130,7 @@ struct SueltosView: View {
             if await send(request, boxId: box.id) {
                 successMessage = LooseLinkForm.linkedText(box: box.displayName, suelto: suelto.displayName, store: storeName)
                 reset()
+                await loadLinks()
             }
         }
     }
@@ -127,6 +141,7 @@ struct SueltosView: View {
         if await send(.unlink, boxId: box.id) {
             successMessage = LooseLinkForm.unlinkedText(box: box.displayName, store: storeName)
             reset()
+            await loadLinks()
         }
     }
 
@@ -146,6 +161,51 @@ struct SueltosView: View {
         return false
     }
 
+    // MARK: Linked pairs
+
+    @ViewBuilder
+    private func linkedSection(_ proxy: ScrollViewProxy) -> some View {
+        Section {
+            if linksFailed {
+                StatusLabel("No se pudieron cargar los productos vinculados. Revisa la conexión.", tone: .critical)
+            } else if let links {
+                if links.isEmpty {
+                    Text(LooseLinkForm.linkedEmptyText(store: storeName))
+                        .foregroundStyle(.secondary)
+                }
+                ForEach(links) { pair in
+                    Button {
+                        // Load it into the form: box + suelto, and boxChanged() prefills
+                        // the pieces and shows Suelto actual + Desvincular.
+                        successMessage = nil
+                        errorMessage = nil
+                        box = pair.box
+                        suelto = pair.loose
+                        withAnimation { proxy.scrollTo(SueltosAnchor.top, anchor: .top) }
+                    } label: {
+                        LinkedPairRow(pair: pair)
+                    }
+                    .tint(.primary)
+                }
+            } else {
+                ProgressView().frame(maxWidth: .infinity)
+            }
+        } header: {
+            Text(LooseLinkForm.linkedHeader(store: storeName, count: links?.count))
+        }
+    }
+
+    private func loadLinks() async {
+        do {
+            let response: LooseLinkListResponse = try await APIClient.shared.request(endpoint: .listLooseLinks)
+            links = response.data
+            linksFailed = false
+        } catch {
+            guard !Task.isCancelled else { return }
+            linksFailed = true
+        }
+    }
+
     private func reset() {
         box = nil
         suelto = nil
@@ -157,6 +217,7 @@ struct SueltosView: View {
 // MARK: - Product Search Picker
 
 fileprivate enum SueltosField: Hashable { case box, suelto, quantity }
+private enum SueltosAnchor: Hashable { case top }
 
 /// Name/SKU search over this store's products (live API, not the cache), or a
 /// barcode scan, pick one.
@@ -330,12 +391,54 @@ private struct ProductOptionLabel: View {
     let product: Product
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
-            Text(product.displayName)
-            Text(LooseLinkForm.pickerSubtitle(sku: product.sku, quantity: product.quantity,
-                                              linked: product.looseProductId != nil))
-                .font(.caption)
+        HStack(spacing: DS.Spacing.m) {
+            ProductThumbnail(product: product)
+
+            VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
+                Text(product.displayName)
+                Text(LooseLinkForm.pickerSubtitle(sku: product.sku, quantity: product.quantity,
+                                                  linked: product.looseProductId != nil))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
+/// A linked pair: the box, then its suelto at this store, with both photos.
+private struct LinkedPairRow: View {
+    let pair: LooseLinkPair
+
+    var body: some View {
+        HStack(spacing: DS.Spacing.m) {
+            ProductThumbnail(product: pair.box)
+            VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
+                Text(pair.box.displayName)
+                Label(pair.loose.displayName, systemImage: "arrow.turn.down.right")
+                    .font(.subheadline)
+                Text(LooseLinkForm.linkedRowDetail(quantity: pair.box.quantity))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 0)
+            ProductThumbnail(product: pair.loose)
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// 48pt, like ProductSummaryRow: the photo makes the right product easy to spot.
+private struct ProductThumbnail: View {
+    let product: Product
+
+    var body: some View {
+        CachedProductImage(url: product.squareImageUrl, targetSize: CGSize(width: 48, height: 48)) {
+            Image(systemName: "shippingbox")
                 .foregroundStyle(.secondary)
         }
+        .frame(width: 48, height: 48)
+        .background(.fill.tertiary, in: .rect(cornerRadius: DS.Radius.m))
+        .clipShape(.rect(cornerRadius: DS.Radius.m))
+        .accessibilityHidden(true)
     }
 }
