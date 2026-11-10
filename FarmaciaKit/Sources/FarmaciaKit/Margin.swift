@@ -19,3 +19,21 @@ public enum Margin {
         return .critical
     }
 }
+
+// MARK: - Price Margin
+//
+// The product detail's margin: the percent (comparable across products) and the
+// pesos one unit puts in the till (the number you can multiply by quantity).
+public struct PriceMargin: Equatable, Sendable {
+    public let percent: Double
+    public let perUnit: Double
+
+    /// Nil without a positive price.
+    public init?(price: Double, cost: Double) {
+        guard let percent = Margin.percent(price: price, cost: cost) else { return nil }
+        self.percent = percent
+        self.perUnit = price - cost
+    }
+
+    public var tone: Tone { Margin.tone(forPercent: percent) }
+}

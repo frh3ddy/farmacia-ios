@@ -39,3 +39,26 @@ struct ReportFormatTests {
         #expect(ReportFormat.tone(amount) == expected)
     }
 }
+
+/// The big-number money style: symbol, whole part, cents set smaller ("$220.00").
+struct CurrencyPartsTests {
+    let mx = Locale(identifier: "es_MX")
+
+    @Test("given 220, should split into \"$\", \"220\", \".00\"")
+    func whole() {
+        let parts = ReportFormat.currencyParts(220, locale: mx)
+        #expect(parts == .init(symbol: "$", whole: "220", fraction: ".00"))
+    }
+
+    @Test("given 1234.5, should keep grouping in the whole part and cents in the fraction")
+    func grouped() {
+        let parts = ReportFormat.currencyParts(1234.5, locale: mx)
+        #expect(parts == .init(symbol: "$", whole: "1,234", fraction: ".50"))
+    }
+
+    @Test("given -89.999, should round and keep the sign on the symbol")
+    func negative() {
+        let parts = ReportFormat.currencyParts(-89.999, locale: mx)
+        #expect(parts == .init(symbol: "-$", whole: "90", fraction: ".00"))
+    }
+}

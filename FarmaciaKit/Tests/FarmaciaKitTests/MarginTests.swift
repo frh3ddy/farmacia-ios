@@ -29,3 +29,26 @@ struct MarginToneTests {
         #expect(Margin.tone(forPercent: 9.9) == .critical)
     }
 }
+
+/// The margin the detail shows: percent (comparable) and pesos per unit (actionable).
+struct PriceMarginTests {
+    @Test("given price 220 and cost 98, should be $122 per unit and 55.5%")
+    func healthy() throws {
+        let margin = try #require(PriceMargin(price: 220, cost: 98))
+        #expect(margin.perUnit == 122)
+        #expect(abs(margin.percent - 55.4545) < 0.001)
+        #expect(margin.tone == .positive)
+    }
+
+    @Test("given a cost above the price, should be a negative, critical margin")
+    func loss() throws {
+        let margin = try #require(PriceMargin(price: 90, cost: 98))
+        #expect(margin.perUnit == -8)
+        #expect(margin.tone == .critical)
+    }
+
+    @Test("given no price, should be nil")
+    func noPrice() {
+        #expect(PriceMargin(price: 0, cost: 98) == nil)
+    }
+}

@@ -99,3 +99,17 @@ extension ExpiryTests {
         #expect(Expiry.display(ISO8601DateFormatter().date(from: "2027-01-01T18:00:00Z")!) == "1 ene 2027")
     }
 }
+
+/// How far off a lot's expiry is, for the lot row ("Vence 15 feb 2028 · 15 meses").
+struct ExpiryCountdownTests {
+    @Test("given 456 days, should be \"15 meses\"")
+    func months() {
+        #expect(Expiry.countdown(daysUntil: 456) == "15 meses")
+    }
+
+    @Test("given a day count, should read naturally",
+          arguments: [(61, "2 meses"), (60, "60 días"), (1, "1 día"), (0, "vence hoy"), (-1, "venció hace 1 día"), (-3, "venció hace 3 días")])
+    func cases(days: Int, expected: String) {
+        #expect(Expiry.countdown(daysUntil: days) == expected)
+    }
+}

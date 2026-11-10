@@ -37,6 +37,15 @@ public enum Expiry {
         expiry.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted, locale: locale, timeZone: TimeZone(identifier: "UTC")!))
     }
 
+    /// How far off the expiry is: "15 meses" past 60 days, "20 días" up to them, "vence hoy", "venció hace 3 días".
+    public static func countdown(daysUntil days: Int) -> String {
+        func plural(_ n: Int, _ one: String, _ many: String) -> String { "\(n) \(n == 1 ? one : many)" }
+        if days < 0 { return "venció hace \(plural(-days, "día", "días"))" }
+        if days == 0 { return "vence hoy" }
+        if days <= 60 { return plural(days, "día", "días") }
+        return plural(days / 30, "mes", "meses")
+    }
+
     /// Days of warning before a lot's expiry turns it to caution.
     public static let warningDays = 90
 
