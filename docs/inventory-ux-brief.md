@@ -414,6 +414,21 @@ Use existing project standards, but aim for:
 
 For mobile tables, consider visible identifiers, selective columns, and clear horizontal-scroll cues where a table is still the right component. [Nielsen Norman Group](https://www.nngroup.com/articles/mobile-tables/)
 
+### Detail screens (from the product detail review — `docs/product-detail-findings.md`)
+
+- **Money is ink, green is state.** Amounts are primary-colored, tabular (`MoneyText`); green/amber/red only say
+  whether something is fine. Textual green is the accessible `Tone.positive` (light `#0F7B3F`, 5.35:1), never systemGreen.
+- **One number, one place, with provenance.** A cost appears once per screen, labelled with where it comes from
+  ("Simi · compra 1 nov"). Margin is shown in pesos as well as percent.
+- **One formatter per type.** Money `ReportFormat.currency` ("$220.00", currency code stated once per block);
+  dates `DisplayDate.day` ("24 sep 2026"); timestamps `DisplayDate.timestamp` ("2 nov · 2:57 a.m.").
+- **Names never truncate.** Product names wrap; the card grows.
+- **Neutral by default.** A healthy state is neutral, not green; only problems escalate (amber → red). No "low stock"
+  flag until thresholds are learned per product. A branch that doesn't carry an item shows a neutral `0 uds`.
+- **Empty states are one 44pt row** ("Sin movimientos aún · Historial ›"); tall cards are for content.
+- **No meaning by color alone** — every tone carries a glyph and words.
+- **No unresolved placeholders, no dead menus.** Hide links that lead to what's already on screen (one supplier).
+
 ---
 
 ## 8. Acceptance criteria

@@ -20,6 +20,26 @@ public enum ReportFormat {
         return formatter.string(from: NSNumber(value: value)) ?? "$\(value)"
     }
 
+    /// `currency` split for the big-number style: "$" + "220" + ".00", cents set smaller.
+    public struct CurrencyParts: Equatable, Sendable {
+        public let symbol: String
+        public let whole: String
+        public let fraction: String
+    }
+
+    public static func currencyParts(_ value: Double, locale: Locale = Locale(identifier: "es_MX")) -> CurrencyParts {
+        let text = currency(value, locale: locale)
+        let digitsStart = text.firstIndex(where: \.isNumber) ?? text.endIndex
+        let decimal = locale.decimalSeparator ?? "."
+        let number = text[digitsStart...]
+        let fractionStart = number.range(of: decimal, options: .backwards)?.lowerBound ?? number.endIndex
+        return CurrencyParts(
+            symbol: String(text[..<digitsStart]),
+            whole: String(number[..<fractionStart]),
+            fraction: String(number[fractionStart...])
+        )
+    }
+
     public static func percent(_ value: String) -> String {
         guard let doubleValue = Double(value) else { return "\(value)%" }
         return String(format: "%.1f%%", doubleValue)

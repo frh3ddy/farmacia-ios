@@ -1,4 +1,5 @@
 import Foundation
+import FarmaciaKit
 
 // MARK: - Inventory Batch
 // Note: Some fields are optional to handle minimal responses in receiving endpoints
@@ -92,10 +93,7 @@ struct InventoryReceiving: Codable, Identifiable {
     }
     
     var formattedDate: String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: receivedAt)
+        DisplayDate.timestamp(receivedAt)
     }
     
     var formattedUnitCost: String {

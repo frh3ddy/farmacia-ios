@@ -68,6 +68,17 @@ Merged: `f580589` (merge `9fcbfc2`).
 
 ---
 
+## 📋 Product detail redesign follow-ups (`tasks/product-detail-redesign-epic.md`)
+
+- Given a product that normally carries 1–2 units (or sits at 0 for weeks), should flag low stock only below its own learned threshold (typical on-hand, time at 0) — farmacia-ops; until then the detail has no "Bajo".
+- Given a product, should say how fast it sells (sell-through or last sold) — needs an endpoint from `SaleItem`; a line in Inventario.
+- Given a lot with no caducidad, should let an owner add it from the lot row — needs a PATCH endpoint; "Sin caducidad registrada" is text only.
+- Given one supplier on record, "Sin proveedor alterno · agregar" — needs an add-supplier-to-product flow on iOS.
+- Given a product card and its detail, margins should agree — cards use average cost, the detail the latest supplier cost; decide whether cards follow (the list doesn't load suppliers).
+- Given supplier notes "Migrated from cutover <uuid>" in the costs sheet, should hide the migration id.
+- `ProductDetailView` is still one file of computed `some View` sections (swiftui-pro: extract `View` structs, own files — needs pbxproj registration); the aging bar still uses `GeometryReader`.
+- Product photo guidance (package front) at capture time.
+
 ## 📋 Small fixes
 
 - ✅ Given a create-product (or edit-price) response with no `data`, should show an error rather than nothing — `APIResponse.requireData()`, `4a4c45e`

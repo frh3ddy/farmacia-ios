@@ -64,7 +64,7 @@ class ProductActivityViewModel: ObservableObject {
                 id: "adj-\(a.id)",
                 kind: .adjustment(a.type),
                 title: "\(a.type.displayName)",
-                subtitle: a.reason ?? a.notes ?? a.adjustedAt.formatted(date: .abbreviated, time: .shortened),
+                subtitle: a.reason ?? a.notes ?? DisplayDate.timestamp(a.adjustedAt),
                 date: a.adjustedAt,
                 quantity: a.quantity,
                 icon: a.type.icon,

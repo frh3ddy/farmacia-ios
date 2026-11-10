@@ -60,6 +60,9 @@ struct Product: Codable, Identifiable, Equatable, Hashable {
         formatter.numberStyle = .currency
         formatter.currencyCode = code
         formatter.locale = Locale(identifier: "es_MX")
+        // "$220.00", like ReportFormat.currency — es_MX writes a non-peso code as "USD 220.00".
+        // Screens state the currency once per block instead.
+        formatter.currencySymbol = "$"
         currencyFormatters[code] = formatter
         return formatter
     }
