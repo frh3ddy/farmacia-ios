@@ -1,6 +1,6 @@
 # Expiry Picker Styles Epic (try on device, keep one)
 
-**Status**: ✅ DONE (2026-11-09). The user tried all three on the iPhone 13 Pro and kept the **bottom sheet** (the default); the trial code is removed. Uncommitted.
+**Status**: ✅ DONE (2026-11-09). The user tried all three on the iPhone 13 Pro and kept the **bottom sheet** (the default); the trial code is removed. Committed as `d10b9f2`.
 **Branch**: `feature/expiry-picker-styles` (from main)
 **Goal**: The "Vence" month/year wheels are always fully on screen when they open. Today in Conteo inicial they open inline under a lot row near the bottom, behind the Guardar bar, so the months are hard to scroll.
 
