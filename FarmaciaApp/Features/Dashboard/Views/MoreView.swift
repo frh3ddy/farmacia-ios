@@ -43,6 +43,12 @@ struct MoreView: View {
                     } label: {
                         Label("Sueltos", systemImage: "shippingbox.and.arrow.backward")
                     }
+
+                    NavigationLink {
+                        TransfersView()
+                    } label: {
+                        Label("Transferencias", systemImage: "arrow.left.arrow.right")
+                    }
                 }
 
                 if authManager.canManageEmployees {

@@ -29,6 +29,7 @@
 		9E25ADFE9081EC5831439365 /* ExpiringProductsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F15BF3D21F89E5EBF003160 /* ExpiringProductsViewModel.swift */; };
 		A72617238F43931DC3C57629 /* EditPriceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 551F6878C658EA6406F8A5A7 /* EditPriceView.swift */; };
 		63F83CA069E14080BA3B586B /* SueltosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C515886454E4BCC9378D6C2 /* SueltosView.swift */; };
+		A7C3E1F2B4D5469788990002 /* ProductSearchPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7C3E1F2B4D5469788990001 /* ProductSearchPicker.swift */; };
 		AA00000100000001 /* GlobalActivityHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000200000001 /* GlobalActivityHistoryView.swift */; };
 		B9E53ECCEE227AA469A1BEBC /* ProductBatchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C675966EAAE838142E37278B /* ProductBatchViewModel.swift */; };
 		CA00000100000001 /* CachedProduct.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA00000200000001 /* CachedProduct.swift */; };
@@ -80,6 +81,7 @@
 		F000000100000018 /* Device.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000018 /* Device.swift */; };
 		F000000100000019 /* Location.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000019 /* Location.swift */; };
 		F000000100000020 /* Product.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000020 /* Product.swift */; };
+		A7C3E1F2B4D5469788990004 /* Transfer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7C3E1F2B4D5469788990003 /* Transfer.swift */; };
 		DD00000100000008 /* ImageUploadResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000008 /* ImageUploadResponse.swift */; };
 		F000000100000021 /* Inventory.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000021 /* Inventory.swift */; };
 		F000000100000022 /* Adjustment.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000022 /* Adjustment.swift */; };
@@ -97,6 +99,7 @@
 		F000000100000039 /* ExpenseSummaryReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000039 /* ExpenseSummaryReportView.swift */; };
 		F000000100000040 /* InventoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000040 /* InventoryViewModel.swift */; };
 		F000000100000042 /* ReceiveInventoryFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000042 /* ReceiveInventoryFormView.swift */; };
+		A7C3E1F2B4D5469788990006 /* TransfersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7C3E1F2B4D5469788990005 /* TransfersView.swift */; };
 		DD000001000000F6 /* LotScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD000002000000F6 /* LotScannerView.swift */; };
 		F000000100000044 /* SupplierPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000044 /* SupplierPickerView.swift */; };
 		F000000100000046 /* AdjustmentFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000046 /* AdjustmentFormView.swift */; };
@@ -144,6 +147,7 @@
 		D0C003E1536E46E7A7E549C6 /* ProductCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductCard.swift; sourceTree = "<group>"; };
 		551F6878C658EA6406F8A5A7 /* EditPriceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditPriceView.swift; sourceTree = "<group>"; };
 		2C515886454E4BCC9378D6C2 /* SueltosView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SueltosView.swift; sourceTree = "<group>"; };
+		A7C3E1F2B4D5469788990001 /* ProductSearchPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductSearchPicker.swift; sourceTree = "<group>"; };
 		5B36C1CAC70495EFA1EEFDC2 /* CostSupplierViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CostSupplierViewModel.swift; sourceTree = "<group>"; };
 		67DB948B9C5055D67639955A /* ProductsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductsViewModel.swift; sourceTree = "<group>"; };
 		7AF0652B989018922F154F43 /* ProductActivityFullView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductActivityFullView.swift; sourceTree = "<group>"; };
@@ -202,6 +206,7 @@
 		F100000100000018 /* Device.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Device.swift; sourceTree = "<group>"; };
 		F100000100000019 /* Location.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Location.swift; sourceTree = "<group>"; };
 		F100000100000020 /* Product.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Product.swift; sourceTree = "<group>"; };
+		A7C3E1F2B4D5469788990003 /* Transfer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transfer.swift; sourceTree = "<group>"; };
 		DD00000200000008 /* ImageUploadResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageUploadResponse.swift; sourceTree = "<group>"; };
 		F100000100000021 /* Inventory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Inventory.swift; sourceTree = "<group>"; };
 		F100000100000022 /* Adjustment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Adjustment.swift; sourceTree = "<group>"; };
@@ -220,6 +225,7 @@
 		F100000100000039 /* ExpenseSummaryReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseSummaryReportView.swift; sourceTree = "<group>"; };
 		F100000100000040 /* InventoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryViewModel.swift; sourceTree = "<group>"; };
 		F100000100000042 /* ReceiveInventoryFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiveInventoryFormView.swift; sourceTree = "<group>"; };
+		A7C3E1F2B4D5469788990005 /* TransfersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransfersView.swift; sourceTree = "<group>"; };
 		DD000002000000F6 /* LotScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LotScannerView.swift; sourceTree = "<group>"; };
 		F100000100000044 /* SupplierPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupplierPickerView.swift; sourceTree = "<group>"; };
 		F100000100000046 /* AdjustmentFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdjustmentFormView.swift; sourceTree = "<group>"; };
@@ -294,6 +300,7 @@
 				C675966EAAE838142E37278B /* ProductBatchViewModel.swift */,
 				551F6878C658EA6406F8A5A7 /* EditPriceView.swift */,
 				2C515886454E4BCC9378D6C2 /* SueltosView.swift */,
+				A7C3E1F2B4D5469788990001 /* ProductSearchPicker.swift */,
 				5B36C1CAC70495EFA1EEFDC2 /* CostSupplierViewModel.swift */,
 				37E697392F32F2A400F6CB5D /* ProductsView.swift */,
 				DD00000200000010 /* ScanFlowSheet.swift */,
@@ -431,6 +438,7 @@
 				F100000100000018 /* Device.swift */,
 				F100000100000019 /* Location.swift */,
 				F100000100000020 /* Product.swift */,
+				A7C3E1F2B4D5469788990003 /* Transfer.swift */,
 				DD00000200000008 /* ImageUploadResponse.swift */,
 				F100000100000021 /* Inventory.swift */,
 				F100000100000022 /* Adjustment.swift */,
@@ -544,6 +552,7 @@
 			children = (
 				F100000100000040 /* InventoryViewModel.swift */,
 				F100000100000042 /* ReceiveInventoryFormView.swift */,
+				A7C3E1F2B4D5469788990005 /* TransfersView.swift */,
 				DD000002000000F6 /* LotScannerView.swift */,
 				F100000100000044 /* SupplierPickerView.swift */,
 				F100000100000046 /* AdjustmentFormView.swift */,
@@ -704,6 +713,7 @@
 				B9E53ECCEE227AA469A1BEBC /* ProductBatchViewModel.swift in Sources */,
 				A72617238F43931DC3C57629 /* EditPriceView.swift in Sources */,
 				63F83CA069E14080BA3B586B /* SueltosView.swift in Sources */,
+				A7C3E1F2B4D5469788990002 /* ProductSearchPicker.swift in Sources */,
 				D419F61DEDDF944288D2F152 /* CostSupplierViewModel.swift in Sources */,
 				37E6973D2F32F2A400F6CB5D /* ProductsView.swift in Sources */,
 				DD00000100000010 /* ScanFlowSheet.swift in Sources */,
@@ -729,6 +739,7 @@
 				F000000100000056 /* MoreView.swift in Sources */,
 				F000000100000040 /* InventoryViewModel.swift in Sources */,
 				F000000100000042 /* ReceiveInventoryFormView.swift in Sources */,
+				A7C3E1F2B4D5469788990006 /* TransfersView.swift in Sources */,
 				DD000001000000F6 /* LotScannerView.swift in Sources */,
 				F000000100000044 /* SupplierPickerView.swift in Sources */,
 				F000000100000046 /* AdjustmentFormView.swift in Sources */,
@@ -749,6 +760,7 @@
 				F000000100000019 /* Location.swift in Sources */,
 				37E697422F3408EF00F6CB5D /* Setup.swift in Sources */,
 				F000000100000020 /* Product.swift in Sources */,
+				A7C3E1F2B4D5469788990004 /* Transfer.swift in Sources */,
 				DD00000100000008 /* ImageUploadResponse.swift in Sources */,
 				F000000100000021 /* Inventory.swift in Sources */,
 				37E697342F32AC3200F6CB5D /* ExpenseFormView.swift in Sources */,

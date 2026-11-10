@@ -69,22 +69,6 @@ public enum LooseLinkForm {
         "\"\(box)\" desvinculado en \(store)."
     }
 
-    public enum ScanPick: Equatable, Sendable {
-        case select
-        case choose
-        case notFound(String)
-    }
-
-    /// A scanned code's exact search at this store: one match is picked, several are
-    /// listed (a box and its suelto can share a barcode), none says so.
-    public static func scanPick(code: String, resultCount: Int, store: String) -> ScanPick {
-        switch resultCount {
-        case 0: .notFound("Ningún producto con el código \(code) se vende en \(store).")
-        case 1: .select
-        default: .choose
-        }
-    }
-
     // The "Vinculados en <tienda>" list.
 
     public static func linkedRowDetail(quantity: Int?) -> String {

@@ -21,6 +21,32 @@ public enum NetworkError: LocalizedError {
     case cancelled
     /// A positive adjustment for a product with no cost on record (UNIT_COST_REQUIRED).
     case unitCostRequired(message: String)
+    /// A transfer the API refused with a stable code (`NetworkError.refusalCodes`).
+    case refused(Refusal)
+
+    public struct Refusal: Equatable, Sendable {
+        public let code: String
+        public let message: String
+        /// The item the refusal names, when it names one.
+        public let productId: String?
+        /// INSUFFICIENT_STOCK: what the store has.
+        public let available: Int?
+
+        public init(code: String, message: String, productId: String?, available: Int?) {
+            self.code = code
+            self.message = message
+            self.productId = productId
+            self.available = available
+        }
+    }
+
+    /// The transfer codes whose details the screen needs (which product, how many).
+    public static let refusalCodes: Set<String> = [
+        "NO_ITEMS", "TOO_MANY_ITEMS", "INVALID_QUANTITY", "DUPLICATE_PRODUCT", "SAME_LOCATION",
+        "DESTINATION_NOT_CUT_OVER", "PRODUCT_NOT_SOLD_AT_LOCATION", "INSUFFICIENT_STOCK",
+        "RECEIVE_ON_SEND_NOT_ALLOWED", "INVALID_ITEM", "LOCATION_NOT_CUT_OVER",
+        "CLIENT_REQUEST_ID_REUSED",
+    ]
 
     public var errorDescription: String? {
         switch self {
@@ -57,6 +83,8 @@ public enum NetworkError: LocalizedError {
             return message
         case .unitCostRequired(let message):
             return message
+        case .refused(let refusal):
+            return refusal.message
         case .unknown(let error):
             return error.localizedDescription
         case .queuedForSync:
@@ -107,6 +135,7 @@ extension NetworkError {
             if let errorResponse = try? decoder.decode(APIErrorResponse.self, from: body), errorResponse.lockedUntil != nil {
                 return .accountLocked(until: errorResponse.lockedUntil.flatMap(parseTimestamp))
             }
+            if let refusal = refusal(from: body) { return refusal }
             return .unauthorized
         case 400...499:
             if let errorResponse = try? decoder.decode(APIErrorResponse.self, from: body) {
@@ -115,6 +144,7 @@ extension NetworkError {
                     || errorResponse.message == "Indica el costo unitario: este producto no tiene un costo anterior registrado." {
                     return .unitCostRequired(message: errorResponse.displayMessage)
                 }
+                if let refusal = refusal(from: body) { return refusal }
                 return .httpError(statusCode: statusCode, message: errorResponse.displayMessage)
             }
             return .httpError(statusCode: statusCode, message: nil)
@@ -126,6 +156,13 @@ extension NetworkError {
         default:
             return .httpError(statusCode: statusCode, message: nil)
         }
+    }
+
+    private static func refusal(from body: Data) -> NetworkError? {
+        guard let response = try? JSONDecoder().decode(APIErrorResponse.self, from: body),
+              let code = response.code, refusalCodes.contains(code) else { return nil }
+        return .refused(Refusal(code: code, message: response.displayMessage,
+                                productId: response.productId, available: response.available))
     }
 
     /// The API's ISO timestamps carry milliseconds (JS toISOString); accept both forms.
@@ -160,6 +197,9 @@ public struct APIErrorResponse: Decodable {
     public let lockedUntil: String?
     /// Stable error code (AuthErrorCode raw values); absent from older servers.
     public let code: String?
+    /// Transfer refusals: the item named, and (INSUFFICIENT_STOCK) what the store has.
+    public let productId: String?
+    public let available: Int?
     
     public var displayMessage: String {
         message ?? error ?? "Ocurrió un error desconocido"
