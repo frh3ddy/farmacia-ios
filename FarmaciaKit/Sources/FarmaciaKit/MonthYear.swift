@@ -58,3 +58,17 @@ extension MonthYear {
         today.isBefore(self) ? nil : "Se guarda como vencido desde el 1.º de mes"
     }
 }
+
+extension MonthYear {
+    /// What the wheels start on: the saved expiry, or a year out (the usual shelf life).
+    public static func openingValue(current: MonthYear?, today: MonthYear) -> MonthYear {
+        current ?? MonthYear(year: today.year + 1, month: today.month)
+    }
+
+    /// When the wheels' sheet closes: Listo or Quitar (`confirmed`) keep what's shown;
+    /// swiping it away is a cancel, so the expiry goes back to what it was before
+    /// opening, including empty, so a year-out start nobody chose isn't saved.
+    public static func closingValue(before: MonthYear?, current: MonthYear?, confirmed: Bool) -> MonthYear? {
+        confirmed ? current : before
+    }
+}
