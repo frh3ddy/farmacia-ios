@@ -5,56 +5,47 @@ import FarmaciaKit
 //
 // An expiry as the box prints it: month and year, no day calendar to scroll
 // (tasks/lot-expiry-capture-epic.md). A Form row "Vence · mar 2027" that opens
-// two wheels in place. Starts empty: leaving it so means "no expiry", never a
+// two wheels. Starts empty: leaving it so means "no expiry", never a
 // made-up default. Saved as the 1st of the month (`MonthYear.firstDay`).
+// The wheels open in a bottom sheet, so they're never cut off below the row
+// (tasks/expiry-picker-styles-epic.md).
 
 struct MonthYearPicker: View {
     let title: String
     @Binding var value: MonthYear?
     var today = MonthYear(date: .now)
     @State private var isOpen = false
+    /// The expiry before the sheet opened: a swipe-away puts it back.
+    @State private var before: MonthYear?
+    /// Listo or Quitar closed it (vs. a swipe-away, which cancels).
+    @State private var confirmed = false
 
     private var years: ClosedRange<Int> { (today.year - 1)...(today.year + 10) }
 
     var body: some View {
         LabeledContent(title) {
             HStack(spacing: DS.Spacing.s) {
-                Button(value?.display() ?? "Elegir", action: toggle)
+                Button(value?.display() ?? "Elegir", action: open)
                 .foregroundStyle(value == nil || isOpen ? AnyShapeStyle(.tint) : AnyShapeStyle(.primary))
                 .monospacedDigit()
 
                 if value != nil {
-                    Button("Quitar caducidad", systemImage: "xmark.circle.fill") {
-                        withAnimation {
-                            value = nil
-                            isOpen = false
-                        }
-                    }
-                    .labelStyle(.iconOnly)
-                    .foregroundStyle(.tertiary)
+                    Button("Quitar caducidad", systemImage: "xmark.circle.fill", action: clear)
+                        .labelStyle(.iconOnly)
+                        .foregroundStyle(.tertiary)
                 }
             }
             .buttonStyle(.borderless)
         }
         // The whole row opens it, like a DatePicker row; VoiceOver uses the button.
         .contentShape(.rect)
-        .onTapGesture(perform: toggle)
-
-        if isOpen, let current = value {
-            HStack(spacing: 0) {
-                Picker("Mes", selection: monthBinding(current)) {
-                    ForEach(1...12, id: \.self) { month in
-                        Text(MonthYear.monthNames[month - 1]).tag(month)
-                    }
-                }
-                Picker("Año", selection: yearBinding(current)) {
-                    ForEach(years, id: \.self) { year in
-                        Text(String(year)).tag(year)
-                    }
-                }
-            }
-            .pickerStyle(.wheel)
-            .labelsHidden()
+        .onTapGesture(perform: open)
+        .sheet(isPresented: $isOpen, onDismiss: closed) {
+            panel
+                // Medium, not a fixed height: wheels + title + Quitar fit with
+                // larger text too; drag up for the full height.
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
         }
 
         if let warning = value?.expiredWarning(today: today) {
@@ -64,10 +55,58 @@ struct MonthYearPicker: View {
         }
     }
 
-    private func toggle() {
-        // Opening an empty one starts the wheels a year out, the usual shelf life.
-        if value == nil { value = MonthYear(year: today.year + 1, month: today.month) }
-        withAnimation { isOpen.toggle() }
+    /// The bottom sheet: always fully on screen, wherever the row is in the form.
+    private var panel: some View {
+        VStack(spacing: DS.Spacing.m) {
+            HStack {
+                Text("Caducidad").font(.headline)
+                Spacer()
+                Button("Listo") {
+                    confirmed = true
+                    isOpen = false
+                }
+                .bold()
+            }
+            if let current = value {
+                HStack(spacing: 0) {
+                    Picker("Mes", selection: monthBinding(current)) {
+                        ForEach(1...12, id: \.self) { month in
+                            Text(MonthYear.monthNames[month - 1]).tag(month)
+                        }
+                    }
+                    Picker("Año", selection: yearBinding(current)) {
+                        ForEach(years, id: \.self) { year in
+                            Text(String(year)).tag(year)
+                        }
+                    }
+                }
+                .pickerStyle(.wheel)
+                .labelsHidden()
+            }
+            Button("Quitar caducidad", role: .destructive, action: clear)
+        }
+        .padding()
+        .frame(maxHeight: .infinity, alignment: .top)
+    }
+
+    private func open() {
+        before = value
+        confirmed = false
+        value = MonthYear.openingValue(current: value, today: today)
+        isOpen = true
+    }
+
+    /// Quitar: from the row (sheet closed) or from the sheet.
+    private func clear() {
+        confirmed = true
+        withAnimation {
+            value = nil
+            isOpen = false
+        }
+    }
+
+    private func closed() {
+        value = MonthYear.closingValue(before: before, current: value, confirmed: confirmed)
     }
 
     private func monthBinding(_ current: MonthYear) -> Binding<Int> {
