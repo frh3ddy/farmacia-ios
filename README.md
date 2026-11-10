@@ -210,6 +210,13 @@ The two builds are separate apps, so both can be installed on the same phone:
 Each keeps its own Keychain entries, so each app is activated once against its own server.
 Both scripts install on the first connected (or Wi-Fi paired) iPhone; the dev script warns if the local API isn't reachable and keeps `build/dev` between runs for faster rebuilds.
 On a free Apple account, the two count as 2 of the 3 sideloaded apps a device allows.
+
+**Profile renewal**: a free account's signing profile lasts 7 days, after which the app stops opening.
+- `scripts/install-renew-agent.sh` (run once) schedules `scripts/renew-profile.sh` daily at 9:00. When the release profile has under 48h left, it reinstalls the release on both iPhones and posts a Mac notification.
+- If a phone fails (locked, or off this Wi-Fi), an alert says how long the app has left. Retry with `FORCE=1 scripts/renew-profile.sh`, or let the next day's run try again.
+- The log is `~/Library/Logs/farmacia-renew.log`.
+- The Mac must be awake and signed in to the Apple ID in Xcode.
+- The Debug app isn't renewed; reinstall it with `scripts/dev-build-install.sh`.
 Brand art (icon, logo lockups) comes from `scripts/brand/render-brand.swift`; see `docs/brand-guidelines.md`.
 
 ### Testing
