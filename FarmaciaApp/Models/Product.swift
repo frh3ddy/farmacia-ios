@@ -154,6 +154,18 @@ struct ProductSyncResponse: Decodable {
     let hasMore: Bool
 }
 
+/// GET /products/loose-links: this store's box → suelto pairs, each a /products row.
+struct LooseLinkPair: Decodable, Identifiable, Equatable {
+    let box: Product
+    let loose: Product
+    /// A box has one suelto per store.
+    var id: String { box.id }
+}
+
+struct LooseLinkListResponse: Decodable {
+    let data: [LooseLinkPair]
+}
+
 struct ProductListResponse: Decodable {
     let data: [Product]
     let count: Int
