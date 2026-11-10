@@ -114,3 +114,22 @@ public enum BarcodeLookup {
 private extension Character {
     var isASCIIDigit: Bool { isASCII && isNumber }
 }
+
+// A scanned code's pick, shared by every product picker (Sueltos, Transferencias).
+extension BarcodeLookup {
+    public enum Pick: Equatable, Sendable {
+        case select
+        case choose
+        case notFound(String)
+    }
+
+    /// A scanned code's exact search at this store: one match is picked, several are
+    /// listed (a box and its suelto can share a barcode), none says so.
+    public static func pick(code: String, resultCount: Int, store: String) -> Pick {
+        switch resultCount {
+        case 0: .notFound("Ningún producto con el código \(code) se vende en \(store).")
+        case 1: .select
+        default: .choose
+        }
+    }
+}

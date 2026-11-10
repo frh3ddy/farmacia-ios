@@ -119,17 +119,17 @@ struct LooseLinkFormTests {
 
     @Test("given a scan that matches one product, should select it")
     func scanOne() {
-        #expect(LooseLinkForm.scanPick(code: "7501", resultCount: 1, store: "Centro") == .select)
+        #expect(BarcodeLookup.pick(code: "7501", resultCount: 1, store: "Centro") == .select)
     }
 
     @Test("given a scan that matches several products, should list them to choose from")
     func scanSeveral() {
-        #expect(LooseLinkForm.scanPick(code: "7501", resultCount: 3, store: "Centro") == .choose)
+        #expect(BarcodeLookup.pick(code: "7501", resultCount: 3, store: "Centro") == .choose)
     }
 
     @Test("given a scan that matches nothing at this store, should name the code and the store")
     func scanNone() {
-        #expect(LooseLinkForm.scanPick(code: "7501", resultCount: 0, store: "Centro")
+        #expect(BarcodeLookup.pick(code: "7501", resultCount: 0, store: "Centro")
                 == .notFound("Ningún producto con el código 7501 se vende en Centro."))
     }
 

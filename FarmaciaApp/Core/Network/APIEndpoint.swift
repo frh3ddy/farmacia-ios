@@ -115,6 +115,11 @@ enum APIEndpoint {
     /// Sueltos: links (or with null, unlinks) a box to its suelto at the session's store.
     case setLooseLink(productId: String)
     case listLooseLinks
+    /// Transferencias: many products to another store in one shipment (TransferBatchRequest).
+    case sendTransfers
+    /// `?locationId=&status=`: shipments where the store is either side.
+    case listShipments
+    case receiveShipment(id: String)
     case uploadProductImage(id: String)
     case productSuppliers(productId: String)
     case productCostHistory(productId: String)
@@ -240,6 +245,9 @@ enum APIEndpoint {
         case .updateProductPrice(let id): return "/products/\(id)/price"
         case .setLooseLink(let id): return "/products/\(id)/loose-link"
         case .listLooseLinks: return "/products/loose-links"
+        case .sendTransfers: return "/transfers/batch"
+        case .listShipments: return "/transfers/shipments"
+        case .receiveShipment(let id): return "/transfers/shipments/\(id)/receive"
         case .uploadProductImage(let id): return "/products/\(id)/image"
         case .productSuppliers(let productId): return "/products/\(productId)/suppliers"
         case .productCostHistory(let productId): return "/products/\(productId)/cost-history"
@@ -348,6 +356,10 @@ enum APIEndpoint {
             return .post
         case .updateProductPrice, .setLooseLink:
             return .patch
+        case .sendTransfers, .receiveShipment:
+            return .post
+        case .listShipments:
+            return .get
         case .uploadProductImage:
             return .post
             

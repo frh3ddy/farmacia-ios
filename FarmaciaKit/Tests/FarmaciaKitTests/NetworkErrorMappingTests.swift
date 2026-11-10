@@ -96,3 +96,55 @@ struct NetworkErrorMappingTests {
         #expect(describe(from(status, json)) == expected)
     }
 }
+
+/// Transfer refusals keep their code and the item they name, so the screen can say
+/// which product failed (a batch stops at its first failing item).
+struct NetworkErrorRefusalTests {
+    private func refusal(_ status: Int, _ json: String) -> NetworkError.Refusal? {
+        if case .refused(let refusal)? = NetworkError.from(statusCode: status, body: Data(json.utf8)) { return refusal }
+        return nil
+    }
+
+    @Test("given a 400 INSUFFICIENT_STOCK, should keep the code, product and what's available")
+    func insufficientStock() throws {
+        let body = #"{"success":false,"code":"INSUFFICIENT_STOCK","message":"No hay suficientes existencias","productId":"asp","requested":5,"available":4}"#
+        let refusal = try #require(refusal(400, body))
+        #expect(refusal == .init(code: "INSUFFICIENT_STOCK", message: "No hay suficientes existencias", productId: "asp", available: 4))
+    }
+
+    @Test("given a 403 RECEIVE_ON_SEND_NOT_ALLOWED, should keep the code instead of a bare unauthorized")
+    func receiveOnSendForbidden() throws {
+        let body = #"{"success":false,"code":"RECEIVE_ON_SEND_NOT_ALLOWED","message":"No tienes acceso a la sucursal de destino: envíala para confirmar al llegar"}"#
+        #expect(try #require(refusal(403, body)).code == "RECEIVE_ON_SEND_NOT_ALLOWED")
+    }
+
+    @Test("given the newer transfer codes, should keep them too", arguments: ["INVALID_ITEM", "LOCATION_NOT_CUT_OVER", "NO_ITEMS"])
+    func newerCodes(code: String) {
+        #expect(refusal(400, #"{"success":false,"code":"\#(code)","message":"x"}"#)?.code == code)
+    }
+
+    @Test("given a 409 CLIENT_REQUEST_ID_REUSED, should keep the code")
+    func requestIdReused() {
+        #expect(refusal(409, #"{"success":false,"code":"CLIENT_REQUEST_ID_REUSED","message":"x"}"#)?.code == "CLIENT_REQUEST_ID_REUSED")
+    }
+
+    @Test("given a refusal, should describe itself with the server's message")
+    func describesWithMessage() {
+        let error = NetworkError.refused(.init(code: "SAME_LOCATION", message: "Elige otra sucursal", productId: nil, available: nil))
+        #expect(error.errorDescription == "Elige otra sucursal")
+    }
+
+    @Test("given a 403 with no code, should stay unauthorized")
+    func plainForbidden() {
+        if case .unauthorized? = NetworkError.from(statusCode: 403, body: Data(#"{"message":"No tienes acceso a esta sucursal"}"#.utf8)) {} else {
+            Issue.record("expected unauthorized")
+        }
+    }
+
+    @Test("given a 400 with a code outside transfers, should stay an httpError", arguments: ["SOMETHING_ELSE"])
+    func otherCodes(code: String) {
+        if case .httpError(400, "x")? = NetworkError.from(statusCode: 400, body: Data(#"{"code":"\#(code)","message":"x"}"#.utf8)) {} else {
+            Issue.record("expected httpError")
+        }
+    }
+}
