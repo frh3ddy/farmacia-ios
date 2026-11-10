@@ -3,26 +3,45 @@ import Testing
 @testable import FarmaciaKit
 
 /// Más → Transferencias: the list of products being sent to another store in one go.
-struct TransferDraftAddTests {
-    @Test("given an empty draft, adding Aspirina with 12 available should add one line with quantity 1")
+struct TransferDraftSetTests {
+    @Test("given an empty draft, saving Aspirina with 3 from the sheet should add one line with 3")
     func addsLine() {
         var draft = TransferDraft(clientRequestId: "r1")
-        draft.add(productId: "asp", name: "Aspirina", available: 12)
-        #expect(draft.lines == [.init(productId: "asp", name: "Aspirina", available: 12, quantity: 1)])
+        draft.set(productId: "asp", name: "Aspirina", available: 12, quantity: 3)
+        #expect(draft.lines == [.init(productId: "asp", name: "Aspirina", available: 12, quantity: 3)])
     }
 
-    @Test("given Aspirina already in the list, adding it again should raise its quantity to 2, not add a second line")
-    func secondScanRaisesQuantity() {
+    @Test("given Aspirina then Ibuprofeno, should list Ibuprofeno first")
+    func newestFirst() {
         var draft = TransferDraft(clientRequestId: "r1")
-        draft.add(productId: "asp", name: "Aspirina", available: 12)
-        draft.add(productId: "asp", name: "Aspirina", available: 12)
-        #expect(draft.lines.map(\.quantity) == [2])
+        draft.set(productId: "asp", name: "Aspirina", available: 12, quantity: 1)
+        draft.set(productId: "ibu", name: "Ibuprofeno", available: 3, quantity: 1)
+        #expect(draft.lines.map(\.productId) == ["ibu", "asp"])
+    }
+
+    @Test("given Aspirina with 5, saving it again with 3 should leave one line with 3, at the top")
+    func rePickSetsAndMovesUp() {
+        var draft = TransferDraft(clientRequestId: "r1")
+        draft.set(productId: "asp", name: "Aspirina", available: 12, quantity: 5)
+        draft.set(productId: "ibu", name: "Ibuprofeno", available: 3, quantity: 1)
+        draft.set(productId: "asp", name: "Aspirina", available: 12, quantity: 3)
+        #expect(draft.lines.map(\.productId) == ["asp", "ibu"])
+        #expect(draft.lines.map(\.quantity) == [3, 1])
+    }
+
+    @Test("given three lines, changing the last one's quantity in its row should not move it")
+    func rowEditKeepsPlace() {
+        var draft = TransferDraft(clientRequestId: "r1")
+        for id in ["a", "b", "c"] { draft.set(productId: id, name: id, available: 9, quantity: 1) }
+        draft.setQuantity(4, for: "a")
+        #expect(draft.lines.map(\.productId) == ["c", "b", "a"])
+        #expect(draft.lines.last?.quantity == 4)
     }
 
     @Test("given a product whose stock here is unknown, should count it as none, so it can't be sent")
     func unknownStock() {
         var draft = TransferDraft(clientRequestId: "r1")
-        draft.add(productId: "asp", name: "Aspirina", available: nil)
+        draft.set(productId: "asp", name: "Aspirina", available: nil, quantity: 1)
         #expect(draft.lines.first?.available == 0)
         #expect(!draft.canSend(destinationId: "oriente"))
     }
@@ -30,19 +49,10 @@ struct TransferDraftAddTests {
     @Test("given two lines, removing one should drop only it")
     func removesLine() {
         var draft = TransferDraft(clientRequestId: "r1")
-        draft.add(productId: "asp", name: "Aspirina", available: 12)
-        draft.add(productId: "ibu", name: "Ibuprofeno", available: 3)
+        draft.set(productId: "asp", name: "Aspirina", available: 12, quantity: 1)
+        draft.set(productId: "ibu", name: "Ibuprofeno", available: 3, quantity: 1)
         draft.remove(productId: "asp")
         #expect(draft.lines.map(\.productId) == ["ibu"])
-    }
-
-    @Test("given a line, setting its quantity should change only that line")
-    func setsQuantity() {
-        var draft = TransferDraft(clientRequestId: "r1")
-        draft.add(productId: "asp", name: "Aspirina", available: 12)
-        draft.add(productId: "ibu", name: "Ibuprofeno", available: 3)
-        draft.setQuantity(5, for: "asp")
-        #expect(draft.lines.map(\.quantity) == [5, 1])
     }
 }
 
@@ -72,8 +82,7 @@ struct TransferDraftCanSendTests {
     private func draft(_ lines: [(String, Int, Int)]) -> TransferDraft {
         var draft = TransferDraft(clientRequestId: "r1")
         for (id, available, quantity) in lines {
-            draft.add(productId: id, name: id, available: available)
-            draft.setQuantity(quantity, for: id)
+            draft.set(productId: id, name: id, available: available, quantity: quantity)
         }
         return draft
     }
@@ -143,8 +152,7 @@ struct TransferDraftSummaryTests {
     func plural() {
         var draft = TransferDraft(clientRequestId: "r1")
         for (id, quantity) in [("a", 10), ("b", 10), ("c", 4)] {
-            draft.add(productId: id, name: id, available: 50)
-            draft.setQuantity(quantity, for: id)
+            draft.set(productId: id, name: id, available: 50, quantity: quantity)
         }
         #expect(draft.summary == "3 productos · 24 unidades")
     }
@@ -152,7 +160,7 @@ struct TransferDraftSummaryTests {
     @Test("given 1 line with 1 piece, should read 1 producto · 1 unidad")
     func singular() {
         var draft = TransferDraft(clientRequestId: "r1")
-        draft.add(productId: "a", name: "a", available: 5)
+        draft.set(productId: "a", name: "a", available: 5, quantity: 1)
         #expect(draft.summary == "1 producto · 1 unidad")
     }
 }
@@ -246,5 +254,45 @@ struct SendUncertainTests {
     func text() {
         #expect(TransferError.mayHaveSentText
             == "Puede que ya se haya enviado. Revisa Recientes antes de cambiar la lista; reenviarla tal cual no la duplica.")
+    }
+}
+
+/// The product sheet that opens on every pick or scan.
+struct TransferSheetTests {
+    private var draftWithAspirina: TransferDraft {
+        var draft = TransferDraft(clientRequestId: "r1")
+        draft.set(productId: "asp", name: "Aspirina", available: 12, quantity: 5)
+        return draft
+    }
+
+    @Test("given a product not in the list with 12 here, should start at 1")
+    func startsAtOne() {
+        #expect(draftWithAspirina.sheetStart(productId: "ibu", available: 12) == 1)
+    }
+
+    @Test("given it's in the list with 5, should start at 5")
+    func startsAtListed() {
+        #expect(draftWithAspirina.sheetStart(productId: "asp", available: 12) == 5)
+    }
+
+    @Test("given none here, should start at 0", arguments: [0, nil] as [Int?])
+    func startsAtZeroWithoutStock(available: Int?) {
+        #expect(draftWithAspirina.sheetStart(productId: "ibu", available: available) == 0)
+    }
+
+    @Test("given a product not in the list, should read Agregar; one already in it, Guardar")
+    func action() {
+        #expect(draftWithAspirina.sheetAction(productId: "ibu") == "Agregar")
+        #expect(draftWithAspirina.sheetAction(productId: "asp") == "Guardar")
+    }
+
+    @Test("given 3 here, the −/+ should go from 1 to 3")
+    func rangeWithStock() {
+        #expect(TransferDraft.stepRange(available: 3) == 1...3)
+    }
+
+    @Test("given none here, the −/+ should stay at 0", arguments: [0, -2, nil] as [Int?])
+    func rangeWithoutStock(available: Int?) {
+        #expect(TransferDraft.stepRange(available: available) == 0...0)
     }
 }

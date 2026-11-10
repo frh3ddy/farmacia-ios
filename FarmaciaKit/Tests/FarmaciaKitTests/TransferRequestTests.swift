@@ -11,9 +11,8 @@ struct TransferBatchRequestTests {
 
     private func twoLines(id: String = "r1") -> TransferDraft {
         var draft = TransferDraft(clientRequestId: id)
-        draft.add(productId: "asp", name: "Aspirina", available: 12)
-        draft.add(productId: "ibu", name: "Ibuprofeno", available: 3)
-        draft.setQuantity(4, for: "asp")
+        draft.set(productId: "asp", name: "Aspirina", available: 12, quantity: 4)
+        draft.set(productId: "ibu", name: "Ibuprofeno", available: 3, quantity: 1)
         return draft
     }
 
@@ -24,8 +23,8 @@ struct TransferBatchRequestTests {
         #expect(body["receiveOnSend"] as? Bool == true)
         #expect(body["clientRequestId"] as? String == "r1")
         let items = try #require(body["items"] as? [[String: Any]])
-        #expect(items.map { $0["productId"] as? String } == ["asp", "ibu"])
-        #expect(items.map { $0["quantity"] as? Int } == [4, 1])
+        #expect(items.map { $0["productId"] as? String } == ["ibu", "asp"])
+        #expect(items.map { $0["quantity"] as? Int } == [1, 4])
     }
 
     @Test("given the same draft encoded twice, should keep the same clientRequestId")
@@ -40,7 +39,7 @@ struct TransferBatchRequestTests {
         var draft = twoLines(id: "r1")
         draft.renewRequestId("r2")
         #expect(draft.clientRequestId == "r2")
-        #expect(draft.lines.map(\.productId) == ["asp", "ibu"])
+        #expect(draft.lines.map(\.productId) == ["ibu", "asp"])
     }
 
     @Test("after a send succeeds and the draft is reset, should be empty with a new clientRequestId")

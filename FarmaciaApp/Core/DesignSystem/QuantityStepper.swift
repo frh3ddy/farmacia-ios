@@ -10,12 +10,15 @@ struct QuantityStepper<Field: Hashable>: View {
     let unit: String
     let focus: FocusState<Field?>.Binding
     let field: Field
+    /// + stops here (e.g. the store's stock); nil: no limit. Typing past it isn't clamped.
+    var maximum: Int? = nil
 
     /// ± taps only: typing, or Unidades/Cajas swapping the bound value, stays silent.
     @State private var ups = 0
     @State private var downs = 0
 
     private var current: Int { value ?? 0 }
+    private var atMaximum: Bool { maximum.map { current >= $0 } ?? false }
 
     var body: some View {
         HStack(spacing: DS.Spacing.l) {
@@ -32,7 +35,7 @@ struct QuantityStepper<Field: Hashable>: View {
                     .accessibilityLabel("Cantidad en \(unit)")
                     .accessibilityAdjustableAction { direction in
                         switch direction {
-                        case .increment: value = current + 1
+                        case .increment: if !atMaximum { value = current + 1 }
                         case .decrement: value = max(0, current - 1)
                         @unknown default: break
                         }
@@ -47,6 +50,7 @@ struct QuantityStepper<Field: Hashable>: View {
                 value = current + 1
                 ups += 1
             }
+                .disabled(atMaximum)
         }
         .sensoryFeedback(.increase, trigger: ups)
         .sensoryFeedback(.decrease, trigger: downs)
