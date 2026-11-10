@@ -3,7 +3,7 @@ import Foundation
 // MARK: - Transfer draft (Más → Transferencias)
 //
 // The products being sent to another store in one POST /transfers/batch. The batch
-// refuses a repeated productId, so a second scan raises the line instead of adding one.
+// refuses a repeated productId, so a re-pick edits its line (and moves it to the top).
 
 public struct TransferDraft: Equatable, Sendable {
     public struct Line: Equatable, Identifiable, Sendable {
@@ -32,14 +32,30 @@ public struct TransferDraft: Equatable, Sendable {
         self.clientRequestId = clientRequestId
     }
 
-    /// Unknown stock (`nil`) counts as none, so it can't be sent until it's known.
-    public mutating func add(productId: String, name: String, available: Int?, imageUrl: String? = nil) {
-        let available = available ?? 0
-        if let index = lines.firstIndex(where: { $0.productId == productId }) {
-            lines[index].quantity += 1
-        } else {
-            lines.append(Line(productId: productId, name: name, available: available, quantity: 1, imageUrl: imageUrl))
-        }
+    /// The sheet's save: the line takes this quantity (a re-pick edits it, it doesn't add)
+    /// and goes first, so the newest pick is on top. Unknown stock (`nil`) counts as none.
+    public mutating func set(productId: String, name: String, available: Int?, quantity: Int, imageUrl: String? = nil) {
+        lines.removeAll { $0.productId == productId }
+        lines.insert(Line(productId: productId, name: name, available: available ?? 0, quantity: quantity, imageUrl: imageUrl), at: 0)
+    }
+
+    // MARK: The product sheet
+
+    /// Where the sheet's stepper starts: the listed quantity for a re-pick, else 1 (0 with no stock).
+    public func sheetStart(productId: String, available: Int?) -> Int {
+        if let line = lines.first(where: { $0.productId == productId }) { return line.quantity }
+        return (available ?? 0) > 0 ? 1 : 0
+    }
+
+    public func sheetAction(productId: String) -> String {
+        lines.contains { $0.productId == productId } ? "Guardar" : "Agregar"
+    }
+
+    /// The sheet's + and each row's −/+: 1 up to this store's stock (0...0 with none).
+    /// Typing more still shows `lineIssue`; it isn't clamped silently.
+    public static func stepRange(available: Int?) -> ClosedRange<Int> {
+        guard let available, available > 0 else { return 0...0 }
+        return 1...available
     }
 
     public mutating func remove(productId: String) {

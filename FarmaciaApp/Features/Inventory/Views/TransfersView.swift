@@ -11,7 +11,6 @@ import FarmaciaKit
 
 private enum TransferField: Hashable {
     case search
-    case quantity(String)
 }
 
 struct TransfersView: View {
@@ -21,6 +20,8 @@ struct TransfersView: View {
     /// The picker's pick; it goes into the draft at once, and the picker clears.
     /// Its stock here is `totalInventory` (this store's lots); `quantity` is piezas por caja.
     @State private var picked: Product?
+    /// The product sheet: every pick or scan opens it to set how many.
+    @State private var sheetProduct: Product?
     @State private var stores: [Location] = []
     @State private var storesFailed = false
     @State private var destinationId: String?
@@ -95,16 +96,14 @@ struct TransfersView: View {
             isDone: false
         ) { tappedSend() })
         .formKeyboard(focus: $focusedField,
-                      order: FocusOrder([.search] + draft.lines.map { .quantity($0.productId) }))
+                      order: FocusOrder([.search]))
         .navigationTitle("Transferencias")
         .storeStrip()
         .onChange(of: picked) { _, product in
             guard let product else { return }
-            draft.add(productId: product.id, name: product.displayName, available: product.totalInventory,
-                      imageUrl: product.squareImageUrl)
             picked = nil
-            sentMessage = nil
-            errorMessage = nil
+            focusedField = nil
+            sheetProduct = product
         }
         // A store switch while this screen is open: the list's stock, its destination
         // and its request id belonged to the other store.
@@ -128,6 +127,18 @@ struct TransfersView: View {
             Text(receiveOnSend
                  ? "Las existencias pasan a \(destination?.name ?? "la otra sucursal") al enviar."
                  : "\(destination?.name ?? "La otra sucursal") las confirmará al recibir.")
+        }
+        .sheet(item: $sheetProduct) { product in
+            TransferProductSheet(
+                product: product,
+                start: draft.sheetStart(productId: product.id, available: product.totalInventory),
+                actionTitle: draft.sheetAction(productId: product.id)
+            ) { quantity in
+                draft.set(productId: product.id, name: product.displayName, available: product.totalInventory,
+                          quantity: quantity, imageUrl: product.squareImageUrl)
+                sentMessage = nil
+                errorMessage = nil
+            }
         }
         .sheet(item: $receiving) { shipment in
             ShipmentReceiveView(shipment: shipment) { _ in
@@ -174,9 +185,7 @@ struct TransfersView: View {
                     quantity: Binding(
                         get: { line.quantity },
                         set: { draft.setQuantity($0, for: line.productId) }
-                    ),
-                    field: .quantity(line.productId),
-                    focus: $focusedField
+                    )
                 )
             }
             .onDelete { offsets in
@@ -325,8 +334,6 @@ struct TransfersView: View {
 private struct TransferLineRow: View {
     let line: TransferDraft.Line
     @Binding var quantity: Int
-    let field: TransferField
-    var focus: FocusState<TransferField?>.Binding
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
@@ -339,12 +346,14 @@ private struct TransferLineRow: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
-                TextField("Cantidad", value: $quantity, format: .number)
-                    .keyboardType(.numberPad)
-                    .multilineTextAlignment(.trailing)
-                    .frame(maxWidth: 72)
-                    .formField(field, focus: focus)
-                    .accessibilityLabel("Cantidad de \(line.name)")
+                Text("\(line.quantity)")
+                    .font(.body.monospacedDigit().weight(.semibold))
+                    .accessibilityHidden(true)
+                // −/+ in place: the row keeps its spot. Typing a big number: pick it again (the sheet).
+                Stepper("Cantidad de \(line.name)", value: $quantity,
+                        in: TransferDraft.stepRange(available: line.available))
+                    .labelsHidden()
+                    .accessibilityValue("\(line.quantity)")
             }
             if let issue = TransferDraft.lineIssue(quantity: line.quantity, available: line.available) {
                 StatusLabel(issue, tone: .critical)
