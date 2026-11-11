@@ -42,6 +42,12 @@ struct ScanFlowSheet: View {
     @State private var isLookingUp = false
     /// The last receive or count, and its product (the strip opens it).
     @State private var recent: (save: RecentScanSave, product: Product)?
+    /// Recibir's "Recibiendo de": the delivery's supplier, picked over each product's
+    /// preferred one until the sheet closes (tasks/receiving-run-supplier-epic.md).
+    @State private var runSupplier: Supplier?
+    /// A choice was made: "Sin proveedor" is then none for every form, not "use the preferred".
+    @State private var runSupplierChosen = false
+    @State private var showsRunSupplierPicker = false
     /// The store's open Conteo inicial, so counters see that Contar is going to it.
     @State private var openCount: StockCountSession?
     @EnvironmentObject private var authManager: AuthManager
@@ -55,7 +61,8 @@ struct ScanFlowSheet: View {
         case choose(code: String, candidates: [Product])
         case create(code: String)
         /// The note is worked out on the way in, so it doesn't change as the save lands.
-        case receive(Product, note: String?)
+        /// `cost`: typed in Nuevo producto just before.
+        case receive(Product, note: String?, cost: Double?)
         case count(Product, note: String?)
     }
 
@@ -80,18 +87,20 @@ struct ScanFlowSheet: View {
                     prefillBarcode: BarcodeLookup.newProductBarcode(code),
                     showsInitialStock: mode.createShowsInitialStock,
                     onCreated: onCreated,
-                    onClose: { product in
-                        if let product { route(.created, product: product) } else { route(.closed) }
+                    onClose: { product, cost in
+                        if let product { route(.created(cost: cost), product: product) } else { route(.closed) }
                     }
                 )
                 .transition(.push(from: .trailing))
-            case .receive(let product, let note):
+            case .receive(let product, let note, let cost):
                 ReceiveInventoryFormView(
                     viewModel: inventoryViewModel,
                     product: product,
                     onComplete: { quantity in saved(product, .received(quantity)) },
                     onClose: { route(.closed) },
-                    note: note
+                    note: note,
+                    runSupplier: RunSupplier(chosen: runSupplierChosen, id: runSupplier?.id),
+                    prefillCost: cost
                 )
                 .transition(.push(from: .trailing))
             case .count(let product, let note):
@@ -151,6 +160,7 @@ struct ScanFlowSheet: View {
                             }
                         }
                         .pickerStyle(.segmented)
+                        if mode == .receive { runSupplierRow }
                         if mode == .count, openCount != nil {
                             Label("Conteo inicial en curso", systemImage: "checklist")
                                 .font(.caption.weight(.semibold))
@@ -172,6 +182,9 @@ struct ScanFlowSheet: View {
                 )
                 openCount = active?.data
             }
+            .navigationDestination(isPresented: $showsRunSupplierPicker) {
+                SupplierPickerView(suppliers: $inventoryViewModel.suppliers, selectedSupplier: runSupplierSelection)
+            }
             .navigationTitle("Escanear Código")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -182,6 +195,52 @@ struct ScanFlowSheet: View {
                 }
             }
         }
+    }
+
+    /// Pushes the supplier list; the camera comes back when it pops.
+    private var runSupplierRow: some View {
+        VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
+            Button {
+                showsRunSupplierPicker = true
+            } label: {
+                LabeledContent("Recibiendo de") {
+                    HStack(spacing: DS.Spacing.xs) {
+                        Text(runSupplierName)
+                        Image(systemName: "chevron.forward")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                .font(.subheadline)
+                .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            // One label and value; the LabeledContent inside a Button read "Recibiendo de" twice.
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Recibiendo de")
+            .accessibilityValue(runSupplierName)
+            .accessibilityAddTraits(.isButton)
+            if inventoryViewModel.suppliersFailed && inventoryViewModel.suppliers.isEmpty {
+                Text("No se pudieron cargar los proveedores.")
+                    .font(.caption)
+                    .foregroundStyle(Tone.critical.color)
+            }
+        }
+        .task {
+            if inventoryViewModel.suppliers.isEmpty { await inventoryViewModel.loadSuppliers() }
+        }
+    }
+
+    private var runSupplierName: String {
+        runSupplierChosen ? runSupplier?.name ?? "Sin proveedor" : "Elegir proveedor"
+    }
+
+    /// The picker writes nil for "Sin proveedor" too; picking anything counts as a choice.
+    private var runSupplierSelection: Binding<Supplier?> {
+        Binding(
+            get: { runSupplier },
+            set: { runSupplier = $0; runSupplierChosen = true }
+        )
     }
 
     private func handleScan(result: Result<ScanResult, ScanError>) {
@@ -209,7 +268,7 @@ struct ScanFlowSheet: View {
     private func route(_ event: ScanEvent, product: Product? = nil, code: String = "", candidates: [Product] = []) {
         switch ScanNext.after(event, in: mode) {
         case .openDetail: if let product { open(product) }
-        case .receive: if let product { show(.receive(product, note: repeatNote(product, .receive))) }
+        case .receive(let cost): if let product { show(.receive(product, note: repeatNote(product, .receive), cost: cost)) }
         case .count: if let product { show(.count(product, note: repeatNote(product, .count))) }
         case .choose: show(.choose(code: code, candidates: candidates))
         case .create: show(.create(code: code))
