@@ -25,8 +25,9 @@ public enum ScanEvent: Equatable, Sendable {
     case matched
     case severalMatched
     case unknown
-    /// Nuevo Producto saved, and the server returned the product.
-    case created
+    /// Nuevo Producto saved, and the server returned the product. `cost`: typed in
+    /// its Precio section; without initial stock (Recibir) the server drops it.
+    case created(cost: Double?)
     /// A form or the choose list closed with nothing to show next: saved,
     /// cancelled, or a create queued offline.
     case closed
@@ -34,7 +35,8 @@ public enum ScanEvent: Equatable, Sendable {
 
 /// Where the scan flow goes next.
 public enum ScanNext: Equatable, Sendable {
-    case openDetail, receive, count, choose, create, scan, close
+    /// `cost`: carried from Nuevo producto, so the receive form doesn't ask for it again.
+    case openDetail, receive(cost: Double?), count, choose, create, scan, close
 
     public static func after(_ event: ScanEvent, in mode: ScanMode) -> ScanNext {
         switch event {
@@ -42,12 +44,20 @@ public enum ScanNext: Equatable, Sendable {
         case .unknown: .create
         // Consultar closes (as before); the runs scan the next item.
         case .closed: mode == .consult ? .close : .scan
-        case .matched, .created:
-            switch mode {
-            case .consult: .openDetail
-            case .receive: .receive
-            case .count: .count
-            }
+        case .matched: mode.next(cost: nil)
+        case .created(let cost): mode.next(cost: cost)
+        }
+    }
+}
+
+private extension ScanMode {
+    /// The product's screen in this mode. Only Recibir takes a cost: Contar's
+    /// Nuevo producto already saved it with the initial stock.
+    func next(cost: Double?) -> ScanNext {
+        switch self {
+        case .consult: .openDetail
+        case .receive: .receive(cost: cost)
+        case .count: .count
         }
     }
 }

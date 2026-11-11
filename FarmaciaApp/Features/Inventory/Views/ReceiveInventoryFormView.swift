@@ -25,6 +25,11 @@ struct ReceiveInventoryFormView: View {
     var onClose: (() -> Void)? = nil
     /// A reminder shown under the product (the scanner's "Ya recibiste…").
     var note: String? = nil
+    /// The scanner's run supplier (Recibir › "Recibiendo de"): picked over the preferred one.
+    var runSupplier: RunSupplier = .unset
+    /// The cost typed in Nuevo producto just before (scanner, Recibir): the server
+    /// drops it without initial stock, so it would be asked for twice.
+    var prefillCost: Double? = nil
 
     private func close() {
         if let onClose { onClose() } else { dismiss() }
@@ -287,6 +292,10 @@ struct ReceiveInventoryFormView: View {
                 if start == nil { start = draft }
                 // Fetch the product's suppliers to auto-pick the preferred one
                 receivingCost.productChanged(to: product.id)
+                if let cost = prefillCost {
+                    // Not added to the baseline: it was typed (in Nuevo producto), so Cancelar asks first.
+                    receivingCost.prefill(cost, forProductId: product.id)
+                }
                 await loadProductSuppliers(for: product.id)
             }
             .task { await loadSupplierList() }
@@ -445,7 +454,9 @@ struct ReceiveInventoryFormView: View {
                     unit: "MXN",
                     value: $receivingCost.value,
                     focus: $focusedField,
-                    field: .unitCost
+                    field: .unitCost,
+                    prompt: ReceivingCost.hint(previous: ReceivingPrice.oldCost(supplierLast: supplierLastCost,
+                                                                                average: product.averageCost))
                 )
                 // Catches supplier increases and typos; the arrow says it without color.
                 if let costChange {
@@ -630,17 +641,18 @@ struct ReceiveInventoryFormView: View {
     /// Loads the full supplier list only if the product page hasn't (it usually has).
     private func loadSupplierList() async {
         defer { isLoadingSupplierList = false }
-        guard viewModel.suppliers.isEmpty else { return }
-        await viewModel.loadSuppliers()
+        if viewModel.suppliers.isEmpty { await viewModel.loadSuppliers() }
         // Picked here, in the same update that ends the wait, like the product's suppliers.
+        // Also with the list already in: the run supplier doesn't wait for the product's.
         applyPreferredSupplier()
     }
 
-    /// Selects the product's preferred supplier once both lists are in. Runs when
+    /// Selects the run's or the product's preferred supplier once both lists are in. Runs when
     /// either loads; onChange(of: selectedSupplier) then fills its last cost.
     private func applyPreferredSupplier() {
         let preferredId = productSuppliers.first(where: { $0.isPreferred })?.id
         guard let id = PreferredSupplier.pick(
+            run: runSupplier,
             preferredId: preferredId,
             selectedId: selectedSupplier?.id,
             available: viewModel.suppliers.map(\.id)
