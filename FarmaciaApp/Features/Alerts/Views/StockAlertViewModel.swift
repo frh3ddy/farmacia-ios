@@ -73,20 +73,13 @@ class StockAlertViewModel: ObservableObject {
         }
     }
 
-    /// Single-pass count calculation — called once when products change.
+    /// Fallback counts (server counts failed) — recalculated when products change.
     private func recalculateFallbackCounts() {
         var c = StockAlertCounts()
-        for product in products {
-            let stock = product.totalInventory ?? 0
-            if stock == 0 {
-                c.outOfStock += 1
-            } else if stock < 10 {
-                c.lowStock += 1
-            }
-            if (product.profitMargin ?? 100) < 10 {
-                c.lowMargin += 1
-            }
-        }
+        let tally = StockTally(products.map { ($0.totalInventory ?? 0, $0.stockAlert) })
+        c.outOfStock = tally.outOfStock
+        c.lowStock = tally.lowStock
+        c.lowMargin = products.count { ($0.profitMargin ?? 100) < 10 }
         fallbackCounts = c
     }
 }

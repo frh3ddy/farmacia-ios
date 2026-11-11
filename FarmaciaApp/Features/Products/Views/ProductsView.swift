@@ -14,6 +14,7 @@ extension ProductFilter {
         case .atRisk: return "exclamationmark.octagon"
         case .expiringSoon: return "clock.badge.exclamationmark"
         case .lowMargin: return "percent"
+        case .paused: return "pause.circle"
         }
     }
 }
@@ -547,6 +548,7 @@ struct ProductsView: View {
         case .inStock: return viewModel.counts.inStock
         case .atRisk, .expiringSoon: return riskSet(for: filter).count
         case .lowMargin: return viewModel.counts.lowMargin
+        case .paused: return viewModel.counts.paused
         }
     }
 

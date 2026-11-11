@@ -33,6 +33,9 @@ struct Product: Codable, Identifiable, Equatable, Hashable {
     var quantity: Int? = nil
     /// Sueltos: this store's loose product for this box (the API resolves it per store).
     var looseProductId: String? = nil
+    /// This store's stock alert (regular sellers only) and pause; nil from an old
+    /// server, and rows fall back to `StockLevel(quantity:)`.
+    var stockAlert: StockAlert? = nil
     
     var displayName: String {
         ProductName.display(name: name, item: squareProductName, variation: squareVariationName)

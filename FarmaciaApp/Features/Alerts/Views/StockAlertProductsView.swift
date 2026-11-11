@@ -1,4 +1,5 @@
 import SwiftUI
+import FarmaciaKit
 
 // MARK: - Stock Alert Products View (linked from Dashboard)
 
@@ -16,14 +17,18 @@ struct StockAlertProductsView: View {
     private var filteredProducts: [Product] {
         switch selectedFilter {
         case .outOfStock:
-            return products.filter { ($0.totalInventory ?? 0) == 0 }
+            return products.filter { [.out, .empty].contains(stockLevel($0)) }
         case .lowStock:
-            return products.filter { ($0.totalInventory ?? 0) > 0 && ($0.totalInventory ?? 0) < 10 }
+            return products.filter { stockLevel($0) == .low }
         case .lowMargin:
             return products.filter { ($0.profitMargin ?? 100) < 10 }
         }
     }
     
+    private func stockLevel(_ product: Product) -> StockLevel {
+        StockLevel(quantity: product.totalInventory ?? 0, alert: product.stockAlert)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             Picker("Filtrar", selection: $selectedFilter) {

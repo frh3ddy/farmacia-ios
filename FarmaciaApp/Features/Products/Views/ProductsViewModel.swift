@@ -11,6 +11,8 @@ struct ProductCounts: Equatable {
     var inStock = 0
     var lowMargin = 0
     var local = 0
+    /// nil: the server doesn't count paused products, so there's no Pausados chip.
+    var paused: Int?
 }
 
 @MainActor
@@ -339,9 +341,10 @@ class ProductsViewModel: ObservableObject {
         c.total = response.total
         c.outOfStock = response.outOfStock
         c.lowStock = response.lowStock
-        c.inStock = response.total - response.outOfStock - response.lowStock
+        c.inStock = response.inStock
         c.lowMargin = response.lowMargin ?? 0
         c.local = response.local
+        c.paused = response.paused
         counts = c
         syncSummary = ProductCountsResponse.syncSummary(response)
     }
@@ -353,11 +356,12 @@ class ProductsViewModel: ObservableObject {
     private func computeCounts(from source: [Product]) -> ProductCounts {
         var c = ProductCounts()
         c.total = source.count
+        let tally = StockTally(source.map { ($0.totalInventory ?? 0, $0.stockAlert) })
+        c.outOfStock = tally.outOfStock
+        c.lowStock = tally.lowStock
+        c.inStock = tally.inStock
+        c.paused = tally.paused
         for product in source {
-            let stock = product.totalInventory ?? 0
-            if stock == 0 { c.outOfStock += 1 }
-            else if stock < 10 { c.lowStock += 1 }
-            else { c.inStock += 1 }
             if (product.profitMargin ?? 100) < 10 { c.lowMargin += 1 }
             if product.hasSquareSync != true { c.local += 1 }
         }

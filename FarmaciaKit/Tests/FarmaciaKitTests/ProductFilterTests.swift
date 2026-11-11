@@ -37,9 +37,24 @@ struct ProductFilterTests {
         #expect(!filters.contains(.lowMargin))
     }
 
-    @Test("given an owner, should offer every filter")
+    @Test("given an owner and a server that counts paused products, should offer every filter")
     func owner() {
-        #expect(ProductFilter.visible(canViewCosts: true) == ProductFilter.allCases)
+        #expect(ProductFilter.visible(canViewCosts: true, showsPaused: true) == ProductFilter.allCases)
+    }
+
+    @Test("given the Pausados chip, should send filter=paused, in a neutral tone")
+    func paused() {
+        #expect(ProductFilter.paused.rawValue == "Pausados")
+        #expect(ProductFilter.paused.apiValue == "paused")
+        #expect(ProductFilter.paused.tone == .neutral)
+    }
+
+    @Test("given a server without paused counts (old server), should hide Pausados and fall back from it to Todos")
+    func pausedOldServer() {
+        #expect(!ProductFilter.visible(canViewCosts: true).contains(.paused))
+        #expect(ProductFilter.visible(canViewCosts: false, showsPaused: true).contains(.paused))
+        #expect(ProductFilter.coerced(.paused, canViewCosts: true) == .all)
+        #expect(ProductFilter.coerced(.paused, canViewCosts: false, showsPaused: true) == .paused)
     }
 
     @Test("given En Riesgo or Margen Bajo active and the role becomes cashier, should fall back to Todos",

@@ -7,6 +7,8 @@ import Foundation
 // En Riesgo (cash tied up in old stock) and Margen Bajo come from cost, so
 // cashiers don't get them; Por Vencer they do. The En Riesgo / Por Vencer chip
 // counts come from the aging ids (`RiskSet`), "—" when those failed to load.
+// Pausados shows only when the server counts paused products (a server
+// without stock alerts doesn't know the filter).
 
 public enum ProductFilter: String, CaseIterable, Sendable {
     case all = "Todos"
@@ -16,6 +18,7 @@ public enum ProductFilter: String, CaseIterable, Sendable {
     case atRisk = "En Riesgo"
     case expiringSoon = "Por Vencer"
     case lowMargin = "Margen Bajo"
+    case paused = "Pausados"
 
     /// The `filter` query value for GET /products; nil for Todos.
     public var apiValue: String? {
@@ -27,6 +30,7 @@ public enum ProductFilter: String, CaseIterable, Sendable {
         case .atRisk: return "atRisk"
         case .expiringSoon: return "expiring"
         case .lowMargin: return "lowMargin"
+        case .paused: return "paused"
         }
     }
 
@@ -37,17 +41,24 @@ public enum ProductFilter: String, CaseIterable, Sendable {
         case .outOfStock, .atRisk: .critical
         case .lowStock, .expiringSoon, .lowMargin: .caution
         case .inStock: .positive
+        case .paused: .neutral
         }
     }
 
-    public static func visible(canViewCosts: Bool) -> [ProductFilter] {
-        canViewCosts ? allCases : allCases.filter { $0 != .atRisk && $0 != .lowMargin }
+    public static func visible(canViewCosts: Bool, showsPaused: Bool = false) -> [ProductFilter] {
+        allCases.filter { filter in
+            switch filter {
+            case .atRisk, .lowMargin: canViewCosts
+            case .paused: showsPaused
+            default: true
+            }
+        }
     }
 
     /// `filter` if the role may use it, else Todos (e.g. after switching to a store
     /// where this employee is a cashier).
-    public static func coerced(_ filter: ProductFilter, canViewCosts: Bool) -> ProductFilter {
-        visible(canViewCosts: canViewCosts).contains(filter) ? filter : .all
+    public static func coerced(_ filter: ProductFilter, canViewCosts: Bool, showsPaused: Bool = false) -> ProductFilter {
+        visible(canViewCosts: canViewCosts, showsPaused: showsPaused).contains(filter) ? filter : .all
     }
 }
 
