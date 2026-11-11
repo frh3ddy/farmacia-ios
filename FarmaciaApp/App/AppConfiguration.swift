@@ -22,10 +22,10 @@ enum AppConfiguration {
     
     // MARK: - API Configuration
     
-    // For physical device testing, replace with your Mac's local IP
-    // Find it with: ifconfig | grep "inet " | grep -v 127.0.0.1
-    // Example: "http://192.168.1.100:3000"
-    private static let localServerIP = "192.168.1.64" // Change to your Mac's IP for physical device
+    // The Mac's Bonjour name (System Settings → General → Sharing → Local hostname),
+    // so a new DHCP address doesn't break device builds. ATS allows .local over HTTP
+    // (NSAllowsLocalNetworking).
+    private static let localServerIP = "Fredys-Mac-mini.local"
     
     static var apiBaseURL: String {
         switch current {
