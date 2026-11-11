@@ -164,6 +164,7 @@ Opened from a product (Productos → product → Recibir Inventario / Ajustar In
 - Adjustment Impact
 - Receiving Summary
 - Profit & Loss statement
+- Horas pico (owner/manager): orders per weekday × hour from Square sales history, on Inicio (90 days) and in Reportes (30 días–2 años), with the top 3 slots as text (`BusyHours`)
 - Merma in the P&L (dashboard card and statement) is losses; stock that came back (Encontrado, a count corrected up) shows apart as "Mercancía recuperada" and lowers the expense total
 
 ### Design system

@@ -34,6 +34,11 @@ struct DashboardView: View {
                         
                         // Sales Summary
                         salesSummarySection(report: report)
+
+                        // Busy hours (Square sales history), owner/manager
+                        if authManager.isOwner || authManager.isManager {
+                            BusyHoursCard()
+                        }
                         
                         // Inventory Overview
                         inventorySummarySection(report: report)

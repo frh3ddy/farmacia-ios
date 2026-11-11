@@ -70,6 +70,8 @@ enum APIEndpoint {
     case receivingSummaryReport
     case profitLossReport
     case dashboardReport
+    /// `?locationId=&days=`: orders per weekday × hour (BusyHours). Owner/manager.
+    case busyHoursReport
     
     // MARK: - Expense Endpoints
     case createExpense
@@ -130,6 +132,8 @@ enum APIEndpoint {
     case productCostHistory(productId: String)
     /// Every open store's stock of the product (StoreStock). Never sends locationId.
     case productStock(productId: String)
+    /// `?locationId=`: units sold in 30/90 days and the last sale (SalesVelocity).
+    case productSalesVelocity(productId: String)
     case supplierCatalog(supplierId: String)
     case syncProductsToSquare
     case productCounts
@@ -209,6 +213,7 @@ enum APIEndpoint {
         case .receivingSummaryReport: return "/inventory/reports/receiving-summary"
         case .profitLossReport: return "/inventory/reports/profit-loss"
         case .dashboardReport: return "/inventory/reports/dashboard"
+        case .busyHoursReport: return "/inventory/reports/busy-hours"
             
         // Expenses
         case .createExpense, .listExpenses: return "/expenses"
@@ -259,6 +264,7 @@ enum APIEndpoint {
         case .productSuppliers(let productId): return "/products/\(productId)/suppliers"
         case .productCostHistory(let productId): return "/products/\(productId)/cost-history"
         case .productStock(let productId): return "/products/\(productId)/stock"
+        case .productSalesVelocity(let productId): return "/products/\(productId)/sales-velocity"
         case .supplierCatalog(let supplierId): return "/products/supplier-catalog/\(supplierId)"
         case .syncProductsToSquare: return "/products/sync-to-square"
         case .productCounts: return "/products/counts"
@@ -319,7 +325,7 @@ enum APIEndpoint {
             
         // Reports
         case .cogsReport, .valuationReport, .profitMarginReport, .adjustmentImpactReport,
-             .receivingSummaryReport, .profitLossReport, .dashboardReport:
+             .receivingSummaryReport, .profitLossReport, .dashboardReport, .busyHoursReport:
             return .get
             
         // Inventory Aging
@@ -357,7 +363,7 @@ enum APIEndpoint {
             
         // Products
         case .listProducts, .getProduct, .productSuppliers, .productCostHistory, .supplierCatalog,
-             .productCounts, .productDeltaSync, .productStock, .listLooseLinks:
+             .productCounts, .productDeltaSync, .productStock, .productSalesVelocity, .listLooseLinks:
             return .get
         case .createProduct, .syncProductsToSquare, .createSupplier:
             return .post

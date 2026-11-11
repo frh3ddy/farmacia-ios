@@ -41,6 +41,19 @@ struct ReportsView: View {
                         color: .purple
                     )
                 }
+
+                if authManager.isOwner || authManager.isManager {
+                    NavigationLink {
+                        BusyHoursReportView()
+                    } label: {
+                        reportRow(
+                            title: "Horas pico",
+                            subtitle: "Pedidos por día y hora",
+                            icon: "clock",
+                            color: .blue
+                        )
+                    }
+                }
             }
 
             // Inventory Reports
