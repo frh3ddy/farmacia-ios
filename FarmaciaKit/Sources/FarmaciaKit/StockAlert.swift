@@ -46,7 +46,7 @@ public struct StockAlert: Codable, Hashable, Sendable {
 }
 
 /// Why a product is paused at a store. Paused isn't discontinued: it may be restocked,
-/// and it resumes itself when a receiving or a transfer brings it above 0.
+/// and it resumes itself on any receiving or received transfer at that store, whatever the stock.
 public enum PauseReason: String, Codable, CaseIterable, Sendable {
     case supplierUnavailable = "SUPPLIER_UNAVAILABLE"
     case replacedByEquivalent = "REPLACED_BY_EQUIVALENT"
