@@ -56,7 +56,7 @@ struct AlertsView: View {
 
     private func loadStockAlerts() async {
         guard let locationId = authManager.currentLocation?.id else { return }
-        await stockAlertViewModel.loadProducts(locationId: locationId)
+        await stockAlertViewModel.loadCounts(locationId: locationId)
     }
 
     private func loadSignals() async {
@@ -104,9 +104,7 @@ struct AlertsView: View {
                 Spacer()
 
                 NavigationLink {
-                    // Navigate to Products tab (via MainTabView)
-                    // For now, link to a filtered products view
-                    StockAlertProductsView(products: stockAlertViewModel.products)
+                    StockAlertProductsView()
                 } label: {
                     Text("Ver Productos")
                         .font(.caption)
@@ -122,25 +120,25 @@ struct AlertsView: View {
             Divider()
 
             HStack(spacing: 16) {
-                if stockAlertViewModel.outOfStockCount > 0 {
+                if stockAlertViewModel.count(.out) > 0 {
                     alertMetric(
-                        value: "\(stockAlertViewModel.outOfStockCount)",
+                        value: "\(stockAlertViewModel.count(.out))",
                         label: "Sin Stock",
                         color: .red
                     )
                 }
 
-                if stockAlertViewModel.lowStockCount > 0 {
+                if stockAlertViewModel.count(.low) > 0 {
                     alertMetric(
-                        value: "\(stockAlertViewModel.lowStockCount)",
+                        value: "\(stockAlertViewModel.count(.low))",
                         label: "Stock Bajo",
                         color: .orange
                     )
                 }
 
-                if stockAlertViewModel.lowMarginCount > 0 {
+                if stockAlertViewModel.count(.lowMargin) > 0 {
                     alertMetric(
-                        value: "\(stockAlertViewModel.lowMarginCount)",
+                        value: "\(stockAlertViewModel.count(.lowMargin))",
                         label: "Margen Bajo",
                         color: .purple
                     )

@@ -169,7 +169,7 @@ Each step has its own tests on their side. Order matters: O2 feeds O3, and O3 fe
       inventario.", Sin Stock 6 → 5, Pausados 1, and the recents row shows Pausado. **Receive 1 unit → resumed** (the
       Pausado line is gone). Pausing with stock on hand, then Reanudar, works. Not checked: a cashier (no menu, by the
       rule's tests) or a pause with a replacement.
-11. [ ] Alertas. O6 as built by ops (2026-11-13, on their `feature/stock-alerts-list`, not deployed): no
+11. [ ] Alertas. O6 as built by ops (2026-11-13, live in production 2026-11-13, ops main a8eb30f; every sorted list breaks ties on product id, so pages never repeat or skip): no
     `/inventory/stock-alerts` route. Use `GET /products?filter=outAlert` / `filter=lowAlert` instead, with the same rows,
     pages (limit ≤ 200, `totalCount`, `hasMore`) and cost stripping, only regular sellers that aren't paused, sorted by
     `stockAlert.priority` desc then newest. `/products/counts` adds `outAlert` (Alertas "Sin stock"). "Stock bajo" uses
@@ -178,6 +178,23 @@ Each step has its own tests on their side. Order matters: O2 feeds O3, and O3 fe
       ("vende ~3 al día · agotado hace 2 días").
     - New "Sugerencias para pausar (N)" card opens a review list: each row's `reasonText`; swipe or buttons for Pausar
       and Descartar; Seleccionar → several → "Pausar (N)" with one reason.
+    - Ranked lists done 2026-11-13 (committed, "feat: ranked Alertas lists"): `AlertList` (filter, count with an `outAlert` → `outOfStock` fallback,
+      Margen Bajo only with costs, `keeps` for rows changed on the detail) and `StockAlert.reasonText`, tests in
+      `AlertListTests.swift`. First test: **given the Sin Stock list, should ask the server for the alerting products
+      only (outAlert)**. The app drops the 200-row fetch and the fallback counts: the card reads `/products/counts` only,
+      and `AlertListViewModel` pages each list (50 a page), dropping pages from an earlier pick. The suggestions card
+      waits on O7.
+    - Smoke on the simulator against ops' seeded local stats (3 out, 3 low), with a temporary page size of 2:
+      the card shows Sin Stock 3 and Stock Bajo 3. Both lists come in ops' order, and the third row came from page 2.
+      Reasons: "Vende ~3 al día", "Vende ~4 a la semana", "Vende ~2 al día · alcanza para ~2 días". Pausing Cable USB
+      from the list drops its row without a reload, and the card shows 2 when you go back (resumed after). The out
+      reason first repeated the badge ("· agotado hace 2 días"), so it now gives the rate only.
+    - Review fixes 2026-11-13 (committed, "feat: ranked Alertas lists"): `AlertListViewModel` now pages through the tested `ProductListLoad`
+      (`ProductListQuery(locationId:alert:)`), not its own untested page/generation state; a refresh keeps the rows
+      until page 1 lands. Alertas' Sin Stock / Stock Bajo show `AlertList.note` ("Solo productos que se venden seguido
+      y no están pausados…") because their counts differ from the Productos chips of the same name (3 vs 4 locally).
+      Tests: **given Sin Stock's page 2 still loading when Stock Bajo is picked, should drop it**; notes. Smoke: both
+      tabs show their note and ranked rows.
     - Smoke: pause two from suggestions at once; dismiss one; both disappear and the counts update; a cashier doesn't see
       the card.
 12. [ ] Build, `swiftui-pro` + `swift-concurrency-pro` reviews, `/tdd-review`, README, `docs/inventory-ux-brief.md` §7

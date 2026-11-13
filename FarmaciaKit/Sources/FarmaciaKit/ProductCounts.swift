@@ -6,6 +6,8 @@ public struct ProductCountsResponse: Decodable, Sendable {
     public let total: Int
     public let outOfStock: Int
     public let lowStock: Int
+    /// Alertas' Sin Stock: regular sellers at 0, not paused (O6). Nil from an older server.
+    public let outAlert: Int?
     /// Absent for a cashier: it's worked out from cost, which a cashier never sees.
     public let lowMargin: Int?
     /// Paused at this store; nil from a server without stock alerts (no Pausados chip).

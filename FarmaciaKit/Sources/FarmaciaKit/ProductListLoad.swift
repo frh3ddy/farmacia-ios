@@ -13,23 +13,33 @@ public struct ProductListQuery: Hashable, Sendable {
     public let search: String?
     /// The chip the server filters by (GET /products?filter=); nil for Todos.
     public let filter: ProductFilter?
+    /// An Alertas list (ranked by the server); nil for Productos.
+    public let alert: AlertList?
 
     public init(locationId: String, search: String?, filter: ProductFilter? = nil) {
         self.locationId = locationId
         let trimmed = search?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         self.search = trimmed.isEmpty ? nil : trimmed
         self.filter = filter == .all ? nil : filter
+        self.alert = nil
+    }
+
+    public init(locationId: String, alert: AlertList) {
+        self.locationId = locationId
+        search = nil
+        filter = nil
+        self.alert = alert
     }
 
     /// The plain catalog: the only list that is cached, shown from cache first,
     /// and kept on screen (from cache) when a reload fails.
-    public var isCatalog: Bool { search == nil && filter == nil }
+    public var isCatalog: Bool { search == nil && filter == nil && alert == nil }
 
     /// The GET /products query for one page of this list.
     public func params(page: Int, limit: Int) -> [String: String] {
         var params = ["locationId": locationId, "page": "\(page)", "limit": "\(limit)"]
         params["search"] = search
-        params["filter"] = filter?.apiValue
+        params["filter"] = filter?.apiValue ?? alert?.apiFilter
         return params
     }
 }
