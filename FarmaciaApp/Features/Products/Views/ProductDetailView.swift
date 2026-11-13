@@ -130,6 +130,8 @@ struct ProductDetailView: View {
                         Task { await refreshDependentData() }
                     }
                 )
+            case .pause:
+                PauseProductView(product: displayProduct) { applyPauseChange($0) }
             case .batch(let batchId):
                 BatchDetailView(batchId: batchId, productName: displayProduct.displayName)
             case .suppliers:
@@ -541,10 +543,17 @@ struct ProductDetailView: View {
                 }
             }
 
-            if StockLevel(quantity: here) == .out {
-                StatusLabel("Agotado en esta tienda", tone: .critical)
+            let level = StockLevel(quantity: here, alert: displayProduct.stockAlert)
+            let isPaused = displayProduct.stockAlert?.paused == true
+            if let text = level.detailText {
+                StatusLabel(text, tone: level.tone, systemImage: isPaused ? "pause.circle" : nil)
                     .font(.caption)
                     .fontWeight(.medium)
+                if isPaused {
+                    Text("Se reanuda solo cuando recibas inventario.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             otherStoresRows
@@ -626,6 +635,16 @@ struct ProductDetailView: View {
                         Button { selectAdjustment(.countCorrection) } label: { Label("Corrección de Conteo", systemImage: "number") }
                         Button { selectAdjustment(.theft) } label: { Label("Robo", systemImage: "lock.slash") }
                         Button { selectAdjustment(.writeOff) } label: { Label("Baja", systemImage: "xmark.circle") }
+                        switch pauseAction {
+                        case .pause:
+                            Divider()
+                            Button { sheet = .pause } label: { Label("Pausar", systemImage: "pause.circle") }
+                        case .resume:
+                            Divider()
+                            Button { Task { await resume() } } label: { Label("Reanudar", systemImage: "play.circle") }
+                        case nil:
+                            EmptyView()
+                        }
                     } label: {
                         Label("Ajustar", systemImage: "slider.horizontal.3")
                     }
@@ -653,6 +672,35 @@ struct ProductDetailView: View {
     
     private func selectAdjustment(_ type: AdjustmentType) {
         sheet = .adjust(type)
+    }
+
+    // MARK: - Pause (stock alerts O5)
+
+    private var pauseAction: PauseForm.Action? {
+        PauseForm.action(alert: displayProduct.stockAlert, isManager: authManager.isManager,
+                         tracksInventory: displayProduct.tracksInventory,
+                         soldOnlyAtLocationId: displayProduct.soldOnlyAtLocationId,
+                         currentLocationId: authManager.currentLocation?.id)
+    }
+
+    /// The API answers the updated row (stockAlert included): no refetch.
+    private func applyPauseChange(_ updated: Product) {
+        currentProduct = updated
+        onProductUpdated?(updated)
+        ProductCacheManager.shared.saveProduct(updated)
+    }
+
+    private func resume() async {
+        guard let locationId = authManager.currentLocation?.id else { return }
+        do {
+            let response: ProductDetailResponse = try await APIClient.shared.request(
+                endpoint: .resumeProduct(id: product.id), queryParams: ["locationId": locationId])
+            applyPauseChange(response.data)
+        } catch NetworkError.cancelled {
+        } catch {
+            refreshErrorMessage = (error as? NetworkError)?.errorDescription ?? "No se pudo reanudar el producto."
+            showRefreshError = true
+        }
     }
     
     // MARK: - Recent Activity Section (Product-Scoped)
@@ -1434,6 +1482,7 @@ private enum DetailSheet: Identifiable {
     case adjust(AdjustmentType)
     case batch(String)
     case suppliers
+    case pause
 
     var id: String {
         switch self {
@@ -1442,6 +1491,7 @@ private enum DetailSheet: Identifiable {
         case .adjust(let type): "adjust-\(type.id)"
         case .batch(let batchId): "batch-\(batchId)"
         case .suppliers: "suppliers"
+        case .pause: "pause"
         }
     }
 }

@@ -53,6 +53,14 @@ Each step has its own tests on their side. Order matters: O2 feeds O3, and O3 fe
     `GET /products/:id?locationId` with `stockAlert`. Bulk answers `{ success, data: [rows] }` in the order sent.
     Resuming a product that isn't paused returns its row. Refusals are 400/403 with a Spanish `message`. iOS takes the
     row to update the detail screen, the list and the cache with no refetch.
+  - Bulk pause is all or nothing (ops 2026-11-13): one refused product (Yastás "no lleva existencias", "está
+    descontinuado", "no se vende en esta sucursal") fails the whole call with 400 (404 for an unknown id) and
+    `{ success: false, message: "<name>: este producto <why>", productId }`. 1–200 ids, else 400 "Indica de 1 a 200
+    productos". Single-pause refusals have no `productId`. iOS (step 11): `NetworkError` keeps only the message today,
+    so read `productId` from the error body, mark that row, keep the selection, and let the person deselect it and retry.
+  - **Live in production (ops 2026-11-13)**, with O4's `stockAlert`, the `paused` filter and its count. All three
+    endpoints are OWNER/MANAGER only, at the session's own store. `stockStats.stockAtEnd` fills in after the first
+    03:00 run, so until then a product that sells out today has `zeroSince: null` (the badge falls back to "Agotado").
   - **Auto-resume** in the same transaction as any receiving or received transfer of that product at that store,
     whatever its stock was (user, 2026-11-13: a product paused with 2 left must resume when the supplier delivers).
     Adjustments, counts and returns don't resume.
@@ -140,7 +148,7 @@ Each step has its own tests on their side. Order matters: O2 feeds O3, and O3 fe
      46, Pausados 0), the Sin Stock chip list, opening a product puts it under Recientes, search "Aba" → 2, clearing
      the search returns to the start screen, Ver todo and back. Not checked: location switch (1 store locally),
      offline launch, and "Agotado hace N días" (no local stats yet).
-10. [ ] Product detail (owner/manager):
+10. [~] Product detail (owner/manager). Pausar / Reanudar done 2026-11-13 (uncommitted); Equivalentes waits on O8:
     - A Pausado line in Inventario.
     - Pausar / Reanudar in the Ajustar menu: reason picker, a product picker for "Reemplazado por equivalente" (reuses
       `ProductSearchPicker`), optional note.
@@ -149,7 +157,23 @@ Each step has its own tests on their side. Order matters: O2 feeds O3, and O3 fe
     - All of it through the single `.sheet(item: DetailSheet)`.
     - Smoke: pause → the product leaves Sin Stock and shows under Pausados; **receive inventory** (critical) on that
       paused product → it resumes (the Pausado line goes away and it leaves Pausados).
-11. [ ] Alertas:
+    - Done: `PauseForm` in FarmaciaKit (`validate` → `PauseRequest`, `action` → Pausar / Reanudar / nothing,
+      `StockLevel.detailText`), tests in `ProductPauseTests.swift`. First test: **given Proveedor sin surtido and no
+      note, should send the store and the reason only**. The app adds `.pauseProduct` / `.resumeProduct`,
+      `PauseProductView` (reason, replacement picker for Reemplazado por equivalente, which the app requires though the
+      API doesn't, and an optional note), and Pausar / Reanudar at the end of Ajustar. The menu shows only to owners and
+      managers, when the server sends `stockAlert`, and for products this store stocks. Reanudar is always offered on a
+      paused product. The response row updates the detail, the list and the cache with no refetch.
+    - Smoke on the simulator against ops' local O5: Pausar with no reason → "Elige un motivo" (which stayed after a
+      reason was picked; fixed). Se vende poco → "Pausado · Se vende poco" with "Se reanuda solo cuando recibas
+      inventario.", Sin Stock 6 → 5, Pausados 1, and the recents row shows Pausado. **Receive 1 unit → resumed** (the
+      Pausado line is gone). Pausing with stock on hand, then Reanudar, works. Not checked: a cashier (no menu, by the
+      rule's tests) or a pause with a replacement.
+11. [ ] Alertas. O6 as built by ops (2026-11-13, on their `feature/stock-alerts-list`, not deployed): no
+    `/inventory/stock-alerts` route. Use `GET /products?filter=outAlert` / `filter=lowAlert` instead, with the same rows,
+    pages (limit ≤ 200, `totalCount`, `hasMore`) and cost stripping, only regular sellers that aren't paused, sorted by
+    `stockAlert.priority` desc then newest. `/products/counts` adds `outAlert` (Alertas "Sin stock"). "Stock bajo" uses
+    the existing `lowStock`. Productos "Sin Stock" stays `outOfStock`.
     - "Sin stock" and "Stock bajo" cards use the O6 ranked, paginated list (no 200 cap). Rows show the reason to care
       ("vende ~3 al día · agotado hace 2 días").
     - New "Sugerencias para pausar (N)" card opens a review list: each row's `reasonText`; swipe or buttons for Pausar
