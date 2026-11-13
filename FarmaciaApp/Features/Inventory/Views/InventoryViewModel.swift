@@ -26,14 +26,30 @@ class InventoryViewModel: ObservableObject {
     private let apiClient = APIClient.shared
 
     // MARK: - Load Suppliers
+    /// The list didn't load: the scanner's "Recibiendo de" says so, or its empty
+    /// picker reads like there are no suppliers.
+    @Published var suppliersFailed = false
+    /// The load in flight: the scanner row and the receive form both ask for the
+    /// list when a run starts, and share one request.
+    private var suppliersLoad: Task<Void, Never>?
+
     func loadSuppliers() async {
-        do {
-            let response: SupplierListResponse = try await apiClient.request(endpoint: .listSuppliers)
-            suppliers = response.data
-        } catch {
-            // Suppliers are optional, don't show error
-            print("Failed to load suppliers: \(error)")
+        if let suppliersLoad { return await suppliersLoad.value }
+        let load = Task {
+            do {
+                let response: SupplierListResponse = try await apiClient.request(endpoint: .listSuppliers)
+                suppliers = response.data
+                suppliersFailed = false
+            } catch is CancellationError {
+            } catch {
+                // Suppliers are optional for a receiving: the forms still save without one
+                suppliersFailed = true
+                print("Failed to load suppliers: \(error)")
+            }
         }
+        suppliersLoad = load
+        await load.value
+        suppliersLoad = nil
     }
 
     // MARK: - Receive Inventory

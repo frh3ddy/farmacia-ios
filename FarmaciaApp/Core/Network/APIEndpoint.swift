@@ -120,6 +120,8 @@ enum APIEndpoint {
     case listLooseLinks
     /// Transferencias: many products to another store in one shipment (TransferBatchRequest).
     case sendTransfers
+    /// This store's stock for a saved list's products, in one call (TransferStockRequest).
+    case transferStock
     /// `?locationId=&status=`: shipments where the store is either side.
     case listShipments
     case receiveShipment(id: String)
@@ -250,6 +252,7 @@ enum APIEndpoint {
         case .pauseProduct(let id), .resumeProduct(let id): return "/products/\(id)/pause"
         case .listLooseLinks: return "/products/loose-links"
         case .sendTransfers: return "/transfers/batch"
+        case .transferStock: return "/transfers/stock"
         case .listShipments: return "/transfers/shipments"
         case .receiveShipment(let id): return "/transfers/shipments/\(id)/receive"
         case .uploadProductImage(let id): return "/products/\(id)/image"
@@ -364,7 +367,7 @@ enum APIEndpoint {
             return .post
         case .resumeProduct:
             return .delete
-        case .sendTransfers, .receiveShipment:
+        case .sendTransfers, .transferStock, .receiveShipment:
             return .post
         case .listShipments:
             return .get

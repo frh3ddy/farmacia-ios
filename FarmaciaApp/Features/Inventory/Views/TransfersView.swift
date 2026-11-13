@@ -7,7 +7,9 @@ import FarmaciaKit
 // name or scan, and send them all in one shipment (POST /transfers/batch, all or
 // nothing). By default the other store gets them at once; "Confirmar al llegar"
 // leaves them in transit until that store counts them in "Por recibir".
-// tasks/transfers-epic.md
+// The list stays on the phone (per employee and store) until it's sent or
+// cleared, and its stock is refreshed when it loads.
+// tasks/transfers-epic.md, tasks/transfer-list-persist-epic.md
 
 private enum TransferField: Hashable {
     case search
@@ -35,10 +37,25 @@ struct TransfersView: View {
     @State private var shipments: [Shipment]?
     @State private var shipmentsFailed = false
     @State private var receiving: Shipment?
+    @State private var confirmClear = false
+    /// The saved list's stock is reloading: Enviar waits.
+    @State private var refreshingStock = false
+    /// "Cambiaron las existencias: …" after a refresh.
+    @State private var stockNotice: String?
+    /// The refresh failed: the numbers are from when the products were added.
+    @State private var stockStale = false
+    /// The saved list couldn't be read: it starts empty, and a note says so.
+    @State private var draftLost = false
+    /// The key whose saved list is on screen; nil until the first load.
+    @State private var loadedKey: String?
 
     @FocusState private var focusedField: TransferField?
 
     private var currentId: String? { authManager.currentLocation?.id }
+
+    private var draftKey: String? {
+        TransferDraftStore.key(employeeId: authManager.currentEmployee?.id, locationId: currentId)
+    }
 
     private var inactiveStoreIds: Set<String> { Set(stores.filter { $0.isActive == false }.map(\.id)) }
 
@@ -105,10 +122,15 @@ struct TransfersView: View {
             focusedField = nil
             sheetProduct = product
         }
-        // A store switch while this screen is open: the list's stock, its destination
-        // and its request id belonged to the other store.
+        .onChange(of: draft) { _, draft in
+            guard let draftKey else { return }
+            TransferDraftStore.save(draft, to: .standard, key: draftKey)
+        }
+        // A store switch while this screen is open: the list, its destination and its
+        // request id belong to each store; this one's saved list comes back.
+        // Logout clears the store (nil) before this screen goes: its list stays saved.
         .onChange(of: currentId) {
-            draft.reset()
+            guard currentId != nil else { return }
             destinationId = nil
             shipments = nil
             errorMessage = nil
@@ -118,15 +140,19 @@ struct TransfersView: View {
                 await loadShipments()
             }
         }
+        // On open, and when the store (or employee) changes the key.
+        .task(id: draftKey) { await loadDraft() }
         .task { await loadStores() }
         .task { await loadShipments() }
         .refreshable { await loadShipments() }
         .confirmationDialog(confirmTitle, isPresented: $confirmSend, titleVisibility: .visible) {
             Button("Enviar") { Task { await send() } }
         } message: {
-            Text(receiveOnSend
-                 ? "Las existencias pasan a \(destination?.name ?? "la otra sucursal") al enviar."
-                 : "\(destination?.name ?? "La otra sucursal") las confirmará al recibir.")
+            Text([draft.sendWarning,
+                  receiveOnSend
+                  ? "Las existencias pasan a \(destination?.name ?? "la otra sucursal") al enviar."
+                  : "\(destination?.name ?? "La otra sucursal") las confirmará al recibir."]
+                .compactMap { $0 }.joined(separator: "\n\n"))
         }
         .sheet(item: $sheetProduct) { product in
             TransferProductSheet(
@@ -176,6 +202,24 @@ struct TransfersView: View {
 
     private var productsSection: some View {
         Section {
+            if let warning = draft.sendWarning {
+                StatusLabel(warning, tone: .caution)
+            }
+            if draftLost {
+                StatusLabel("No se pudo recuperar la lista guardada.", tone: .caution)
+            }
+            if refreshingStock {
+                Label {
+                    Text("Actualizando existencias…")
+                } icon: {
+                    ProgressView()
+                }
+                .foregroundStyle(.secondary)
+            } else if let stockNotice {
+                StatusLabel(stockNotice, tone: .caution)
+            } else if stockStale {
+                StatusLabel("No se pudieron actualizar las existencias: son de cuando agregaste los productos.", tone: .caution)
+            }
             ProductSearchPicker(selected: $picked, placeholder: "Nombre, SKU o escanea…",
                                 field: .search, focus: $focusedField, scanLabel: "Escanear producto",
                                 subtitle: { TransferDraft.pickerSubtitle(sku: $0.sku, available: $0.totalInventory) })
@@ -191,6 +235,12 @@ struct TransfersView: View {
             .onDelete { offsets in
                 for index in offsets { draft.remove(productId: draft.lines[index].productId) }
                 errorMessage = nil
+            }
+            if !draft.lines.isEmpty {
+                Button("Vaciar lista", role: .destructive) { confirmClear = true }
+                    .confirmationDialog("¿Vaciar la lista?", isPresented: $confirmClear, titleVisibility: .visible) {
+                        Button("Vaciar", role: .destructive) { clearList() }
+                    }
             }
         } header: {
             Text("Productos")
@@ -251,7 +301,7 @@ struct TransfersView: View {
 
     private func tappedSend() {
         sentMessage = nil
-        if let issue = draft.sendIssue(destinationId: destinationId) {
+        if let issue = draft.sendIssue(destinationId: destinationId, refreshingStock: refreshingStock) {
             errorMessage = issue
             return
         }
@@ -262,6 +312,8 @@ struct TransfersView: View {
 
     private func send() async {
         guard let destination else { return }
+        // The list being sent: a store switch while waiting swaps in another store's.
+        let sentKey = draftKey
         isSending = true
         defer { isSending = false }
         errorMessage = nil
@@ -282,21 +334,81 @@ struct TransfersView: View {
             squareNotes = shipment.transfers
                 .filter { $0.squareSyncError != nil }
                 .map { TransferError.squareFailed(product: $0.product.name) }
-            draft.reset()
+            updateSentList(sentKey) { $0.reset() }
+            if sentKey == draftKey {
+                stockNotice = nil
+                stockStale = false
+            }
             await loadShipments()
         } catch NetworkError.refused(let refusal) {
-            if TransferError.needsNewRequestId(code: refusal.code) { draft.renewRequestId() }
+            if TransferError.needsNewRequestId(code: refusal.code) { updateSentList(sentKey) { $0.renewRequestId() } }
             let name = refusal.productId.flatMap { id in draft.lines.first { $0.productId == id }?.name }
             errorMessage = TransferError.message(code: refusal.code, productName: name, available: refusal.available,
                                                  destination: destination.name, fallback: refusal.message)
         } catch let error as NetworkError where TransferError.mayHaveSent(error) {
             // No answer: it may have gone through. Resending as is can't ship twice
             // (same clientRequestId), so the list stays; Recientes shows whether it went.
+            // Changing the list after this warns: it would go as a new shipment.
+            updateSentList(sentKey) { $0.markMayHaveSent() }
             errorMessage = TransferError.mayHaveSentText
             await loadShipments()
         } catch {
             guard !NetworkError.isCancellation(error) else { return }
             errorMessage = (error as? NetworkError)?.errorDescription ?? error.localizedDescription
+        }
+    }
+
+    /// Enviar's outcome goes to the list it sent: the one on screen, or the saved one
+    /// when the store switched while it waited.
+    private func updateSentList(_ key: String?, _ change: (inout TransferDraft) -> Void) {
+        if key == draftKey {
+            change(&draft)
+        } else if let key {
+            TransferDraftStore.update(.standard, key: key, change)
+        }
+    }
+
+    private func clearList() {
+        draft.reset()
+        stockNotice = nil
+        stockStale = false
+        draftLost = false
+        errorMessage = nil
+    }
+
+    /// This employee's saved list for this store, with its stock refreshed. Once per
+    /// key: coming back to the screen keeps the list (and its notes) as they are.
+    private func loadDraft() async {
+        guard let draftKey, draftKey != loadedKey else { return }
+        loadedKey = draftKey
+        stockNotice = nil
+        stockStale = false
+        do {
+            draft = try TransferDraftStore.load(.standard, key: draftKey)
+            draftLost = false
+        } catch {
+            draft = TransferDraft()
+            draftLost = true
+            TransferDraftStore.save(draft, to: .standard, key: draftKey)
+        }
+        await refreshStock()
+    }
+
+    /// One call for the whole list. On failure (or a server without the endpoint)
+    /// the saved numbers stay, and a note says they may be old.
+    private func refreshStock() async {
+        guard let locationId = currentId, let request = draft.stockRequest(locationId: locationId) else { return }
+        refreshingStock = true
+        defer { refreshingStock = false }
+        do {
+            let response: APIResponse<[String: Int]> = try await APIClient.shared.request(
+                endpoint: .transferStock, body: request)
+            // A store switch while waiting: these numbers are the other store's.
+            guard currentId == locationId else { return }
+            stockNotice = TransferStockChange.notice(draft.refreshAvailable(response.data ?? [:]))
+        } catch {
+            guard !NetworkError.isCancellation(error), currentId == locationId else { return }
+            stockStale = true
         }
     }
 

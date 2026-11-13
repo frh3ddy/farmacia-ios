@@ -29,3 +29,4 @@
 - A manager without access to the other store sending (the rule is unit-tested; there's no such employee locally).
 - Cancelling a shipment in transit (the API has CANCELLED, but no endpoint).
 - Retrying a failed Square sync from iOS (owner-only; the web screen has it).
+- Saved lists (tasks/transfer-list-persist-epic.md): a list for an employee who's gone stays on the phone (a few KB, no cleanup). The stock note clears only on Enviar, Vaciar or reopening, not on the next edit.

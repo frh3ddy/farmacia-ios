@@ -57,4 +57,40 @@ struct ReceivingCostTests {
         #expect(!filled)
         #expect(cost.value == nil)
     }
+
+    @Test("given a cost carried from Nuevo producto, should keep it after the supplier's last cost is offered")
+    func carriedCostWins() {
+        var cost = ReceivingCost()
+        cost.productChanged(to: "a")
+        cost.prefill(20, forProductId: "a")
+        cost.offerSupplierCost(50, forProductId: "a")
+        #expect(cost.value == 20)
+    }
+
+    @Test("given a carried cost of 0 (a gift), should keep 0")
+    func carriedZero() {
+        var cost = ReceivingCost()
+        cost.productChanged(to: "a")
+        cost.prefill(0, forProductId: "a")
+        #expect(cost.value == 0)
+    }
+
+    @Test("given a carried cost for another product, should not fill")
+    func carriedForOtherProduct() {
+        var cost = ReceivingCost()
+        cost.productChanged(to: "a")
+        cost.prefill(20, forProductId: "b")
+        #expect(cost.value == nil)
+    }
+
+    @Test("given a previous cost of 12.5, should hint \"Anterior 12.50\" (the field shows the $)")
+    func hintsPreviousCost() {
+        #expect(ReceivingCost.hint(previous: 12.5) == "Anterior 12.50")
+        #expect(ReceivingCost.hint(previous: 1234.5) == "Anterior 1,234.50")
+    }
+
+    @Test("given no previous cost, should have no hint (the field keeps its placeholder)")
+    func noHint() {
+        #expect(ReceivingCost.hint(previous: nil) == nil)
+    }
 }

@@ -89,15 +89,16 @@ struct CreateProductView: View {
     /// away (ProductsViewModel.insertProduct).
     private let onCreated: ((Product) -> Void)?
     /// Set by the scanner: closing goes back to it (with the product the server
-    /// created; nil when cancelled or queued offline) instead of dismissing its whole sheet.
-    private let onClose: ((Product?) -> Void)?
+    /// created, nil when cancelled or queued offline, and the cost typed for Recibir's
+    /// form) instead of dismissing its whole sheet.
+    private let onClose: ((Product?, Double?) -> Void)?
     /// False from the scanner's Recibir: its receive form takes the stock, so entering it here
     /// too would add it twice. Contar shows it (cost and supplier stick); the count form then
     /// starts at that stock, and saving it marks the product counted.
     private let showsInitialStock: Bool
 
     init(prefillBarcode: String? = nil, showsInitialStock: Bool = true,
-         onCreated: ((Product) -> Void)? = nil, onClose: ((Product?) -> Void)? = nil) {
+         onCreated: ((Product) -> Void)? = nil, onClose: ((Product?, Double?) -> Void)? = nil) {
         self.showsInitialStock = showsInitialStock
         self.onCreated = onCreated
         self.onClose = onClose
@@ -105,7 +106,7 @@ struct CreateProductView: View {
     }
 
     private func close() {
-        if let onClose { onClose(viewModel.createdProduct) } else { dismiss() }
+        if let onClose { onClose(viewModel.createdProduct, viewModel.costPrice) } else { dismiss() }
     }
 
     var body: some View {

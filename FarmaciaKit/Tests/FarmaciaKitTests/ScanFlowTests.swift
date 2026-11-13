@@ -22,11 +22,11 @@ struct ScanModeTests {
 struct ScanNextTests {
     @Test("given receive mode and one match, should go to the receive form, not the detail screen")
     func receiveMatch() {
-        #expect(ScanNext.after(.matched, in: .receive) == .receive)
+        #expect(ScanNext.after(.matched, in: .receive) == .receive(cost: nil))
     }
 
     @Test("given a match (or a pick from several), should follow the mode",
-          arguments: [(ScanMode.consult, ScanNext.openDetail), (.receive, .receive), (.count, .count)])
+          arguments: [(ScanMode.consult, ScanNext.openDetail), (.receive, .receive(cost: nil)), (.count, .count)])
     func matchFollowsMode(mode: ScanMode, next: ScanNext) {
         #expect(ScanNext.after(.matched, in: mode) == next)
     }
@@ -39,9 +39,21 @@ struct ScanNextTests {
     }
 
     @Test("given a product created from the code, should open its detail, receive form or count form",
-          arguments: [(ScanMode.consult, ScanNext.openDetail), (.receive, .receive), (.count, .count)])
+          arguments: [(ScanMode.consult, ScanNext.openDetail), (.receive, .receive(cost: nil)), (.count, .count)])
     func createdFollowsMode(mode: ScanMode, next: ScanNext) {
-        #expect(ScanNext.after(.created, in: mode) == next)
+        #expect(ScanNext.after(.created(cost: nil), in: mode) == next)
+    }
+
+    @Test("given a product created in Recibir with a cost of 20, should open the receive form with 20 (the server drops it without stock)",
+          arguments: [20.0, 0])
+    func createdCarriesCost(cost: Double) {
+        #expect(ScanNext.after(.created(cost: cost), in: .receive) == .receive(cost: cost))
+    }
+
+    @Test("given a cost typed in Nuevo producto outside Recibir, should not carry it (Contar saves it with the initial stock)",
+          arguments: [(ScanMode.consult, ScanNext.openDetail), (.count, .count)])
+    func createdCostOnlyForReceive(mode: ScanMode, next: ScanNext) {
+        #expect(ScanNext.after(.created(cost: 20), in: mode) == next)
     }
 
     @Test("given a form closed with nothing to show (saved, cancelled, or created offline), should scan the next item in a run",

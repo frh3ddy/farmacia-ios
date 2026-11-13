@@ -22,6 +22,8 @@ struct AmountField<Field: Hashable, Value: AmountValue>: View {
     private let focus: FocusState<Field?>.Binding
     private let field: Field
     private let alignment: TextAlignment?
+    /// Shown when empty instead of the plain "0.00" (e.g. the previous cost).
+    private let prompt: String?
 
     @State private var text = ""
 
@@ -33,7 +35,8 @@ struct AmountField<Field: Hashable, Value: AmountValue>: View {
         value: Binding<Value?>,
         focus: FocusState<Field?>.Binding,
         field: Field,
-        alignment: TextAlignment? = nil
+        alignment: TextAlignment? = nil,
+        prompt: String? = nil
     ) {
         self.label = label
         self.prefix = prefix
@@ -42,6 +45,7 @@ struct AmountField<Field: Hashable, Value: AmountValue>: View {
         self.focus = focus
         self.field = field
         self.alignment = alignment
+        self.prompt = prompt
     }
 
     private var showsClearButton: Bool {
@@ -57,7 +61,7 @@ struct AmountField<Field: Hashable, Value: AmountValue>: View {
                 Text(prefix)
                     .foregroundStyle(.secondary)
             }
-            TextField(Value.placeholder, text: $text)
+            TextField(prompt ?? Value.placeholder, text: $text)
                 .keyboardType(Value.keyboard)
                 .multilineTextAlignment(alignment ?? (label == nil ? .leading : .trailing))
                 .focused(focus, equals: field)
