@@ -5,7 +5,11 @@
 `20261111120000_stock_alerts`) and O2 (`npm run import-stock-history -w apps/api`, dry run by default) are built on their
 `feature/stock-alerts`, not deployed. The production O2 report waits on the user's go-ahead to deploy. `StockDay` is
 sparse (a row only when the level changes or on a restock; readers carry the last level forward). iOS steps 1–7 done
-(uncommitted).
+(`e25702d`).
+- 2026-11-12: O2 saved in production with the user's OK (98,747 `StockDay` rows; replay matched Square's count for
+  99.6% of Lolita items and 97.3% of Oriente items, and every mismatch so far is Square gone negative, with the replay
+  clamped at 0). Nightly stock days run at 03:00 Mexico City. Square's negative counts stay as they are (the app is the
+  stock source of truth). O3 never counts a day with sales as a day at 0. Next: O3, then O4.
 
 Goal: alerts only for regular sellers that ran out or are running low, ranked by lost sales. Slow movers stay quiet at
 1–3. Products the supplier can't restock, or that were replaced by an equivalent, can be **paused** per store (not
@@ -40,11 +44,18 @@ Each step has its own tests on their side. Order matters: O2 feeds O3, and O3 fe
   - Changed rows reach delta sync within a day.
 - **O5. Pause / resume:**
   - `POST /products/:id/pause` `{ locationId, reason, note?, replacedByProductId? }`; with `REPLACED_BY_EQUIVALENT` and
-    a replacement, both products join one `EquivalenceGroup`.
+    a replacement, both products join one `EquivalenceGroup`: a new group if neither has one, else the other joins
+    it. If both are already in different groups, the replacement stays on the pause and the groups aren't merged
+    (merging is a deliberate O8 action; user, 2026-11-13).
   - `POST /products/pause` `{ locationId, productIds[], reason }` for several at once.
   - `DELETE /products/:id/pause?locationId`.
-  - **Auto-resume** in the same transaction as a receiving or a received transfer that takes the store's on-hand from 0
-    to > 0. Adjustments, counts and returns don't resume.
+  - Responses (confirmed by ops 2026-11-13): pause and resume answer `{ success, data: <product row> }`, the same row as
+    `GET /products/:id?locationId` with `stockAlert`. Bulk answers `{ success, data: [rows] }` in the order sent.
+    Resuming a product that isn't paused returns its row. Refusals are 400/403 with a Spanish `message`. iOS takes the
+    row to update the detail screen, the list and the cache with no refetch.
+  - **Auto-resume** in the same transaction as any receiving or received transfer of that product at that store,
+    whatever its stock was (user, 2026-11-13: a product paused with 2 left must resume when the supplier delivers).
+    Adjustments, counts and returns don't resume.
   - Owner/manager only.
 - **O6. Alerts list:** `GET /inventory/stock-alerts?locationId&level=out|low&page` ranked by priority (fixes Alertas'
   200-row cap).
@@ -99,16 +110,36 @@ Each step has its own tests on their side. Order matters: O2 feeds O3, and O3 fe
 
 ## Part 3: iOS UI (FarmaciaApp)
 
-8. [ ] Model, endpoints and cache:
+8. [~] Model, endpoints and cache (cache part done 2026-11-13: `CachedProduct.stockAlertData` holds the encoded
+   `StockAlert`, an optional attribute, so a lightweight migration; the O5–O8 endpoints wait for ops):
    - `Product.stockAlert: StockAlert?`; `CachedProduct` gains the same fields as optional attributes (SwiftData
      lightweight migration).
    - Endpoints for O5–O8.
    - Smoke: cache-first launch offline still shows the list (critical: activation → PIN → list from cache).
-9. [ ] Productos:
-   - "Pausados" chip.
-   - "Sin Stock" shows the server order (most recent stock-out first) with "Agotado hace N días" on rows.
-   - Cards and rows use the `StockAlert` label and tone.
-   - Smoke: Sin Stock order, the Pausados count matches its list, location switch (critical) reloads both.
+9. [x] Productos, search-first (the user's idea via ops, decided 2026-11-12): staff search or scan, they never
+   scroll the catalog.
+   - Top: the search field, ready to type, with the scanner next to it.
+   - Under it, chips with counts: Agotados, Bajo, Por vencer, Pausados, and Margen bajo for owners and managers.
+     Each opens its short server-filtered list. Pausados shows only when counts send `paused`.
+   - No search and no chip: **the 10 products opened most recently on this phone** (no catalog list). The
+     ranked-alerts list from O6 stays behind the chips and in Alertas, not here.
+   - A "Ver todo" link opens today's full list, with its sort options and the cards/list switch.
+   - Agotados shows the server order (most recent stock-out first) with "Agotado hace N días" on rows. Cards and rows
+     use `StockLevel(quantity:alert:)`.
+   - Delta sync is unchanged: the full catalog stays on the phone, so offline search stays local. This is a screen
+     change only, and it drops the full-list page requests.
+   - Logic (FarmaciaKit, TDD) `RecentProducts`: an ordered list of ids, newest first, no duplicates, capped at 10.
+     First test: **given A, B, then A opened again, should list A, B**. Then: the 11th drops the oldest; an id no
+     longer in the catalog (deleted or discontinued) is skipped when shown. Stored per device in `UserDefaults`
+     (product ids only, no session data).
+   - Smoke: activation → PIN → Productos opens on search with recents (critical); search offline from the cache;
+     each chip's count matches its list; Ver todo; location switch (critical) reloads the counts and chip lists.
+   - Done 2026-11-13 (uncommitted). Kept the existing chip names (Sin Stock, Stock Bajo, Por Vencer) to match Alertas;
+     In Stock and Todos are gone as chips (Ver todo replaces Todos). The sort menu shows only under Ver todo. Counts show
+     "—" until they load. Smoke on the simulator against ops' O4 locally: start screen counts (Sin Stock 6, Ver todo
+     46, Pausados 0), the Sin Stock chip list, opening a product puts it under Recientes, search "Aba" → 2, clearing
+     the search returns to the start screen, Ver todo and back. Not checked: location switch (1 store locally),
+     offline launch, and "Agotado hace N días" (no local stats yet).
 10. [ ] Product detail (owner/manager):
     - A Pausado line in Inventario.
     - Pausar / Reanudar in the Ajustar menu: reason picker, a product picker for "Reemplazado por equivalente" (reuses

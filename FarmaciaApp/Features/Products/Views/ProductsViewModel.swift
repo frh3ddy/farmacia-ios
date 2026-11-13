@@ -19,6 +19,8 @@ struct ProductCounts: Equatable {
 class ProductsViewModel: ObservableObject {
     @Published var products: [Product] = []
     @Published var filteredProducts: [Product] = []
+    /// The start screen: products opened recently on this phone, from the cache.
+    @Published private(set) var recents: [Product] = []
     @Published var isLoading = false
     @Published var isLoadingMore = false
     @Published var showError = false
@@ -30,6 +32,9 @@ class ProductsViewModel: ObservableObject {
     // /products/counts, whole catalog) whenever it's available; falls back
     // to a page-based estimate from `products` only if that request fails.
     @Published var counts = ProductCounts()
+    /// False until counts arrive: the chips show "—", not a 0 that reads as "none"
+    /// (the start screen has no page to estimate from when GET /products/counts fails).
+    @Published private(set) var countsKnown = false
     /// The stats row, from the server's counts only (ProductCountsResponse.syncSummary).
     @Published private(set) var syncSummary: String?
     
@@ -68,7 +73,14 @@ class ProductsViewModel: ObservableObject {
         recomputeFilteredProducts()
     }
     
+    /// The sort menu applies to the full catalog (Ver todo) only: search results come
+    /// ranked by the server, and the chip lists in the server's order (e.g. Sin Stock,
+    /// most recent stock-out first).
     private func recomputeFilteredProducts() {
+        guard load.query?.isCatalog == true else {
+            filteredProducts = products
+            return
+        }
         var result = products
 
         switch activeSort {
@@ -189,6 +201,23 @@ class ProductsViewModel: ObservableObject {
         isLoading = false
     }
 
+    /// The start screen (no search, no chip): recents from the cache, the chip counts,
+    /// and the cache sync. No list request.
+    func loadHome(locationId: String) async {
+        currentLocationId = locationId
+        refreshRecents()
+        syncCache(locationId: locationId)
+        guard let serverCounts: ProductCountsResponse = try? await apiClient.request(
+            endpoint: .productCounts,
+            queryParams: ["locationId": locationId]
+        ), !Task.isCancelled else { return }
+        applyServerCounts(serverCounts)
+    }
+
+    func refreshRecents() {
+        recents = cache.products(ids: RecentProductsStore.ids)
+    }
+
     /// Load next page (appends to existing products). Called by infinite scroll.
     func loadMoreProducts() async {
         guard let ticket = load.beginNextPage() else { return }
@@ -260,7 +289,10 @@ class ProductsViewModel: ObservableObject {
                     return ProductSyncPage(rows: response.data, removedIds: response.removedIds,
                                            cursor: response.cursor, hasMore: response.hasMore)
                 }
-                if !Task.isCancelled { self.cache.applySync(result, for: scope) }
+                if !Task.isCancelled {
+                    self.cache.applySync(result, for: scope)
+                    self.refreshRecents() // first sync at a store, or fresher stock
+                }
             } catch {
                 // Best effort: the stored cursor stays and the next sync resumes from it;
                 // the scanner's level-2 server search covers gaps meanwhile.
@@ -297,6 +329,7 @@ class ProductsViewModel: ObservableObject {
         }
         // Write-through to cache
         cache.saveProduct(product)
+        refreshRecents()
         refreshServerCounts()
     }
 
@@ -346,6 +379,7 @@ class ProductsViewModel: ObservableObject {
         c.local = response.local
         c.paused = response.paused
         counts = c
+        countsKnown = true
         syncSummary = ProductCountsResponse.syncSummary(response)
     }
     
@@ -370,6 +404,19 @@ class ProductsViewModel: ObservableObject {
 
     private func recalculateCounts() {
         counts = computeCounts(from: products)
+        countsKnown = true
         syncSummary = nil
+    }
+}
+
+// MARK: - Recent Products Store
+// Product ids only, per phone (UserDefaults): what the start screen lists.
+enum RecentProductsStore {
+    private static let key = "recentProductIds"
+
+    static var ids: [String] { UserDefaults.standard.stringArray(forKey: key) ?? [] }
+
+    static func record(_ id: String) {
+        UserDefaults.standard.set(RecentProducts.adding(id, to: ids), forKey: key)
     }
 }

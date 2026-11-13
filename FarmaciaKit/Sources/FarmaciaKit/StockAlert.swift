@@ -72,3 +72,24 @@ extension StockAlert {
         zeroSince.map { "Agotado \(DisplayDate.relative($0, now: now, timeZone: timeZone))" }
     }
 }
+
+// The offline cache keeps the alert as one encoded value (an old row has none).
+extension StockAlert {
+    public var cacheData: Data? { try? JSONEncoder().encode(self) }
+
+    public init?(cacheData: Data?) {
+        guard let cacheData, let alert = try? JSONDecoder().decode(StockAlert.self, from: cacheData) else { return nil }
+        self = alert
+    }
+}
+
+extension StockLevel {
+    /// The row badge: "Agotado hace 3 días" when the API knows since when, else the label.
+    public static func badgeText(quantity: Int, alert: StockAlert?, now: Date = Date(), timeZone: TimeZone = .current) -> String? {
+        let level = StockLevel(quantity: quantity, alert: alert)
+        switch level {
+        case .out, .empty: return alert?.zeroSinceText(now: now, timeZone: timeZone) ?? level.label
+        default: return level.label
+        }
+    }
+}

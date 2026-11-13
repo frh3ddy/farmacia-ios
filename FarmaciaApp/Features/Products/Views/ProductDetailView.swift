@@ -149,6 +149,7 @@ struct ProductDetailView: View {
             }
         }
         .task {
+            RecentProductsStore.record(product.id) // Productos' start screen
             // All three loads are independent — fire in parallel.
             // Suppliers are fetched here so the receive sheet doesn't need to re-fetch.
             async let productRefresh: () = refreshProduct()

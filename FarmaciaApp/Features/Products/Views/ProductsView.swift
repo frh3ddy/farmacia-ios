@@ -52,8 +52,10 @@ private enum ProductsSheet: Identifiable {
 }
 
 // MARK: - Products View
-// Unified product + inventory hub. Includes search, smart filters,
-// attention banner, sort options, and a toolbar link to global activity history.
+// Search-first (ProductsScreen): staff search or scan, they don't scroll the
+// catalog. The start screen shows the chips with counts and the products opened
+// recently on this phone; a chip opens its short list; Ver todo opens the full
+// catalog with its sort options and layout switch.
 
 struct ProductsView: View {
     @EnvironmentObject var authManager: AuthManager
@@ -63,7 +65,8 @@ struct ProductsView: View {
     @State private var sheet: ProductsSheet?
     @State private var offlineQueue = OfflineQueueManager.shared
     @State private var searchText = ""
-    @State private var activeFilter: ProductFilter = .all
+    /// nil: the start screen. `.all` is Ver todo (the full catalog).
+    @State private var activeFilter: ProductFilter?
     @State private var sortOption: ProductSortOption = .name
     @AppStorage("productsLayout") private var layout: ProductsLayout = .cards
 
@@ -77,18 +80,24 @@ struct ProductsView: View {
     /// What the list shows. Changing it (typing, clearing the search, picking a chip,
     /// switching location or tab) cancels the previous load task and starts the next one.
     private struct ListLoadKey: Equatable {
+        let locationId: String?
+        /// nil: the start screen (no list request).
         let query: ProductListQuery?
         let refresh: UUID
     }
 
     private var listLoadKey: ListLoadKey {
-        ListLoadKey(
+        let locationId = authManager.currentLocation?.id
+        return ListLoadKey(
+            locationId: locationId,
             // Coerced here too, so a store switch never sends a chip the new role can't use
-            // (the onChange below then moves the selection itself back to Todos).
-            query: authManager.currentLocation.map {
-                ProductListQuery(locationId: $0.id, search: searchText,
-                                 filter: .coerced(activeFilter, canViewCosts: authManager.canViewCosts))
-            },
+            // (the onChange below then moves the selection itself back to Todos). Pausados
+            // isn't coerced away: its chip only shows when the server knows the filter.
+            query: ProductsScreen.query(
+                locationId: locationId,
+                search: searchText,
+                filter: activeFilter.map { .coerced($0, canViewCosts: authManager.canViewCosts, showsPaused: true) }
+            ),
             refresh: refreshTrigger
         )
     }
@@ -129,7 +138,9 @@ struct ProductsView: View {
             Group {
                 // Whole-screen states are for the plain catalog; a search or chip
                 // with no matches keeps the list (and its chips) on screen.
-                if viewModel.isCatalog && viewModel.isLoading && viewModel.products.isEmpty {
+                if listLoadKey.query == nil {
+                    homeList
+                } else if viewModel.isCatalog && viewModel.isLoading && viewModel.products.isEmpty {
                     loadingView
                 } else if viewModel.isCatalog && viewModel.products.isEmpty && !viewModel.loadFailed {
                     emptyStateView
@@ -161,17 +172,20 @@ struct ProductsView: View {
                     }
                     .accessibilityLabel("Escanear Código de Barras")
 
-                    // Sort menu — uses Picker to avoid SwiftUI Menu+ForEach first-item bug
-                    Menu {
-                        Picker("Ordenar por", selection: $sortOption) {
-                            ForEach(ProductSortOption.allCases, id: \.self) { option in
-                                Text(option.rawValue).tag(option)
+                    // Sort menu (Ver todo only: search and chip lists keep the server's order).
+                    // Uses Picker to avoid SwiftUI Menu+ForEach first-item bug.
+                    if listLoadKey.query?.isCatalog == true {
+                        Menu {
+                            Picker("Ordenar por", selection: $sortOption) {
+                                ForEach(ProductSortOption.allCases, id: \.self) { option in
+                                    Text(option.rawValue).tag(option)
+                                }
                             }
+                        } label: {
+                            Image(systemName: "arrow.up.arrow.down.circle")
                         }
-                    } label: {
-                        Image(systemName: "arrow.up.arrow.down.circle")
+                        .accessibilityLabel("Ordenar")
                     }
-                    .accessibilityLabel("Ordenar")
 
                     // Add product
                     if authManager.isOwner || authManager.isManager {
@@ -184,13 +198,13 @@ struct ProductsView: View {
                     }
                 }
             }
-            .searchable(text: $searchText, prompt: "Buscar productos...")
+            .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Buscar productos...")
             .onChange(of: sortOption) { _, newSort in
                 viewModel.setSort(newSort)
             }
             .onChange(of: authManager.canViewCosts) { _, canViewCosts in
                 // e.g. switched to a store where this employee is a cashier: no hidden chip stays active
-                activeFilter = .coerced(activeFilter, canViewCosts: canViewCosts)
+                activeFilter = activeFilter.map { .coerced($0, canViewCosts: canViewCosts, showsPaused: true) }
             }
             .onChange(of: viewModel.isWarmingCache) { _, isWarming in
                 syncBannerDelayTask?.cancel()
@@ -246,12 +260,11 @@ struct ProductsView: View {
                 }
             }
             .task(id: listLoadKey) {
-                guard let query = listLoadKey.query else { return }
-                if query.search != nil {
+                if listLoadKey.query?.search != nil {
                     // Debounce typing: the next keystroke cancels this task during the sleep.
                     do { try await Task.sleep(for: .milliseconds(400)) } catch { return }
                 }
-                await viewModel.loadProducts(query)
+                await loadProducts()
             }
             .onChange(of: authManager.currentLocation?.id) {
                 // Nothing from the previous store (or role) shows while this one loads.
@@ -260,6 +273,22 @@ struct ProductsView: View {
             }
             .task(id: authManager.currentLocation?.id) {
                 await loadAgingData()
+            }
+            // Docked outside the List's own content (rather than as a Section row)
+            // so it never inserts/removes a row — which was reflowing every row
+            // below it and producing a visible jump each time cache warm-up
+            // toggled on/off, e.g. right after popping back from ProductDetailView.
+            .safeAreaInset(edge: .bottom) {
+                if showSyncBanner {
+                    syncBanner
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
+            .animation(.easeInOut(duration: 0.25), value: showSyncBanner)
+            .alert("Sincronización Square", isPresented: $showSyncResult) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(syncResultMessage ?? "")
             }
             .alert("Error", isPresented: $viewModel.showError) {
                 Button("OK", role: .cancel) {}
@@ -309,34 +338,8 @@ struct ProductsView: View {
     
     private var productsList: some View {
         List {
-            // Chips, stats and (optional) local sync row share a single Section —
-            // insetGrouped List style adds its own gap *between* Sections, so
-            // splitting these into separate Sections was stacking that gap
-            // three times over. One Section + manual VStack spacing instead.
             if !isSearching {
-                Section {
-                    VStack(alignment: .leading, spacing: 0) {
-                        Picker("Vista", selection: $layout) {
-                            ForEach(ProductsLayout.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                        }
-                        .pickerStyle(.segmented)
-                        .padding(.bottom, DS.Spacing.m)
-
-                        filterChips
-                            .padding(.bottom, 14)
-
-                        if let summary = viewModel.syncSummary {
-                            statsRow(summary)
-                        }
-
-                        if viewModel.counts.local > 0 {
-                            localSyncRow
-                                .padding(.top, 6)
-                        }
-                    }
-                }
-                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
-                .listRowBackground(Color.clear)
+                chipsSection(showsLayout: true)
             }
 
             // Products Section
@@ -370,12 +373,7 @@ struct ProductsView: View {
                 } else {
                     ForEach(viewModel.filteredProducts) { product in
                         NavigationLink {
-                            ProductDetailView(
-                                product: product,
-                                onProductUpdated: { updatedProduct in
-                                    viewModel.updateProduct(updatedProduct)
-                                }
-                            )
+                            productDetail(product)
                         } label: {
                             switch layout {
                             case .cards:
@@ -417,9 +415,9 @@ struct ProductsView: View {
                 // actually a filter/search/sort indicator to show — an empty
                 // HStack here was reserving header height even with no text,
                 // which read as extra dead space above the product cards.
-                if activeFilter != .all || !searchText.isEmpty || sortOption != .name {
+                if (activeFilter != nil && activeFilter != .all) || !searchText.isEmpty || sortOption != .name {
                     HStack {
-                        if activeFilter != .all {
+                        if let activeFilter, activeFilter != .all {
                             Text("\(viewModel.filteredProducts.count) \(activeFilter.rawValue)")
                         } else if !searchText.isEmpty {
                             Text("\(viewModel.filteredProducts.count) resultados")
@@ -427,7 +425,7 @@ struct ProductsView: View {
 
                         Spacer()
 
-                        if sortOption != .name {
+                        if sortOption != .name && listLoadKey.query?.isCatalog == true {
                             Text("Ordenado por: \(sortOption.rawValue)")
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
@@ -449,22 +447,49 @@ struct ProductsView: View {
         .listSectionSpacing(.compact)
         // Cards: a gap between rows, so each product sits in its own rounded cell.
         .listRowSpacing(layout == .cards ? DS.Spacing.m : nil)
-        // Docked outside the List's own content (rather than as a Section row)
-        // so it never inserts/removes a row — which was reflowing every row
-        // below it and producing a visible jump each time cache warm-up
-        // toggled on/off, e.g. right after popping back from ProductDetailView.
-        .safeAreaInset(edge: .bottom) {
-            if showSyncBanner {
-                syncBanner
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+    }
+
+    // MARK: - Start Screen
+    // No search, no chip: the chips with counts and the products opened recently on
+    // this phone (from the cache, so it works offline). No list request.
+
+    private var homeList: some View {
+        List {
+            chipsSection(showsLayout: false)
+
+            Section("Recientes") {
+                if viewModel.recents.isEmpty {
+                    Text("Busca o escanea un producto. Los que abras aparecerán aquí.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(viewModel.recents) { product in
+                        NavigationLink {
+                            productDetail(product)
+                        } label: {
+                            ProductRow(
+                                product: product,
+                                riskLevel: agingViewModel.productRiskLevels[product.id],
+                                showsMargin: authManager.canViewCosts
+                            )
+                        }
+                    }
+                }
             }
         }
-        .animation(.easeInOut(duration: 0.25), value: showSyncBanner)
-        .alert("Sincronización Square", isPresented: $showSyncResult) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(syncResultMessage ?? "")
-        }
+        .listStyle(.insetGrouped)
+        .listSectionSpacing(.compact)
+        // Coming back from a product: it's now the most recent.
+        .onAppear { viewModel.refreshRecents() }
+    }
+
+    private func productDetail(_ product: Product) -> some View {
+        ProductDetailView(
+            product: product,
+            onProductUpdated: { updatedProduct in
+                viewModel.updateProduct(updatedProduct)
+            }
+        )
     }
 
     // MARK: - Catalog Warm-Up Banner
@@ -491,10 +516,62 @@ struct ProductsView: View {
     // the list body (each chip's badge count/color mirrors what a separate
     // attention banner used to spell out). Dashboard owns cross-tab alerting.
 
+    /// Chips, stats, the local-sync row and Ver todo share one Section —
+    /// insetGrouped List style adds its own gap *between* Sections, so
+    /// splitting these into separate Sections was stacking that gap.
+    private func chipsSection(showsLayout: Bool) -> some View {
+        Section {
+            VStack(alignment: .leading, spacing: 0) {
+                if showsLayout {
+                    Picker("Vista", selection: $layout) {
+                        ForEach(ProductsLayout.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.bottom, DS.Spacing.m)
+                }
+
+                filterChips
+                    .padding(.bottom, DS.Spacing.s)
+
+                verTodoButton
+                    .padding(.bottom, DS.Spacing.xs)
+
+                if let summary = viewModel.syncSummary {
+                    statsRow(summary)
+                }
+
+                if viewModel.counts.local > 0 {
+                    localSyncRow
+                        .padding(.top, 6)
+                }
+            }
+        }
+        .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+        .listRowBackground(Color.clear)
+    }
+
+    /// Opens the full catalog (rare: shelf counts); tapping again goes back to the start screen.
+    private var verTodoButton: some View {
+        let showsAll = activeFilter == .all
+        let total = viewModel.counts.total
+        return Button {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                activeFilter = showsAll ? nil : .all
+            }
+        } label: {
+            Label(showsAll ? "Ocultar lista completa" : (total > 0 ? "Ver todo (\(total))" : "Ver todo"),
+                  systemImage: showsAll ? "chevron.up" : "list.bullet")
+                .font(.subheadline)
+                .frame(minHeight: DS.minTapSize)
+        }
+        .buttonStyle(.borderless)
+    }
+
     private var filterChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
-                ForEach(ProductFilter.visible(canViewCosts: authManager.canViewCosts), id: \.self) { filter in
+                ForEach(ProductFilter.chips(canViewCosts: authManager.canViewCosts,
+                                            showsPaused: viewModel.counts.paused != nil), id: \.self) { filter in
                     filterChip(filter)
                 }
             }
@@ -507,8 +584,9 @@ struct ProductsView: View {
         let count = filterCount(for: filter)
 
         return Button {
+            // Tapping the open chip again goes back to the start screen.
             withAnimation(.easeInOut(duration: 0.2)) {
-                activeFilter = filter
+                activeFilter = isActive ? nil : filter
             }
         } label: {
             HStack(spacing: DS.Spacing.xs) {
@@ -539,8 +617,9 @@ struct ProductsView: View {
         .buttonStyle(.plain)
     }
 
-    /// nil while the chip's ids are loading or failed to load (shown as "—").
+    /// nil while the chip's ids or counts are loading or failed to load (shown as "—").
     private func filterCount(for filter: ProductFilter) -> Int? {
+        if filter != .atRisk && filter != .expiringSoon && !viewModel.countsKnown { return nil }
         switch filter {
         case .all: return viewModel.totalCount
         case .lowStock: return viewModel.counts.lowStock
@@ -603,8 +682,11 @@ struct ProductsView: View {
     // MARK: - Actions
     
     private func loadProducts() async {
-        guard let query = listLoadKey.query else { return }
-        await viewModel.loadProducts(query)
+        if let query = listLoadKey.query {
+            await viewModel.loadProducts(query)
+        } else if let locationId = listLoadKey.locationId {
+            await viewModel.loadHome(locationId: locationId)
+        }
     }
     
     private func loadAgingData() async {

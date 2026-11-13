@@ -85,6 +85,13 @@ final class ProductCacheManager {
         return ((try? context.fetch(descriptor)) ?? []).map { $0.toProduct() }
     }
     
+    /// These products, in `ids` order; ids not in the cache (e.g. deleted) are skipped.
+    func products(ids: [String]) -> [Product] {
+        guard let context = modelContext, !ids.isEmpty else { return [] }
+        let rows = (try? context.fetch(FetchDescriptor<CachedProduct>(predicate: #Predicate { ids.contains($0.id) }))) ?? []
+        return RecentProducts.ordered(rows.map { $0.toProduct() }, by: ids)
+    }
+
     /// Check if cache has any data
     var isEmpty: Bool {
         guard let context = modelContext else { return true }

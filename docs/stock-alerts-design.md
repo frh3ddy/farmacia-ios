@@ -133,8 +133,9 @@ where the catalog has nothing; the automatic one is never required.
 
 **Pause / resume**
 - Pause: owner or manager, per store, with a reason (and optionally the replacement product).
-- **Auto-resume (decided):** in the same transaction as a **receiving** or a **received transfer** that takes this
-  store's on-hand from 0 to > 0. Adjustments (Encontrado, count corrected up) don't resume it. Sets `pausedAt = null`, `resumedBy = STOCK_RECEIVED`. Done once,
+- **Auto-resume (decided; widened 2026-11-13):** in the same transaction as any **receiving** or **received transfer**
+  of the product at this store, whatever its stock was (a product paused with units left must resume when the
+  supplier delivers). Adjustments (Encontrado, count corrected up) don't resume it. Sets `pausedAt = null`, `resumedBy = STOCK_RECEIVED`. Done once,
   in the shared "store stock changed" path (ops already stamps product changes with a trigger), so no write path can
   skip it.
 

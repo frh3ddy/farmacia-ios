@@ -28,11 +28,29 @@ struct StockAlertTests {
         #expect(alert.zeroSince == nil)
     }
 
+    @Test("given the O4 shape with explicit nulls and a decimal priority, should decode")
+    func o4Shape() throws {
+        let alert = try decode(#"{"level":"low","priority":0.3333333333,"paused":false,"pauseReason":null,"zeroSince":null}"#)
+        #expect(alert.level == .low)
+        #expect(alert.pauseReason == nil)
+        #expect(alert.zeroSince == nil)
+        #expect(abs(alert.priority - 1.0 / 3) < 0.0001)
+    }
+
     @Test("given no priority or paused, should read them as 0 and not paused")
     func defaults() throws {
         let alert = try decode(#"{"level":"low"}"#)
         #expect(alert.priority == 0)
         #expect(!alert.paused)
+    }
+
+    @Test("given an alert saved in the offline cache, should read back the same alert")
+    func cacheRoundTrip() throws {
+        let alert = StockAlert(level: .out, priority: 1.5, paused: true, pauseReason: .slowMover,
+                               zeroSince: Date(timeIntervalSince1970: 1_794_151_800))
+        let data = try #require(alert.cacheData)
+        #expect(StockAlert(cacheData: data) == alert)
+        #expect(StockAlert(cacheData: nil) == nil) // a row cached before alerts existed
     }
 
     @Test("given a level or reason this app doesn't know, should still decode (the product list must not fail)")
@@ -97,6 +115,26 @@ struct StockLevelAlertTests {
     @Test("given no alert (old server), should keep the fixed cutoffs", arguments: [(0, StockLevel.out), (5, .low), (10, .ok)])
     func fallback(quantity: Int, expected: StockLevel) {
         #expect(StockLevel(quantity: quantity, alert: nil) == expected)
+    }
+}
+
+struct StockBadgeTextTests {
+    private let mx = TimeZone(identifier: "America/Mexico_City")!
+    private let now = Date(timeIntervalSince1970: 1_794_151_800)
+
+    @Test("given a product at 0 with zeroSince 3 days ago, the badge should say Agotado hace 3 días")
+    func outWithDate() {
+        let alert = StockAlert(level: .out, zeroSince: now.addingTimeInterval(-3 * 86_400))
+        #expect(StockLevel.badgeText(quantity: 0, alert: alert, now: now, timeZone: mx) == "Agotado hace 3 días")
+    }
+
+    @Test("given no date, a paused product or one in stock, the badge should be its plain label")
+    func others() {
+        #expect(StockLevel.badgeText(quantity: 0, alert: StockAlert(level: .out), now: now, timeZone: mx) == "Agotado")
+        #expect(StockLevel.badgeText(quantity: 0, alert: nil, now: now, timeZone: mx) == "Agotado")
+        let paused = StockAlert(level: .none, paused: true, pauseReason: .other, zeroSince: now)
+        #expect(StockLevel.badgeText(quantity: 0, alert: paused, now: now, timeZone: mx) == "Pausado · Otro")
+        #expect(StockLevel.badgeText(quantity: 40, alert: StockAlert(level: .none), now: now, timeZone: mx) == nil)
     }
 }
 
