@@ -5,12 +5,12 @@ import Foundation
 // The products being sent to another store in one POST /transfers/batch. The batch
 // refuses a repeated productId, so a re-pick edits its line (and moves it to the top).
 
-public struct TransferDraft: Equatable, Sendable {
-    public struct Line: Equatable, Identifiable, Sendable {
+public struct TransferDraft: Equatable, Sendable, Codable {
+    public struct Line: Equatable, Identifiable, Sendable, Codable {
         public let productId: String
         public let name: String
-        /// On hand at this (the sending) store.
-        public let available: Int
+        /// On hand at this (the sending) store, when the line was added or last refreshed.
+        public internal(set) var available: Int
         public var quantity: Int
         public let imageUrl: String?
         public var id: String { productId }
@@ -27,14 +27,33 @@ public struct TransferDraft: Equatable, Sendable {
     public private(set) var lines: [Line] = []
     /// Same for every retry of this draft, so a resend after a timeout can't ship twice.
     public private(set) var clientRequestId: String
+    /// Enviar timed out (it may have gone through), and the list changed since: a
+    /// resend goes as a new shipment, so it can arrive twice. Saved with the list.
+    private var mayHaveSent = false
+    private var editedSinceMayHaveSent = false
 
     public init(clientRequestId: String = UUID().uuidString) {
         self.clientRequestId = clientRequestId
     }
 
+    private enum CodingKeys: String, CodingKey {
+        case lines, clientRequestId, mayHaveSent, editedSinceMayHaveSent
+    }
+
+    /// The saved list (TransferDraftStore): fields added after the lines and the id
+    /// default when missing, so a new field doesn't lose a list saved before it.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        lines = try container.decode([Line].self, forKey: .lines)
+        clientRequestId = try container.decode(String.self, forKey: .clientRequestId)
+        mayHaveSent = try container.decodeIfPresent(Bool.self, forKey: .mayHaveSent) ?? false
+        editedSinceMayHaveSent = try container.decodeIfPresent(Bool.self, forKey: .editedSinceMayHaveSent) ?? false
+    }
+
     /// The sheet's save: the line takes this quantity (a re-pick edits it, it doesn't add)
     /// and goes first, so the newest pick is on top. Unknown stock (`nil`) counts as none.
     public mutating func set(productId: String, name: String, available: Int?, quantity: Int, imageUrl: String? = nil) {
+        edited()
         lines.removeAll { $0.productId == productId }
         lines.insert(Line(productId: productId, name: name, available: available ?? 0, quantity: quantity, imageUrl: imageUrl), at: 0)
     }
@@ -59,12 +78,45 @@ public struct TransferDraft: Equatable, Sendable {
     }
 
     public mutating func remove(productId: String) {
+        edited()
         lines.removeAll { $0.productId == productId }
     }
 
     public mutating func setQuantity(_ quantity: Int, for productId: String) {
         guard let index = lines.firstIndex(where: { $0.productId == productId }) else { return }
+        edited()
         lines[index].quantity = quantity
+    }
+
+    // MARK: Enviar timed out
+
+    /// No answer to Enviar: the list and its request id stay, so resending as is can't ship twice.
+    public mutating func markMayHaveSent() {
+        mayHaveSent = true
+    }
+
+    /// Shown while the list changed after a send that may have gone through.
+    public var sendWarning: String? {
+        mayHaveSent && editedSinceMayHaveSent
+            ? "Puede que el envío anterior sí haya llegado. Si llegó, este se enviará además. Revisa Recientes."
+            : nil
+    }
+
+    private mutating func edited() {
+        if mayHaveSent { editedSinceMayHaveSent = true }
+    }
+
+    /// This store's stock now, by product id (a saved list's numbers go stale). A
+    /// product missing from `stock` (deleted, or the refresh failed) keeps its number.
+    @discardableResult
+    public mutating func refreshAvailable(_ stock: [String: Int]) -> [TransferStockChange] {
+        var changes: [TransferStockChange] = []
+        for index in lines.indices {
+            guard let now = stock[lines[index].productId], now != lines[index].available else { continue }
+            changes.append(.init(name: lines[index].name, before: lines[index].available, after: now))
+            lines[index].available = now
+        }
+        return changes
     }
 
     // MARK: Checks (every line is checked before sending: the batch reports only its first failure)
@@ -82,8 +134,10 @@ public struct TransferDraft: Equatable, Sendable {
         lines.count > Self.maxItems ? "Máximo \(Self.maxItems) productos por envío" : nil
     }
 
-    /// What to fix before Enviar can send, or nil when it can.
-    public func sendIssue(destinationId: String?) -> String? {
+    /// What to fix before Enviar can send, or nil when it can. `refreshingStock`: the
+    /// saved list's stock is reloading; checking against the old numbers could be wrong.
+    public func sendIssue(destinationId: String?, refreshingStock: Bool = false) -> String? {
+        if refreshingStock { return "Actualizando existencias…" }
         if destinationId == nil { return "Elige la sucursal destino" }
         if lines.isEmpty { return "Agrega al menos un producto" }
         if let capIssue { return capIssue }
@@ -161,8 +215,7 @@ public struct TransferDraft: Equatable, Sendable {
 
     /// After a successful send: a new list is a new shipment.
     public mutating func reset(clientRequestId: String = UUID().uuidString) {
-        lines = []
-        self.clientRequestId = clientRequestId
+        self = TransferDraft(clientRequestId: clientRequestId)
     }
 
     /// The API lets the OWNER, or a manager at both stores, receive on send; anyone else
