@@ -3,91 +3,86 @@ import FarmaciaKit
 
 // MARK: - Stock Alert ViewModel
 
-/// Pre-computed fallback counts (avoids re-filtering `products` on every
-/// access — see `StockAlertViewModel`).
-private struct StockAlertCounts {
-    var outOfStock = 0
-    var lowStock = 0
-    var lowMargin = 0
-}
-
+/// Alertas' stock counts, from GET /products/counts (the whole catalog at this store).
 @MainActor
 class StockAlertViewModel: ObservableObject {
-    @Published var products: [Product] = []
     @Published var isLoading = false
 
-    /// Server-side counts; nil until the counts request succeeds.
+    /// Nil until the counts request succeeds: no counts, no card (alerts are supplementary).
     @Published private(set) var serverCounts: ProductCountsResponse?
 
-    private let apiClient = APIClient.shared
-
-    // Computed once when `products` changes, NOT on every SwiftUI render.
-    // Only used as a fallback when serverCounts hasn't arrived yet — the
-    // count properties below are each read several times per render pass
-    // (needsAttention, the alert card, the restock action).
-    private var fallbackCounts = StockAlertCounts()
-
-    var outOfStockCount: Int {
-        serverCounts?.outOfStock ?? fallbackCounts.outOfStock
-    }
-
-    var lowStockCount: Int {
-        serverCounts?.lowStock ?? fallbackCounts.lowStock
-    }
-
-    var lowMarginCount: Int {
-        serverCounts?.lowMargin ?? fallbackCounts.lowMargin
+    func count(_ list: AlertList) -> Int {
+        serverCounts.flatMap(list.count) ?? 0
     }
 
     var needsAttention: Bool {
-        outOfStockCount > 0 || lowStockCount > 0 || lowMarginCount > 0
+        AlertList.allCases.contains { count($0) > 0 }
     }
 
-    func loadProducts(locationId: String) async {
+    func loadCounts(locationId: String) async {
         isLoading = true
         defer { isLoading = false }
-
-        // Counts come from the server aggregate (correct for the whole catalog).
-        // The product list is bounded to 200 — only used by the alert list view
-        // and the restock shopping list, which need concrete Product rows.
-        async let countsFetch: ProductCountsResponse? = try? apiClient.request(
-            endpoint: .productCounts,
-            queryParams: ["locationId": locationId]
-        )
-        async let listFetch: ProductListResponse? = try? apiClient.request(
-            endpoint: .listProducts,
-            queryParams: ["locationId": locationId, "limit": "200"]
-        )
-
-        let (counts, list) = await (countsFetch, listFetch)
-
-        if let counts {
+        if let counts: ProductCountsResponse = try? await APIClient.shared.request(
+            endpoint: .productCounts, queryParams: ["locationId": locationId]
+        ) {
             serverCounts = counts
         }
-        if let list {
-            products = list.data
-            recalculateFallbackCounts()
-        } else {
-            // Silent fail — alerts are supplementary
-            print("Failed to load products for stock alerts")
-        }
-    }
-
-    /// Single-pass count calculation — called once when products change.
-    private func recalculateFallbackCounts() {
-        var c = StockAlertCounts()
-        for product in products {
-            let stock = product.totalInventory ?? 0
-            if stock == 0 {
-                c.outOfStock += 1
-            } else if stock < 10 {
-                c.lowStock += 1
-            }
-            if (product.profitMargin ?? 100) < 10 {
-                c.lowMargin += 1
-            }
-        }
-        fallbackCounts = c
     }
 }
 
+/// One Alertas list, paged from the server in its ranked order (O6). Paging and
+/// dropping late pages is `ProductListLoad`, shared with Productos.
+@MainActor
+final class AlertListViewModel: ObservableObject {
+    @Published private(set) var rows: [Product] = []
+    @Published private(set) var isLoading = false
+    @Published private(set) var errorMessage: String?
+    private var load = ProductListLoad()
+    private let pageSize = 50
+
+    /// Starts `list` over; a list already shown is kept (coming back from a product).
+    /// A refresh keeps its rows on screen until page 1 lands.
+    func show(_ list: AlertList, locationId: String, force: Bool = false) async {
+        let query = ProductListQuery(locationId: locationId, alert: list)
+        guard force || load.query != query else { return }
+        if load.shownQuery != query {
+            rows = []
+            load.showRows(of: nil)
+        }
+        await run(load.beginFirstPage(query))
+    }
+
+    func loadMore(after product: Product) async {
+        guard product.id == rows.last?.id, let ticket = load.beginNextPage() else { return }
+        await run(ticket)
+    }
+
+    /// A row changed on the detail (paused, restocked): update it, or drop it if it left the list.
+    func update(_ product: Product) {
+        guard let list = load.query?.alert, let index = rows.firstIndex(where: { $0.id == product.id }) else { return }
+        if list.keeps(product.stockAlert) {
+            rows[index] = product
+        } else {
+            rows.remove(at: index)
+        }
+    }
+
+    private func run(_ ticket: ProductListLoad.Ticket) async {
+        isLoading = true
+        errorMessage = nil
+        do {
+            let response: ProductListResponse = try await APIClient.shared.request(
+                endpoint: .listProducts, queryParams: ticket.query.params(page: ticket.page, limit: pageSize))
+            // A newer pick or refresh owns the screen: this page is dropped.
+            guard load.accept(ticket, hasMore: response.hasMore ?? false) else { return }
+            rows = ticket.page == 1 ? response.data : rows + response.data
+        } catch {
+            guard load.fail(ticket) else { return }
+            isLoading = false
+            if case NetworkError.cancelled = error { return }
+            errorMessage = (error as? NetworkError)?.errorDescription ?? "No se pudo cargar la lista."
+            return
+        }
+        isLoading = false
+    }
+}

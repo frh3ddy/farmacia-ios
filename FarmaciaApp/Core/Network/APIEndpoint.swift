@@ -114,6 +114,9 @@ enum APIEndpoint {
     case updateProductPrice(id: String)
     /// Sueltos: links (or with null, unlinks) a box to its suelto at the session's store.
     case setLooseLink(productId: String)
+    /// Stock alerts O5: POST pauses at the body's store, DELETE (`?locationId=`) resumes.
+    case pauseProduct(id: String)
+    case resumeProduct(id: String)
     case listLooseLinks
     /// Transferencias: many products to another store in one shipment (TransferBatchRequest).
     case sendTransfers
@@ -246,6 +249,7 @@ enum APIEndpoint {
         case .createProduct: return "/products"
         case .updateProductPrice(let id): return "/products/\(id)/price"
         case .setLooseLink(let id): return "/products/\(id)/loose-link"
+        case .pauseProduct(let id), .resumeProduct(let id): return "/products/\(id)/pause"
         case .listLooseLinks: return "/products/loose-links"
         case .sendTransfers: return "/transfers/batch"
         case .transferStock: return "/transfers/stock"
@@ -359,6 +363,10 @@ enum APIEndpoint {
             return .post
         case .updateProductPrice, .setLooseLink:
             return .patch
+        case .pauseProduct:
+            return .post
+        case .resumeProduct:
+            return .delete
         case .sendTransfers, .transferStock, .receiveShipment:
             return .post
         case .listShipments:

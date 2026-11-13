@@ -93,8 +93,8 @@ struct ProductCard: View {
 
     @ViewBuilder
     private func badges(_ figures: ProductFigures) -> some View {
-        let level = figures.stock.map(StockLevel.init(quantity:))
-        let label = level?.label
+        let level = figures.stock.map { StockLevel(quantity: $0, alert: product.stockAlert) }
+        let label = figures.stock.flatMap { StockLevel.badgeText(quantity: $0, alert: product.stockAlert) }
         let risky = riskLevel == .high || riskLevel == .critical
         if label != nil || risky || figures.marginPercent != nil || product.hasSquareSync == true {
             HStack(spacing: DS.Spacing.xs) {
@@ -123,7 +123,7 @@ struct ProductCard: View {
         list.append(.init(label: "Precio", value: f.price.map(money) ?? "—"))
         if canViewCosts { list.append(.init(label: "Costo prom.", value: f.cost.map(money) ?? "—")) }
         if let stock = f.stock {
-            let level = StockLevel(quantity: stock)
+            let level = StockLevel(quantity: stock, alert: product.stockAlert)
             list.append(.init(label: "Stock", value: "\(stock)", unit: "uds",
                                color: level == .ok ? .primary : level.tone.color))
         }

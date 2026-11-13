@@ -1,5 +1,6 @@
 import Foundation
 import SwiftData
+import FarmaciaKit
 
 // MARK: - CachedProduct (SwiftData persistence for offline/instant loading)
 
@@ -32,6 +33,9 @@ final class CachedProduct {
     var totalInventory: Int
     var hasSquareSync: Bool
     var tracksInventory: Bool?
+    /// This store's StockAlert, encoded (StockAlert.cacheData); nil on rows cached
+    /// before stock alerts, which fall back to the fixed cutoffs.
+    var stockAlertData: Data?
     
     // Supplier count
     var supplierCount: Int?
@@ -58,6 +62,7 @@ final class CachedProduct {
         self.totalInventory = product.totalInventory ?? 0
         self.hasSquareSync = product.hasSquareSync ?? false
         self.tracksInventory = product.tracksInventory
+        self.stockAlertData = product.stockAlert?.cacheData
         self.supplierCount = product.supplierCount
         self.lastFetchedAt = Date()
         self.serverCreatedAt = product.createdAt
@@ -81,6 +86,7 @@ final class CachedProduct {
         totalInventory = product.totalInventory ?? 0
         hasSquareSync = product.hasSquareSync ?? false
         tracksInventory = product.tracksInventory
+        stockAlertData = product.stockAlert?.cacheData
         supplierCount = product.supplierCount
         lastFetchedAt = Date()
         serverCreatedAt = product.createdAt
@@ -109,7 +115,8 @@ final class CachedProduct {
             averageCost: nil,
             hasSquareSync: hasSquareSync,
             tracksInventory: tracksInventory,
-            gtin: gtin
+            gtin: gtin,
+            stockAlert: StockAlert(cacheData: stockAlertData)
         )
     }
 }

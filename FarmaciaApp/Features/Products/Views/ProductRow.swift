@@ -70,7 +70,7 @@ struct ProductRow: View {
                 if let stock = product.totalInventory {
                     Text("\(stock) uds")
                         .font(.caption)
-                        .foregroundStyle(StockLevel(quantity: stock) == .out ? Tone.critical.color : .secondary)
+                        .foregroundStyle(StockLevel(quantity: stock, alert: product.stockAlert) == .out ? Tone.critical.color : .secondary)
                 }
             }
         }
@@ -80,8 +80,9 @@ struct ProductRow: View {
     /// Shown with no stock info too (counts as 0), as before.
     @ViewBuilder
     private var stockBadge: some View {
-        let level = StockLevel(quantity: product.totalInventory ?? 0)
-        if let label = level.label {
+        let quantity = product.totalInventory ?? 0
+        let level = StockLevel(quantity: quantity, alert: product.stockAlert)
+        if let label = StockLevel.badgeText(quantity: quantity, alert: product.stockAlert) {
             ToneBadge(label, tone: level.tone)
         }
     }

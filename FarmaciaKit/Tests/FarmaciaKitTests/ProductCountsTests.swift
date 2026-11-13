@@ -20,6 +20,18 @@ struct ProductCountsTests {
         #expect(counts.lowMargin == 42)
     }
 
+    @Test("given a server with stock alerts, should decode paused; given an old one, nil (no Pausados chip)")
+    func paused() throws {
+        #expect(try decode(#"{"total":3,"outOfStock":1,"lowStock":0,"paused":2,"synced":3,"local":0}"#).paused == 2)
+        #expect(try decode(#"{"total":3,"outOfStock":1,"lowStock":0,"synced":3,"local":0}"#).paused == nil)
+    }
+
+    @Test("given paused products (some still with stock), In Stock should leave them out: they count only as paused")
+    func inStockWithoutPaused() throws {
+        #expect(try decode(#"{"total":10,"outOfStock":2,"lowStock":3,"paused":1,"synced":10,"local":0}"#).inStock == 4)
+        #expect(try decode(#"{"total":10,"outOfStock":2,"lowStock":3,"synced":10,"local":0}"#).inStock == 5)
+    }
+
     let mx = Locale(identifier: "es_MX")
 
     @Test("given the server's counts, should say how many of the same catalog are linked to Square, both numbers from one query")
