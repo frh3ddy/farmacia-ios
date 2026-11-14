@@ -91,7 +91,9 @@ Steps 6b–6d (migration note, aging-bar math, `ProductDetailView` split) moved 
 
 ## Open follow-ups
 
-- [ ] **Horas pico can stay on its spinner** (dev-67, 2026-11-13, non-blocking). If the newest load is cancelled before it
+- [x] **Horas pico can stay on its spinner** (dev-67, 2026-11-13, non-blocking). Fixed 2026-11-13 on
+  `fix/busy-hours-spinner`: a ticket is the store and period only (no request number), since answers for the same store
+  and period carry the same data; tests `cancelledRefreshDoesNotStrand` (red before) and `answerBeforeNoStoreDropped`. If the newest load is cancelled before it
   finishes while the grid was never loaded (e.g. a pull-to-refresh cancelled while the first `.task` load is still
   running, whose earlier ticket is then dropped), `BusyHoursLoad` stays `.loading` until the next appearance. Rare and
   self-healing. Fix idea: on a cancelled current load, fall back to the previous state, or let a dropped answer land

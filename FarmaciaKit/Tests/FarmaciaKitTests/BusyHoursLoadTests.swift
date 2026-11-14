@@ -65,4 +65,22 @@ struct BusyHoursLoadTests {
         load.finish(grid, for: refreshA) // landing after B, too
         #expect(load.state == .loaded(newer))
     }
+
+    @Test("given the first load in flight and a refresh started then cancelled, the first load's answer should still show the grid")
+    func cancelledRefreshDoesNotStrand() {
+        var load = BusyHoursLoad()
+        let first = load.begin(locationId: "A", days: 90)!
+        _ = load.begin(locationId: "A", days: 90) // pull-to-refresh, then cancelled: never finishes
+        load.finish(grid, for: first)
+        #expect(load.state == .loaded(grid))
+    }
+
+    @Test("given a load from before no store was selected, its answer should not land")
+    func answerBeforeNoStoreDropped() {
+        var load = BusyHoursLoad()
+        let a = load.begin(locationId: "A", days: 90)!
+        _ = load.begin(locationId: nil, days: 90)
+        load.finish(grid, for: a)
+        #expect(load.state == .noStore)
+    }
 }
