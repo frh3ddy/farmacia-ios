@@ -9,26 +9,25 @@ struct BusyHoursLoadTests {
 
     private func loaded(_ locationId: String = "centro", days: Int = 90) -> BusyHoursLoad {
         var load = BusyHoursLoad()
-        _ = load.begin(locationId: locationId, days: days)
-        load.finish(grid)
+        let ticket = load.begin(locationId: locationId, days: days)!
+        load.finish(grid, for: ticket)
         return load
     }
 
     @Test("given no store selected, should say so instead of loading or failing")
     func noStore() {
         var load = BusyHoursLoad()
-        let fetches = load.begin(locationId: nil, days: 90)
-        #expect(!fetches)
+        let ticket = load.begin(locationId: nil, days: 90)
+        #expect(ticket == nil)
         #expect(load.state == .noStore)
     }
 
     @Test("given a pull-to-refresh of the same store and period, should keep the grid until the new one lands")
     func refreshKeepsGrid() {
         var load = loaded()
-        let fetches = load.begin(locationId: "centro", days: 90)
-        #expect(fetches)
+        let ticket = load.begin(locationId: "centro", days: 90)!
         #expect(load.state == .loaded(grid))
-        load.finish(newer)
+        load.finish(newer, for: ticket)
         #expect(load.state == .loaded(newer))
     }
 
@@ -45,12 +44,25 @@ struct BusyHoursLoadTests {
     @Test("given a refresh that fails, should keep the last grid; a first load that fails, should say it failed")
     func failures() {
         var refresh = loaded()
-        _ = refresh.begin(locationId: "centro", days: 90)
-        refresh.finish(nil)
+        let refreshTicket = refresh.begin(locationId: "centro", days: 90)!
+        refresh.finish(nil, for: refreshTicket)
         #expect(refresh.state == .loaded(grid))
         var first = BusyHoursLoad()
-        _ = first.begin(locationId: "centro", days: 90)
-        first.finish(nil)
+        let firstTicket = first.begin(locationId: "centro", days: 90)!
+        first.finish(nil, for: firstTicket)
         #expect(first.state == .failed)
+    }
+
+    @Test("given a refresh at store A still in flight when store B is picked, A's answer should never show under B")
+    func staleAnswerDropped() {
+        var load = loaded("A")
+        let refreshA = load.begin(locationId: "A", days: 90)!
+        let storeB = load.begin(locationId: "B", days: 90)!
+        load.finish(grid, for: refreshA)
+        #expect(load.state == .loading)
+        load.finish(newer, for: storeB)
+        #expect(load.state == .loaded(newer))
+        load.finish(grid, for: refreshA) // landing after B, too
+        #expect(load.state == .loaded(newer))
     }
 }

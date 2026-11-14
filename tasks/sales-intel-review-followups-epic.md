@@ -84,4 +84,7 @@ Steps 6b–6d (migration note, aging-bar math, `ProductDetailView` split) moved 
 - Smoke against the local API rebuilt from ops' branch: Agua Oxigenada "Vende ~3 al día · última venta hace 3 días"
   (Alertas: "Vende ~3 al día"); Agua bonafont "Vende ~2 al día · última venta hoy" (Alertas: "Vende ~2 al día ·
   alcanza para ~2 días"); Inicio's grid survives pull-to-refresh.
+- Reviewer fix (dev-67): Inicio's pull-to-refresh isn't tied to the store's `.task`, so a refresh at store A landing
+  after a switch to B showed A's grid under B. `begin` now returns a ticket and `finish(_:for:)` drops any answer that
+  isn't the current one (`staleAnswerDropped`, red with the ticket ignored, green with the check).
 - Waiting: ops deploy of `rate` / `lastSoldAt` (until then production shows no sales line).

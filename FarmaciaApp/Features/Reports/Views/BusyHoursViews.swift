@@ -93,11 +93,12 @@ final class BusyHoursLoader {
     var state: BusyHoursLoad.State { progress.state }
 
     func load(locationId: String?, days: Int) async {
-        guard progress.begin(locationId: locationId, days: days), let locationId else { return }
+        guard let ticket = progress.begin(locationId: locationId, days: days), let locationId else { return }
         let fresh = await APIClient.shared.busyHours(locationId: locationId, days: days)
-        // A store/period switch cancelled this load; the newer one owns the state.
+        // Cancelled (the view went away): not a failure; the next appearance loads again.
         guard !Task.isCancelled else { return }
-        progress.finish(fresh)
+        // An answer for an earlier store, period or refresh is dropped by its ticket.
+        progress.finish(fresh, for: ticket)
     }
 }
 
