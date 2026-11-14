@@ -199,7 +199,12 @@ Each step has its own tests on their side. Order matters: O2 feeds O3, and O3 fe
       tabs show their note and ranked rows.
     - Later, with O7 — smoke: pause two from suggestions at once; dismiss one; both disappear and the counts update; a cashier doesn't see
       the card.
-12. [ ] Build, `swiftui-pro` + `swift-concurrency-pro` reviews, `/tdd-review`, README, `docs/inventory-ux-brief.md` §7
+12. [x] Final review 2026-11-13 (commit "fix: reload an Alertas list whose first page never landed"): build, `swiftui-pro` + `swift-concurrency-pro` + `/tdd-review` over
+    the merged diff (`8a3434a..551ebcc`). One fix: an Alertas list whose page 1 was cancelled by leaving the tab came
+    back empty ("No hay productos") because `show` skipped any list it had *started*; it now skips only a list whose
+    rows are on screen (`ProductListLoad.needsFirstPage`; test **given Sin Stock's page 1 cancelled (left the tab),
+    coming back should load it; once shown, should keep it**). Brief §7 has the alert and Pausado rules; the
+    low-stock follow-ups are ✅. Original plan: Build, `swiftui-pro` + `swift-concurrency-pro` reviews, `/tdd-review`, README, `docs/inventory-ux-brief.md` §7
     (Bajo = days of cover + normal level for regular sellers; Pausado), mark the low-stock follow-up ✅,
     `graphify update .`.
 

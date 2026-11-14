@@ -423,8 +423,16 @@ For mobile tables, consider visible identifiers, selective columns, and clear ho
 - **One formatter per type.** Money `ReportFormat.currency` ("$220.00", currency code stated once per block);
   dates `DisplayDate.day` ("24 sep 2026"); timestamps `DisplayDate.timestamp` ("2 nov · 2:57 a.m.").
 - **Names never truncate.** Product names wrap; the card grows.
-- **Neutral by default.** A healthy state is neutral, not green; only problems escalate (amber → red). No "low stock"
-  flag until thresholds are learned per product. A branch that doesn't carry an item shows a neutral `0 uds`.
+- **Neutral by default.** A healthy state is neutral, not green; only problems escalate (amber → red). A branch that
+  doesn't carry an item shows a neutral `0 uds`.
+- **Stock alerts only for regular sellers** (`docs/stock-alerts-design.md`). "Agotado" when a product that sells most
+  weeks is at 0; "Bajo" when its stock covers fewer than 14 days at its own sales rate *and* sits under its normal
+  level. Slow movers at 0–3 stay quiet. Alertas ranks them by sales lost a day and says why ("Vende ~3 al día",
+  "· alcanza para ~4 días"); its counts aren't Productos' chips of the same name, so the list says what it counts.
+- **Pausado is not discontinued.** An owner or manager pauses a product per store with a reason (the supplier can't
+  restock it, replaced by an equivalent, sells little…); it stops alerting and resumes itself on any receiving or
+  received transfer at that store. It shows as "Pausado · <motivo>" with that hint, never as an alert. Pausing is
+  never automatic: suggestions (later) only propose it.
 - **Empty states are one 44pt row** ("Sin movimientos aún · Historial ›"); tall cards are for content.
 - **No meaning by color alone** — every tone carries a glyph and words.
 - **No unresolved placeholders, no dead menus.** Hide links that lead to what's already on screen (one supplier).
