@@ -80,6 +80,8 @@ extension StockAlert {
     private static func rateText(_ perDay: Double) -> String {
         if perDay >= 1 { return "Vende ~\(Int(perDay.rounded())) al día" }
         if perDay * 7 >= 1 { return "Vende ~\(Int((perDay * 7).rounded())) a la semana" }
-        return "Vende ~\(max(1, Int((perDay * 30).rounded()))) al mes"
+        // Under 1 a week, an average misleads ("~1 al mes" for 1 sale 78 days ago): give the
+        // real count. The API's rate is unitsSold ÷ windowDays, and the window is 90 days.
+        return "Vendió \(max(1, Int((perDay * 90).rounded()))) en 90 días"
     }
 }

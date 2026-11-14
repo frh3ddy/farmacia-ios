@@ -40,6 +40,12 @@ struct StockAlertSalesTests {
         #expect(alert.salesLine(now: now, timeZone: tz) == "Vende ~1 al día · última venta hace 2 días")
     }
 
+    @Test("given 1 sold in 90 days, 78 days ago, should say Vendió 1 en 90 días, not ~1 al mes")
+    func rareSeller() {
+        let alert = StockAlert(level: .none, rate: 1.0 / 90, lastSoldAt: daysAgo(78))
+        #expect(alert.salesLine(now: now, timeZone: tz) == "Vendió 1 en 90 días · última venta hace 78 días")
+    }
+
     @Test("given nothing sold in the window, should say Sin ventas recientes with the last sale; never sold, Sin ventas registradas")
     func quietLines() {
         #expect(StockAlert(level: .none, rate: 0, lastSoldAt: daysAgo(200)).salesLine(now: now, timeZone: tz)

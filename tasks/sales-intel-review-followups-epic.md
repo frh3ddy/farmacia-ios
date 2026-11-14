@@ -87,7 +87,12 @@ Steps 6b–6d (migration note, aging-bar math, `ProductDetailView` split) moved 
 - Reviewer fix (dev-67): Inicio's pull-to-refresh isn't tied to the store's `.task`, so a refresh at store A landing
   after a switch to B showed A's grid under B. `begin` now returns a ticket and `finish(_:for:)` drops any answer that
   isn't the current one (`staleAnswerDropped`, red with the ticket ignored, green with the check).
-- Waiting: ops deploy of `rate` / `lastSoldAt` (until then production shows no sales line).
+- ✅ Ops deployed `rate` / `lastSoldAt` to production (2026-11-13, deploys e52046c0 and 1ca4b37d); `lastSoldAt`
+  includes today's sales.
+- ✅ Under 1 sale a week the line gives the real count, not an average (the user, via ops, 2026-11-14): "Vende ~1 al
+  mes · última venta hace 78 días" said it sells monthly when nothing had sold in 2½ months. Now "Vendió 1 en 90 días"
+  (rate × 90, the API's window) in "fix: under 1 sale a week, the sales line gives the real count"; ≥1 a day / a week unchanged; Alertas' reason uses the
+  same formatter.
 
 ## Open follow-ups
 
