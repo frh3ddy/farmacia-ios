@@ -88,3 +88,12 @@ Steps 6b–6d (migration note, aging-bar math, `ProductDetailView` split) moved 
   after a switch to B showed A's grid under B. `begin` now returns a ticket and `finish(_:for:)` drops any answer that
   isn't the current one (`staleAnswerDropped`, red with the ticket ignored, green with the check).
 - Waiting: ops deploy of `rate` / `lastSoldAt` (until then production shows no sales line).
+
+## Open follow-ups
+
+- [ ] **Horas pico can stay on its spinner** (dev-67, 2026-11-13, non-blocking). If the newest load is cancelled before it
+  finishes while the grid was never loaded (e.g. a pull-to-refresh cancelled while the first `.task` load is still
+  running, whose earlier ticket is then dropped), `BusyHoursLoad` stays `.loading` until the next appearance. Rare and
+  self-healing. Fix idea: on a cancelled current load, fall back to the previous state, or let a dropped answer land
+  when nothing has loaded yet for the same store and period. First test: **given the first load in flight and a
+  refresh started then cancelled, the first load's answer should still show the grid**.
