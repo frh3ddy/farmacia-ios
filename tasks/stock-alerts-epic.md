@@ -6,6 +6,8 @@
 `feature/stock-alerts`, not deployed. The production O2 report waits on the user's go-ahead to deploy. `StockDay` is
 sparse (a row only when the level changes or on a restock; readers carry the last level forward). iOS steps 1–7 done
 (`e25702d`).
+**Later (user, 2026-11-13):** O7 (pause suggestions), O8 (equivalents) and O9 (report) are documented for a later
+implementation; the iOS parts that need them (Equivalentes on the detail, the Sugerencias card) wait with them.
 - 2026-11-12: O2 saved in production with the user's OK (98,747 `StockDay` rows; replay matched Square's count for
   99.6% of Lolita items and 97.3% of Oriente items, and every mismatch so far is Square gone negative, with the replay
   clamped at 0). Nightly stock days run at 03:00 Mexico City. Square's negative counts stay as they are (the app is the
@@ -148,7 +150,7 @@ Each step has its own tests on their side. Order matters: O2 feeds O3, and O3 fe
      46, Pausados 0), the Sin Stock chip list, opening a product puts it under Recientes, search "Aba" → 2, clearing
      the search returns to the start screen, Ver todo and back. Not checked: location switch (1 store locally),
      offline launch, and "Agotado hace N días" (no local stats yet).
-10. [~] Product detail (owner/manager). Pausar / Reanudar done 2026-11-13 (uncommitted); Equivalentes waits on O8:
+10. [x] Product detail (owner/manager). Pausar / Reanudar done 2026-11-13 (`3351ded`); Equivalentes is for later, with O8:
     - A Pausado line in Inventario.
     - Pausar / Reanudar in the Ajustar menu: reason picker, a product picker for "Reemplazado por equivalente" (reuses
       `ProductSearchPicker`), optional note.
@@ -169,7 +171,7 @@ Each step has its own tests on their side. Order matters: O2 feeds O3, and O3 fe
       inventario.", Sin Stock 6 → 5, Pausados 1, and the recents row shows Pausado. **Receive 1 unit → resumed** (the
       Pausado line is gone). Pausing with stock on hand, then Reanudar, works. Not checked: a cashier (no menu, by the
       rule's tests) or a pause with a replacement.
-11. [ ] Alertas. O6 as built by ops (2026-11-13, live in production 2026-11-13, ops main a8eb30f; every sorted list breaks ties on product id, so pages never repeat or skip): no
+11. [x] Alertas (ranked lists `776ded2`; the Sugerencias card is for later, with O7). O6 as built by ops (2026-11-13, live in production 2026-11-13, ops main a8eb30f; every sorted list breaks ties on product id, so pages never repeat or skip): no
     `/inventory/stock-alerts` route. Use `GET /products?filter=outAlert` / `filter=lowAlert` instead, with the same rows,
     pages (limit ≤ 200, `totalCount`, `hasMore`) and cost stripping, only regular sellers that aren't paused, sorted by
     `stockAlert.priority` desc then newest. `/products/counts` adds `outAlert` (Alertas "Sin stock"). "Stock bajo" uses
@@ -195,9 +197,14 @@ Each step has its own tests on their side. Order matters: O2 feeds O3, and O3 fe
       y no están pausados…") because their counts differ from the Productos chips of the same name (3 vs 4 locally).
       Tests: **given Sin Stock's page 2 still loading when Stock Bajo is picked, should drop it**; notes. Smoke: both
       tabs show their note and ranked rows.
-    - Smoke: pause two from suggestions at once; dismiss one; both disappear and the counts update; a cashier doesn't see
+    - Later, with O7 — smoke: pause two from suggestions at once; dismiss one; both disappear and the counts update; a cashier doesn't see
       the card.
-12. [ ] Build, `swiftui-pro` + `swift-concurrency-pro` reviews, `/tdd-review`, README, `docs/inventory-ux-brief.md` §7
+12. [x] Final review 2026-11-13 (commit "fix: reload an Alertas list whose first page never landed"): build, `swiftui-pro` + `swift-concurrency-pro` + `/tdd-review` over
+    the merged diff (`8a3434a..551ebcc`). One fix: an Alertas list whose page 1 was cancelled by leaving the tab came
+    back empty ("No hay productos") because `show` skipped any list it had *started*; it now skips only a list whose
+    rows are on screen (`ProductListLoad.needsFirstPage`; test **given Sin Stock's page 1 cancelled (left the tab),
+    coming back should load it; once shown, should keep it**). Brief §7 has the alert and Pausado rules; the
+    low-stock follow-ups are ✅. Original plan: Build, `swiftui-pro` + `swift-concurrency-pro` reviews, `/tdd-review`, README, `docs/inventory-ux-brief.md` §7
     (Bajo = days of cover + normal level for regular sellers; Pausado), mark the low-stock follow-up ✅,
     `graphify update .`.
 
@@ -210,7 +217,7 @@ Each step has its own tests on their side. Order matters: O2 feeds O3, and O3 fe
 ## Order and dependencies
 
 - iOS steps 1–7 can start now, against the shapes above.
-- UI step 8 needs O4; step 10 needs O5 and O8; step 11 needs O6 and O7.
+- UI step 8 needs O4; step 10 needs O5 (O8 later); step 11 needs O6 (O7 later).
 - O2's report needs the user's OK before the rest of ops builds on it.
 - Every UI step keeps working against today's server, because `stockAlert` is optional.
 

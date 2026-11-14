@@ -70,7 +70,7 @@ Merged: `f580589` (merge `9fcbfc2`).
 
 ## 📋 Product detail redesign follow-ups (`tasks/product-detail-redesign-epic.md`)
 
-- Given a product that normally carries 1–2 units (or sits at 0 for weeks), should flag low stock only below its own learned threshold (typical on-hand, time at 0) — farmacia-ops; until then the detail has no "Bajo".
+- ✅ Given a product that normally carries 1–2 units (or sits at 0 for weeks), should flag low stock only below its own learned threshold (typical on-hand, time at 0) — done by the stock alerts epic (`tasks/stock-alerts-epic.md`, merged in `551ebcc`): regular sellers only, days of cover plus normal level.
 - Given a product, should say how fast it sells (sell-through or last sold) — needs an endpoint from `SaleItem`; a line in Inventario.
 - Given a lot with no caducidad, should let an owner add it from the lot row — needs a PATCH endpoint; "Sin caducidad registrada" is text only.
 - Given one supplier on record, "Sin proveedor alterno · agregar" — needs an add-supplier-to-product flow on iOS.

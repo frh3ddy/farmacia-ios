@@ -40,11 +40,12 @@ final class AlertListViewModel: ObservableObject {
     private var load = ProductListLoad()
     private let pageSize = 50
 
-    /// Starts `list` over; a list already shown is kept (coming back from a product).
+    /// Starts `list` over; a list already shown is kept (coming back from a product), but
+    /// one whose page 1 never landed (cancelled by leaving the tab) loads again.
     /// A refresh keeps its rows on screen until page 1 lands.
     func show(_ list: AlertList, locationId: String, force: Bool = false) async {
         let query = ProductListQuery(locationId: locationId, alert: list)
-        guard force || load.query != query else { return }
+        guard load.needsFirstPage(query, force: force) else { return }
         if load.shownQuery != query {
             rows = []
             load.showRows(of: nil)

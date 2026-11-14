@@ -115,7 +115,7 @@ the design-system pieces it needs (accessible green, money text), and the knowle
 
 ## Follow-ups (→ `tasks/inventory-review-followups-epic.md`)
 
-- **Per-product low-stock threshold learned from history** (typical on-hand, time at 0). farmacia-ops.
+- ✅ **Per-product low-stock threshold learned from history** (typical on-hand, time at 0). Done by the stock alerts epic (`551ebcc`).
 - **Sell-through / last sold**: endpoint from `SaleItem`; a line in Inventario.
 - **Edit a lot's caducidad**: no PATCH endpoint, so "Sin caducidad · agregar" is text-only for now.
 - **"Sin proveedor alterno · agregar"**: no add-supplier-to-product flow on iOS.
