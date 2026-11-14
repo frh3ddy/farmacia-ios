@@ -20,17 +20,25 @@ public struct StockAlert: Codable, Hashable, Sendable {
     public let pauseReason: PauseReason?
     /// When this store's stock last reached 0; nil while in stock or unknown.
     public let zeroSince: Date?
+    /// Units sold a day over the alerts' window (nightly stats): the one sales rate the
+    /// app shows, on the detail and in Alertas. Nil with no stats (older server, new product).
+    public let rate: Double?
+    /// The last sale at this store, from the same nightly stats.
+    public let lastSoldAt: Date?
 
     private enum CodingKeys: String, CodingKey {
-        case level, priority, paused, pauseReason, zeroSince
+        case level, priority, paused, pauseReason, zeroSince, rate, lastSoldAt
     }
 
-    public init(level: Level, priority: Double = 0, paused: Bool = false, pauseReason: PauseReason? = nil, zeroSince: Date? = nil) {
+    public init(level: Level, priority: Double = 0, paused: Bool = false, pauseReason: PauseReason? = nil,
+                zeroSince: Date? = nil, rate: Double? = nil, lastSoldAt: Date? = nil) {
         self.level = level
         self.priority = priority
         self.paused = paused
         self.pauseReason = pauseReason
         self.zeroSince = zeroSince
+        self.rate = rate
+        self.lastSoldAt = lastSoldAt
     }
 
     // Unknown level or reason values decode as none / nil: a new server value
@@ -42,6 +50,8 @@ public struct StockAlert: Codable, Hashable, Sendable {
         paused = try c.decodeIfPresent(Bool.self, forKey: .paused) ?? false
         pauseReason = try c.decodeIfPresent(String.self, forKey: .pauseReason).flatMap(PauseReason.init(rawValue:))
         zeroSince = try c.decodeIfPresent(Date.self, forKey: .zeroSince)
+        rate = try c.decodeIfPresent(Double.self, forKey: .rate)
+        lastSoldAt = try c.decodeIfPresent(Date.self, forKey: .lastSoldAt)
     }
 }
 

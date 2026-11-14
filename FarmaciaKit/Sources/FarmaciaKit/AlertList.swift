@@ -60,12 +60,21 @@ extension StockAlert {
         case .none:
             return nil
         case .out:
-            return Self.rateText(priority)
+            return Self.rateText(rate ?? priority)
         case .low:
             let days = 1 / priority
             let lasts = days < 1 ? "menos de 1 día" : (days.rounded() == 1 ? "~1 día" : "~\(Int(days.rounded())) días")
-            return "\(Self.rateText(priority * Double(max(quantity, 1)))) · alcanza para \(lasts)"
+            return "\(Self.rateText(rate ?? priority * Double(max(quantity, 1)))) · alcanza para \(lasts)"
         }
+    }
+
+    /// The product detail's sales line, e.g. "Vende ~1 al día · última venta hace 2 días": the
+    /// same rate and wording as Alertas' reason. Nil without stats (older server, new product).
+    public func salesLine(now: Date = Date(), timeZone: TimeZone = .current) -> String? {
+        guard let rate else { return nil }
+        let last = lastSoldAt.map { "última venta \(DisplayDate.relative($0, now: now, timeZone: timeZone))" }
+        guard rate > 0 else { return last.map { "Sin ventas recientes · \($0)" } ?? "Sin ventas registradas" }
+        return [Self.rateText(rate), last].compactMap { $0 }.joined(separator: " · ")
     }
 
     private static func rateText(_ perDay: Double) -> String {

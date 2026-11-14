@@ -7,6 +7,9 @@ struct DashboardView: View {
     @EnvironmentObject var authManager: AuthManager
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var viewModel = DashboardViewModel()
+    @State private var busyHours = BusyHoursLoader()
+
+    private var showsBusyHours: Bool { authManager.isOwner || authManager.isManager }
 
     var body: some View {
         NavigationStack {
@@ -34,6 +37,11 @@ struct DashboardView: View {
                         
                         // Sales Summary
                         salesSummarySection(report: report)
+
+                        // Busy hours (Square sales history), owner/manager
+                        if showsBusyHours {
+                            BusyHoursCard(loader: busyHours)
+                        }
                         
                         // Inventory Overview
                         inventorySummarySection(report: report)
@@ -58,7 +66,11 @@ struct DashboardView: View {
                 .containerRelativeFrame(.horizontal)
             }
             .refreshable {
-                await viewModel.loadDashboard()
+                async let dashboard: () = viewModel.loadDashboard()
+                if showsBusyHours {
+                    await busyHours.load(locationId: authManager.currentLocation?.id, days: 90)
+                }
+                await dashboard
             }
             .navigationTitle("Inicio")
             .toolbar {

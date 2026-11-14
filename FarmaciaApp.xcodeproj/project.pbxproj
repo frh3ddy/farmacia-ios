@@ -83,6 +83,7 @@
 		F000000100000012 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000012 /* DashboardView.swift */; };
 		F000000100000013 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000013 /* SettingsView.swift */; };
 		F000000100000015 /* ReportsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000015 /* ReportsView.swift */; };
+		F0000001000009A1 /* BusyHoursViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000001000009A1 /* BusyHoursViews.swift */; };
 		F000000100000016 /* EmployeesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000016 /* EmployeesView.swift */; };
 		F000000100000017 /* Employee.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000017 /* Employee.swift */; };
 		F000000100000018 /* Device.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000018 /* Device.swift */; };
@@ -216,6 +217,7 @@
 		F100000100000012 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		F100000100000013 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		F100000100000015 /* ReportsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportsView.swift; sourceTree = "<group>"; };
+		F1000001000009A1 /* BusyHoursViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusyHoursViews.swift; sourceTree = "<group>"; };
 		F100000100000016 /* EmployeesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmployeesView.swift; sourceTree = "<group>"; };
 		F100000100000017 /* Employee.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Employee.swift; sourceTree = "<group>"; };
 		F100000100000018 /* Device.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Device.swift; sourceTree = "<group>"; };
@@ -588,6 +590,7 @@
 			isa = PBXGroup;
 			children = (
 				F100000100000015 /* ReportsView.swift */,
+				F1000001000009A1 /* BusyHoursViews.swift */,
 				F100000100000031 /* ReportsViewModel.swift */,
 				F100000100000032 /* ReportsShared.swift */,
 				F100000100000033 /* COGSReportView.swift */,
@@ -776,6 +779,7 @@
 				F000000100000044 /* SupplierPickerView.swift in Sources */,
 				F000000100000046 /* AdjustmentFormView.swift in Sources */,
 				F000000100000015 /* ReportsView.swift in Sources */,
+				F0000001000009A1 /* BusyHoursViews.swift in Sources */,
 				F000000100000031 /* ReportsViewModel.swift in Sources */,
 				F000000100000032 /* ReportsShared.swift in Sources */,
 				F000000100000033 /* COGSReportView.swift in Sources */,
