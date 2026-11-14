@@ -87,6 +87,13 @@ Merged: `f580589` (merge `9fcbfc2`).
 
 ---
 
+## ✅ Reviewer nits on stock alerts and the detail split (dev-67, 2026-11-13)
+
+- ✅ Given Sin Stock's page 1 still loading, showing it again should wait for it, not send a second request:
+  `ProductListLoad.needsFirstPage` is false while that list's page 1 is in flight (`waitsForLoadingList`).
+- ✅ Given a bar too narrow for every minimum, `BarSegments.widths` should never give a negative width: the space left
+  after the minimums is clamped at 0 (`tooNarrow`). Real bars (≈300 pt, 2 pt minimum, ≤5 buckets) never hit it.
+
 ## Decided not to do
 
 - **Money as `Decimal` (2026-10-30).** Measured before planning:
