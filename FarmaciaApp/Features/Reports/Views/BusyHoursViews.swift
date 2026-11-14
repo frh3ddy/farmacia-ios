@@ -17,80 +17,101 @@ struct BusyHoursGrid: View {
         if busy.isEmpty {
             EmptyRow(text: busy.topText, systemImage: "clock")
         } else {
-            VStack(alignment: .leading, spacing: DS.Spacing.s) {
-                Label(busy.topText, systemImage: "flame")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-
-                Grid(horizontalSpacing: 2, verticalSpacing: 2) {
-                    GridRow {
-                        Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
-                        ForEach(busy.hours, id: \.self) { hour in
-                            Text(hour % 3 == 0 ? "\(hour)" : "")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                                .fixedSize()
-                        }
-                    }
-                    ForEach(busy.days, id: \.dayOfWeek) { day in
-                        GridRow {
-                            Text(day.label)
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                                .fixedSize()
-                                .gridColumnAlignment(.leading)
-                            ForEach(busy.hours, id: \.self) { hour in
-                                let share = busy.share(day: day.dayOfWeek, hour: hour)
-                                RoundedRectangle(cornerRadius: 3)
-                                    .fill(share > 0 ? Color.accentColor.opacity(0.12 + 0.88 * share) : Color(.systemGray6))
-                                    .frame(height: 18)
-                            }
-                        }
-                    }
-                }
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel("Horas pico: \(busy.topText)")
-
-                Text(caption)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            // Largest text sizes or a small phone: the grid can't fit, so the top slots as a list.
+            ViewThatFits(in: .horizontal) {
+                grid
+                topSlotsList
             }
         }
     }
 
-    /// "Pedidos por hora · hora del centro de México".
-    private var caption: String {
-        let zone = TimeZone(identifier: timezone)?.localizedName(for: .generic, locale: DisplayDate.locale) ?? timezone
-        return "Pedidos por hora · \(zone)"
+    private var topSlotsList: some View {
+        VStack(alignment: .leading, spacing: DS.Spacing.s) {
+            Label("Horas con más pedidos", systemImage: "flame")
+                .font(.subheadline)
+                .fontWeight(.medium)
+            ForEach(busy.topSlots, id: \.self) { slot in
+                Text(slot)
+                    .font(.subheadline)
+            }
+            Text(caption)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
     }
+
+    private var grid: some View {
+        VStack(alignment: .leading, spacing: DS.Spacing.s) {
+            Label(busy.topText, systemImage: "flame")
+                .font(.subheadline)
+                .fontWeight(.medium)
+
+            Grid(horizontalSpacing: 2, verticalSpacing: 2) {
+                GridRow {
+                    Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
+                    ForEach(busy.hours, id: \.self) { hour in
+                        Text(hour % 3 == 0 ? "\(hour)" : "")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .fixedSize()
+                    }
+                }
+                ForEach(busy.days, id: \.dayOfWeek) { day in
+                    GridRow {
+                        Text(day.label)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .fixedSize()
+                            .gridColumnAlignment(.leading)
+                        ForEach(busy.hours, id: \.self) { hour in
+                            let share = busy.share(day: day.dayOfWeek, hour: hour)
+                            RoundedRectangle(cornerRadius: 3)
+                                .fill(share > 0 ? Color.accentColor.opacity(0.12 + 0.88 * share) : Color(.systemGray6))
+                                // An ideal width, so ViewThatFits can tell when the grid doesn't fit.
+                                .frame(minWidth: 6, idealWidth: 10)
+                                .frame(height: 18)
+                        }
+                    }
+                }
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Horas pico: \(busy.topText)")
+
+            Text(caption)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var caption: String { BusyHours.caption(timezone: timezone) }
 }
 
-/// Loads busy hours for the current store; nil while loading, hidden on failure.
+/// Loads busy hours for the current store; what to show is `BusyHoursLoad` (FarmaciaKit).
 @MainActor @Observable
 final class BusyHoursLoader {
-    private(set) var response: BusyHours.Response?
-    private(set) var isLoaded = false
+    private var progress = BusyHoursLoad()
+    var state: BusyHoursLoad.State { progress.state }
 
     func load(locationId: String?, days: Int) async {
-        guard let locationId else { return }
-        isLoaded = false
-        response = nil // never show another store's or period's grid while loading
+        guard progress.begin(locationId: locationId, days: days), let locationId else { return }
         let fresh = await APIClient.shared.busyHours(locationId: locationId, days: days)
         // A store/period switch cancelled this load; the newer one owns the state.
         guard !Task.isCancelled else { return }
-        response = fresh
-        isLoaded = true
+        progress.finish(fresh)
     }
 }
 
-/// Inicio: last 90 days at the current store.
+/// Inicio: last 90 days at the current store. Hidden when it fails or there's no store
+/// (busy hours are supplementary there).
 struct BusyHoursCard: View {
     @EnvironmentObject var authManager: AuthManager
-    @State private var loader = BusyHoursLoader()
+    /// Owned by Inicio, so its pull-to-refresh reloads busy hours too.
+    let loader: BusyHoursLoader
 
     var body: some View {
         Group {
-            if let response = loader.response {
+            switch loader.state {
+            case .loaded(let response):
                 VStack(alignment: .leading, spacing: 12) {
                     Label("Horas pico · 90 días", systemImage: "clock.fill")
                         .font(.headline)
@@ -99,9 +120,11 @@ struct BusyHoursCard: View {
                         .background(Color(.systemGray6))
                         .clipShape(.rect(cornerRadius: 12))
                 }
-            } else if !loader.isLoaded {
+            case .loading:
                 ProgressView()
                     .frame(maxWidth: .infinity, minHeight: 120)
+            case .failed, .noStore:
+                EmptyView()
             }
         }
         .task(id: authManager.currentLocation?.id) {
@@ -128,12 +151,15 @@ struct BusyHoursReportView: View {
                 .pickerStyle(.segmented)
             }
             Section(authManager.currentLocation?.name ?? "") {
-                if let response = loader.response {
+                switch loader.state {
+                case .loaded(let response):
                     BusyHoursGrid(busy: BusyHours(cells: response.cells), timezone: response.timezone)
-                } else if loader.isLoaded {
-                    EmptyRow(text: "No se pudieron cargar las horas pico", systemImage: "wifi.exclamationmark")
-                } else {
+                case .loading:
                     ProgressView().frame(maxWidth: .infinity)
+                case .failed:
+                    EmptyRow(text: "No se pudieron cargar las horas pico", systemImage: "wifi.exclamationmark")
+                case .noStore:
+                    EmptyRow(text: "Elige una sucursal para ver sus horas pico", systemImage: "building.2")
                 }
             }
         }

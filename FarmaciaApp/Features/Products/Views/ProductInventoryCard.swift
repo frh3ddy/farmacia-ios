@@ -73,6 +73,13 @@ struct ProductInventoryCard<Activity: View>: View {
                 }
             }
 
+            // The alerts' own rate (StockAlert.salesLine), so it matches Alertas' reason.
+            if let sales = product.stockAlert?.salesLine() {
+                Label(sales, systemImage: "chart.line.uptrend.xyaxis")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
             otherStoresRows
         }
         .card()

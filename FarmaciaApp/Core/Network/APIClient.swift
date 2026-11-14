@@ -362,11 +362,6 @@ extension APIClient {
         return response?.data ?? []
     }
 
-    /// nil when the request fails: the detail just hides the line.
-    func salesVelocity(productId: String, locationId: String) async -> SalesVelocity? {
-        try? await request(endpoint: .productSalesVelocity(productId: productId), queryParams: ["locationId": locationId])
-    }
-
     /// nil when the request fails: the card shows nothing rather than an error.
     func busyHours(locationId: String, days: Int = 90) async -> BusyHours.Response? {
         try? await request(endpoint: .busyHoursReport, queryParams: ["locationId": locationId, "days": String(days)])

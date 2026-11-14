@@ -42,4 +42,22 @@ struct BusyHoursTests {
         #expect(response.timezone == "America/Mexico_City")
         #expect(BusyHours(cells: response.cells).topText == "lun 9 h")
     }
+
+    @Test("given Sat 19 h and Mon 9 h both at 50 orders, should list lun 9 h first (equal counts: Monday-first, then earlier hour)")
+    func tieOrder() {
+        let busy = BusyHours(cells: [.init(dayOfWeek: 6, hour: 19, orders: 50), .init(dayOfWeek: 1, hour: 12, orders: 50),
+                                     .init(dayOfWeek: 1, hour: 9, orders: 50), .init(dayOfWeek: 0, hour: 8, orders: 50)])
+        #expect(busy.topText == "lun 9 h · lun 12 h · sáb 19 h")
+        // The list shown when the grid doesn't fit (largest text sizes, small phones).
+        #expect(busy.topSlots == ["lun 9 h", "lun 12 h", "sáb 19 h"])
+    }
+
+    @Test("given the API's time zone, should name its city in the caption", arguments: [
+        ("America/Mexico_City", "Pedidos por hora · hora de Ciudad de México"),
+        ("America/Chicago", "Pedidos por hora · hora de Chicago"),
+        ("America/Port_of_Spain", "Pedidos por hora · hora de Port of Spain"),
+    ])
+    func caption(timezone: String, expected: String) {
+        #expect(BusyHours.caption(timezone: timezone) == expected)
+    }
 }

@@ -17,9 +17,13 @@ public struct BusyHours: Equatable, Sendable {
         }
     }
 
-    public struct Response: Decodable, Sendable {
+    public struct Response: Decodable, Equatable, Sendable {
         public let timezone: String
         public let cells: [Cell]
+        public init(timezone: String, cells: [Cell]) {
+            self.timezone = timezone
+            self.cells = cells
+        }
     }
 
     public struct Day: Equatable, Sendable {
@@ -51,11 +55,74 @@ public struct BusyHours: Equatable, Sendable {
         cells.first { $0.dayOfWeek == day && $0.hour == hour }?.orders ?? 0
     }
 
-    /// The three busiest slots, "lun 9 h · sáb 19 h · mar 9 h", so the grid isn't color alone.
+    /// The three busiest slots, "lun 9 h", "sáb 19 h", "mar 9 h". Equal counts: Monday-first
+    /// (Sunday last), then the earlier hour, so the order never reshuffles.
+    public var topSlots: [String] {
+        let mondayFirst = { (day: Int) in (day + 6) % 7 }
+        return cells.sorted {
+            ($1.orders, mondayFirst($0.dayOfWeek), $0.hour) < ($0.orders, mondayFirst($1.dayOfWeek), $1.hour)
+        }.prefix(3).map { "\(Self.labels[$0.dayOfWeek]) \($0.hour) h" }
+    }
+
+    /// "lun 9 h · sáb 19 h · mar 9 h", so the grid isn't color alone.
     public var topText: String {
-        guard !isEmpty else { return "Sin datos de ventas" }
-        return cells.sorted { $0.orders > $1.orders }.prefix(3)
-            .map { "\(Self.labels[$0.dayOfWeek]) \($0.hour) h" }
-            .joined(separator: " · ")
+        isEmpty ? "Sin datos de ventas" : topSlots.joined(separator: " · ")
+    }
+
+    /// "Pedidos por hora · hora de Ciudad de México": the grid's hours are the API's time zone,
+    /// named by its city (the id's last part, Spanish where it differs).
+    public static func caption(timezone: String) -> String {
+        let city = timezone.split(separator: "/").last.map { $0.replacingOccurrences(of: "_", with: " ") } ?? timezone
+        let spanish = ["Mexico City": "Ciudad de México"]
+        return "Pedidos por hora · hora de \(spanish[city] ?? city)"
+    }
+}
+
+// MARK: - Busy Hours Load
+//
+// What the card and report show: a refresh of the same store and period keeps the grid
+// (and keeps it if the refresh fails); another store or period clears it, so the wrong
+// grid is never on screen; no store selected is its own state, not a failure.
+public struct BusyHoursLoad: Equatable, Sendable {
+    public enum State: Equatable, Sendable {
+        case loading, noStore, failed
+        case loaded(BusyHours.Response)
+    }
+
+    private struct Query: Equatable, Sendable {
+        let locationId: String
+        let days: Int
+    }
+
+    public private(set) var state: State = .loading
+    private var query: Query?
+
+    public init() {}
+
+    /// Starts a load; false when there's nothing to fetch (no store selected).
+    public mutating func begin(locationId: String?, days: Int) -> Bool {
+        guard let locationId else {
+            query = nil
+            state = .noStore
+            return false
+        }
+        let next = Query(locationId: locationId, days: days)
+        if case .loaded = state, next == query {
+            return true // a refresh: the grid stays until the new one lands
+        }
+        query = next
+        state = .loading
+        return true
+    }
+
+    /// The load's answer; nil when it failed.
+    public mutating func finish(_ response: BusyHours.Response?) {
+        if let response {
+            state = .loaded(response)
+        } else if case .loaded = state {
+            return // a failed refresh keeps the last grid
+        } else {
+            state = .failed
+        }
     }
 }

@@ -132,8 +132,6 @@ enum APIEndpoint {
     case productCostHistory(productId: String)
     /// Every open store's stock of the product (StoreStock). Never sends locationId.
     case productStock(productId: String)
-    /// `?locationId=`: units sold in 30/90 days and the last sale (SalesVelocity).
-    case productSalesVelocity(productId: String)
     case supplierCatalog(supplierId: String)
     case syncProductsToSquare
     case productCounts
@@ -264,7 +262,6 @@ enum APIEndpoint {
         case .productSuppliers(let productId): return "/products/\(productId)/suppliers"
         case .productCostHistory(let productId): return "/products/\(productId)/cost-history"
         case .productStock(let productId): return "/products/\(productId)/stock"
-        case .productSalesVelocity(let productId): return "/products/\(productId)/sales-velocity"
         case .supplierCatalog(let supplierId): return "/products/supplier-catalog/\(supplierId)"
         case .syncProductsToSquare: return "/products/sync-to-square"
         case .productCounts: return "/products/counts"
@@ -363,7 +360,7 @@ enum APIEndpoint {
             
         // Products
         case .listProducts, .getProduct, .productSuppliers, .productCostHistory, .supplierCatalog,
-             .productCounts, .productDeltaSync, .productStock, .productSalesVelocity, .listLooseLinks:
+             .productCounts, .productDeltaSync, .productStock, .listLooseLinks:
             return .get
         case .createProduct, .syncProductsToSquare, .createSupplier:
             return .post
