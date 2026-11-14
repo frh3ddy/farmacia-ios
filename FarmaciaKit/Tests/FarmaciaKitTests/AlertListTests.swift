@@ -102,11 +102,14 @@ struct StockAlertReasonTests {
         #expect(alert.reasonText(quantity: 0) == "Vende ~3 al día")
     }
 
-    @Test("given a slow seller, should count by week, or by month below 1 a week")
+    @Test("given a slow seller, should count by week; below 1 a week, the real count over the 90-day window, not an average")
     func slowRates() {
         #expect(StockAlert(level: .out, priority: 0.3).reasonText(quantity: 0) == "Vende ~2 a la semana")
-        #expect(StockAlert(level: .out, priority: 0.1).reasonText(quantity: 0) == "Vende ~3 al mes")
-        #expect(StockAlert(level: .out, priority: 0.01).reasonText(quantity: 0) == "Vende ~1 al mes")
+        #expect(StockAlert(level: .out, priority: 0.1).reasonText(quantity: 0) == "Vendió 9 en 90 días")
+        // 1 unit in 90 days (rate 1/90) was "Vende ~1 al mes".
+        #expect(StockAlert(level: .out, priority: 1.0 / 90).reasonText(quantity: 0) == "Vendió 1 en 90 días")
+        // No server rate (priority fallback) and a tiny priority: never "Vendió 0".
+        #expect(StockAlert(level: .out, priority: 0.001).reasonText(quantity: 0) == "Vendió 1 en 90 días")
     }
 
     @Test("given a low alert with 4 on hand selling 1 a day, should say vende ~1 al día · alcanza para ~4 días")
