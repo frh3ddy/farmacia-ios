@@ -97,7 +97,7 @@ final class BusyHoursLoader {
         let fresh = await APIClient.shared.busyHours(locationId: locationId, days: days)
         // Cancelled (the view went away): not a failure; the next appearance loads again.
         guard !Task.isCancelled else { return }
-        // An answer for an earlier store, period or refresh is dropped by its ticket.
+        // An answer for an earlier store or period is dropped by its ticket.
         progress.finish(fresh, for: ticket)
     }
 }

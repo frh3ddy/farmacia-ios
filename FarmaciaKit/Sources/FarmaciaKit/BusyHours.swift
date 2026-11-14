@@ -89,39 +89,38 @@ public struct BusyHoursLoad: Equatable, Sendable {
         case loaded(BusyHours.Response)
     }
 
-    /// One load's store and period. `finish` applies an answer only for the current one,
-    /// so a slow answer for an earlier store or period never lands.
+    /// One load's store and period. `finish` applies an answer only for the current store and
+    /// period, so a slow answer for an earlier one never lands; answers for the same store and
+    /// period carry the same data, so any of them may land (a cancelled refresh can't strand
+    /// the first load's answer).
     public struct Ticket: Equatable, Sendable {
         let locationId: String
         let days: Int
-        fileprivate let generation: Int
     }
 
     public private(set) var state: State = .loading
     private var current: Ticket?
-    private var generation = 0
 
     public init() {}
 
     /// Starts a load and returns its ticket; nil when there's nothing to fetch (no store selected).
     public mutating func begin(locationId: String?, days: Int) -> Ticket? {
-        generation += 1
         guard let locationId else {
             current = nil
             state = .noStore
             return nil
         }
-        let isRefresh = current.map { $0.locationId == locationId && $0.days == days } ?? false
-        current = Ticket(locationId: locationId, days: days, generation: generation)
+        let next = Ticket(locationId: locationId, days: days)
         // A refresh keeps the grid until the new one lands; another store or period clears it.
-        if case .loaded = state, isRefresh { return current }
+        if case .loaded = state, next == current { return next }
+        current = next
         state = .loading
-        return current
+        return next
     }
 
     /// The answer for `ticket`; nil when it failed.
     public mutating func finish(_ response: BusyHours.Response?, for ticket: Ticket) {
-        guard ticket == current else { return } // a newer load (another store, period or refresh) owns the screen
+        guard ticket == current else { return } // another store or period (or no store) owns the screen
         if let response {
             state = .loaded(response)
         } else if case .loaded = state {
