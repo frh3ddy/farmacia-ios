@@ -62,6 +62,12 @@ public struct ProductListLoad: Sendable {
 
     public init() {}
 
+    /// Whether showing `query` needs page 1: its rows aren't on screen (never loaded,
+    /// or its page 1 failed or was cancelled), or the caller forces a refresh.
+    public func needsFirstPage(_ query: ProductListQuery, force: Bool = false) -> Bool {
+        force || shownQuery != query
+    }
+
     /// Starts over for `query`; any load still in flight becomes stale.
     public mutating func beginFirstPage(_ query: ProductListQuery) -> Ticket {
         generation += 1

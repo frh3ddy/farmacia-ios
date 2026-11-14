@@ -31,6 +31,18 @@ struct AlertListTests {
         #expect(lowAccepted)
     }
 
+    @Test("given Sin Stock's page 1 cancelled (left the tab), coming back should load it; once shown, should keep it")
+    func reloadsUnshownList() {
+        let out = ProductListQuery(locationId: "loc", alert: .out)
+        var load = ProductListLoad()
+        load.fail(load.beginFirstPage(out))
+        #expect(load.needsFirstPage(out))
+        _ = load.accept(load.beginFirstPage(out), hasMore: false)
+        #expect(!load.needsFirstPage(out))
+        #expect(load.needsFirstPage(out, force: true))
+        #expect(load.needsFirstPage(ProductListQuery(locationId: "loc", alert: .low)))
+    }
+
     @Test("given Alertas' Sin Stock, should say it only counts regular sellers not paused (Productos' Sin Stock counts every 0)")
     func notes() {
         #expect(AlertList.out.note == "Solo productos que se venden seguido y no están pausados. Primero los que más ventas pierden.")
