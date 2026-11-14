@@ -75,8 +75,8 @@ Merged: `f580589` (merge `9fcbfc2`).
 - Given a lot with no caducidad, should let an owner add it from the lot row — needs a PATCH endpoint; "Sin caducidad registrada" is text only.
 - Given one supplier on record, "Sin proveedor alterno · agregar" — needs an add-supplier-to-product flow on iOS.
 - Given a product card and its detail, margins should agree — cards use average cost, the detail the latest supplier cost; decide whether cards follow (the list doesn't load suppliers).
-- Given supplier notes "Migrated from cutover <uuid>" in the costs sheet, should hide the migration id.
-- `ProductDetailView` is still one file of computed `some View` sections (swiftui-pro: extract `View` structs, own files — needs pbxproj registration); the aging bar still uses `GeometryReader`.
+- ✅ Given supplier notes "Migrated from cutover <uuid>" in the costs sheet, should hide the migration id — `SupplierNote.display` (`tasks/product-detail-followups-epic.md` A, 2026-11-13).
+- ✅ (split 2026-11-13, `tasks/product-detail-followups-epic.md` B) `ProductDetailView` is still one file of computed `some View` sections (swiftui-pro: extract `View` structs, own files — needs pbxproj registration); the aging bar still uses `GeometryReader`.
 - Product photo guidance (package front) at capture time.
 
 ## 📋 Small fixes

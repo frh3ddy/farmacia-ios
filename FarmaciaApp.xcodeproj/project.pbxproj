@@ -30,6 +30,12 @@
 		A72617238F43931DC3C57629 /* EditPriceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 551F6878C658EA6406F8A5A7 /* EditPriceView.swift */; };
 		63F83CA069E14080BA3B586B /* SueltosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C515886454E4BCC9378D6C2 /* SueltosView.swift */; };
 		D9EF26F62684DD7148010BB6 /* PauseProductView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B65A727428C4B657294A9AA1 /* PauseProductView.swift */; };
+		45189532FABABECCF0EDED9F /* CostSupplierSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10123B0496C1128D111248F /* CostSupplierSheet.swift */; };
+		C0883B5F88AEF7BCE8E2C867 /* ProductDetailsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F170C85D3F3561FEF335AA86 /* ProductDetailsCard.swift */; };
+		79AC81C90B042E6CE13C6798 /* ProductRecentActivitySection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A9A19E514612078DB1D01CD /* ProductRecentActivitySection.swift */; };
+		FB22D13AAC6D4F181B00F0E0 /* ProductLotsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4116A55AEC45B1014E016A3 /* ProductLotsSection.swift */; };
+		CA681D9A64EA5951D4DC32AD /* ProductInventoryCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EC4012C8E1EB745167B0E40 /* ProductInventoryCard.swift */; };
+		C79FF061AB7FE60F28A9D47A /* ProductEconomicsBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = F25F2CEF5F26C7B75E2CBD2B /* ProductEconomicsBox.swift */; };
 		A7C3E1F2B4D5469788990002 /* ProductSearchPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7C3E1F2B4D5469788990001 /* ProductSearchPicker.swift */; };
 		AA00000100000001 /* GlobalActivityHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000200000001 /* GlobalActivityHistoryView.swift */; };
 		B9E53ECCEE227AA469A1BEBC /* ProductBatchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C675966EAAE838142E37278B /* ProductBatchViewModel.swift */; };
@@ -150,6 +156,12 @@
 		551F6878C658EA6406F8A5A7 /* EditPriceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditPriceView.swift; sourceTree = "<group>"; };
 		2C515886454E4BCC9378D6C2 /* SueltosView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SueltosView.swift; sourceTree = "<group>"; };
 		B65A727428C4B657294A9AA1 /* PauseProductView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PauseProductView.swift; sourceTree = "<group>"; };
+		F10123B0496C1128D111248F /* CostSupplierSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CostSupplierSheet.swift; sourceTree = "<group>"; };
+		F170C85D3F3561FEF335AA86 /* ProductDetailsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductDetailsCard.swift; sourceTree = "<group>"; };
+		3A9A19E514612078DB1D01CD /* ProductRecentActivitySection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductRecentActivitySection.swift; sourceTree = "<group>"; };
+		C4116A55AEC45B1014E016A3 /* ProductLotsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductLotsSection.swift; sourceTree = "<group>"; };
+		0EC4012C8E1EB745167B0E40 /* ProductInventoryCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductInventoryCard.swift; sourceTree = "<group>"; };
+		F25F2CEF5F26C7B75E2CBD2B /* ProductEconomicsBox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductEconomicsBox.swift; sourceTree = "<group>"; };
 		A7C3E1F2B4D5469788990001 /* ProductSearchPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductSearchPicker.swift; sourceTree = "<group>"; };
 		5B36C1CAC70495EFA1EEFDC2 /* CostSupplierViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CostSupplierViewModel.swift; sourceTree = "<group>"; };
 		67DB948B9C5055D67639955A /* ProductsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductsViewModel.swift; sourceTree = "<group>"; };
@@ -305,6 +317,12 @@
 				551F6878C658EA6406F8A5A7 /* EditPriceView.swift */,
 				2C515886454E4BCC9378D6C2 /* SueltosView.swift */,
 				B65A727428C4B657294A9AA1 /* PauseProductView.swift */,
+				F10123B0496C1128D111248F /* CostSupplierSheet.swift */,
+				F170C85D3F3561FEF335AA86 /* ProductDetailsCard.swift */,
+				3A9A19E514612078DB1D01CD /* ProductRecentActivitySection.swift */,
+				C4116A55AEC45B1014E016A3 /* ProductLotsSection.swift */,
+				0EC4012C8E1EB745167B0E40 /* ProductInventoryCard.swift */,
+				F25F2CEF5F26C7B75E2CBD2B /* ProductEconomicsBox.swift */,
 				A7C3E1F2B4D5469788990001 /* ProductSearchPicker.swift */,
 				5B36C1CAC70495EFA1EEFDC2 /* CostSupplierViewModel.swift */,
 				37E697392F32F2A400F6CB5D /* ProductsView.swift */,
@@ -720,6 +738,12 @@
 				A72617238F43931DC3C57629 /* EditPriceView.swift in Sources */,
 				63F83CA069E14080BA3B586B /* SueltosView.swift in Sources */,
 				D9EF26F62684DD7148010BB6 /* PauseProductView.swift in Sources */,
+				45189532FABABECCF0EDED9F /* CostSupplierSheet.swift in Sources */,
+				C0883B5F88AEF7BCE8E2C867 /* ProductDetailsCard.swift in Sources */,
+				79AC81C90B042E6CE13C6798 /* ProductRecentActivitySection.swift in Sources */,
+				FB22D13AAC6D4F181B00F0E0 /* ProductLotsSection.swift in Sources */,
+				CA681D9A64EA5951D4DC32AD /* ProductInventoryCard.swift in Sources */,
+				C79FF061AB7FE60F28A9D47A /* ProductEconomicsBox.swift in Sources */,
 				A7C3E1F2B4D5469788990002 /* ProductSearchPicker.swift in Sources */,
 				D419F61DEDDF944288D2F152 /* CostSupplierViewModel.swift in Sources */,
 				37E6973D2F32F2A400F6CB5D /* ProductsView.swift in Sources */,
