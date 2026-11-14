@@ -95,8 +95,12 @@ final class BusyHoursLoader {
     func load(locationId: String?, days: Int) async {
         guard let ticket = progress.begin(locationId: locationId, days: days), let locationId else { return }
         let fresh = await APIClient.shared.busyHours(locationId: locationId, days: days)
-        // Cancelled (the view went away): not a failure; the next appearance loads again.
-        guard !Task.isCancelled else { return }
+        // Cancelled (the view went away, or a refresh was abandoned): not a failure, and no
+        // longer in flight, so another load's failure can show.
+        guard !Task.isCancelled else {
+            progress.cancel(ticket)
+            return
+        }
         // An answer for an earlier store or period is dropped by its ticket.
         progress.finish(fresh, for: ticket)
     }

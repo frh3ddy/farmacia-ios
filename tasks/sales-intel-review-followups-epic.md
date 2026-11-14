@@ -99,3 +99,8 @@ Steps 6b–6d (migration note, aging-bar math, `ProductDetailView` split) moved 
   self-healing. Fix idea: on a cancelled current load, fall back to the previous state, or let a dropped answer land
   when nothing has loaded yet for the same store and period. First test: **given the first load in flight and a
   refresh started then cancelled, the first load's answer should still show the grid**.
+- [x] **No brief failure flash** (dev-67's note on the spinner fix, 2026-11-13). If the first load failed while a same-store
+  refresh was still running, the card showed the failure until the refresh landed. `BusyHoursLoad` now counts the loads
+  in flight for the current store and period: a failure shows only when none is left to answer; a cancelled load counts
+  down (`cancel(_:)`, called by the loader) without being a failure. Tests `failureWaitsForRefresh` (red before),
+  `failsAfterLast`, `cancelledThenFailed`.
