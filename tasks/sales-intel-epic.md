@@ -1,5 +1,9 @@
 # Epic: sales velocity + busy hours (from Square sales history)
 
+> **Superseded in part (2026-11-13):** the detail's `SalesVelocity` line and its dead-stock caution were replaced by
+> the stock alerts' own rate (`StockAlert.salesLine`), and the app no longer calls `/products/:id/sales-velocity`. See
+> `tasks/sales-intel-review-followups-epic.md` § Decided. Busy hours stands as described.
+
 **Branch:** `feature/sales-intel`. **Status (2026-11-10):** steps 1–6 done, uncommitted; 753 Kit tests green; app build green.
 **API (requested from farmacia-ops-50 on 2026-11-10, dev-67 copied):**
 - `SalesHistoryLine`: a history-only table filled by a one-time, idempotent Square `SearchOrders` import (~111k
