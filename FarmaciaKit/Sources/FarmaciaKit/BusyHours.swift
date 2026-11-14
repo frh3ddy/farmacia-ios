@@ -100,6 +100,8 @@ public struct BusyHoursLoad: Equatable, Sendable {
 
     public private(set) var state: State = .loading
     private var current: Ticket?
+    /// Loads still running for `current`: a failure shows only when none is left to answer.
+    private var inFlight = 0
 
     public init() {}
 
@@ -107,10 +109,12 @@ public struct BusyHoursLoad: Equatable, Sendable {
     public mutating func begin(locationId: String?, days: Int) -> Ticket? {
         guard let locationId else {
             current = nil
+            inFlight = 0
             state = .noStore
             return nil
         }
         let next = Ticket(locationId: locationId, days: days)
+        inFlight = next == current ? inFlight + 1 : 1
         // A refresh keeps the grid until the new one lands; another store or period clears it.
         if case .loaded = state, next == current { return next }
         current = next
@@ -118,15 +122,22 @@ public struct BusyHoursLoad: Equatable, Sendable {
         return next
     }
 
+    /// The load for `ticket` was cancelled (its view went away) and will never answer.
+    public mutating func cancel(_ ticket: Ticket) {
+        guard ticket == current, inFlight > 0 else { return }
+        inFlight -= 1 // not a failure: the next appearance loads again
+    }
+
     /// The answer for `ticket`; nil when it failed.
     public mutating func finish(_ response: BusyHours.Response?, for ticket: Ticket) {
         guard ticket == current else { return } // another store or period (or no store) owns the screen
+        inFlight = max(0, inFlight - 1)
         if let response {
             state = .loaded(response)
         } else if case .loaded = state {
             return // a failed refresh keeps the last grid
-        } else {
-            state = .failed
+        } else if inFlight == 0 {
+            state = .failed // only once no other load for this store and period can still answer
         }
     }
 }

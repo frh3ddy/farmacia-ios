@@ -83,4 +83,35 @@ struct BusyHoursLoadTests {
         load.finish(grid, for: a)
         #expect(load.state == .noStore)
     }
+
+    @Test("given the first load failing while a refresh is still running, should stay loading, then show the refresh's grid")
+    func failureWaitsForRefresh() {
+        var load = BusyHoursLoad()
+        let first = load.begin(locationId: "A", days: 90)!
+        let refresh = load.begin(locationId: "A", days: 90)!
+        load.finish(nil, for: first)
+        #expect(load.state == .loading)
+        load.finish(grid, for: refresh)
+        #expect(load.state == .loaded(grid))
+    }
+
+    @Test("given both loads failing, should show the failure only after the last one")
+    func failsAfterLast() {
+        var load = BusyHoursLoad()
+        let first = load.begin(locationId: "A", days: 90)!
+        let refresh = load.begin(locationId: "A", days: 90)!
+        load.finish(nil, for: first)
+        load.finish(nil, for: refresh)
+        #expect(load.state == .failed)
+    }
+
+    @Test("given the refresh cancelled and then the first load failing, should show the failure, not stay loading")
+    func cancelledThenFailed() {
+        var load = BusyHoursLoad()
+        let first = load.begin(locationId: "A", days: 90)!
+        let refresh = load.begin(locationId: "A", days: 90)!
+        load.cancel(refresh)
+        load.finish(nil, for: first)
+        #expect(load.state == .failed)
+    }
 }
