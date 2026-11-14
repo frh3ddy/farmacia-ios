@@ -10,7 +10,7 @@ public enum BarSegments {
         guard sum > 0 else { return fractions.map { _ in 0 } }
         let available = max(0, total - spacing * Double(shown.count - 1))
         let isSmall = { (f: Double) in f / sum * available < minimum }
-        let rest = available - minimum * Double(shown.filter(isSmall).count)
+        let rest = max(0, available - minimum * Double(shown.filter(isSmall).count))
         let largeSum = shown.filter { !isSmall($0) }.reduce(0, +)
         return fractions.map { f in
             guard f > 0 else { return 0 }

@@ -21,6 +21,12 @@ struct BarSegmentsTests {
         #expect(BarSegments.widths(fractions: [0.5, 0, 0.5], total: 101, spacing: 1, minimum: 2) == [50, 0, 50])
     }
 
+    @Test("given a bar too narrow for every minimum, should never give a negative width")
+    func tooNarrow() {
+        let widths = BarSegments.widths(fractions: [0.9, 0.05, 0.05], total: 6, spacing: 0, minimum: 4)
+        #expect(widths.allSatisfy { $0 >= 0 })
+    }
+
     @Test("given no units at all, should give no segments")
     func nothing() {
         #expect(BarSegments.widths(fractions: [0, 0], total: 100, spacing: 1, minimum: 2) == [0, 0])
