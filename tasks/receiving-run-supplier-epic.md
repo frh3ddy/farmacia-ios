@@ -139,3 +139,16 @@ scanner. The cost typed in Nuevo producto carries over, so it isn't asked for tw
 - ✅ The supplier list loads once per run (`InventoryViewModel.loadSuppliers` shares the
   request in flight); if it fails, "Recibiendo de" says so.
 - ✅ The picker uses `navigationDestination(isPresented:)`; the row reads as one VoiceOver element.
+
+### Fix: the run supplier's cost didn't fill in (2026-11-18, `fix/receive-cost-after-suppliers-load`)
+
+- ✅ Reported by the user (via farmacia-ops-98): with a supplier picked, the cost stayed empty
+  and "Anterior" showed the average until switching suppliers and back. The run supplier (or a
+  tap while loading) was selected before the product's supplier costs arrived; the cost was
+  looked up only on a selection change, so it never filled. Now `SelectedSupplierCost` keeps
+  both, and the form fills the cost after the selection and after the costs load.
+- Not smoked: the local API was down. Check on a phone: Recibir with "Recibiendo de" set,
+  scan a product that supplier has a cost for: the cost and "Anterior" show it.
+- ✅ /tdd-review fixes: `select` and `costsLoaded` return the cost to offer (not discardable,
+  tested for both orders), the duplicate-supplier rule (first wins) moved into FarmaciaKit with
+  a test, and `supplierLastCost` is computed from `SelectedSupplierCost`, not a second copy.
