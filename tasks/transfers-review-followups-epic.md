@@ -30,3 +30,13 @@
 - Cancelling a shipment in transit (the API has CANCELLED, but no endpoint).
 - Retrying a failed Square sync from iOS (owner-only; the web screen has it).
 - Saved lists (tasks/transfer-list-persist-epic.md): a list for an employee who's gone stays on the phone (a few KB, no cleanup). The stock note clears only on Enviar, Vaciar or reopening, not on the next edit.
+
+## Sending feels slow (2026-11-18)
+
+The user: Enviar "feels slow, with no progress indicator". It is one call (`POST /transfers/batch`).
+- [x] iOS (`fix/transfer-send-progress`): while sending, the action bar says "Enviando 3 productos · 24 unidades a Oriente…"
+  (`TransferDraft.sendingText`) next to the button's spinner, and the spinner stops when the server answers instead of
+  waiting for Recientes to reload. Not smoked (one store locally; a transfer needs two).
+- [ ] Ops: with "recibir al enviar", `shipBatch` tells Square about each product one after another
+  (`transfer.service.ts:474`: lookups, a Square call and a DB write per product). One `BatchChangeInventory` per
+  shipment would make the wait not grow with the list. Asked of ops 2026-11-18.
