@@ -53,6 +53,8 @@ struct ReceiveInventoryFormView: View {
     @State private var countWarning: String?
     /// "Ya se recibieron…": this store received the product today or yesterday (RecentReceiving).
     @State private var recentReceiving: String?
+    /// The latest receiving's cost and supplier: the previous cost when the selected supplier has none.
+    @State private var lastReceiving: ReceivingPrice.PreviousCost?
     /// One per receiving being entered: a retry (or the offline queue's replay) reuses it.
     @State private var clientRequestId = UUID().uuidString
 
@@ -169,14 +171,21 @@ struct ReceiveInventoryFormView: View {
         StoreStock.here(storeStock, currentLocationId: authManager.currentLocation?.id) ?? product.totalInventory
     }
 
+    /// The selected supplier's last cost, else the latest receiving's, else the average.
+    private var previousCost: ReceivingPrice.PreviousCost? {
+        ReceivingPrice.previous(supplierLast: supplierLastCost, lastReceiving: lastReceiving, average: product.averageCost)
+    }
+
+    /// Against a real last cost only (the selected supplier's or the latest receiving's), not the average.
     private var costChange: CostChange? {
-        supplierLastCost.flatMap { CostChange(current: receivingCost.value, last: $0) }
+        ReceivingPrice.previous(supplierLast: supplierLastCost, lastReceiving: lastReceiving, average: nil)
+            .flatMap { CostChange(current: receivingCost.value, last: $0.cost, supplierName: $0.supplierName) }
     }
 
     /// The margin the product had at the old cost: the "Actual" chip.
     private var currentMargin: Double? {
         guard let price = product.sellingPrice,
-              let oldCost = ReceivingPrice.oldCost(supplierLast: supplierLastCost, average: product.averageCost),
+              let oldCost = previousCost?.cost,
               let margin = Margin.percent(price: price, cost: oldCost),
               margin > 0
         else { return nil }
@@ -192,7 +201,7 @@ struct ReceiveInventoryFormView: View {
                 margin: currentMargin,
                 price: ReceivingPrice.keepingMargin(
                     currentPrice: product.sellingPrice,
-                    oldCost: ReceivingPrice.oldCost(supplierLast: supplierLastCost, average: product.averageCost),
+                    oldCost: previousCost?.cost,
                     newCost: cost
                 )
             ))
@@ -461,8 +470,7 @@ struct ReceiveInventoryFormView: View {
                     value: $receivingCost.value,
                     focus: $focusedField,
                     field: .unitCost,
-                    prompt: ReceivingCost.hint(previous: ReceivingPrice.oldCost(supplierLast: supplierLastCost,
-                                                                                average: product.averageCost))
+                    prompt: ReceivingCost.hint(previous: previousCost?.cost)
                 )
                 // Catches supplier increases and typos; the arrow says it without color.
                 if let costChange {
@@ -718,6 +726,11 @@ struct ReceiveInventoryFormView: View {
         guard !Task.isCancelled else { return }
         let rows = response?.data
         expiryPlacement = ExpiryPlacement(expiriesNewestFirst: rows?.map(\.expiryDate) ?? [])
+        // Not filtered by store (a supplier's price isn't per store): the owner's history spans
+        // every store, a manager's is their own.
+        lastReceiving = ReceivingPrice.lastReceiving(
+            newestFirst: rows?.map { (unitCost: $0.unitCost, supplierName: $0.supplier?.name) } ?? []
+        )
         guard let locationId = authManager.currentLocation?.id else { return }
         // Not loaded, but the scanner's note says what was just received: show that one.
         if rows == nil, note != nil { recentReceiving = nil; return }
@@ -771,6 +784,8 @@ private struct ReceivingHistoryResponse: Decodable {
         let expiryDate: Date?
         let receivedAt: Date
         let quantity: Int
+        /// A decimal string.
+        let unitCost: String
         let location: Location
         let supplier: Supplier?
     }

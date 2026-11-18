@@ -152,3 +152,17 @@ scanner. The cost typed in Nuevo producto carries over, so it isn't asked for tw
 - ✅ /tdd-review fixes: `select` and `costsLoaded` return the cost to offer (not discardable,
   tested for both orders), the duplicate-supplier rule (first wins) moved into FarmaciaKit with
   a test, and `supplierLastCost` is computed from `SelectedSupplierCost`, not a second copy.
+
+### Fix: no previous cost for a supplier new to the product (2026-11-18, `fix/receive-previous-cost-fallback`)
+
+- ✅ Reported by the user: with a supplier that never supplied this product, Recibir showed no
+  previous cost to compare a new one with. `ReceivingPrice.previous`: the selected supplier's
+  last cost, else the latest receiving's cost (any store; from GET /inventory/receive/product/:id,
+  already loaded for the expiry placement), named in the line ("▲ 9% vs último $16.50 (Nadro)"),
+  else the average for the hint and the "Actual" chip. "vs último" compares only with a real last
+  cost, not the average. A $0 receiving (a gift) is no baseline. `oldCost` removed (replaced).
+- Not smoked: the local API was down.
+- ✅ Review (dev-f8, OK on 193c9fc): a $0 newest receiving now falls back to the newest one
+  with a cost, not the average (`ReceivingPrice.lastReceiving(newestFirst:)`, tested; this also
+  moves the history mapping out of the view). The latest receiving is any store's for the
+  owner, the manager's own store for a manager (the API scopes it).

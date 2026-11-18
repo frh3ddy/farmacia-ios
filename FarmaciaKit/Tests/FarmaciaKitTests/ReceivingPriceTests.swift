@@ -12,15 +12,4 @@ struct ReceivingPriceTests {
     func missing(price: Double?, old: Double?, new: Double?) {
         #expect(ReceivingPrice.keepingMargin(currentPrice: price, oldCost: old, newCost: new) == nil)
     }
-
-    @Test("given the supplier's last cost, should use it as the old cost")
-    func supplierFirst() {
-        #expect(ReceivingPrice.oldCost(supplierLast: 16.50, average: 15) == 16.50)
-    }
-
-    @Test("given no supplier last cost, should use the average cost; given neither, nil")
-    func fallback() {
-        #expect(ReceivingPrice.oldCost(supplierLast: nil, average: 15) == 15)
-        #expect(ReceivingPrice.oldCost(supplierLast: nil, average: nil) == nil)
-    }
 }
