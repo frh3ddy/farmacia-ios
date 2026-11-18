@@ -9,12 +9,15 @@ import Foundation
 public struct CostChange: Equatable, Sendable {
     public let percent: Double
     public let last: Double
+    /// Whose last cost, when it isn't the selected supplier's (`ReceivingPrice.previous`).
+    public let supplierName: String?
 
     /// nil without both costs, without a positive last cost, or for a change under 1¢.
-    public init?(current: Double?, last: Double) {
+    public init?(current: Double?, last: Double, supplierName: String? = nil) {
         guard let current, last > 0, abs(current - last) >= 0.01 else { return nil }
         self.percent = (current - last) / last * 100
         self.last = last
+        self.supplierName = supplierName
     }
 
     public var isUp: Bool { percent > 0 }
@@ -24,6 +27,7 @@ public struct CostChange: Equatable, Sendable {
     public var text: String {
         let rounded = Int(abs(percent).rounded())
         let amount = rounded == 0 ? "<1%" : "\(rounded)%"
-        return "\(isUp ? "▲" : "▼") \(amount) vs último \(ReportFormat.currency(last))"
+        let whose = supplierName.map { " (\($0))" } ?? ""
+        return "\(isUp ? "▲" : "▼") \(amount) vs último \(ReportFormat.currency(last))\(whose)"
     }
 }
