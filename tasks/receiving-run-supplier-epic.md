@@ -178,3 +178,7 @@ scanner. The cost typed in Nuevo producto carries over, so it isn't asked for tw
   takes the `PreviousCost`).
 - Not confirmed on that product: if it has no supplier on record and no average either, there
   is still nothing to show.
+- ✅ Review (dev-f8, OK on 4aa54b6): a $0 supplier on record is skipped, so the next one with a
+  cost wins (tested). The average is null at 0 stock (products.service.ts), which is why an
+  out-of-stock, migration-only product had no hint at all. Still nothing to show for a product
+  with no stock, no receivings and no supplier on record.

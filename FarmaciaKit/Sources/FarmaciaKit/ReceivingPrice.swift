@@ -43,9 +43,10 @@ public enum ReceivingPrice {
     }
 
     /// The product's suppliers on record, picked as the detail screen does (`UnitCost.pick`:
-    /// the preferred, else the first), named.
+    /// the preferred, else the first), named. Only suppliers with a cost: a $0 preferred one
+    /// would hide the next, and an out-of-stock product has no average to fall to.
     public static func supplierOnRecord(_ suppliers: [UnitCost.Supplier]) -> PreviousCost? {
-        guard let pick = UnitCost.pick(suppliers: suppliers, averageCost: nil),
+        guard let pick = UnitCost.pick(suppliers: suppliers.filter { $0.cost > 0 }, averageCost: nil),
               case .supplier(let name, _) = pick.source else { return nil }
         return PreviousCost(cost: pick.cost, supplierName: name)
     }

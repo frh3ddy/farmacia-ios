@@ -43,6 +43,14 @@ struct PreviousCostTests {
         #expect(ReceivingPrice.supplierOnRecord([]) == nil)
     }
 
+    @Test("given the preferred supplier on record at $0, should use the next one with a cost (an out-of-stock product has no average to fall to)")
+    func onRecordSkipsZero() {
+        let zeroPreferred = UnitCost.Supplier(id: "z", name: "Regalos", cost: 0, isPreferred: true, lastPurchase: nil)
+        let nadroOther = UnitCost.Supplier(id: "n", name: "Nadro", cost: 16.5, isPreferred: false, lastPurchase: nil)
+        #expect(ReceivingPrice.supplierOnRecord([zeroPreferred, nadroOther]) == nadro)
+        #expect(ReceivingPrice.supplierOnRecord([zeroPreferred]) == nil)
+    }
+
     @Test("given a receiving and suppliers on record, the receiving (what was actually paid last) should win")
     func receivingBeforeOnRecord() {
         let fanasa = ReceivingPrice.PreviousCost(cost: 15, supplierName: "Fanasa")
