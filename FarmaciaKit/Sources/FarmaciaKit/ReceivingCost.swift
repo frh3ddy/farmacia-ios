@@ -27,7 +27,8 @@ public struct ReceivingCost: Equatable, Sendable {
         value = cost
     }
 
-    /// The line under the cost field while it's empty: the previous cost (`ReceivingPrice.previous`),
+    /// The line under the cost field whenever there's no cost change to show (empty, the same
+    /// cost, or only an average to compare with): the previous cost (`ReceivingPrice.previous`),
     /// so it's still there to type from after the field is cleared. Outside the field (a
     /// placeholder was cut off in the narrow field), so with its "$".
     public static func hint(previous: ReceivingPrice.PreviousCost?) -> String? {
