@@ -1,5 +1,4 @@
 import SwiftUI
-import CodeScanner
 import CoreImage
 import FarmaciaKit
 
@@ -448,15 +447,10 @@ struct CreateProductView: View {
 
     private var barcodeScanner: some View {
         NavigationStack {
-            CodeScannerView(
-                codeTypes: [.ean13, .ean8, .upce, .code128, .code39, .code93, .itf14],
-                scanMode: .once,
-                showViewfinder: true,
-                shouldVibrateOnSuccess: true
-            ) { result in
-                if case .success(let scan) = result {
+            ProductBarcodeScanner { result in
+                if case .success(let code) = result {
                     // A 14-digit read of an EAN-13 is saved as the 13 digits on the box.
-                    viewModel.gtin = BarcodeLookup.newProductBarcode(scan.string)
+                    viewModel.gtin = BarcodeLookup.newProductBarcode(code)
                 }
                 showScanner = false
             }

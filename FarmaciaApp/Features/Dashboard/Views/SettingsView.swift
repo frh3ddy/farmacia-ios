@@ -135,6 +135,10 @@ struct SettingsView: View {
                     Text(environmentName)
                         .foregroundStyle(.secondary)
                 }
+
+                #if DEBUG
+                NavigationLink("Escáner (DEBUG)") { ScannerDebugView() }
+                #endif
             }
 
             // Device Section

@@ -1,6 +1,5 @@
 import SwiftUI
 import FarmaciaKit
-import CodeScanner
 
 // MARK: - Product Search Picker
 //
@@ -114,18 +113,12 @@ struct ProductSearchPicker<Field: Hashable>: View {
 
     private var scanner: some View {
         NavigationStack {
-            CodeScannerView(
-                codeTypes: [.ean13, .ean8, .upce, .code128, .code39, .code93, .itf14],
-                scanMode: .once,
-                showViewfinder: true,
-                simulatedData: ScanFlowSheet.simulatedCode,
-                shouldVibrateOnSuccess: true
-            ) { result in
+            ProductBarcodeScanner(simulatedData: ScanFlowSheet.simulatedCode) { result in
                 showScanner = false
                 switch result {
-                case .success(let result):
+                case .success(let code):
                     query = ""
-                    scan = ScannedCode(code: result.string)
+                    scan = ScannedCode(code: code)
                 case .failure:
                     scanNotice = "No se pudo usar la cámara. Revisa el permiso en Ajustes o escribe el nombre."
                 }

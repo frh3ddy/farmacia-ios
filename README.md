@@ -144,7 +144,7 @@ Opened from a product (Productos → product → Recibir Inventario / Ajustar In
 - The on-device product cache (used by the barcode scanner) stays current with a delta sync (`GET /products/sync`): opening Productos fetches only what changed since the last sync; the full catalog is downloaded once per store
 - Products carry their barcode (`gtin`, Square's GTIN field), shown in product detail
 - Product detail is one screen of 5 blocks (docs/product-detail-findings.md): the name wraps (never truncated) with `SKU · ‖ barcode` under it; price and cost printed once, as ink (`MoneyText`), with the margin in percent and pesos (`Margen 55.5% · $122.00 por unidad`, `PriceMargin`). The cost is the latest supplier cost (preferred, else first; average without a supplier, `UnitCost`), with where it came from (`Moscoso · Mejor precio · compra 2 nov · 3 proveedores` → costs and suppliers sheet); Inventario with the other stores and Movimientos; Lotes (FIFO) with one chip that is neutral unless something needs attention (`ProductAlert`: vencido, agotado, riesgo, por vencer — no fixed "Bajo"), shelf age in words (`AgingSentence`), and per lot `valor del lote` and a caducidad row (`Vence 15 feb 2028 · 15 meses`, `Expiry.countdown`); an empty activity is one row; Ajustar and Recibir inventario sit in a bottom bar. Dates and timestamps use one format (`DisplayDate`), money one (`$220.00`, the currency code once per block); textual green is the accessible `#0F7B3F` app-wide (`Tone.positive`). Inventario shows how the product sells, with the same rate as Alertas ("Vende ~1 al día · última venta hace 2 días", `StockAlert.salesLine` from the API's `stockAlert.rate`; no dead-stock caution — Lotes flags old stock). The costs and suppliers sheet hides the cutover's "Migrated from cutover <id>" supplier note (`SupplierNote`); the aging bar's segments always fit its width (`BarSegments`)
-- Scanning a barcode finds the product by SKU or barcode, whether saved as the 13 digits on the box or the 14-digit form the iPhone sometimes reads (`03664798067460` = `3664798067460`, `BarcodeLookup.codeVariants`/`matches`), offline from the on-device cache too. The scanner reads product barcodes only (EAN, UPC, Code 128/39/93, ITF-14), not QR codes, so a QR printed next to the barcode is never read instead
+- Scanning a barcode finds the product by SKU or barcode, whether saved as the 13 digits on the box or the 14-digit form the iPhone sometimes reads (`03664798067460` = `3664798067460`, `BarcodeLookup.codeVariants`/`matches`), offline from the on-device cache too. The scanner reads product barcodes only, not QR codes, so a QR printed next to the barcode is never read instead (Debug builds: the new Vision scanner, EAN-13/EAN-8/UPC-E/Code 128 with check digits and 2-frame confirmation; Release: the old scanner, which also reads Code 39/93 and ITF-14; see Barcode scanner benchmark)
 - The scanner has three modes (`Consultar | Recibir | Contar`, remembered; Recibir and Contar for owners and managers): Consultar opens the product (a product created from an unknown code opens too); Recibir and Contar open its receive form or Corrección de Conteo in place, then reopen the scanner for the next item with the last save in a strip (`✓ Aspirina 500mg · +20 uds` / `12 → 10 (−2)`; tap it to open the product). Scanning the same product again right after shows a reminder. A count that matches the stock closes as "Sin cambios". Each count saves at once, since the API works out the change from its own stock when it saves (`ScanMode`, `ScanNext`, `RecentScanSave`). Recibir has "Recibiendo de": the delivery's supplier, preselected in every receive form of the run (over the product's preferred one; "Sin proveedor" means none for the run) until the scanner closes (`RunSupplier`, `PreferredSupplier.pick`). An unknown code in Recibir opens Nuevo producto, then the receive form with the cost typed there already in (only the quantity is left), then the scanner (`ScanNext.receive(cost:)`, `ReceivingCost.prefill`)
 - Nuevo Producto has a "Código de barras" field (8, 12, 13 or 14 digits, sent to Square as the item's barcode); a scan that finds nothing fills it with the 13 digits on the box and leaves the SKU for the server to generate
 - The Products stats row reads "X de Y sincronizados con Square", both from the server's catalog counts
@@ -229,6 +229,33 @@ Brand art (icon, logo lockups) comes from `scripts/brand/render-brand.swift`; se
 ```bash
 xcodebuild test -scheme FarmaciaApp -destination 'platform=iOS Simulator,name=iPhone 15'
 ```
+
+### Barcode scanner benchmark
+
+Every scan button opens `ProductBarcodeScanner`. In Debug builds that's the new Vision
+scanner; Release builds keep the old CodeScanner until the new one beats it on the
+benchmark (`tasks/barcode-scanner-epic.md`). The new scanner uses:
+
+- a fixed startup zoom sized to the lens's minimum focus distance;
+- a centered scan box as the region of interest;
+- EAN-13, EAN-8, UPC-E and Code 128 only (no QR);
+- GS1 check digits;
+- a code read in 2 of the last 10 frames before it counts.
+
+- **Offline**, on photos (Mac, no simulator):
+  ```bash
+  cd FarmaciaKit && swift run scan-bench ~/scanner-photos        # summary
+  cd FarmaciaKit && swift run scan-bench ~/scanner-photos --csv  # one row per photo
+  ```
+  Put the expected code last in each filename, after an underscore
+  (`shiny-curved_4006381333931.jpg`). Use `_none` for a photo with no code.
+- **On a device** (Debug build, local API): open Ajustes › Escáner (DEBUG). There you can
+  switch between the old and new scanners, change the lens (wide / dual / triple for
+  macro), the resolution (1080p / 4K), the number of matching reads, the wait after a
+  read, and the minimum confidence. Then scan and export the CSV: one row per scan with
+  the time to read, frames, misreads, device and settings.
+- **Defaults** live in `ScanSettings` (FarmaciaKit). Legal notes are in
+  `LEGAL_REVIEW.md`; licenses are in `THIRD_PARTY_NOTICES`.
 
 ## License
 

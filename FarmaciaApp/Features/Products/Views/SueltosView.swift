@@ -1,6 +1,5 @@
 import SwiftUI
 import FarmaciaKit
-import CodeScanner
 
 // MARK: - Sueltos
 //

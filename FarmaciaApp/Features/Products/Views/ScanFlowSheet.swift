@@ -1,6 +1,5 @@
 import SwiftUI
 import FarmaciaKit
-import CodeScanner
 
 // MARK: - Scan Flow Sheet
 //
@@ -130,14 +129,7 @@ struct ScanFlowSheet: View {
 
     private var scanner: some View {
         NavigationStack {
-            CodeScannerView(
-                codeTypes: [.ean13, .ean8, .upce, .code128, .code39, .code93, .itf14],
-                scanMode: .once,
-                showViewfinder: true,
-                simulatedData: Self.simulatedCode,
-                shouldVibrateOnSuccess: true,
-                completion: handleScan
-            )
+            ProductBarcodeScanner(simulatedData: Self.simulatedCode, completion: handleScan)
             .ignoresSafeArea(edges: .bottom)
             .overlay {
                 if isLookingUp {
@@ -243,10 +235,9 @@ struct ScanFlowSheet: View {
         )
     }
 
-    private func handleScan(result: Result<ScanResult, ScanError>) {
+    private func handleScan(result: Result<String, Error>) {
         switch result {
-        case .success(let scanResult):
-            let code = scanResult.string
+        case .success(let code):
             Task {
                 isLookingUp = true
                 let outcome = await lookup(code)
@@ -296,7 +287,7 @@ struct ScanFlowSheet: View {
         dismiss()
     }
 
-    /// The simulator has no camera: CodeScanner's simulated scan sends this code.
+    /// The simulator has no camera: tapping the scanner sends this code.
     /// Set it with `xcrun simctl spawn booted defaults write <bundle id> simScanCode <code>`.
     /// Sueltos' scanner uses it too.
     static var simulatedCode: String {
