@@ -51,6 +51,8 @@ struct ReceiveInventoryFormView: View {
     @State private var notes = ""
     /// "Count it first": shown when the store's open Conteo inicial hasn't counted this product.
     @State private var countWarning: String?
+    /// "Ya se recibieron…": this store received the product today or yesterday (RecentReceiving).
+    @State private var recentReceiving: String?
     /// One per receiving being entered: a retry (or the offline queue's replay) reuses it.
     @State private var clientRequestId = UUID().uuidString
 
@@ -228,7 +230,11 @@ struct ReceiveInventoryFormView: View {
                 Section {
                     ProductSummaryRow(product: product, stock: currentStock)
                 } footer: {
-                    if let note {
+                    // The server's history covers the scanner's note (it includes that receiving).
+                    if let recentReceiving {
+                        Label(recentReceiving, systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(.orange)
+                    } else if let note {
                         Label(note, systemImage: "info.circle")
                     }
                     if let countWarning {
@@ -308,9 +314,7 @@ struct ReceiveInventoryFormView: View {
                     if let expiry = scan.expiry { expiryMonth = expiry }
                 }
             }
-            .task {
-                expiryPlacement = await loadExpiryPlacement()
-            }
+            .task(id: authManager.currentLocation?.id) { await loadHistory() }
             .task {
                 guard StoreStock.isExpected(tracksInventory: product.tracksInventory,
                                             soldOnlyAtLocationId: product.soldOnlyAtLocationId) else { return }
@@ -696,12 +700,24 @@ struct ReceiveInventoryFormView: View {
         MonthYearPicker(title: "Vence", value: $expiryMonth.animation())
     }
 
-    /// From the product's latest receiving; up top if it can't be loaded.
-    private func loadExpiryPlacement() async -> ExpiryPlacement {
-        let response: ReceivingExpiriesResponse? = try? await APIClient.shared.request(
+    /// The product's receivings: the expiry placement follows the latest (up top if
+    /// they can't be loaded), and this store's since yesterday give the repeat warning.
+    private func loadHistory() async {
+        let response: ReceivingHistoryResponse? = try? await APIClient.shared.request(
             endpoint: .listReceivingsByProduct(productId: product.id)
         )
-        return ExpiryPlacement(expiriesNewestFirst: response?.data.map(\.expiryDate) ?? [])
+        // A store switch restarted this load: the new one fills it in.
+        guard !Task.isCancelled else { return }
+        let rows = response?.data
+        expiryPlacement = ExpiryPlacement(expiriesNewestFirst: rows?.map(\.expiryDate) ?? [])
+        guard let locationId = authManager.currentLocation?.id else { return }
+        // Not loaded, but the scanner's note says what was just received: show that one.
+        if rows == nil, note != nil { recentReceiving = nil; return }
+        recentReceiving = RecentReceiving.note(
+            rows?.map { .init(receivedAt: $0.receivedAt, quantity: $0.quantity,
+                              locationId: $0.location.id, supplierName: $0.supplier?.name) },
+            locationId: locationId
+        )
     }
 
     private func saveReceiving() async {
@@ -737,8 +753,18 @@ struct ReceiveInventoryFormView: View {
     }
 }
 
-/// GET /inventory/receive/product/:id, newest first: only whether each had an expiry.
-private struct ReceivingExpiriesResponse: Decodable {
-    struct Row: Decodable { let expiryDate: Date? }
+/// GET /inventory/receive/product/:id, newest first (every store for the owner):
+/// whether each had an expiry, and when, where and how many for the repeat warning.
+private struct ReceivingHistoryResponse: Decodable {
+    /// Only what's used: one row that fails to decode drops the whole history.
+    struct Row: Decodable {
+        struct Location: Decodable { let id: String }
+        struct Supplier: Decodable { let name: String }
+        let expiryDate: Date?
+        let receivedAt: Date
+        let quantity: Int
+        let location: Location
+        let supplier: Supplier?
+    }
     let data: [Row]
 }

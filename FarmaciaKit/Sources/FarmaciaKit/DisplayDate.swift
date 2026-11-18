@@ -22,7 +22,12 @@ public enum DisplayDate {
 
     /// "2 nov · 2:57 a.m.".
     public static func timestamp(_ date: Date, timeZone: TimeZone = .current) -> String {
-        "\(format(date, "d MMM", timeZone)) · \(format(date, "h:mm a", timeZone))"
+        "\(format(date, "d MMM", timeZone)) · \(time(date, timeZone: timeZone))"
+    }
+
+    /// "2:57 a.m.".
+    public static func time(_ date: Date, timeZone: TimeZone = .current) -> String {
+        format(date, "h:mm a", timeZone)
     }
 
     /// "hoy", "ayer", "hace 2 días" — by calendar day.
