@@ -162,3 +162,7 @@ scanner. The cost typed in Nuevo producto carries over, so it isn't asked for tw
   else the average for the hint and the "Actual" chip. "vs último" compares only with a real last
   cost, not the average. A $0 receiving (a gift) is no baseline. `oldCost` removed (replaced).
 - Not smoked: the local API was down.
+- ✅ Review (dev-f8, OK on 193c9fc): a $0 newest receiving now falls back to the newest one
+  with a cost, not the average (`ReceivingPrice.lastReceiving(newestFirst:)`, tested; this also
+  moves the history mapping out of the view). The latest receiving is any store's for the
+  owner, the manager's own store for a manager (the API scopes it).

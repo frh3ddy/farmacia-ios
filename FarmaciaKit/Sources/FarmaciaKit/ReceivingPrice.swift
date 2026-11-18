@@ -18,6 +18,15 @@ public enum ReceivingPrice {
         }
     }
 
+    /// The newest receiving with a cost (GET /inventory/receive/product/:id, newest first;
+    /// `unitCost` a decimal string): a $0 gift is skipped, not a reason to fall back to the average.
+    public static func lastReceiving(newestFirst rows: [(unitCost: String, supplierName: String?)]) -> PreviousCost? {
+        for row in rows {
+            if let cost = Double(row.unitCost), cost > 0 { return PreviousCost(cost: cost, supplierName: row.supplierName) }
+        }
+        return nil
+    }
+
     /// The cost to compare a receiving with (the "Anterior" hint, "vs último", the "Actual"
     /// chip): the selected supplier's last cost; else the latest receiving's, from whichever
     /// supplier (a supplier new to this product has none); else the average. A $0 (a gift)

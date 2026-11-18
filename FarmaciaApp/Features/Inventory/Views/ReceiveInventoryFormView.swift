@@ -726,10 +726,11 @@ struct ReceiveInventoryFormView: View {
         guard !Task.isCancelled else { return }
         let rows = response?.data
         expiryPlacement = ExpiryPlacement(expiriesNewestFirst: rows?.map(\.expiryDate) ?? [])
-        // Any store's: a supplier's price isn't per store.
-        lastReceiving = rows?.first.flatMap { row in
-            Double(row.unitCost).map { .init(cost: $0, supplierName: row.supplier?.name) }
-        }
+        // Not filtered by store (a supplier's price isn't per store): the owner's history spans
+        // every store, a manager's is their own.
+        lastReceiving = ReceivingPrice.lastReceiving(
+            newestFirst: rows?.map { (unitCost: $0.unitCost, supplierName: $0.supplier?.name) } ?? []
+        )
         guard let locationId = authManager.currentLocation?.id else { return }
         // Not loaded, but the scanner's note says what was just received: show that one.
         if rows == nil, note != nil { recentReceiving = nil; return }

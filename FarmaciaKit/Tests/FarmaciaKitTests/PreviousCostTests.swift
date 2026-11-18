@@ -26,6 +26,13 @@ struct PreviousCostTests {
         #expect(ReceivingPrice.previous(supplierLast: nil, lastReceiving: nil, average: nil) == nil)
     }
 
+    @Test("given the newest receiving a $0 gift, should use the newest one with a cost, not jump to the average")
+    func skipsGift() {
+        let rows: [(unitCost: String, supplierName: String?)] = [("0", "Regalo"), ("16.50", "Nadro"), ("15", "Fanasa")]
+        #expect(ReceivingPrice.lastReceiving(newestFirst: rows) == nadro)
+        #expect(ReceivingPrice.lastReceiving(newestFirst: [(unitCost: "0", supplierName: nil)]) == nil)
+    }
+
     @Test("given $18 typed against Nadro's last $16.50, the line should say whose cost it compares with")
     func namedChange() {
         #expect(CostChange(current: 18, last: 16.5, supplierName: "Nadro")?.text == "▲ 9% vs último $16.50 (Nadro)")
