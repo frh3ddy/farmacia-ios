@@ -115,7 +115,7 @@ struct ProductSearchPicker<Field: Hashable>: View {
     private var scanner: some View {
         NavigationStack {
             CodeScannerView(
-                codeTypes: [.ean13, .ean8, .upce, .code128, .code39, .code93, .itf14, .qr],
+                codeTypes: [.ean13, .ean8, .upce, .code128, .code39, .code93, .itf14],
                 scanMode: .once,
                 showViewfinder: true,
                 simulatedData: ScanFlowSheet.simulatedCode,
