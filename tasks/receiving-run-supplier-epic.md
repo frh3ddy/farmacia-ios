@@ -166,3 +166,15 @@ scanner. The cost typed in Nuevo producto carries over, so it isn't asked for tw
   with a cost, not the average (`ReceivingPrice.lastReceiving(newestFirst:)`, tested; this also
   moves the history mapping out of the view). The latest receiving is any store's for the
   owner, the manager's own store for a manager (the API scopes it).
+
+### Fix: still no hint for stock from the migration (2026-11-18, `fix/receive-previous-cost-suppliers`)
+
+- ✅ Reported by the user (Productos → scan → Recibir, a run supplier new to the product): the
+  field showed its "0" placeholder and no line while typing. Likely cause: stock loaded by the
+  migration has suppliers and costs on record but no receivings, so the latest-receiving
+  fallback had nothing. `ReceivingPrice.supplierOnRecord` (the detail screen's `UnitCost.pick`:
+  preferred, else first) comes after the latest receiving and before the average.
+- ✅ The hint names whose cost it is: "Anterior 16.50 · Nadro" (`ReceivingCost.hint(previous:)`
+  takes the `PreviousCost`).
+- Not confirmed on that product: if it has no supplier on record and no average either, there
+  is still nothing to show.

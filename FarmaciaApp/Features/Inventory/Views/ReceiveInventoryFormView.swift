@@ -171,14 +171,23 @@ struct ReceiveInventoryFormView: View {
         StoreStock.here(storeStock, currentLocationId: authManager.currentLocation?.id) ?? product.totalInventory
     }
 
-    /// The selected supplier's last cost, else the latest receiving's, else the average.
-    private var previousCost: ReceivingPrice.PreviousCost? {
-        ReceivingPrice.previous(supplierLast: supplierLastCost, lastReceiving: lastReceiving, average: product.averageCost)
+    /// The product's supplier cost the detail screen shows: for stock from the migration (no receivings).
+    private var supplierOnRecord: ReceivingPrice.PreviousCost? {
+        ReceivingPrice.supplierOnRecord(productSuppliers.map {
+            UnitCost.Supplier(id: $0.id, name: $0.name, cost: $0.costDouble, isPreferred: $0.isPreferred, lastPurchase: nil)
+        })
     }
 
-    /// Against a real last cost only (the selected supplier's or the latest receiving's), not the average.
+    /// The selected supplier's last cost, else the latest receiving's, else the supplier on record, else the average.
+    private var previousCost: ReceivingPrice.PreviousCost? {
+        ReceivingPrice.previous(supplierLast: supplierLastCost, lastReceiving: lastReceiving,
+                                onRecord: supplierOnRecord, average: product.averageCost)
+    }
+
+    /// Against a real last cost only (the selected supplier's, the latest receiving's, or one on record), not the average.
     private var costChange: CostChange? {
-        ReceivingPrice.previous(supplierLast: supplierLastCost, lastReceiving: lastReceiving, average: nil)
+        ReceivingPrice.previous(supplierLast: supplierLastCost, lastReceiving: lastReceiving,
+                                onRecord: supplierOnRecord, average: nil)
             .flatMap { CostChange(current: receivingCost.value, last: $0.cost, supplierName: $0.supplierName) }
     }
 
@@ -470,7 +479,7 @@ struct ReceiveInventoryFormView: View {
                     value: $receivingCost.value,
                     focus: $focusedField,
                     field: .unitCost,
-                    prompt: ReceivingCost.hint(previous: previousCost?.cost)
+                    prompt: ReceivingCost.hint(previous: previousCost)
                 )
                 // Catches supplier increases and typos; the arrow says it without color.
                 if let costChange {

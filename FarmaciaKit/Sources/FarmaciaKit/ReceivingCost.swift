@@ -30,8 +30,12 @@ public struct ReceivingCost: Equatable, Sendable {
     /// The cost field's placeholder: the previous cost (`ReceivingPrice.oldCost`),
     /// so it's still there to type from after the field is cleared. No "$": the
     /// field shows it before the number.
-    public static func hint(previous: Double?) -> String? {
-        previous.map { "Anterior " + $0.formatted(.number.precision(.fractionLength(2)).locale(Locale(identifier: "es_MX"))) }
+    public static func hint(previous: ReceivingPrice.PreviousCost?) -> String? {
+        previous.map { previous in
+            let cost = "Anterior " + previous.cost.formatted(.number.precision(.fractionLength(2)).locale(Locale(identifier: "es_MX")))
+            // Another supplier's cost (`ReceivingPrice.previous`): say whose.
+            return previous.supplierName.map { "\(cost) · \($0)" } ?? cost
+        }
     }
 
     /// Fills in a supplier's cost (`SelectedSupplierCost.lastCost`): only a positive cost, only into an empty
