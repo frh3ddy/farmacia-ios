@@ -33,6 +33,30 @@ struct PreviousCostTests {
         #expect(ReceivingPrice.lastReceiving(newestFirst: [(unitCost: "0", supplierName: nil)]) == nil)
     }
 
+    @Test("given no receivings (stock from the migration) but suppliers on record, should use the product detail's supplier (preferred, else first), named")
+    func supplierOnRecord() {
+        let fanasa = UnitCost.Supplier(id: "f", name: "Fanasa", cost: 15, isPreferred: false, lastPurchase: nil)
+        let nadroPreferred = UnitCost.Supplier(id: "n", name: "Nadro", cost: 16.5, isPreferred: true, lastPurchase: nil)
+        let onRecord = ReceivingPrice.supplierOnRecord([fanasa, nadroPreferred])
+        #expect(onRecord == nadro)
+        #expect(ReceivingPrice.previous(supplierLast: nil, lastReceiving: nil, onRecord: onRecord, average: 12) == nadro)
+        #expect(ReceivingPrice.supplierOnRecord([]) == nil)
+    }
+
+    @Test("given the preferred supplier on record at $0, should use the next one with a cost (an out-of-stock product has no average to fall to)")
+    func onRecordSkipsZero() {
+        let zeroPreferred = UnitCost.Supplier(id: "z", name: "Regalos", cost: 0, isPreferred: true, lastPurchase: nil)
+        let nadroOther = UnitCost.Supplier(id: "n", name: "Nadro", cost: 16.5, isPreferred: false, lastPurchase: nil)
+        #expect(ReceivingPrice.supplierOnRecord([zeroPreferred, nadroOther]) == nadro)
+        #expect(ReceivingPrice.supplierOnRecord([zeroPreferred]) == nil)
+    }
+
+    @Test("given a receiving and suppliers on record, the receiving (what was actually paid last) should win")
+    func receivingBeforeOnRecord() {
+        let fanasa = ReceivingPrice.PreviousCost(cost: 15, supplierName: "Fanasa")
+        #expect(ReceivingPrice.previous(supplierLast: nil, lastReceiving: nadro, onRecord: fanasa, average: 12) == nadro)
+    }
+
     @Test("given $18 typed against Nadro's last $16.50, the line should say whose cost it compares with")
     func namedChange() {
         #expect(CostChange(current: 18, last: 16.5, supplierName: "Nadro")?.text == "▲ 9% vs último $16.50 (Nadro)")

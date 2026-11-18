@@ -31,10 +31,24 @@ public enum ReceivingPrice {
     /// chip): the selected supplier's last cost; else the latest receiving's, from whichever
     /// supplier (a supplier new to this product has none); else the average. A $0 (a gift)
     /// is no baseline.
-    public static func previous(supplierLast: Double?, lastReceiving: PreviousCost?, average: Double?) -> PreviousCost? {
+    ///
+    /// `onRecord`: the product's supplier cost the detail screen shows (`supplierOnRecord`), after
+    /// the latest receiving: stock loaded by the migration has suppliers and costs but no receivings.
+    public static func previous(supplierLast: Double?, lastReceiving: PreviousCost?,
+                                onRecord: PreviousCost? = nil, average: Double?) -> PreviousCost? {
         if let supplierLast { return PreviousCost(cost: supplierLast, supplierName: nil) }
         if let lastReceiving, lastReceiving.cost > 0 { return lastReceiving }
+        if let onRecord, onRecord.cost > 0 { return onRecord }
         return average.map { PreviousCost(cost: $0, supplierName: nil) }
+    }
+
+    /// The product's suppliers on record, picked as the detail screen does (`UnitCost.pick`:
+    /// the preferred, else the first), named. Only suppliers with a cost: a $0 preferred one
+    /// would hide the next, and an out-of-stock product has no average to fall to.
+    public static func supplierOnRecord(_ suppliers: [UnitCost.Supplier]) -> PreviousCost? {
+        guard let pick = UnitCost.pick(suppliers: suppliers.filter { $0.cost > 0 }, averageCost: nil),
+              case .supplier(let name, _) = pick.source else { return nil }
+        return PreviousCost(cost: pick.cost, supplierName: name)
     }
 
     /// The current price's margin at the old cost, priced at the new cost.
