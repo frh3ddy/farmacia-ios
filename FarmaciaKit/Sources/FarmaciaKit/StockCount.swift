@@ -54,12 +54,41 @@ public struct UncountedProduct: Decodable, Identifiable, Equatable, Sendable {
     public let units: Int
     /// Value at cost, a decimal string.
     public let value: String
+    /// When stock last came in at the store since the count started (a receiving, a return, an
+    /// opened box, a transfer, Encontrado); nil when none, or on a server from before it.
+    public let receivedAt: Date?
 
-    public init(productId: String, name: String, units: Int, value: String) {
+    public init(productId: String, name: String, units: Int, value: String, receivedAt: Date? = nil) {
         self.productId = productId
         self.name = name
         self.units = units
         self.value = value
+        self.receivedAt = receivedAt
+    }
+
+    /// Under the row: its units include what came in, so they aren't left over from the migration.
+    public func receivedNote(now: Date = Date(), timeZone: TimeZone = .current) -> String? {
+        receivedAt.map { "Entró existencia durante el conteo · \(DisplayDate.shortDay($0, now: now, timeZone: timeZone))" }
+    }
+}
+
+/// "Poner todos en 0": every row but those with stock in during the count (the server would
+/// skip them too, as RECEIVED_DURING_COUNT), and its confirmation.
+public struct ZeroAll: Equatable, Sendable {
+    public let productIds: [String]
+    public let message: String
+
+    public init(_ rows: [UncountedProduct]) {
+        let zeroed = rows.filter { $0.receivedAt == nil }
+        let kept = rows.count - zeroed.count
+        productIds = zeroed.map(\.productId)
+        var message = "\(UncountedSummary(zeroed).text). Quedarán en 0 como Conteo inicial; no cuenta como merma."
+        if kept > 0 {
+            message += kept == 1
+                ? "\n1 producto con entradas durante el conteo no se pondrá en 0: cuéntalo."
+                : "\n\(kept) productos con entradas durante el conteo no se pondrán en 0: cuéntalos."
+        }
+        self.message = message
     }
 }
 
@@ -131,9 +160,14 @@ public enum CountNotes {
 public struct StockCountZeroRequest: Encodable, Sendable {
     public let productIds: [String]
     public let locationId: String?
-    public init(productIds: [String], locationId: String? = nil) {
+    /// Only the per-row button (the owner chose that product) zeroes stock that came in during
+    /// the count; left out otherwise, so the server skips it.
+    public let includeReceived: Bool?
+
+    public init(productIds: [String], locationId: String? = nil, includeReceived: Bool = false) {
         self.productIds = productIds
         self.locationId = locationId
+        self.includeReceived = includeReceived ? true : nil
     }
 }
 
@@ -141,11 +175,14 @@ public struct StockCountZeroRequest: Encodable, Sendable {
 public struct StockCountZeroResult: Decodable, Sendable {
     public let productId: String
     public let ok: Bool
-    /// "ALREADY_COUNTED": counted after the list loaded, so it was left alone.
+    /// "ALREADY_COUNTED": counted after the list loaded; "RECEIVED_DURING_COUNT": stock came
+    /// in during the count. Either way it was left alone on purpose.
     public let code: String?
     public let error: String?
 
-    var wasSkipped: Bool { code == "ALREADY_COUNTED" }
+    var wasCounted: Bool { code == "ALREADY_COUNTED" }
+    var wasReceived: Bool { code == "RECEIVED_DURING_COUNT" }
+    var wasSkipped: Bool { wasCounted || wasReceived }
 }
 
 /// What to tell the owner after "Poner en 0": nil when every product went to 0.
@@ -156,16 +193,22 @@ public struct ZeroOutcome: Sendable {
     /// `stoppedBy`: why a batch failed, ending the run; the rest stay on the list.
     public init(_ results: [StockCountZeroResult], stoppedBy: String? = nil) {
         let failed = results.filter { !$0.ok && !$0.wasSkipped }
-        let skipped = results.filter(\.wasSkipped).count
+        let counted = results.filter(\.wasCounted).count
+        let received = results.filter(\.wasReceived).count
         var lines: [String] = []
         if let first = failed.first {
             let who = failed.count == 1 ? "1 producto no se pudo" : "\(failed.count) productos no se pudieron"
             lines.append("\(who) poner en 0: \(first.error ?? "error desconocido")")
         }
-        if skipped > 0 {
-            lines.append(skipped == 1
+        if counted > 0 {
+            lines.append(counted == 1
                 ? "1 producto ya se había contado; se dejó como estaba."
-                : "\(skipped) productos ya se habían contado; se dejaron como estaban.")
+                : "\(counted) productos ya se habían contado; se dejaron como estaban.")
+        }
+        if received > 0 {
+            lines.append(received == 1
+                ? "1 producto tuvo entradas durante el conteo; se dejó como estaba: cuéntalo."
+                : "\(received) productos tuvieron entradas durante el conteo; se dejaron como estaban: cuéntalos.")
         }
         if let stoppedBy {
             lines.append("Se detuvo: \(stoppedBy). Los que faltan siguen en la lista.")

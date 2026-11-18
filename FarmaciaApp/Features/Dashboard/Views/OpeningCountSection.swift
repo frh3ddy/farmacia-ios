@@ -128,6 +128,9 @@ struct UncountedListView: View {
     }
     @State private var showsError = false
 
+    /// Every row but those with stock in during the count.
+    private var zeroAll: ZeroAll { ZeroAll(rows ?? []) }
+
     var body: some View {
         List {
             if let rows, rows.isEmpty {
@@ -145,12 +148,18 @@ struct UncountedListView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .monospacedDigit()
+                        if let received = row.receivedNote() {
+                            Label(received, systemImage: "shippingbox")
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                        }
                     }
                     Spacer()
                     if zeroing.contains(row.productId) {
                         ProgressView()
                     } else {
-                        Button("Poner en 0") { Task { await zero([row.productId]) } }
+                        // The owner chose this product: zero it even if stock came in during the count.
+                        Button("Poner en 0") { Task { await zero([row.productId], includeReceived: true) } }
                             .buttonStyle(.bordered)
                             .disabled(!zeroing.isEmpty)
                     }
@@ -176,15 +185,15 @@ struct UncountedListView: View {
         .toolbar {
             if let rows, !rows.isEmpty {
                 Button("Poner todos en 0") { confirmAll = true }
-                    .disabled(!zeroing.isEmpty)
+                    .disabled(!zeroing.isEmpty || zeroAll.productIds.isEmpty)
             }
         }
         .confirmationDialog("¿Poner todos en 0?", isPresented: $confirmAll, titleVisibility: .visible) {
             Button("Poner todos en 0", role: .destructive) {
-                Task { await zero((rows ?? []).map(\.productId)) }
+                Task { await zero(zeroAll.productIds) }
             }
         } message: {
-            Text("\(UncountedSummary(rows ?? []).text). Quedarán en 0 como Conteo inicial; no cuenta como merma.")
+            Text(zeroAll.message)
         }
         .alert("No contados", isPresented: $showsError) {
             Button("OK", role: .cancel) {}
@@ -211,7 +220,7 @@ struct UncountedListView: View {
         }
     }
 
-    private func zero(_ productIds: [String]) async {
+    private func zero(_ productIds: [String], includeReceived: Bool = false) async {
         zeroing = Set(productIds)
         defer {
             zeroing = []
@@ -226,7 +235,8 @@ struct UncountedListView: View {
             do {
                 let response: APIResponse<[StockCountZeroResult]> = try await APIClient.shared.request(
                     endpoint: .stockCountZero(id: sessionId),
-                    body: StockCountZeroRequest(productIds: batch, locationId: authManager.currentLocation?.id)
+                    body: StockCountZeroRequest(productIds: batch, locationId: authManager.currentLocation?.id,
+                                                includeReceived: includeReceived)
                 )
                 results += response.data ?? []
             } catch {
