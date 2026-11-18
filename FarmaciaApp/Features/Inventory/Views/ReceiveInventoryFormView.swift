@@ -122,7 +122,9 @@ struct ReceiveInventoryFormView: View {
     @State private var waitingForSupplier = false
     /// The product's suppliers didn't load: say so, or the empty fields look like a bug.
     @State private var suppliersFailed = false
-    @State private var supplierLastCost: Double?
+    /// The selection and the product's supplier costs, whichever loads first.
+    @State private var supplierCost = SelectedSupplierCost()
+    private var supplierLastCost: Double? { supplierCost.lastCost }
     /// The cost was filled in from the supplier's last one.
     @State private var costFromSupplier = false
 
@@ -604,15 +606,19 @@ struct ReceiveInventoryFormView: View {
     }
 
     private func supplierChanged(to supplier: Supplier?) {
-        guard let supplier,
-              let ps = productSuppliers.first(where: { $0.id == supplier.id }) else {
-            supplierLastCost = nil
+        offerSupplierCost(supplierCost.select(supplier?.id))
+    }
+
+    /// The selected supplier's last cost into the field when it's empty. Runs after a
+    /// selection and after the product's supplier costs load, since either can come
+    /// first (a run supplier is picked before the costs arrive).
+    private func offerSupplierCost(_ last: Double?) {
+        guard let last else {
             costFromSupplier = false
             return
         }
-        supplierLastCost = ps.costDouble
         // Auto-fill unit cost if empty
-        if receivingCost.offerSupplierCost(ps.costDouble, forProductId: product.id) {
+        if receivingCost.offerSupplierCost(last, forProductId: product.id) {
             // Filled in by the form, not the user: not an unsaved change.
             start?.unitCost = receivingCost.value
             costFromSupplier = true
@@ -632,6 +638,8 @@ struct ReceiveInventoryFormView: View {
                 endpoint: .productSuppliers(productId: productId)
             )
             productSuppliers = response.suppliers
+            // A supplier already picked (the run's, or a tap while loading) gets its cost now.
+            offerSupplierCost(supplierCost.costsLoaded(response.suppliers.map { ($0.id, $0.costDouble) }))
             applyPreferredSupplier()
         } catch is CancellationError {
             // The form closed: nothing to show.
