@@ -478,8 +478,7 @@ struct ReceiveInventoryFormView: View {
                     unit: "MXN",
                     value: $receivingCost.value,
                     focus: $focusedField,
-                    field: .unitCost,
-                    prompt: ReceivingCost.hint(previous: previousCost)
+                    field: .unitCost
                 )
                 // Catches supplier increases and typos; the arrow says it without color.
                 if let costChange {
@@ -487,6 +486,12 @@ struct ReceiveInventoryFormView: View {
                         .font(.footnote)
                         .monospacedDigit()
                         .foregroundStyle(costChange.tone.color)
+                } else if let hint = ReceivingCost.hint(previous: previousCost) {
+                    // Under the field, not its placeholder: that was cut off in the narrow field.
+                    Text(hint)
+                        .font(.footnote)
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
                 }
             }
             .fieldError(error(.unitCost), shake: attempts, field: Field.unitCost)

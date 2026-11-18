@@ -83,19 +83,18 @@ struct ReceivingCostTests {
         #expect(cost.value == nil)
     }
 
-    @Test("given a previous cost of 12.5, should hint \"Anterior 12.50\" (the field shows the $)")
+    @Test("given a previous cost of 12.5, the line under the field should read \"Anterior $12.50\" (outside the field, so with its $)")
     func hintsPreviousCost() {
-        #expect(ReceivingCost.hint(previous: .init(cost: 12.5, supplierName: nil)) == "Anterior 12.50")
-        #expect(ReceivingCost.hint(previous: .init(cost: 1234.5, supplierName: nil)) == "Anterior 1,234.50")
+        #expect(ReceivingCost.hint(previous: .init(cost: 12.5, supplierName: nil)) == "Anterior $12.50")
+        #expect(ReceivingCost.hint(previous: .init(cost: 1234.5, supplierName: nil)) == "Anterior $1,234.50")
     }
 
-    @Test("given another supplier's previous cost (Nadro's 16.50), the hint should name it")
+    @Test("given another supplier's previous cost (Nadro's 16.50), the line should name it")
     func hintsSupplier() {
-        #expect(ReceivingCost.hint(previous: .init(cost: 16.5, supplierName: "Nadro")) == "Anterior 16.50 · Nadro")
-        #expect(ReceivingCost.hint(previous: .init(cost: 16.5, supplierName: nil)) == "Anterior 16.50")
+        #expect(ReceivingCost.hint(previous: .init(cost: 16.5, supplierName: "Nadro")) == "Anterior $16.50 · Nadro")
     }
 
-    @Test("given no previous cost, should have no hint (the field keeps its placeholder)")
+    @Test("given no previous cost, should have no line")
     func noHint() {
         #expect(ReceivingCost.hint(previous: nil) == nil)
     }

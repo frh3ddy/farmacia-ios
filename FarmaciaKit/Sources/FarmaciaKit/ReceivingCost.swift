@@ -27,12 +27,13 @@ public struct ReceivingCost: Equatable, Sendable {
         value = cost
     }
 
-    /// The cost field's placeholder: the previous cost (`ReceivingPrice.oldCost`),
-    /// so it's still there to type from after the field is cleared. No "$": the
-    /// field shows it before the number.
+    /// The line under the cost field whenever there's no cost change to show (empty, the same
+    /// cost, or only an average to compare with): the previous cost (`ReceivingPrice.previous`),
+    /// so it's still there to type from after the field is cleared. Outside the field (a
+    /// placeholder was cut off in the narrow field), so with its "$".
     public static func hint(previous: ReceivingPrice.PreviousCost?) -> String? {
         previous.map { previous in
-            let cost = "Anterior " + previous.cost.formatted(.number.precision(.fractionLength(2)).locale(Locale(identifier: "es_MX")))
+            let cost = "Anterior " + ReportFormat.currency(previous.cost)
             // Another supplier's cost (`ReceivingPrice.previous`): say whose.
             return previous.supplierName.map { "\(cost) · \($0)" } ?? cost
         }

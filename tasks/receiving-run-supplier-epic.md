@@ -182,3 +182,7 @@ scanner. The cost typed in Nuevo producto carries over, so it isn't asked for tw
   cost wins (tested). The average is null at 0 stock (products.service.ts), which is why an
   out-of-stock, migration-only product had no hint at all. Still nothing to show for a product
   with no stock, no receivings and no supplier on record.
+- ✅ The previous cost moved out of the field (as a placeholder it was cut off in the narrow
+  field): a line under it, "Anterior $16.50 · Nadro", while there's no change to show; typing
+  a different cost swaps it for "▲ 9% vs último $16.50 (Nadro)". The field keeps its default
+  placeholder. Branch `fix/receive-previous-cost-line`.
