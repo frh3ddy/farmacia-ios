@@ -183,6 +183,11 @@ public struct TransferDraft: Equatable, Sendable, Codable {
         return "SKU \(sku) · \(stock)"
     }
 
+    /// The action bar's line while the list is on its way to the server.
+    public static func sendingText(destination: String, products: Int, pieces: Int) -> String {
+        "Enviando \(summary(products: products, pieces: pieces)) a \(destination)…"
+    }
+
     /// After a send, from the shipment the server returned (not the draft: a replayed
     /// request returns the first shipment, as it is now).
     public static func sentText(destination: String, inTransit: Bool, products: Int, pieces: Int) -> String {

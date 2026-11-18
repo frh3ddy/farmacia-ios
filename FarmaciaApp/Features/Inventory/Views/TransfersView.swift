@@ -108,7 +108,7 @@ struct TransfersView: View {
         .primaryActionBar(PrimaryActionBar(
             title: "Enviar",
             doneTitle: "Enviado",
-            summary: draft.lines.isEmpty ? nil : draft.summary,
+            summary: draft.lines.isEmpty ? nil : barSummary,
             isSubmitting: isSending,
             isDone: false
         ) { tappedSend() })
@@ -310,6 +310,13 @@ struct TransfersView: View {
         confirmSend = true
     }
 
+    /// While sending, what is going and where, so the wait reads as progress.
+    private var barSummary: String {
+        guard isSending, let destination else { return draft.summary }
+        return TransferDraft.sendingText(destination: destination.name, products: draft.lines.count,
+                                         pieces: draft.lines.reduce(0) { $0 + $1.quantity })
+    }
+
     private func send() async {
         guard let destination else { return }
         // The list being sent: a store switch while waiting swaps in another store's.
@@ -339,6 +346,8 @@ struct TransfersView: View {
                 stockNotice = nil
                 stockStale = false
             }
+            // Answered: done sending; Recientes reloads after, without holding the spinner.
+            isSending = false
             await loadShipments()
         } catch NetworkError.refused(let refusal) {
             if TransferError.needsNewRequestId(code: refusal.code) { updateSentList(sentKey) { $0.renewRequestId() } }
@@ -351,6 +360,7 @@ struct TransfersView: View {
             // Changing the list after this warns: it would go as a new shipment.
             updateSentList(sentKey) { $0.markMayHaveSent() }
             errorMessage = TransferError.mayHaveSentText
+            isSending = false
             await loadShipments()
         } catch {
             guard !NetworkError.isCancellation(error) else { return }

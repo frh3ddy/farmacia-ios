@@ -183,6 +183,12 @@ struct TransferTextTests {
             == "Enviado a Oriente: 3 productos · 24 unidades. Ya están en su inventario.")
     }
 
+    @Test("given a list being sent, should say what is going and where, so the wait reads as progress")
+    func sending() {
+        #expect(TransferDraft.sendingText(destination: "Oriente", products: 3, pieces: 24)
+            == "Enviando 3 productos · 24 unidades a Oriente…")
+    }
+
     @Test("given a shipment in transit, should say the destination confirms it")
     func sentInTransit() {
         #expect(TransferDraft.sentText(destination: "Oriente", inTransit: true, products: 1, pieces: 1)
