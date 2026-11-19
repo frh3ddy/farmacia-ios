@@ -114,6 +114,7 @@
 		A7C3E1F2B4D5469788990006 /* TransfersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7C3E1F2B4D5469788990005 /* TransfersView.swift */; };
 		A7C3E1F2B4D5469788990008 /* TransferProductSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7C3E1F2B4D5469788990007 /* TransferProductSheet.swift */; };
 		DD000001000000F6 /* LotScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD000002000000F6 /* LotScannerView.swift */; };
+		DD00000100000AB1 /* LotLabScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000AB1 /* LotLabScanner.swift */; };
 		F000000100000044 /* SupplierPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000044 /* SupplierPickerView.swift */; };
 		F000000100000046 /* AdjustmentFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000046 /* AdjustmentFormView.swift */; };
 		F000000100000048 /* StatCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000100000048 /* StatCard.swift */; };
@@ -252,6 +253,7 @@
 		A7C3E1F2B4D5469788990005 /* TransfersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransfersView.swift; sourceTree = "<group>"; };
 		A7C3E1F2B4D5469788990007 /* TransferProductSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransferProductSheet.swift; sourceTree = "<group>"; };
 		DD000002000000F6 /* LotScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LotScannerView.swift; sourceTree = "<group>"; };
+		DD00000200000AB1 /* LotLabScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LotLabScanner.swift; sourceTree = "<group>"; };
 		F100000100000044 /* SupplierPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupplierPickerView.swift; sourceTree = "<group>"; };
 		F100000100000046 /* AdjustmentFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdjustmentFormView.swift; sourceTree = "<group>"; };
 		F100000100000048 /* StatCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatCard.swift; sourceTree = "<group>"; };
@@ -591,6 +593,7 @@
 				A7C3E1F2B4D5469788990005 /* TransfersView.swift */,
 				A7C3E1F2B4D5469788990007 /* TransferProductSheet.swift */,
 				DD000002000000F6 /* LotScannerView.swift */,
+				DD00000200000AB1 /* LotLabScanner.swift */,
 				F100000100000044 /* SupplierPickerView.swift */,
 				F100000100000046 /* AdjustmentFormView.swift */,
 			);
@@ -791,6 +794,7 @@
 				A7C3E1F2B4D5469788990006 /* TransfersView.swift in Sources */,
 				A7C3E1F2B4D5469788990008 /* TransferProductSheet.swift in Sources */,
 				DD000001000000F6 /* LotScannerView.swift in Sources */,
+				DD00000100000AB1 /* LotLabScanner.swift in Sources */,
 				F000000100000044 /* SupplierPickerView.swift in Sources */,
 				F000000100000046 /* AdjustmentFormView.swift in Sources */,
 				F000000100000015 /* ReportsView.swift in Sources */,

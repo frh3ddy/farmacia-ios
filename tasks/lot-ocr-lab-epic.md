@@ -1,6 +1,15 @@
 # Epic: faster, surer lot and expiry reading (lot OCR lab)
 
-**Status:** steps 1–5 (logic) ✅ 23f1453 + the confusable-letters fix (dev-f8's review), 976 tests pass. Next: step 6 (lab reader on the iPhone). Branch `feature/lot-ocr-lab`.
+**Status:** steps 1–5 (logic) ✅ 23f1453 + 2358e81 (dev-f8 approved). Steps 6–7 built, uncommitted, not yet
+tried on the iPhone: `LotReading` (accept + 1 s follow-up + metrics row, tested), `LotTextReader`
+(FarmaciaScan: crop, filter, upright, Vision text; tested on rendered labels incl. both 90° turns),
+`CameraController` split into the shared camera + `BarcodeFrameHandler` (barcode logic moved as is) +
+`LotFrameHandler`, the DEBUG switch and metrics in Ajustes › Escáner › Lector de lote, and the
+receive form's save marking `edited` (`LotScanMetrics.recordSave`, tested). 983 + 9 tests pass;
+Debug, Release and simulator builds pass.
+Gaps in the lab reader (DEBUG only): no GS1 DataMatrix (live text still reads it); a lote alone
+can't be used with "Usar" (the card fills at the date); only Recibir marks `edited`, from the last
+scan that filled a form; the camera runs 1 s after the sheet closes (the follow-up). Next: step 6 (lab reader on the iPhone). Branch `feature/lot-ocr-lab`.
 
 ## Why
 

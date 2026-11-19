@@ -14,6 +14,7 @@ struct ScannerDebugView: View {
     var body: some View {
         Form {
             benchPlan
+            lotReader
 
             Section {
                 Toggle("Escáner anterior (CodeScanner)", isOn: $lab.useLegacy)
@@ -63,6 +64,39 @@ struct ScannerDebugView: View {
             }
         }
         .navigationTitle("Escáner (DEBUG)")
+    }
+
+    @Bindable private var lotLab = LotLab.shared
+
+    /// The lot OCR lab (tasks/lot-ocr-lab-epic.md): live text vs our camera + filters.
+    @ViewBuilder private var lotReader: some View {
+        Section {
+            Toggle("Lector de laboratorio", isOn: $lotLab.useLab)
+            Picker("Resolución", selection: $lotLab.settings.preset) {
+                Text("1080p").tag(ScanSettings.Preset.hd1080)
+                Text("4K").tag(ScanSettings.Preset.hd4K)
+            }
+            .disabled(!lotLab.useLab)
+            ForEach(Array(lotLab.metrics.suffix(20).reversed().enumerated()), id: \.offset) { _, row in
+                LabeledContent(row.expiry?.display() ?? "Sin fecha", value: lotRowDetail(row))
+            }
+            ShareLink(item: LotScanMetrics.csv(lotLab.metrics), preview: SharePreview("lot-metrics.csv")) {
+                Label("Exportar CSV (\(lotLab.metrics.count))", systemImage: "square.and.arrow.up")
+            }
+            Button("Borrar métricas de lote", role: .destructive) { lotLab.clearMetrics() }
+                .disabled(lotLab.metrics.isEmpty)
+        } header: {
+            Text("Lector de lote")
+        } footer: {
+            Text("Apagado: el lector de texto de Apple. Encendido: nuestra cámara con filtros; acepta con la primera fecha y sigue leyendo 1 s para comparar. «Editado» se marca al guardar la recepción.")
+        }
+    }
+
+    private func lotRowDetail(_ row: LotScanMetrics) -> String {
+        let reader = row.reader == .lab ? "lab" : "texto"
+        let time = row.msToExpiry.map { "\($0) ms" } ?? "–"
+        let edited = row.edited.map { $0 ? " · editado" : " · ok" } ?? ""
+        return "\(row.lot ?? "sin lote") · \(time) · \(reader)\(edited)"
     }
 
     @ViewBuilder private var benchPlan: some View {

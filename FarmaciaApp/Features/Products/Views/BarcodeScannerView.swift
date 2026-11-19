@@ -239,7 +239,7 @@ extension BarcodeScannerView {
 }
 
 /// Dims everything but the centered scan box.
-private struct ScanBoxOverlay: View {
+struct ScanBoxOverlay: View {
     let width: Double
     let height: Double
 
@@ -273,13 +273,16 @@ private struct CameraPreview: UIViewRepresentable {
 
     func makeUIView(context: Context) -> PreviewView {
         let view = PreviewView()
-        let camera = CameraController(
+        let handler = BarcodeFrameHandler(
             settings: settings,
             onAccept: { [weak coordinator = context.coordinator] code in coordinator?.onAccept(code) },
-            onFailure: { [weak coordinator = context.coordinator] failure in coordinator?.onFailure(failure) },
-            onConfigured: { [weak view] device in view?.configured(device) },
             // Strong on purpose: a give-up (or a read as it closes) arrives after the dismantle.
             onMetrics: { [onMetrics] metrics in onMetrics(metrics) }
+        )
+        let camera = CameraController(
+            settings: settings, handler: handler,
+            onFailure: { [weak coordinator = context.coordinator] failure in coordinator?.onFailure(failure) },
+            onConfigured: { [weak view] device in view?.configured(device) }
         )
         view.attach(camera, box: CGSize(width: settings.scanBoxWidth, height: settings.scanBoxHeight))
         camera.start()
@@ -310,7 +313,9 @@ private struct CameraPreview: UIViewRepresentable {
     }
 }
 
-private final class PreviewView: UIView {
+/// The camera's preview; turns the centered scan box into the camera's ROI. Shared with
+/// the lot lab reader (`LotLabScannerView`).
+final class PreviewView: UIView {
     override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
     private var previewLayer: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
     private(set) var camera: CameraController?
