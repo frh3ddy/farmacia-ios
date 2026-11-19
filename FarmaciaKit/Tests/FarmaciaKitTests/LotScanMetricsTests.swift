@@ -10,17 +10,17 @@ struct LotScanMetricsTests {
         let rows = [
             LotScanMetrics(date: date, device: "iPhone14,2", reader: .lab, lot: "D26U908", expiry: MonthYear(year: 2028, month: 7),
                            msToExpiry: 840, msToLot: 410, passes: 12, filter: .dotJoin, edited: true,
-                           sameDateReads: 4, otherDateReads: 1),
+                           sameDateReads: 4, otherDateReads: 1, setup: "wide-hd4K"),
             LotScanMetrics(date: date, device: "iPhone16,1", reader: .liveText, lot: nil, expiry: MonthYear(year: 2027, month: 5),
                            msToExpiry: 1200, msToLot: nil, passes: nil, filter: nil, edited: false),
             LotScanMetrics(date: date, device: "iPhone14,2", reader: .lab, lot: nil, expiry: nil,
                            msToExpiry: nil, msToLot: nil, passes: 40, filter: nil, edited: nil),
         ]
         #expect(LotScanMetrics.csv(rows) == """
-            date,device,reader,outcome,lot,expiry,ms_to_expiry,ms_to_lot,passes,filter,edited,same_date_reads,other_date_reads
-            2026-11-18T11:06:40Z,"iPhone14,2",lab,read,D26U908,2028-07,840,410,12,dotJoin,yes,4,1
-            2026-11-18T11:06:40Z,"iPhone16,1",liveText,read,,2027-05,1200,,,,no,,
-            2026-11-18T11:06:40Z,"iPhone14,2",lab,none,,,,,40,,,,
+            date,device,reader,outcome,lot,expiry,ms_to_expiry,ms_to_lot,passes,filter,edited,same_date_reads,other_date_reads,setup
+            2026-11-18T11:06:40Z,"iPhone14,2",lab,read,D26U908,2028-07,840,410,12,dotJoin,yes,4,1,wide-hd4K
+            2026-11-18T11:06:40Z,"iPhone16,1",liveText,read,,2027-05,1200,,,,no,,,
+            2026-11-18T11:06:40Z,"iPhone14,2",lab,none,,,,,40,,,,,
 
             """)
     }

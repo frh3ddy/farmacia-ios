@@ -23,6 +23,7 @@ struct LotScannerView: View {
     /// DEBUG: the lot OCR lab reader instead of live text (fixed when the sheet opens).
     @State private var useLab = LotLab.shared.useLab
     @State private var cameraFailed = false
+    @State private var usedAt = Date()
 
     /// DataScannerViewController needs an A12 chip or later; the form hides the button otherwise.
     static var isSupported: Bool { DataScannerViewController.isSupported }
@@ -32,6 +33,15 @@ struct LotScannerView: View {
             reader
             .ignoresSafeArea(edges: .bottom)
             .overlay(alignment: .bottom) { foundCard }
+            #if DEBUG
+            .overlay(alignment: .top) { planBadge }
+            .alert(LotLab.shared.announcement ?? "", isPresented: Binding(
+                get: { LotLab.shared.announcement != nil },
+                set: { if !$0 { LotLab.shared.announcement = nil } }
+            )) {
+                Button("OK") {}
+            }
+            #endif
             .navigationTitle("Escanear lote")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -43,6 +53,7 @@ struct LotScannerView: View {
         .sensoryFeedback(.success, trigger: used) { _, done in done }
         #if DEBUG
         .onDisappear {
+            LotLab.shared.opened()
             // Live text's row (the lab reader logs its own): a read, or a give-up.
             guard !useLab else { return }
             LotLab.shared.log(LotScanMetrics(
@@ -54,7 +65,21 @@ struct LotScannerView: View {
         #endif
     }
 
-    @State private var usedAt = Date()
+    #if DEBUG
+    /// Which plan mode this opening is, so nobody loses track mid-test (like the barcode bench).
+    @ViewBuilder private var planBadge: some View {
+        if let plan = LotLab.shared.plan, let mode = plan.current {
+            Text("Prueba · \(mode.name) · \(plan.count)/\(plan.target)")
+                .font(.caption.bold())
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(.yellow, in: .capsule)
+                .foregroundStyle(.black)
+                .padding(.top, 8)
+                .allowsHitTesting(false)
+        }
+    }
+    #endif
 
     @ViewBuilder private var reader: some View {
         if cameraFailed {

@@ -27,14 +27,51 @@ final class LotLab {
     private var log = LotScanLog()
     var metrics: [LotScanMetrics] { log.rows }
 
+    /// The automatic test: `target` openings per mode (`BenchPlan.lotStandard`), switching by itself.
+    private(set) var plan: BenchPlan?
+    /// Shown once by the next lot scanner on screen (plan mode changes).
+    var announcement: String?
+
     private init() {
-        log = UserDefaults.standard.data(forKey: Self.key)
+        let defaults = UserDefaults.standard
+        log = defaults.data(forKey: Self.key)
             .flatMap { try? JSONDecoder().decode(LotScanLog.self, from: $0) } ?? LotScanLog()
+        plan = defaults.data(forKey: Self.planKey).flatMap { try? JSONDecoder().decode(BenchPlan.self, from: $0) }
+        if let mode = plan?.current { apply(mode) }
     }
 
     func log(_ row: LotScanMetrics) {
         log.log(row)
         save()
+    }
+
+    /// A lot scanner closed: one opening for the plan. Counted at the close, not when the
+    /// row arrives (the lab's comes 1 s later), so a quick reopen gets the right mode.
+    func opened() {
+        guard var plan else { return }
+        let step = plan.recordOpening(finished: "Prueba de lote completa. Exporta el CSV en Ajustes › Escáner (DEBUG).")
+        self.plan = plan
+        if let mode = step.switchTo { apply(mode) }
+        if let message = step.announcement { announcement = message }
+        save()
+    }
+
+    func startPlan(target: Int) {
+        let plan = BenchPlan(modes: BenchPlan.lotStandard, target: target)
+        self.plan = plan
+        if let mode = plan.current { apply(mode) }
+        save()
+    }
+
+    func stopPlan() {
+        plan = nil
+        save()
+    }
+
+    private func apply(_ mode: BenchPlan.Mode) {
+        useLab = !mode.legacy
+        settings.camera = mode.camera
+        settings.preset = mode.preset
     }
 
     /// The form that the last scan filled was saved with these values.
@@ -52,9 +89,12 @@ final class LotLab {
     }
 
     private static let key = "lot.lab.log"
+    private static let planKey = "lot.lab.plan"
 
     private func save() {
-        UserDefaults.standard.set(try? JSONEncoder().encode(log), forKey: Self.key)
+        let defaults = UserDefaults.standard
+        defaults.set(try? JSONEncoder().encode(log), forKey: Self.key)
+        defaults.set(plan.flatMap { try? JSONEncoder().encode($0) }, forKey: Self.planKey)
     }
     #else
     let useLab = false
@@ -71,18 +111,22 @@ final class LotLab {
 final class LotFrameHandler: CameraFrameHandler, @unchecked Sendable {
     private let reader = LotTextReader()
     private let followUp: TimeInterval
+    /// Camera and resolution, for the row ("wide-hd4K").
+    private let setup: String
     private let onAccept: @MainActor @Sendable (LotScan) -> Void
     private let onMetrics: @MainActor @Sendable (LotScanMetrics) -> Void
     private var reading: LotReading
     private var pass = 0
     private var logged = false
 
-    init(followUp: TimeInterval,
+    init(followUp: TimeInterval, setup: String,
          onAccept: @escaping @MainActor @Sendable (LotScan) -> Void,
          onMetrics: @escaping @MainActor @Sendable (LotScanMetrics) -> Void) {
         self.followUp = followUp
+        self.setup = setup
         self.onAccept = onAccept
         self.onMetrics = onMetrics
+        // Replaced in started(), so the times count from when the camera runs.
         reading = LotReading(today: MonthYear(date: .now), openedAt: .now, followUp: followUp)
     }
 
@@ -113,7 +157,8 @@ final class LotFrameHandler: CameraFrameHandler, @unchecked Sendable {
     private func log() {
         guard !logged else { return }
         logged = true
-        let row = reading.metrics(device: CameraController.deviceModel)
+        var row = reading.metrics(device: CameraController.deviceModel)
+        row.setup = setup
         Task { @MainActor in onMetrics(row) }
     }
 }
@@ -134,18 +179,21 @@ struct LotLabCamera: View {
         LotCameraPreview(settings: settings, torch: torch, followUp: followUp,
                          onAccept: onAccept, onFailure: onFailure, onMetrics: onMetrics)
             .overlay { ScanBoxOverlay(width: settings.scanBoxWidth, height: settings.scanBoxHeight) }
-            .overlay(alignment: .top) {
-                Button {
-                    torch.toggle()
-                } label: {
-                    Image(systemName: torch ? "flashlight.on.fill" : "flashlight.off.fill")
-                        .font(.title2)
-                        .frame(width: 56, height: 56)
-                        .background(.ultraThinMaterial, in: .circle)
+            .overlay {
+                // Just under the scan box: clear of the test badge on top and the found card below.
+                GeometryReader { geo in
+                    Button {
+                        torch.toggle()
+                    } label: {
+                        Image(systemName: torch ? "flashlight.on.fill" : "flashlight.off.fill")
+                            .font(.title2)
+                            .frame(width: 56, height: 56)
+                            .background(.ultraThinMaterial, in: .circle)
+                    }
+                    .foregroundStyle(torch ? .yellow : .white)
+                    .accessibilityLabel(torch ? "Apagar linterna" : "Encender linterna")
+                    .position(x: geo.size.width / 2, y: geo.size.height * (0.5 + settings.scanBoxHeight / 2) + 52)
                 }
-                .foregroundStyle(torch ? .yellow : .white)
-                .accessibilityLabel(torch ? "Apagar linterna" : "Encender linterna")
-                .padding(.top, DS.Spacing.l)
             }
     }
 }
@@ -161,7 +209,7 @@ private struct LotCameraPreview: UIViewRepresentable {
     func makeUIView(context: Context) -> PreviewView {
         let view = PreviewView()
         let handler = LotFrameHandler(
-            followUp: followUp,
+            followUp: followUp, setup: "\(settings.camera)-\(settings.preset)",
             onAccept: { [weak coordinator = context.coordinator] scan in
                 coordinator?.accepted = true
                 coordinator?.onAccept(scan)

@@ -1,18 +1,28 @@
 # Epic: faster, surer lot and expiry reading (lot OCR lab)
 
-**Status:** steps 1–5 (logic) ✅ 23f1453 + 2358e81 (dev-f8 approved). Steps 6–7 built, uncommitted, not yet
-tried on the iPhone: `LotReading` (accept + 1 s follow-up + metrics row, tested), `LotTextReader`
-(FarmaciaScan: crop, filter, upright, Vision text; tested on rendered labels incl. both 90° turns),
-`CameraController` split into the shared camera + `BarcodeFrameHandler` (barcode logic moved as is) +
-`LotFrameHandler`, the DEBUG switch and metrics in Ajustes › Escáner › Lector de lote, and the
-receive form's save marking `edited` (`LotScanMetrics.recordSave`, tested). 983 + 9 tests pass;
-Debug, Release and simulator builds pass.
-Gaps in the lab reader (DEBUG only): no GS1 DataMatrix (live text still reads it); a lote alone
-can't be used with "Usar" (the card fills at the date); only Recibir marks `edited`, from the last
-scan that filled a form; the camera runs 1 s after the sheet closes (the follow-up).
-Review dev-f8 on 37d17de (fixed, tested): the follow-up runs only after a read (a give-up stops
-at once; `LotReading.stop()` keeps late frames from turning it into a read), and `LotScanLog`
-forgets the fill on a give-up or a form closed unsaved, so typed values never mark an older read. Next: step 6 (lab reader on the iPhone). Branch `feature/lot-ocr-lab`.
+**Status** (branch `feature/lot-ocr-lab`):
+- Steps 1–5 (logic) ✅ on main: 23f1453 + 2358e81, merged as 5a82f79.
+- Steps 6–7 ✅ 37d17de + 230a3db (dev-f8 approved), not on main yet. **Before pushing:** a short
+  barcode check on the iPhone (the camera split touches the Release barcode scanner).
+  - `LotReading`: accept + 1 s follow-up + metrics row; tested.
+  - `LotTextReader` (FarmaciaScan): crop, filter, upright, Vision text; tested on rendered labels,
+    including both 90° turns.
+  - `CameraController` split into the shared camera + `BarcodeFrameHandler` (barcode logic moved
+    as is) + `LotFrameHandler`.
+  - The DEBUG switch and metrics in Ajustes › Escáner › Lector de lote; Recibir's save marks
+    `edited` (`LotScanMetrics.recordSave`, `LotScanLog`; tested).
+  - Review dev-f8 (fixed in 230a3db): the follow-up runs only after a read (a give-up stops at
+    once; `LotReading.stop()` keeps late frames from turning it into a read); `LotScanLog`
+    forgets the fill on a give-up or a form closed unsaved.
+- Automatic lot test (user, 2026-11-19): `BenchPlan.lotStandard` (Apple's live text, then the lab
+  at 1080p and 4K) drives `LotLab` like the barcode bench: N openings per mode, switching by
+  itself with an alert and a badge. Ajustes › Escáner › Prueba automática de lote. The CSV gains
+  `setup` (e.g. wide-hd4K). Both labs share the tested `BenchPlan.recordOpening`; the lot
+  scanner counts an opening when it closes, not when the row arrives 1 s later.
+- Gaps in the lab reader (DEBUG only): no GS1 DataMatrix (live text still reads it); a lote alone
+  can't be used with "Usar" (the card fills at the date); only Recibir marks `edited`; the camera
+  runs 1 s after the sheet closes after a read (the follow-up).
+- Next: the device run (barcode check, then the lot plan), then the CSV.
 
 ## Why
 

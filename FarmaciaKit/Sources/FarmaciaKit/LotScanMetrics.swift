@@ -33,10 +33,12 @@ public struct LotScanMetrics: Equatable, Sendable, Codable {
     /// and ones that read another date. The data for deciding if 2 reads should be needed.
     public var sameDateReads: Int?
     public var otherDateReads: Int?
+    /// Camera and resolution of the lab reader ("wide-hd4K"); nil for live text.
+    public var setup: String?
 
     public init(date: Date, device: String, reader: Reader, lot: String?, expiry: MonthYear?,
                 msToExpiry: Int?, msToLot: Int?, passes: Int?, filter: LotFilter?, edited: Bool?,
-                sameDateReads: Int? = nil, otherDateReads: Int? = nil) {
+                sameDateReads: Int? = nil, otherDateReads: Int? = nil, setup: String? = nil) {
         self.date = date
         self.device = device
         self.reader = reader
@@ -49,6 +51,7 @@ public struct LotScanMetrics: Equatable, Sendable, Codable {
         self.edited = edited
         self.sameDateReads = sameDateReads
         self.otherDateReads = otherDateReads
+        self.setup = setup
     }
 
     /// The form was saved with these values: edited if a value the scanner filled in changed.
@@ -58,14 +61,14 @@ public struct LotScanMetrics: Equatable, Sendable, Codable {
     }
 
     public static func csv(_ rows: [LotScanMetrics]) -> String {
-        let header = "date,device,reader,outcome,lot,expiry,ms_to_expiry,ms_to_lot,passes,filter,edited,same_date_reads,other_date_reads"
+        let header = "date,device,reader,outcome,lot,expiry,ms_to_expiry,ms_to_lot,passes,filter,edited,same_date_reads,other_date_reads,setup"
         let lines = rows.map { r in
             [r.date.formatted(.iso8601), r.device, r.reader.rawValue,
              r.lot == nil && r.expiry == nil ? "none" : "read", r.lot ?? "",
              r.expiry.map { String(format: "%04d-%02d", $0.year, $0.month) } ?? "",
              r.msToExpiry.map(String.init) ?? "", r.msToLot.map(String.init) ?? "",
              r.passes.map(String.init) ?? "", r.filter?.rawValue ?? "", r.edited.map { $0 ? "yes" : "no" } ?? "",
-             r.sameDateReads.map(String.init) ?? "", r.otherDateReads.map(String.init) ?? ""]
+             r.sameDateReads.map(String.init) ?? "", r.otherDateReads.map(String.init) ?? "", r.setup ?? ""]
                 .map(ScanMetrics.csvField).joined(separator: ",")
         }
         return ([header] + lines).joined(separator: "\n") + "\n"

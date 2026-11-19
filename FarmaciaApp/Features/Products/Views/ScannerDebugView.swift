@@ -67,16 +67,39 @@ struct ScannerDebugView: View {
     }
 
     @Bindable private var lotLab = LotLab.shared
+    @State private var lotTarget = 20
 
     /// The lot OCR lab (tasks/lot-ocr-lab-epic.md): live text vs our camera + filters.
     @ViewBuilder private var lotReader: some View {
         Section {
+            if let plan = lotLab.plan {
+                ForEach(Array(plan.modes.enumerated()), id: \.offset) { index, mode in
+                    LabeledContent {
+                        Text(index < plan.index ? "Listo" : index == plan.index ? "\(plan.count)/\(plan.target)" : "Pendiente")
+                    } label: {
+                        Label(mode.name, systemImage: index < plan.index ? "checkmark.circle.fill"
+                              : index == plan.index ? "record.circle" : "circle")
+                    }
+                }
+                Button("Detener prueba de lote", role: .destructive) { lotLab.stopPlan() }
+            } else {
+                Stepper("Productos por modo: \(lotTarget)", value: $lotTarget, in: 5...50, step: 5)
+                Button("Iniciar prueba de lote") { lotLab.startPlan(target: lotTarget) }
+            }
+        } header: {
+            Text("Prueba automática de lote")
+        } footer: {
+            Text("Lector de Apple, luego laboratorio 1080p y 4K. Cuenta cada apertura del escáner de lote (lectura o no) y cambia de modo sola al llegar a la meta.")
+        }
+
+        Section {
             Toggle("Lector de laboratorio", isOn: $lotLab.useLab)
+                .disabled(lotLab.plan != nil)
             Picker("Resolución", selection: $lotLab.settings.preset) {
                 Text("1080p").tag(ScanSettings.Preset.hd1080)
                 Text("4K").tag(ScanSettings.Preset.hd4K)
             }
-            .disabled(!lotLab.useLab)
+            .disabled(!lotLab.useLab || lotLab.plan != nil)
             ForEach(Array(lotLab.metrics.suffix(20).reversed().enumerated()), id: \.offset) { _, row in
                 LabeledContent(row.expiry?.display() ?? "Sin fecha", value: lotRowDetail(row))
             }
@@ -93,7 +116,7 @@ struct ScannerDebugView: View {
     }
 
     private func lotRowDetail(_ row: LotScanMetrics) -> String {
-        let reader = row.reader == .lab ? "lab" : "texto"
+        let reader = row.reader == .lab ? "lab \(row.setup ?? "")" : "Apple"
         let time = row.msToExpiry.map { "\($0) ms" } ?? "–"
         let edited = row.edited.map { $0 ? " · editado" : " · ok" } ?? ""
         return "\(row.lot ?? "sin lote") · \(time) · \(reader)\(edited)"

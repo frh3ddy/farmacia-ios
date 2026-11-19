@@ -116,18 +116,10 @@ final class ScannerLab {
         #if DEBUG
         metrics.append(scan)
         if var plan {
-            let finishedMode = plan.current
-            let event = plan.record()
+            let step = plan.recordOpening(finished: "Prueba completa. Exporta el CSV en Ajustes › Escáner (DEBUG).")
             self.plan = plan
-            switch event {
-            case .next(let mode):
-                apply(mode)
-                announcement = "\(finishedMode?.name ?? "") listo (\(plan.target) escaneos). Ahora: \(mode.name)."
-            case .finished:
-                announcement = "Prueba completa. Exporta el CSV en Ajustes › Escáner (DEBUG)."
-            case nil:
-                break
-            }
+            if let mode = step.switchTo { apply(mode) }
+            if let message = step.announcement { announcement = message }
         }
         save()
         #endif
