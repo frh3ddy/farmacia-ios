@@ -47,6 +47,7 @@ enum APIEndpoint {
     case listReceivingsByProduct(productId: String)
     case receivingSummary(locationId: String)
     case retrySquareSync(receivingId: String)
+    case fixReceivingCost(receivingId: String)
     
     // MARK: - Adjustment Endpoints
     case createAdjustment
@@ -188,6 +189,7 @@ enum APIEndpoint {
         case .listReceivingsByProduct(let productId): return "/inventory/receive/product/\(productId)"
         case .receivingSummary(let locationId): return "/inventory/receive/location/\(locationId)/summary"
         case .retrySquareSync(let id): return "/inventory/receive/\(id)/retry-square-sync"
+        case .fixReceivingCost(let id): return "/inventory/receive/\(id)/cost"
             
         // Adjustments
         case .createAdjustment: return "/inventory/adjustments"
@@ -306,7 +308,7 @@ enum APIEndpoint {
             return .delete
             
         // Inventory Receiving
-        case .receiveInventory, .retrySquareSync:
+        case .receiveInventory, .retrySquareSync, .fixReceivingCost:
             return .post
         case .getReceiving, .listReceivingsByLocation, .listReceivingsByProduct, .receivingSummary:
             return .get

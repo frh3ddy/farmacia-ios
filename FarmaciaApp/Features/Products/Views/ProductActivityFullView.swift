@@ -10,10 +10,13 @@ struct ProductActivityFullView: View {
     /// Owner-only Square sync retries; each returns the message to show. Nil hides Reintentar.
     var retryReceiving: ((InventoryReceiving) async -> String)? = nil
     var retryAdjustment: ((InventoryAdjustment) async -> String)? = nil
+    /// Owner-only Corregir costo: nil on success, else the message to show. Nil hides the button.
+    var fixReceivingCost: ((InventoryReceiving, Decimal) async -> String?)? = nil
 
     @State private var selectedSegment: ActivitySegment = .all
     @State private var syncRetryMessage = ""
     @State private var showSyncRetryMessage = false
+    @State private var costFixReceiving: InventoryReceiving?
 
     enum ActivitySegment: String, CaseIterable {
         case all = "Todos"
@@ -50,7 +53,8 @@ struct ProductActivityFullView: View {
                         ForEach(receivings) { receiving in
                             ReceivingRow(
                                 receiving: receiving,
-                                onRetrySync: retryReceiving.map { retry in { await showRetryResult(retry(receiving)) } }
+                                onRetrySync: retryReceiving.map { retry in { await showRetryResult(retry(receiving)) } },
+                                onFixCost: fixReceivingCost.map { _ in { costFixReceiving = receiving } }
                             )
                         }
                     }
@@ -69,6 +73,13 @@ struct ProductActivityFullView: View {
                 }
             }
             .listStyle(.insetGrouped)
+            .sheet(item: $costFixReceiving) { receiving in
+                if let fixReceivingCost {
+                    FixReceivingCostView(receiving: receiving) { cost in
+                        await fixReceivingCost(receiving, cost)
+                    }
+                }
+            }
         }
         .navigationTitle("\(product.displayName) Activity")
         .navigationBarTitleDisplayMode(.inline)
@@ -169,3 +180,81 @@ struct ActivityFullRow: View {
     }
 }
 
+
+// MARK: - Corregir costo (owner): a receiving saved with the wrong unit cost
+
+struct FixReceivingCostView: View {
+    let receiving: InventoryReceiving
+    /// nil on success, else the message to show (a 409 refusal as the API wrote it).
+    let save: (Decimal) async -> String?
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var costText = ""
+    @State private var isConfirming = false
+    @State private var isSaving = false
+    @State private var errorMessage: String?
+
+    private var newCost: Decimal? { ReceivingCostFix.cost(from: costText) }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    LabeledContent("Recibido", value: receiving.formattedDate)
+                    LabeledContent("Cantidad", value: "\(receiving.quantity) uds")
+                    if let supplier = receiving.supplier?.name {
+                        LabeledContent("Proveedor", value: supplier)
+                    }
+                    LabeledContent("Costo actual", value: ReportFormat.currency(receiving.unitCost))
+                }
+                Section {
+                    TextField("Costo nuevo por unidad", text: $costText)
+                        .keyboardType(.decimalPad)
+                    if let newCost, ReceivingCostFix.canSave(newCost: newCost, oldCost: receiving.unitCost) {
+                        Text(ReceivingCostFix.comparison(oldCost: receiving.unitCost, newCost: newCost))
+                            .font(.headline)
+                            .monospacedDigit()
+                    }
+                } footer: {
+                    Text("Recalcula esta recepción, su lote, las ventas y mermas que salieron de ella y, si es la más reciente del proveedor, su costo actual.")
+                }
+                if let errorMessage {
+                    Section {
+                        Text(errorMessage).foregroundStyle(.red)
+                    }
+                }
+            }
+            .navigationTitle("Corregir costo")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancelar") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    if isSaving {
+                        ProgressView()
+                    } else {
+                        Button("Guardar") { isConfirming = true }
+                            .disabled(!ReceivingCostFix.canSave(newCost: newCost, oldCost: receiving.unitCost))
+                    }
+                }
+            }
+            .confirmationDialog("¿Corregir el costo?", isPresented: $isConfirming, titleVisibility: .visible) {
+                Button("Corregir costo") { Task { await submit() } }
+            } message: {
+                if let newCost {
+                    Text("\(ReceivingCostFix.comparison(oldCost: receiving.unitCost, newCost: newCost)) por unidad, \(receiving.quantity) uds")
+                }
+            }
+            .interactiveDismissDisabled(isSaving)
+        }
+    }
+
+    private func submit() async {
+        guard let newCost else { return }
+        isSaving = true
+        errorMessage = await save(newCost)
+        isSaving = false
+        if errorMessage == nil { dismiss() }
+    }
+}

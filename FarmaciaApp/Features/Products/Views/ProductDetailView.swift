@@ -402,6 +402,9 @@ struct ProductDetailView: View {
             } : nil,
             retryAdjustment: canRetrySync ? { adjustment in
                 await retrySync(.retryAdjustmentSquareSync(adjustmentId: adjustment.id))
+            } : nil,
+            fixReceivingCost: ReceivingCostFix.canFix(isOwner: authManager.isOwner) ? { receiving, cost in
+                await fixReceivingCost(receiving, cost)
             } : nil
         )
     }
@@ -574,6 +577,24 @@ struct ProductDetailView: View {
         return message
     }
     
+    /// Corregir costo; on success reloads what the new cost changes (history, supplier cost, lots).
+    private func fixReceivingCost(_ receiving: InventoryReceiving, _ cost: Decimal) async -> String? {
+        do {
+            try await APIClient.shared.requestVoid(endpoint: .fixReceivingCost(receivingId: receiving.id),
+                                                   body: ReceivingCostFix.Request(unitCost: cost))
+        } catch {
+            guard case .failed(let message) = SaveOutcome(error: error, fallback: ReceivingCostFix.failure) else {
+                return ReceivingCostFix.failure
+            }
+            return message
+        }
+        async let activity: Void = loadActivity()
+        async let suppliers: Void = loadCostSupplierData()
+        async let batches: Void = loadBatchData()
+        _ = await (activity, suppliers, batches)
+        return nil
+    }
+
     private func loadCostSupplierData() async {
         // Every caller (first load, refresh after a write) goes through here: the API refuses cashiers
         guard authManager.canViewCosts else { return }

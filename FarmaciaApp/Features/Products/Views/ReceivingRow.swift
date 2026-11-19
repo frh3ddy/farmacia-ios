@@ -6,6 +6,8 @@ import FarmaciaKit
 struct ReceivingRow: View {
     let receiving: InventoryReceiving
     var onRetrySync: (() async -> Void)? = nil
+    /// Owner-only Corregir costo (`ReceivingCostFix.canFix`); nil hides it.
+    var onFixCost: (() -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -28,6 +30,11 @@ struct ReceivingRow: View {
                 Text("\(ReportFormat.currency(receiving.unitCost))/unidad")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                if let onFixCost {
+                    Button("Corregir costo", action: onFixCost)
+                        .font(.caption.weight(.semibold))
+                        .buttonStyle(.borderless)
+                }
             }
 
             HStack {
