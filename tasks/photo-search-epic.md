@@ -1,6 +1,6 @@
 # Buscar por foto Epic
 
-**Status**: 🚧 IN PROGRESS. Step 1 ✅ (734edf9, merged 7a94de3)
+**Status**: 🚧 IN PROGRESS. Steps 1–2 ✅ (merged 7a94de3, 8551bca)
 **Branch**: `feature/photo-search`. Steps 1–12 are farmacia-ios only. Step 14 adds one API endpoint (farmacia-ops).
 **Photos are never changed.** Reference photos are downloaded, background-removed and turned into vectors in memory only; nothing is uploaded and the Square images stay as they are. The search photo isn't saved or uploaded either.
 **Goal**: Find a product that has no barcode by taking its photo. The result is a short ranked list to tap, not one guessed answer.
@@ -59,7 +59,7 @@ The full "sin código" grid is always the fallback: a photo that reads no text a
    - given `tracksInventory == false`, should be false
    - given a nil SKU and nil `gtin`, should be true
 
-2. **`PhotoSearch.textScore(lines:name:)`**: the share of the name's words found on the box, with case and accents ignored. "500mg" splits into "500" and "mg". Words of 5+ letters survive one OCR slip; numbers must match exactly.
+2. ✅ **`PhotoSearch.textScore(lines:name:)`** (6376a9e, merged 8551bca): the share of the name's words found on the box, with case and accents ignored. "500mg" splits into "500" and "mg". Words of 5+ letters survive one OCR slip; numbers must match exactly.
    - *As built:* there's no `presentation:` parameter. The strength's number is a name word, so "500" vs "750" already ranks correctly. `LabelName`'s noise rules weren't needed: the score counts the name's words, so lot/date lines can only add a coincidental match. The folding stays inline, a one-liner like `LotNumber`'s, rather than becoming a shared helper.
    - given OCR "PARACETAMOL" and name "Paracetamol", should score > 0 *(first failing test)*
    - given OCR "Jabón Neutro" and name "jabon neutro", should be a full match
@@ -72,7 +72,7 @@ The full "sin código" grid is always the fallback: a photo that reads no text a
    - given orthogonal vectors, should be 0
    - given different lengths (vectors from different Vision revisions), should be nil
 
-4. **`PhotoSearch.rank(_ candidates:, text:, image:) -> [Candidate]`**: blends the two scores with fixed weights. `ponytail: fixed weights; tune from step 8's bench numbers if top-5 is low.`
+4. **`PhotoSearch.rank(_ candidates:, lines:, photo:) -> [Candidate]`**: blends the two scores with fixed weights (text 0.6, image 0.4). `Candidate` is `{id, name, vector?}`, and rank computes both scores itself, so the app only passes data. A negative image similarity counts as 0, and equal scores fall back to name order. `ponytail: fixed weights; tune from step 8's bench numbers if top-5 is low.`
    - given no text and no image scores, should return every candidate in name order (the grid fallback, never empty) *(first failing test)*
    - given "500 mg" on the box, the 500 mg product should beat a 750 mg product with a higher image score
    - given a product with no reference photo, it should still rank first on a strong text match
