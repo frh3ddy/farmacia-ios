@@ -1,6 +1,6 @@
 # Buscar por foto Epic
 
-**Status**: 🚧 IN PROGRESS. Steps 1–5 ✅ (merged 7a94de3, 8551bca, 4fd1428, 1ff752f)
+**Status**: 🚧 IN PROGRESS. Steps 1–7 ✅ (merged 7a94de3, 8551bca, 4fd1428, 1ff752f, 2f0a904). Step 8: bench built; gate waiting on the user's photos
 **Branch**: `feature/photo-search`. Steps 1–12 are farmacia-ios only. Step 14 adds one API endpoint (farmacia-ops).
 **Photos are never changed.** Reference photos are downloaded, background-removed and turned into vectors in memory only; nothing is uploaded and the Square images stay as they are. The search photo isn't saved or uploaded either.
 **Goal**: Find a product that has no barcode by taking its photo. The result is a short ranked list to tap, not one guessed answer.
@@ -87,15 +87,16 @@ The full "sin código" grid is always the fallback: a photo that reads no text a
 
 ### Vision: FarmaciaScan (Vision and Core Image also run on macOS, so `swift test` and `scan-bench` can use them)
 
-6. **Migrate the subject lift into FarmaciaScan** (migrate-as-touched): `SubjectMask.lift(_ CGImage) -> CGImage?`, using `VNGenerateForegroundInstanceMaskRequest`. The app's `SubjectLifter` (UIImage) becomes a thin wrapper over it, and its behavior is unchanged.
+6. ✅ **Migrate the subject lift into FarmaciaScan** (migrate-as-touched): `SubjectMask.lift(_ CGImage) -> CGImage?`, using `VNGenerateForegroundInstanceMaskRequest`. The app's `SubjectLifter` (UIImage) becomes a thin wrapper over it, and its behavior is unchanged.
    - given a plain single-color image, should return nil (no subject) *(first failing test)*
    - given a synthetic box on a gray counter, should keep the box and turn the counter white (the composite is over white, as SubjectLifter always did; synthetic images instead of a photo fixture, because Vision lifts them on the Mac)
 
-7. **`FeaturePrinter.vector(_ CGImage) -> (vector: [Float], revision: Int)?`**, using `VNGenerateImageFeaturePrintRequest` with its revision pinned.
+7. ✅ **`FeaturePrinter.vector(_ CGImage) -> (vector: [Float], revision: Int)?`**, using `VNGenerateImageFeaturePrintRequest` with its revision pinned.
    - given the same fixture twice, `FeatureVector.similarity` should be ≥ 0.99 *(first failing test)*
    - given two different fixtures, similarity should be lower than for the same one
 
-8. **Bench before any UI: `scan-bench --photo-search <refs> <queries>`**
+8. **Bench before any UI: `scan-bench --photo-search <refs> <queries> [--weights text,image,floor]`**
+   - *As built:* reference photos are named after the product (`Jabón neutro.jpg`), not its id, so the name is both the candidate's id and its text. Each photo is downsampled to 1024 px, lifted (or used whole), then OCR'd (`FarmaciaScan.PhotoText`) and feature-printed. Output: one CSV row per query (rank, the right product's cosine, and the closest wrong one with its cosine, for tuning the floor), then top-1 and top-5 for text, looks and both. `PhotoSearch.Weights` (`.standard` = 0.6 / 0.4 / 0.5) lets the bench try weights without code edits. Hit rate and filename rules are tested in `PhotoBench`.
    - Reference photos are named `<productId>.jpg`, downloaded from `squareImageUrl`. Query photos are new phone photos named `<anything>_<productId>.jpg`.
    - It runs lift, OCR, vector and `rank`, then prints top-1 and top-5 hit rates for text only, image only, and both.
    - Run it on about 30 real "sin código" products, with old Square photos (background) and newer app photos (lifted) reported separately.

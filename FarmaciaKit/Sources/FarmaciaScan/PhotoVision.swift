@@ -47,3 +47,18 @@ public enum FeaturePrinter {
         return print.data.withUnsafeBytes { Array($0.bindMemory(to: Float.self)) }
     }
 }
+
+/// The text on a photographed box, for `PhotoSearch.textScore`. The same OCR settings
+/// as the app's ProductPhotoReader (accurate, Spanish first).
+public enum PhotoText {
+    /// Recognized lines, top to bottom; empty when Vision reads nothing or fails.
+    /// Synchronous: call it off the main actor.
+    public static func lines(_ image: CGImage) -> [String] {
+        let request = VNRecognizeTextRequest()
+        request.recognitionLevel = .accurate
+        request.recognitionLanguages = ["es-MX", "en-US"]
+        request.usesLanguageCorrection = true
+        guard (try? VNImageRequestHandler(cgImage: image, orientation: .up).perform([request])) != nil else { return [] }
+        return (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }
+    }
+}

@@ -9,6 +9,7 @@ import ImageIO
 
 let usage = """
 usage: swift run scan-bench <folder> [--csv | --list]
+       swift run scan-bench --photo-search <refs> <queries> [--weights text,image,floor]
 
 Photos (jpg, jpeg, png, heic) are named with the expected code LAST, after an
 underscore: shiny-curved_4006381333931.jpg. Use _none for a photo with no code
@@ -18,6 +19,10 @@ to check by eye; no read rate, since there's no expected code.
 """
 
 let args = CommandLine.arguments.dropFirst()
+if args.first == "--photo-search" {
+    photoSearchBench(Array(args.dropFirst()))
+    exit(0)
+}
 guard let folder = args.first(where: { !$0.hasPrefix("-") }) else {
     print(usage)
     exit(2)
