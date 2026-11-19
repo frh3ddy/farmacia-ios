@@ -72,7 +72,7 @@ The full "sin código" grid is always the fallback: a photo that reads no text a
    - given orthogonal vectors, should be 0
    - given different lengths (vectors from different Vision revisions), should be nil
 
-4. **`PhotoSearch.rank(_ candidates:, lines:, photo:) -> [Candidate]`**: blends the two scores with fixed weights (text 0.6, image 0.4). `Candidate` is `{id, name, vector?}`, and rank computes both scores itself, so the app only passes data. A negative image similarity counts as 0, and equal scores fall back to name order. `ponytail: fixed weights; tune from step 8's bench numbers if top-5 is low.`
+4. **`PhotoSearch.rank(_ candidates:, lines:, photo:) -> [Candidate]`**: blends the two scores with fixed weights (text 0.6, image 0.4). Image similarity is first rescaled above an "unrelated" floor of 0.5 (`likeness`), because real feature prints of unrelated products still score 0.2–0.58, which would otherwise give any product with a photo a head start (dev-f8 review of 346f824). `Candidate` is `{id, name, vector?}`, and rank computes both scores itself, so the app only passes data. A negative image similarity counts as 0, and equal scores fall back to name order. `ponytail: fixed weights; tune from step 8's bench numbers if top-5 is low.`
    - given no text and no image scores, should return every candidate in name order (the grid fallback, never empty) *(first failing test)*
    - given "500 mg" on the box, the 500 mg product should beat a 750 mg product with a higher image score
    - given a product with no reference photo, it should still rank first on a strong text match
