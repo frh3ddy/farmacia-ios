@@ -8,11 +8,13 @@ import ImageIO
 // at or above ScanSettings' minimum confidence counts as the accept.
 
 let usage = """
-usage: swift run scan-bench <folder> [--csv]
+usage: swift run scan-bench <folder> [--csv | --list]
 
 Photos (jpg, jpeg, png, heic) are named with the expected code LAST, after an
 underscore: shiny-curved_4006381333931.jpg. Use _none for a photo with no code
 (any read off it is a misread). --csv prints one row per photo instead of the summary.
+--list ignores filenames (IMG_5756.HEIC is fine) and just prints what each photo reads,
+to check by eye; no read rate, since there's no expected code.
 """
 
 let args = CommandLine.arguments.dropFirst()
@@ -21,6 +23,7 @@ guard let folder = args.first(where: { !$0.hasPrefix("-") }) else {
     exit(2)
 }
 let asCSV = args.contains("--csv")
+let asList = args.contains("--list")
 
 let settings = ScanSettings()
 let detector = VisionBarcodeDetector(symbologies: settings.symbologies)
@@ -40,6 +43,7 @@ _ = try? detector.detect(in: CGContext(data: nil, width: 8, height: 8, bitsPerCo
                                        space: CGColorSpaceCreateDeviceGray(), bitmapInfo: 0)!.makeImage()!, roi: wholeImage)
 
 var results: [BenchReport.Result] = []
+var listed = (read: 0, total: 0)
 if asCSV { print("file,expected,read,ms") }
 for url in files {
     guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
@@ -55,6 +59,19 @@ for url in files {
         .sorted { $0.confidence > $1.confidence }
         .lazy.compactMap { try? BarcodeRead.validated(symbology: $0.symbology, payload: $0.payload, enabled: settings.symbologies).get() }
         .first
+    if asList {
+        // What a scanner would accept, else the best raw sighting (why it didn't count).
+        let raw = reads.max { $0.confidence < $1.confidence }
+        let detail = raw.map { "\($0.symbology.rawValue) \(String(format: "%.2f", $0.confidence))" } ?? ""
+        listed.total += 1
+        if let read {
+            listed.read += 1
+            print("✔ \(url.lastPathComponent): \(read)  (\(detail))")
+        } else {
+            print("✘ \(url.lastPathComponent): nothing\(raw.map { "  (saw \($0.payload), \(detail), not accepted)" } ?? "")")
+        }
+        continue
+    }
     let expected = BenchReport.expectedCode(fromFilename: url.lastPathComponent)
     results.append(.init(expected: expected, read: read, ms: ms))
     if asCSV {
@@ -64,7 +81,9 @@ for url in files {
     }
 }
 
-if !asCSV {
+if asList {
+    print("\nread \(listed.read) of \(listed.total) photos")
+} else if !asCSV {
     let r = BenchReport(results)
     print("""
 

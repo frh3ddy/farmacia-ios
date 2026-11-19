@@ -248,7 +248,13 @@ benchmark (`tasks/barcode-scanner-epic.md`). The new scanner uses:
   cd FarmaciaKit && swift run scan-bench ~/scanner-photos --csv  # one row per photo
   ```
   Put the expected code last in each filename, after an underscore
-  (`shiny-curved_4006381333931.jpg`). Use `_none` for a photo with no code.
+  (`shiny-curved_4006381333931.jpg`, or just `_4006381333931.jpg`). Use `_none` for a
+  photo with no code. Don't score iPhone names as they are: `IMG_5756.HEIC` would
+  expect the code `5756`. For those, `--list` ignores the names and prints what each
+  photo reads (and what was seen but not accepted) to check by eye:
+  ```bash
+  cd FarmaciaKit && swift run scan-bench ~/scanner-photos --list
+  ```
 - **On a device** (Debug build, local API): open Ajustes › Escáner (DEBUG). There you can
   switch between the old and new scanners, change the lens (wide / dual / triple for
   macro), the resolution (1080p / 4K), the number of matching reads, the wait after a

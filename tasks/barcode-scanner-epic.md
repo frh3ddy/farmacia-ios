@@ -261,7 +261,23 @@ best confidence); `ScanMetrics` code/msToRead optional + `msSinceOpen`,
 legacy `onDisappear` without a result); `BenchPlan` (standard 4 modes, `target` openings
 each, `.next`/`.finished`) with the alert, the scanner badge and the debug section;
 metrics + plan saved in UserDefaults (DEBUG). Simulator-checked: 5 cancels finished
-the legacy mode and switched to wide 1080p with the alert.
+the legacy mode and switched to wide 1080p with the alert. (56d3f5e)
+
+**`scan-bench --list` (✅):** prints what each photo reads (and what was seen but not
+accepted), ignoring filenames, for iPhone-named photos (`IMG_5756.HEIC` would otherwise
+be scored as code `5756`).
+
+**No-read photos (2026-11-19, `~/barcdoes/no reads`):** 0 of 5 read from the stills.
+All have valid check digits, and 3 did read live in the first run (triple 4K, 1.8–28 s).
+- `6928928377421` (clip in a crinkled bag), `7702018880409` (Gillette card): the photos
+  are out of focus; retake them focused before using them as decoder fixtures.
+- `8888021206074` (Energizer): torn card, the bottom of the bars and the digits missing.
+  Stage 2 ZXing candidate; ⚠ damaged-code recovery sits near 11893764, so legal review first.
+- `7503003406730` (bandage): curved roll, shiny wrap, small vertical bars → preprocess/ZXing.
+- `7891317048815` (Melox): a glare streak across the bars → exposure bias. **Near-misread:**
+  with every symbology on, Vision decoded it as `2056708016841` (valid check digit) at
+  0.61, above the 0.6 cutoff. Only multi-frame voting stops that, so never set
+  `votesRequired` to 1, and keep this photo as a misread regression fixture.
 
 ---
 
