@@ -198,7 +198,7 @@ struct ProductsView: View {
                     }
                 }
             }
-            .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Buscar productos...")
+            .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Nombre, SKU o últimos dígitos")
             .onChange(of: sortOption) { _, newSort in
                 viewModel.setSort(newSort)
             }
