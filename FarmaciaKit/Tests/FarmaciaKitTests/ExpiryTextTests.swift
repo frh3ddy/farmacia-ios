@@ -71,6 +71,12 @@ extension ExpiryTextTests {
         #expect(ExpiryText.read(lines: [line], today: today) == MonthYear(year: year, month: month))
     }
 
+    @Test("given a real word one letter from a month (review dev-f8), should read nothing: only OCR-confusable letters count",
+          arguments: ["1 AL DIA 30 TABLETAS", "PAR 27", "NOS 27", "ABS 27", "ONE 28"])
+    func wordsAreNotMonths(line: String) {
+        #expect(ExpiryText.read(lines: [line], today: today) == nil)
+    }
+
     @Test("given a misread month that's one character from two months, should read nothing")
     func ambiguousMonth() {
         #expect(ExpiryText.read(lines: ["JUI 27"], today: today) == nil)

@@ -125,7 +125,8 @@ public enum ExpiryText {
 
     /// Dot-matrix and embossed months read with one wrong character ("KAY 27", "IUL 28"): a
     /// 3-character word before a 2-digit year becomes the one month name a single substitution
-    /// away. Two months that close ("JUI": JUL, JUN) leave it unread.
+    /// away, only for a letter OCR actually confuses (`confusable`), so words stay words
+    /// ("DIA 30" isn't DIC, "PAR 27" isn't MAR). Two months that close ("JUI": JUL, JUN) leave it unread.
     private static func fixingMonthMisreads(_ line: String) -> String {
         var line = line
         for m in monthLike.matches(in: line, range: NSRange(line.startIndex..., in: line)).reversed() {
@@ -136,12 +137,20 @@ public enum ExpiryText {
             guard monthNumber(text) == nil, firstMatch(madeKeyword, in: text) == nil else { continue }
             let word = Array(text)
             let close = (months + englishMonths.keys).filter { name in
-                zip(word, name).filter { $0 != $1 }.count == 1
+                let diffs = zip(word, name).filter { $0 != $1 }
+                return diffs.count == 1 && confusable[diffs[0].1, default: []].contains(diffs[0].0)
             }
             if close.count == 1 { line.replaceSubrange(range, with: close[0]) }
         }
         return line
     }
+
+    /// A month's letter → what OCR read it as on dot-matrix and embossed labels (photos IMG_5794,
+    /// 5797: MAY as KAY/HAY/M4Y, JUL as IUL). Add pairs only from a seen misread.
+    private static let confusable: [Character: Set<Character>] = [
+        "M": ["K", "H", "N"], "N": ["M"], "A": ["4"], "J": ["I", "1", "L"],
+        "O": ["0"], "S": ["5"], "B": ["8"],
+    ]
 
     /// A 3-character word with at least two letters, followed by a spaced 2-digit year.
     private static let monthLike = regex(#"(?<![A-Z0-9])(?=[A-Z0-9]*[A-Z][A-Z0-9]*[A-Z])[A-Z0-9]{3}(?![A-Z0-9])(?=\s+\d{2}(?!\d))"#)

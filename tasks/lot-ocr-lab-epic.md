@@ -1,6 +1,6 @@
 # Epic: faster, surer lot and expiry reading (lot OCR lab)
 
-**Status:** steps 1–5 (logic) ✅ uncommitted, 975 tests pass; both reviews applied. Next: step 6 (lab reader on the iPhone). Branch `feature/lot-ocr-lab`.
+**Status:** steps 1–5 (logic) ✅ 23f1453 + the confusable-letters fix (dev-f8's review), 976 tests pass. Next: step 6 (lab reader on the iPhone). Branch `feature/lot-ocr-lab`.
 
 ## Why
 
@@ -34,6 +34,8 @@ IMG_5793–5797, 2026-11-19):
    2-digit year when exactly one month name is one substitution away.
    - First test: *given "KAY 27", "HAY 27", "M4Y 27" or "IUL 28", should read May 2027 / July 2028*.
    - *Given "JUI 27" (JUL or JUN), should read nothing.*
+   - Only OCR-confusable letters count (review dev-f8): M↔K/H/N, A↔4, J↔I/1/L, O↔0, S↔5, B↔8.
+     *Given "1 AL DIA 30 TABLETAS", "PAR 27", "NOS 27", "ABS 27" or "ONE 28", should read nothing.*
 2. **The new photos as fixtures** (`LotScanPhotoTests`): IMG_5794's lines
    `["Lote:", "Caducidad:", …, "513302288", "HAY 27", "$ 161, 25"]` → lot `513302288`, May 2027;
    IMG_5797's `["LOTE: D26U908", "CAD:", "IUL 28", "PRECIO:$ 52.63"]` → D26U908, July 2028.
