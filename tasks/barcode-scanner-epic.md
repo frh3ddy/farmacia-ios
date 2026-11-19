@@ -16,6 +16,8 @@ device, zoom, focus range, region of interest, validation or multi-frame confirm
 - **QR off now**, in its own small fix (step 0), before the rebuild.
 - **Symbologies:** EAN-13, EAN-8, UPC-E, Code 128 only. Code 39, Code 93 and ITF-14 are
   dropped. They stay configurable in `ScanSettings.symbologies` so they can come back.
+  **Revised 2026-11-19:** Code 39 is back on by default (the user confirmed). Store labels
+  like `124111SP` are Code 39 and only the old scanner read them (56d3f5e).
 - **Debug/benchmark screen:** DEBUG builds only, under Ajustes. Device benchmarks use a
   Debug build pointed at the local API (never prod).
 - **Simple mode = the old `CodeScanner`**, behind a DEBUG toggle, kept as the benchmark
