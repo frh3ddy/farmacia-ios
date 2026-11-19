@@ -1,6 +1,6 @@
 # Buscar por foto Epic
 
-**Status**: 🚧 IN PROGRESS. Steps 1–2 ✅ (merged 7a94de3, 8551bca)
+**Status**: 🚧 IN PROGRESS. Steps 1–4 ✅ (merged 7a94de3, 8551bca, 4fd1428)
 **Branch**: `feature/photo-search`. Steps 1–12 are farmacia-ios only. Step 14 adds one API endpoint (farmacia-ops).
 **Photos are never changed.** Reference photos are downloaded, background-removed and turned into vectors in memory only; nothing is uploaded and the Square images stay as they are. The search photo isn't saved or uploaded either.
 **Goal**: Find a product that has no barcode by taking its photo. The result is a short ranked list to tap, not one guessed answer.
@@ -67,19 +67,19 @@ The full "sin código" grid is always the fallback: a photo that reads no text a
    - given OCR with "500 mg" and products "Paracetamol 500 mg" / "Paracetamol 750 mg", should score the 500 mg one higher (read with `Presentation.read`)
    - given only noise lines (lot, date, registration), should be 0. Reuse `LabelName`'s noise rules rather than a new list.
 
-3. **`FeatureVector.similarity(_:_:) -> Double?`**: cosine similarity over `[Float]`.
+3. ✅ **`FeatureVector.similarity(_:_:) -> Double?`**: cosine similarity over `[Float]`.
    - given two identical vectors, should be 1 *(first failing test)*
    - given orthogonal vectors, should be 0
    - given different lengths (vectors from different Vision revisions), should be nil
 
-4. **`PhotoSearch.rank(_ candidates:, lines:, photo:) -> [Candidate]`**: blends the two scores with fixed weights (text 0.6, image 0.4). Image similarity is first rescaled above an "unrelated" floor of 0.5 (`likeness`), because real feature prints of unrelated products still score 0.2–0.58, which would otherwise give any product with a photo a head start (dev-f8 review of 346f824). `Candidate` is `{id, name, vector?}`, and rank computes both scores itself, so the app only passes data. A negative image similarity counts as 0, and equal scores fall back to name order. `ponytail: fixed weights; tune from step 8's bench numbers if top-5 is low.`
+4. ✅ **`PhotoSearch.rank(_ candidates:, lines:, photo:) -> [Candidate]`**: blends the two scores with fixed weights (text 0.6, image 0.4). Image similarity is first rescaled above an "unrelated" floor of 0.5 (`likeness`), because real feature prints of unrelated products still score 0.2–0.58, which would otherwise give any product with a photo a head start (dev-f8 review of 346f824). `Candidate` is `{id, name, vector?}`, and rank computes both scores itself, so the app only passes data. A negative image similarity counts as 0, and equal scores fall back to name order. `ponytail: fixed weights; tune from step 8's bench numbers if top-5 is low.`
    - given no text and no image scores, should return every candidate in name order (the grid fallback, never empty) *(first failing test)*
    - given "500 mg" on the box, the 500 mg product should beat a 750 mg product with a higher image score
    - given a product with no reference photo, it should still rank first on a strong text match
    - given equal text scores, the higher image score should come first
    - given a blue and a pink variant with the photo closest to blue, blue should be first and pink still in the top 5
 
-5. **`FeatureIndex` (Codable value plus rules)**: entries keyed by `productId`, each storing its `imageUrl`, the Vision `revision` and the vector.
+5. **`FeatureIndex` (Codable value plus rules)**: entries keyed by `productId`, each storing its `imageUrl` and vector, with one Vision `revision` for the whole index. `refreshed(for: [Ref], revision:) -> (index, queue)` keeps the valid entries and lists what to index next; `insert`, `vector(for:)`. Step 8's bench set must include IMG_5770 vs 5771, the hardest unrelated pair found so far at cos 0.58.
    - given an entry whose `imageUrl` differs from the product's current `squareImageUrl`, should need reindexing *(first failing test)*
    - given a stored revision different from the current one, every entry should be stale
    - given a product no longer "sin código" (a barcode was added), its entry should be dropped
