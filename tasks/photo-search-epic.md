@@ -1,6 +1,6 @@
 # Buscar por foto Epic
 
-**Status**: 📝 PLANNED (2026-11-19)
+**Status**: 🚧 IN PROGRESS. Step 1 ✅ (734edf9, merged 7a94de3)
 **Branch**: `feature/photo-search`. Steps 1–12 are farmacia-ios only. Step 14 adds one API endpoint (farmacia-ops).
 **Photos are never changed.** Reference photos are downloaded, background-removed and turned into vectors in memory only; nothing is uploaded and the Square images stay as they are. The search photo isn't saved or uploaded either.
 **Goal**: Find a product that has no barcode by taking its photo. The result is a short ranked list to tap, not one guessed answer.
@@ -51,7 +51,7 @@ The full "sin código" grid is always the fallback: a photo that reads no text a
 
 ### Logic: FarmaciaKit (Swift Testing, `swift test`)
 
-1. **`PhotoSearch.isSinCodigo(sku:gtin:tracksInventory:)`**
+1. ✅ **`PhotoSearch.isSinCodigo(sku:gtin:tracksInventory:)`** (734edf9, merged 7a94de3)
    - given an empty `gtin` and SKU "PARA-500", should be true *(first failing test)*
    - given SKU "7501234567890" (EAN-13 as SKU), should be false
    - given a `gtin`, should be false
@@ -59,7 +59,8 @@ The full "sin código" grid is always the fallback: a photo that reads no text a
    - given `tracksInventory == false`, should be false
    - given a nil SKU and nil `gtin`, should be true
 
-2. **`PhotoSearch.textScore(lines:name:presentation:)`**: case- and accent-insensitive word overlap. Reuse the `folding(options: [.caseInsensitive, .diacriticInsensitive])` from `LotNumber`, and lift it into a shared helper as it's touched.
+2. **`PhotoSearch.textScore(lines:name:)`**: the share of the name's words found on the box, with case and accents ignored. "500mg" splits into "500" and "mg". Words of 5+ letters survive one OCR slip; numbers must match exactly.
+   - *As built:* there's no `presentation:` parameter. The strength's number is a name word, so "500" vs "750" already ranks correctly. `LabelName`'s noise rules weren't needed: the score counts the name's words, so lot/date lines can only add a coincidental match. The folding stays inline, a one-liner like `LotNumber`'s, rather than becoming a shared helper.
    - given OCR "PARACETAMOL" and name "Paracetamol", should score > 0 *(first failing test)*
    - given OCR "Jabón Neutro" and name "jabon neutro", should be a full match
    - given no lines, should be 0
