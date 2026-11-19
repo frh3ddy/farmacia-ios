@@ -324,8 +324,10 @@ scans, and 0.8–1 s faster per product than the old scanner.
   (manual entry) is covered by searching the last 4+ barcode digits in Productos (ops
   f36e86d), which also handles the box nothing reads (`7503005950017`). Reopen a step
   when field misses show it's needed.
-- Not checked on the phone yet: the 0.7 cutoff on real boxes, the torch button, and the
-  "Sin lectura" row on a closed sheet.
+- Torch checked on the iPhone 13 Pro (2026-11-19, user): it works. Release build
+  installed on the 13 Pro and the 15 Pro from 67d879c.
+- Not checked on the phone yet: the 0.7 cutoff on real boxes and the "Sin lectura" row
+  on a closed sheet (Debug only).
 
 ---
 
