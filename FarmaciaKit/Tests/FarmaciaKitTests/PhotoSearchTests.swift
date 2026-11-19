@@ -108,3 +108,118 @@ struct PhotoSearchTextScoreTests {
         #expect(PhotoSearch.textScore(lines: ["NEUTRO"], name: "Jabón neutro") == 0.5)
     }
 }
+
+struct FeatureVectorTests {
+    @Test("given two identical vectors, should be 1")
+    func identical() {
+        #expect(FeatureVector.similarity([0.6, 0.8], [0.6, 0.8]) == 1)
+    }
+
+    @Test("given orthogonal vectors, should be 0")
+    func orthogonal() {
+        #expect(FeatureVector.similarity([1, 0], [0, 1]) == 0)
+    }
+
+    @Test("given the same direction at another length, should be 1 (only direction counts)")
+    func scaled() throws {
+        let s = try #require(FeatureVector.similarity([3, 4], [0.6, 0.8]))
+        #expect(abs(s - 1) < 1e-9)
+    }
+
+    @Test("given different lengths (another Vision revision), should be nil")
+    func lengths() {
+        #expect(FeatureVector.similarity([1, 0], [1, 0, 0]) == nil)
+    }
+
+    @Test("given an all-zero vector, should be nil, not NaN")
+    func zero() {
+        #expect(FeatureVector.similarity([0, 0], [1, 0]) == nil)
+    }
+
+    @Test("given empty vectors, should be nil")
+    func empty() {
+        #expect(FeatureVector.similarity([], []) == nil)
+    }
+}
+
+struct PhotoSearchRankTests {
+    typealias C = PhotoSearch.Candidate
+
+    /// A unit vector whose cosine with `photo` ([1, 0]) is `cos`. Real feature prints
+    /// (Vision revision 2, measured on the user's photos): the same box ≈ 0.8,
+    /// unrelated products 0.2–0.58, mostly 0.3–0.45. Never 0.
+    static func look(_ cos: Float) -> [Float] { [cos, (1 - cos * cos).squareRoot()] }
+    static let photo: [Float] = [1, 0]
+
+    @Test("given no text and no photo vector, should return every candidate in name order")
+    func fallback() {
+        let ranked = PhotoSearch.rank([C(id: "b", name: "Venda"), C(id: "a", name: "Algodón"), C(id: "c", name: "jabón")],
+                                      lines: [], photo: nil)
+        #expect(ranked.map(\.id) == ["a", "c", "b"])
+    }
+
+    @Test("given one name word read on a product with no photo, an unrelated-looking product (cos 0.45) should not outrank it")
+    func unrelatedLookIsNotAHeadStart() {
+        let ranked = PhotoSearch.rank([C(id: "unrelated", name: "Venda elástica", vector: Self.look(0.45)),
+                                       C(id: "read", name: "Jabón neutro líquido 500 ml", vector: nil)],
+                                      lines: ["NEUTRO"], photo: Self.photo)
+        #expect(ranked.first?.id == "read")
+    }
+
+    @Test("given an unrelated look (cos 0.35) and no photo at all, should tie and fall back to name order")
+    func unrelatedLookAddsNothing() {
+        let ranked = PhotoSearch.rank([C(id: "unrelated", name: "Venda", vector: Self.look(0.35)),
+                                       C(id: "none", name: "Algodón", vector: nil)],
+                                      lines: [], photo: Self.photo)
+        #expect(ranked.map(\.id) == ["none", "unrelated"])
+    }
+
+    @Test("given 500 mg on the box, the 500 mg product should beat a 750 mg one that looks more alike")
+    func strengthBeatsLook() {
+        let ranked = PhotoSearch.rank([C(id: "750", name: "Paracetamol 750 mg", vector: Self.look(0.85)),
+                                       C(id: "500", name: "Paracetamol 500 mg", vector: Self.look(0.75))],
+                                      lines: ["PARACETAMOL 500 mg"], photo: Self.photo)
+        #expect(ranked.first?.id == "500")
+    }
+
+    @Test("given a strong text match on a product with no reference photo, it should beat the same-looking box")
+    func textWithoutPhoto() {
+        let ranked = PhotoSearch.rank([C(id: "look", name: "Venda elástica", vector: Self.look(0.8)),
+                                       C(id: "text", name: "Jabón neutro", vector: nil)],
+                                      lines: ["JABÓN NEUTRO"], photo: Self.photo)
+        #expect(ranked.first?.id == "text")
+    }
+
+    @Test("given no text, the same box (cos 0.8) should come before an unrelated one (cos 0.35)")
+    func lookBreaksTie() {
+        let ranked = PhotoSearch.rank([C(id: "far", name: "Chupón", vector: Self.look(0.35)),
+                                       C(id: "near", name: "Mordedera", vector: Self.look(0.8))],
+                                      lines: [], photo: Self.photo)
+        #expect(ranked.map(\.id) == ["near", "far"])
+    }
+
+    @Test("given a blue and a pink variant and a photo closest to blue, blue first and pink right behind")
+    func colorVariants() {
+        let ranked = PhotoSearch.rank([C(id: "other", name: "Algodón", vector: Self.look(0.35)),
+                                       C(id: "pink", name: "Chupón rosa", vector: Self.look(0.75)),
+                                       C(id: "blue", name: "Chupón azul", vector: Self.look(0.85))],
+                                      lines: [], photo: Self.photo)
+        #expect(ranked.map(\.id) == ["blue", "pink", "other"])
+    }
+
+    @Test("given a reference vector from another Vision revision (other length), should rank on text only, not crash")
+    func otherRevision() {
+        let ranked = PhotoSearch.rank([C(id: "old", name: "Venda", vector: [1, 0, 0]),
+                                       C(id: "ok", name: "Algodón", vector: Self.look(0.8))],
+                                      lines: [], photo: Self.photo)
+        #expect(ranked.map(\.id) == ["ok", "old"])
+    }
+
+    @Test("given an opposite-looking product, its image score should not push it below one with no photo")
+    func negativeSimilarity() {
+        let ranked = PhotoSearch.rank([C(id: "opposite", name: "Algodón", vector: [-1, 0]),
+                                       C(id: "none", name: "Venda", vector: nil)],
+                                      lines: [], photo: Self.photo)
+        #expect(ranked.map(\.id) == ["opposite", "none"])
+    }
+}

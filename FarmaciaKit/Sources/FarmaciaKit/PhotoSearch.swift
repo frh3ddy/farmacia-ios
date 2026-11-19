@@ -69,3 +69,67 @@ extension PhotoSearch {
         return true
     }
 }
+
+/// An image feature print as plain numbers (Vision's `VNFeaturePrintObservation`
+/// stays in FarmaciaScan; the index caches these).
+public enum FeatureVector {
+    /// Cosine similarity, -1...1. Nil when the two can't be compared: different
+    /// lengths (another Vision revision), empty, or all zeros.
+    public static func similarity(_ a: [Float], _ b: [Float]) -> Double? {
+        guard a.count == b.count else { return nil }
+        var dot = 0.0, aa = 0.0, bb = 0.0
+        for (x, y) in zip(a, b) {
+            dot += Double(x) * Double(y)
+            aa += Double(x) * Double(x)
+            bb += Double(y) * Double(y)
+        }
+        guard aa > 0, bb > 0 else { return nil }
+        return dot / (aa * bb).squareRoot()
+    }
+}
+
+extension PhotoSearch {
+    public struct Candidate: Equatable, Sendable {
+        public let id: String
+        public let name: String
+        public let vector: [Float]?
+
+        public init(id: String, name: String, vector: [Float]? = nil) {
+            self.id = id
+            self.name = name
+            self.vector = vector
+        }
+    }
+
+    // ponytail: fixed weights; tune from scan-bench's photo-search numbers (epic step 8).
+    static let textWeight = 0.6
+    static let imageWeight = 0.4
+    /// Feature prints of unrelated products still score 0.2–0.58 (Vision revision 2,
+    /// measured on the user's photos; the same box ≈ 0.8). Similarity up to this
+    /// counts as no likeness at all, so a reference photo isn't a head start.
+    // ponytail: fixed floor; tune with the weights from scan-bench (epic step 8).
+    static let unrelatedFloor = 0.5
+
+    /// Similarity above the unrelated floor, rescaled to 0...1.
+    static func likeness(_ similarity: Double) -> Double {
+        max((similarity - unrelatedFloor) / (1 - unrelatedFloor), 0)
+    }
+
+    /// Best first. Every candidate is kept (the grid scrolls past the top matches);
+    /// equal scores fall back to name order, so no text and no photo is a plain list.
+    public static func rank(_ candidates: [Candidate], lines: [String], photo: [Float]?) -> [Candidate] {
+        candidates
+            .map { candidate in
+                let text = textScore(lines: lines, name: candidate.name)
+                // Rescaled so unrelated (or opposite) looks add 0, the same as no photo.
+                let similarity = photo.flatMap { p in candidate.vector.flatMap { FeatureVector.similarity(p, $0) } }
+                let image = similarity.map(likeness) ?? 0
+                return (candidate, textWeight * text + imageWeight * image)
+            }
+            .sorted { a, b in
+                a.1 != b.1 ? a.1 > b.1
+                    : a.0.name.localizedStandardCompare(b.0.name) == .orderedAscending
+            }
+            .map(\.0)
+    }
+}
