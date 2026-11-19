@@ -1,4 +1,6 @@
 import CoreGraphics
+import CoreText
+import Foundation
 import FarmaciaKit
 import Testing
 @testable import FarmaciaScan
@@ -71,5 +73,29 @@ struct FeaturePrinterTests {
         let v = try #require(FeaturePrinter.vector(SyntheticPhoto.image(box: SyntheticPhoto.blue)))
         #expect(FeaturePrinter.revision == 2)
         #expect(v.count == 768)
+    }
+}
+
+struct PhotoTextTests {
+    static func label(_ text: String) -> CGImage {
+        let ctx = CGContext(data: nil, width: 800, height: 300, bitsPerComponent: 8, bytesPerRow: 0,
+                            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        ctx.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
+        ctx.fill(CGRect(x: 0, y: 0, width: 800, height: 300))
+        let font = CTFontCreateWithName("Helvetica-Bold" as CFString, 72, nil)
+        let string = NSAttributedString(string: text, attributes: [.init(kCTFontAttributeName as String): font])
+        ctx.textPosition = CGPoint(x: 40, y: 120)
+        CTLineDraw(CTLineCreateWithAttributedString(string), ctx)
+        return ctx.makeImage()!
+    }
+
+    @Test("given a label printed PARACETAMOL, should read it")
+    func reads() {
+        #expect(PhotoText.lines(Self.label("PARACETAMOL")).contains { $0.uppercased().contains("PARACETAMOL") })
+    }
+
+    @Test("given a blank image, should read nothing")
+    func blank() {
+        #expect(PhotoText.lines(SyntheticPhoto.image(box: nil)).isEmpty)
     }
 }

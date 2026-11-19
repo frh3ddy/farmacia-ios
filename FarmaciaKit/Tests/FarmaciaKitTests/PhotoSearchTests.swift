@@ -223,3 +223,66 @@ struct PhotoSearchRankTests {
         #expect(ranked.map(\.id) == ["opposite", "none"])
     }
 }
+
+struct PhotoSearchWeightsTests {
+    typealias C = PhotoSearch.Candidate
+
+    @Test("given weights with no image share, looks should not change the order")
+    func imageOff() {
+        let ranked = PhotoSearch.rank([C(id: "b", name: "Mordedera", vector: PhotoSearchRankTests.look(0.95)),
+                                       C(id: "a", name: "Chupón", vector: PhotoSearchRankTests.look(0.35))],
+                                      lines: [], photo: PhotoSearchRankTests.photo,
+                                      weights: .init(text: 1, image: 0, unrelatedFloor: 0.5))
+        #expect(ranked.map(\.id) == ["a", "b"])
+    }
+
+    @Test("given a lower floor, a 0.45 look should count")
+    func lowerFloor() {
+        let ranked = PhotoSearch.rank([C(id: "a", name: "Chupón", vector: nil),
+                                       C(id: "b", name: "Mordedera", vector: PhotoSearchRankTests.look(0.45))],
+                                      lines: [], photo: PhotoSearchRankTests.photo,
+                                      weights: .init(text: 0.6, image: 0.4, unrelatedFloor: 0.3))
+        #expect(ranked.map(\.id) == ["b", "a"])
+    }
+}
+
+struct PhotoBenchTests {
+    typealias R = PhotoBench.Result
+
+    @Test("given the expected product third, should miss top 1 and hit top 5")
+    func topK() {
+        let results = [R(expected: "c", ranked: ["a", "b", "c", "d"])]
+        #expect(PhotoBench.hitRate(results, top: 1) == 0)
+        #expect(PhotoBench.hitRate(results, top: 5) == 1)
+    }
+
+    @Test("given one hit in two queries, should be 0.5")
+    func rate() {
+        let results = [R(expected: "a", ranked: ["a", "b"]), R(expected: "z", ranked: ["a", "b"])]
+        #expect(PhotoBench.hitRate(results, top: 1) == 0.5)
+    }
+
+    @Test("given no queries, should be 0")
+    func empty() {
+        #expect(PhotoBench.hitRate([], top: 5) == 0)
+    }
+
+    @Test("given a reference filename, should use its name as the product", arguments: [
+        ("Jabón neutro.jpg", "Jabón neutro"), ("Chupón azul.HEIC", "Chupón azul"),
+    ])
+    func referenceName(file: String, name: String) {
+        #expect(PhotoBench.referenceName(fromFilename: file) == name)
+    }
+
+    @Test("given a query filename, should take the product after the last underscore", arguments: [
+        ("IMG_5770_Jabón neutro.HEIC", "Jabón neutro"), ("counter_Chupón azul.jpg", "Chupón azul"),
+    ])
+    func queryExpected(file: String, name: String?) {
+        #expect(PhotoBench.expected(fromFilename: file) == name)
+    }
+
+    @Test("given a query filename with no underscore, should be nil")
+    func noExpected() {
+        #expect(PhotoBench.expected(fromFilename: "IMG5770.HEIC") == nil)
+    }
+}
