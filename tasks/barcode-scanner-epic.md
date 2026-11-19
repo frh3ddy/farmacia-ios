@@ -277,7 +277,11 @@ All have valid check digits, and 3 did read live in the first run (triple 4K, 1.
 - `7891317048815` (Melox): a glare streak across the bars → exposure bias. **Near-misread:**
   with every symbology on, Vision decoded it as `2056708016841` (valid check digit) at
   0.61, above the 0.6 cutoff. Only multi-frame voting stops that, so never set
-  `votesRequired` to 1, and keep this photo as a misread regression fixture.
+  `votesRequired` to 1 (the 2–3 clamp in `ScanSettings.votesRequired` enforces it, so
+  don't remove the clamp), and keep this photo as a misread regression fixture.
+  Stage-2 decision for the user: if the device CSV's `top_confidence` shows good reads
+  near 1.0, raise `minConfidence` (e.g. 0.8) so a glare misread like this one can't
+  vote at all.
 
 ---
 
