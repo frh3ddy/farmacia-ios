@@ -8,10 +8,10 @@ struct ScanSettingsTests {
         #expect(ScanSettings().symbologies == [.ean13, .ean8, .upce, .code128, .code39])
     }
 
-    @Test("given defaults, should use the brief's starting thresholds")
+    @Test("given defaults, should use the brief's thresholds, with minConfidence tuned to 0.7 on device")
     func defaults() {
         let s = ScanSettings()
-        #expect(s.minConfidence == 0.6)
+        #expect(s.minConfidence == 0.7)
         #expect(s.votesRequired == 2)
         #expect(s.voteWindow == 10)
         #expect(s.cooldown == 1.5)

@@ -114,7 +114,7 @@ None of steps 1–16 uses the three flagged methods. `LEGAL_REVIEW.md` records w
 5. ✅ (uncommitted) **`ScanSettings`** (one struct for every threshold, with defaults from the brief).
    - *given defaults, should list exactly ean13/ean8/upce/code128*
    - *given `votesRequired` 5, should clamp to 3; given 1, should clamp to 2*
-   - Fields: `symbologies`, `minConfidence` 0.6, `votesRequired` 2, `voteWindow` 10,
+   - Fields: `symbologies`, `minConfidence` 0.6 (0.7 after the device bench), `votesRequired` 2, `voteWindow` 10,
      `cooldown` 1.5 s, `scanBox` (0.8 × 0.3), `targetCodeWidthMM` 35, `camera`
      (`.wide | .dualWide | .triple`), `preset` (`.hd1080 | .hd4K`), `fps` 30.
 
@@ -279,9 +279,26 @@ All have valid check digits, and 3 did read live in the first run (triple 4K, 1.
   0.61, above the 0.6 cutoff. Only multi-frame voting stops that, so never set
   `votesRequired` to 1 (the 2–3 clamp in `ScanSettings.votesRequired` enforces it, so
   don't remove the clamp), and keep this photo as a misread regression fixture.
-  Stage-2 decision for the user: if the device CSV's `top_confidence` shows good reads
-  near 1.0, raise `minConfidence` (e.g. 0.8) so a glare misread like this one can't
-  vote at all.
+  Decided: `minConfidence` 0.7 (see the bench below), so this misread can't vote at all.
+
+**Device bench (2026-11-19, iPhone 13 Pro, the same 20 products per mode, 0.6 cutoff):**
+0 misreads in every mode, and every product read in every mode.
+
+| Mode | Distinct read | Open → read (median) | Slowest | Lowest correct `top_confidence` |
+|---|---|---|---|---|
+| Legacy | 20/20 | 2.76 s | 6.7 s | – |
+| Wide 1080p | 19/19 ¹ | 1.93 s | 6.1 s | 0.83 |
+| Triple 1080p | 20/20 | 1.98 s | 6.0 s | 0.79 |
+| Wide 4K | 20/20 ² | 1.76 s | 6.5 s | 0.76 |
+
+From first sighting to accept takes a median of ~35 ms in every Vision mode, so most of the
+open → read time is aiming. ¹ One box was read twice (it was already in view when the
+scanner reopened), so one product was skipped. ² `7503003406600` failed once and was read
+last (6.5 s); that failed opening left no give-up row, though closing the sheet logged one
+elsewhere in the same run. Open: verify the give-up row on a closed sheet.
+- **`minConfidence` 0.6 → 0.7 (✅):** the weakest correct read was 0.76 and the glare misread
+  0.61. Test: *given the 0.61 misread in 2 frames before the right code at 0.76, should accept
+  only the right code* (red at 0.6).
 
 ---
 

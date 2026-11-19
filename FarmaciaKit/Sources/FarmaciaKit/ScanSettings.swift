@@ -18,8 +18,9 @@ public struct ScanSettings: Equatable, Sendable {
     }
 
     public var symbologies: Set<Symbology> = [.ean13, .ean8, .upce, .code128, .code39]
-    /// Vision observations below this confidence don't vote.
-    public var minConfidence: Float = 0.6
+    /// Vision observations below this confidence don't vote. 0.7 from the iPhone 13 Pro
+    /// bench (2026-11-19): weakest correct read 0.76, a glare misread 0.61.
+    public var minConfidence: Float = 0.7
     /// Frames the same code must appear in (2–3) before it's accepted.
     public var votesRequired: Int {
         get { votes }

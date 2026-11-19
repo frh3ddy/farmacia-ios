@@ -48,6 +48,17 @@ struct ResultAggregatorTests {
         #expect(feed(&agg, [[weak], [weak], [weak]], from: t0).allSatisfy { $0 == nil })
     }
 
+    @Test("given the Melox glare misread at 0.61 in 2 frames before the right code at 0.76, should accept only the right code")
+    func glareMisread() {
+        // Device data (2026-11-19): Vision read 2056708016841 (valid check digit) at 0.61 off
+        // glare on 7891317048815; the weakest correct read on the phone was 0.76. The glare
+        // code gets its 2 votes before the right code's second one arrives.
+        var agg = ResultAggregator(settings: ScanSettings())
+        let wrong = BarcodeCandidate(symbology: .ean13, payload: "2056708016841", confidence: 0.61)
+        let right = BarcodeCandidate(symbology: .ean13, payload: "7891317048815", confidence: 0.76)
+        #expect(feed(&agg, [[wrong], [wrong, right], [right]], from: t0) == [nil, nil, right.payload])
+    }
+
     @Test("given a wrong check digit, should not count it and should add one misread per read")
     func misread() {
         var agg = ResultAggregator(settings: ScanSettings())
