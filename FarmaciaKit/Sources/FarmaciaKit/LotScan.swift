@@ -12,6 +12,11 @@ public struct LotScan: Equatable, Sendable {
     public let lot: String?
     public let expiry: MonthYear?
 
+    public init(lot: String?, expiry: MonthYear?) {
+        self.lot = lot
+        self.expiry = expiry
+    }
+
     public init(lines: [String], barcodes: [String], today: MonthYear) {
         let code = barcodes.lazy.compactMap(GS1Code.init(payload:)).first
         let lines = lines.map(Self.joinSpacedCharacters)

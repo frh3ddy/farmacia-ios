@@ -62,3 +62,23 @@ extension ExpiryTextTests {
         #expect(ExpiryText.read(lines: ["Lote 03/2027"], today: today) == MonthYear(year: 2027, month: 3))
     }
 }
+
+/// Dot-matrix and embossed months read with one wrong character (photos IMG_5794, IMG_5797).
+extension ExpiryTextTests {
+    @Test("given a month with one misread character before a 2-digit year, should read the month",
+          arguments: [("KAY 27", 5, 2027), ("HAY 27", 5, 2027), ("M4Y 27", 5, 2027), ("IUL 28", 7, 2028)])
+    func oneCharacterMonth(line: String, month: Int, year: Int) {
+        #expect(ExpiryText.read(lines: [line], today: today) == MonthYear(year: year, month: month))
+    }
+
+    @Test("given a misread month that's one character from two months, should read nothing")
+    func ambiguousMonth() {
+        #expect(ExpiryText.read(lines: ["JUI 27"], today: today) == nil)
+    }
+
+    @Test("given FAB before a 2-digit year, should not read it as FEB")
+    func fabIsNotFeb() {
+        #expect(ExpiryText.read(lines: ["FAB 28"], today: today) == nil)
+        #expect(ExpiryText.read(lines: ["MAR 27 FAB 25"], today: today) == MonthYear(year: 2027, month: 3))
+    }
+}
