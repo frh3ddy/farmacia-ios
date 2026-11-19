@@ -2,9 +2,10 @@ import Testing
 @testable import FarmaciaKit
 
 struct ScanSettingsTests {
-    @Test("given defaults, should read only EAN-13, EAN-8, UPC-E and Code 128 (no QR, Code 39/93, ITF-14)")
+    @Test("given defaults, should read EAN-13, EAN-8, UPC-E, Code 128 and Code 39 (no QR, Code 93, ITF-14)")
     func defaultSymbologies() {
-        #expect(ScanSettings().symbologies == [.ean13, .ean8, .upce, .code128])
+        // Code 39: some store labels use it (124111SP lip balm); the old scanner read it.
+        #expect(ScanSettings().symbologies == [.ean13, .ean8, .upce, .code128, .code39])
     }
 
     @Test("given defaults, should use the brief's starting thresholds")

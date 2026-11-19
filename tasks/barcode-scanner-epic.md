@@ -240,6 +240,27 @@ None of steps 1–16 uses the three flagged methods. `LEGAL_REVIEW.md` records w
 - Docs: README Escanear section (how to run the bench and tune settings), and this epic
   marked ✅ with hashes.
 
+**First device run (2026-11-19, iPhone 13 Pro, 64 scans):** 0 misreads in every mode.
+Not usable for time or read rate: `ms_to_read` ran from the opening/previous accept (it
+included picking up the next box; one row was 166 s for 125 frames), and give-ups left
+no row. Photos of the misses, through raw Vision:
+- `124111SP` is **Code 39** (0.999), off in the new scanner → Code 39 back on by default.
+- `7503003406600` (small, blue bars): EAN-13 at 0.73 on the 12 MP photo; likely under
+  the 0.6 cutoff at 1080p. Tune `minConfidence` from the new `top_confidence` column.
+- `7500435138635` (crumpled bag): reads at 0.99 from the photo; device cause unknown.
+- `7503005950017` (red bars): unreadable by anything. The printed check digit is wrong
+  (`750300595001` → 9, label says 7), and red bars are invisible to red-light scanners.
+  Needs manual entry/search (stage 2 step 13).
+
+**Metrics fix (✅):** `ScanSettings` default + Code 39; `SightingClock`
+(time from first sighting, any confidence; restarts after `voteWindow` empty frames;
+best confidence); `ScanMetrics` code/msToRead optional + `msSinceOpen`,
+`topConfidence`, `outcome` column, Codable; give-up rows (camera stop with no accept,
+legacy `onDisappear` without a result); `BenchPlan` (standard 4 modes, `target` openings
+each, `.next`/`.finished`) with the alert, the scanner badge and the debug section;
+metrics + plan saved in UserDefaults (DEBUG). Simulator-checked: 5 cancels finished
+the legacy mode and switched to wide 1080p with the alert.
+
 ---
 
 ## Stage 2 (outline, re-plan after the benchmark)

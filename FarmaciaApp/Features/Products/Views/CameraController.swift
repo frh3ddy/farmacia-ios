@@ -26,6 +26,7 @@ final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDele
     private let onAccept: @MainActor @Sendable (String, ScanMetrics) -> Void
     private let onFailure: @MainActor @Sendable (Failure) -> Void
     private let onConfigured: @MainActor @Sendable (AVCaptureDevice) -> Void
+    private let onGiveUp: @MainActor @Sendable (ScanMetrics) -> Void
 
     private let sessionQueue = DispatchQueue(label: "scanner.session")
     private let frameQueue = DispatchQueue(label: "scanner.frames")
@@ -39,6 +40,8 @@ final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDele
     private var framesSinceAccept = 0
     private var misreadsAtAccept = 0
     private var countingFrom = Date()
+    private var clock: SightingClock
+    private var acceptedAny = false
 
     // sessionQueue only
     private var configured = false
@@ -49,13 +52,16 @@ final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDele
     init(settings: ScanSettings,
          onAccept: @escaping @MainActor @Sendable (String, ScanMetrics) -> Void,
          onFailure: @escaping @MainActor @Sendable (Failure) -> Void,
-         onConfigured: @escaping @MainActor @Sendable (AVCaptureDevice) -> Void) {
+         onConfigured: @escaping @MainActor @Sendable (AVCaptureDevice) -> Void,
+         onGiveUp: @escaping @MainActor @Sendable (ScanMetrics) -> Void) {
         self.settings = settings
         detector = VisionBarcodeDetector(symbologies: settings.symbologies)
         aggregator = ResultAggregator(settings: settings)
+        clock = SightingClock(gapFrames: settings.voteWindow)
         self.onAccept = onAccept
         self.onFailure = onFailure
         self.onConfigured = onConfigured
+        self.onGiveUp = onGiveUp
     }
 
     /// The scan box in Vision's coordinates (`ScanROI.visionRect`), from the main thread.
@@ -77,7 +83,8 @@ final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDele
     }
 
     /// Stops the camera for good: the output's delegate is cleared so this controller
-    /// (and its session) can be freed once the scanner closes.
+    /// (and its session) can be freed once the scanner closes. A camera that ran without
+    /// reading anything reports a give-up row (read rates need the misses).
     func stop() {
         sessionQueue.async {
             self.stopped = true
@@ -85,7 +92,19 @@ final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDele
             for case let output as AVCaptureVideoDataOutput in self.session.outputs {
                 output.setSampleBufferDelegate(nil, queue: nil)
             }
+            guard self.configured else { return }
+            self.processingQueue.async { self.reportGiveUp() }
         }
+    }
+
+    private func reportGiveUp() {
+        guard !acceptedAny else { return }
+        let now = Date()
+        let metrics = ScanMetrics(date: now, device: Self.deviceModel, detector: .vision, code: nil, msToRead: nil,
+                                  msSinceOpen: Int(now.timeIntervalSince(countingFrom) * 1000),
+                                  frames: framesSinceAccept, misreads: aggregator.misreads,
+                                  topConfidence: clock.topConfidence, settingsTag: settings.tag)
+        Task { @MainActor in onGiveUp(metrics) }
     }
 
     private func startSession() {
@@ -198,12 +217,15 @@ final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDele
         let reads = (try? detector.detect(in: buffer, roi: roi)) ?? []
         framesSinceAccept += 1
         let now = Date()
+        clock.frame(reads, now: now)
         guard let code = aggregator.ingest(reads, now: now) else { return }
 
         let metrics = ScanMetrics(date: now, device: Self.deviceModel, detector: .vision, code: code,
-                                  msToRead: Int(now.timeIntervalSince(countingFrom) * 1000),
+                                  msToRead: clock.since.map { Int(now.timeIntervalSince($0) * 1000) },
+                                  msSinceOpen: Int(now.timeIntervalSince(countingFrom) * 1000),
                                   frames: framesSinceAccept, misreads: aggregator.misreads - misreadsAtAccept,
-                                  settingsTag: settings.tag)
+                                  topConfidence: clock.topConfidence, settingsTag: settings.tag)
+        acceptedAny = true
         framesSinceAccept = 0
         misreadsAtAccept = aggregator.misreads
         countingFrom = now

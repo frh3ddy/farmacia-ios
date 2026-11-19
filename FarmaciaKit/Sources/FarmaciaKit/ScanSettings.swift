@@ -6,18 +6,18 @@ import Foundation
 // against the benchmark (README › Escáner); the DEBUG scanner screen edits them.
 
 public struct ScanSettings: Equatable, Sendable {
-    public enum Camera: String, CaseIterable, Sendable {
+    public enum Camera: String, CaseIterable, Sendable, Codable {
         /// The plain back wide camera.
         case wide
         /// Virtual devices that switch to the ultra-wide (macro) lens up close on Pro models.
         case dualWide, triple
     }
 
-    public enum Preset: String, CaseIterable, Sendable {
+    public enum Preset: String, CaseIterable, Sendable, Codable {
         case hd1080, hd4K
     }
 
-    public var symbologies: Set<Symbology> = [.ean13, .ean8, .upce, .code128]
+    public var symbologies: Set<Symbology> = [.ean13, .ean8, .upce, .code128, .code39]
     /// Vision observations below this confidence don't vote.
     public var minConfidence: Float = 0.6
     /// Frames the same code must appear in (2–3) before it's accepted.

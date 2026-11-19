@@ -17,10 +17,26 @@ struct ProductBarcodeScanner: View {
     let completion: (Result<String, Error>) -> Void
 
     @State private var openedAt = Date()
+    // Fixed when the scanner opens: a bench-plan mode switch after this scan must not
+    // swap the scanner under the lookup that follows it.
+    @State private var useLegacy = ScannerLab.shared.useLegacy
+    @State private var settings = ScannerLab.shared.settings
+    @State private var finished = false
     private var lab: ScannerLab { .shared }
 
     var body: some View {
-        if lab.useLegacy {
+        scanner
+            .overlay(alignment: .top) { benchBadge }
+            .alert(lab.announcement ?? "", isPresented: Binding(
+                get: { lab.announcement != nil },
+                set: { if !$0 { lab.announcement = nil } }
+            )) {
+                Button("OK") {}
+            }
+    }
+
+    @ViewBuilder private var scanner: some View {
+        if useLegacy {
             CodeScannerView(
                 codeTypes: [.ean13, .ean8, .upce, .code128, .code39, .code93, .itf14],
                 scanMode: .once,
@@ -30,40 +46,133 @@ struct ProductBarcodeScanner: View {
             ) { result in
                 switch result {
                 case .success(let scan):
-                    lab.log(ScanMetrics(date: .now, device: CameraController.deviceModel, detector: .legacy,
-                                        code: scan.string, msToRead: Int(Date.now.timeIntervalSince(openedAt) * 1000),
-                                        frames: 0, misreads: 0, settingsTag: "legacy"))
+                    finished = true
+                    lab.log(legacyMetrics(code: scan.string))
                     completion(.success(scan.string))
                 case .failure(let error):
                     completion(.failure(error))
                 }
             }
+            .onDisappear {
+                // Closed without reading: a give-up row, so read rates count the misses.
+                if !finished { lab.log(legacyMetrics(code: nil)) }
+            }
         } else {
-            BarcodeScannerView(settings: lab.settings, simulatedData: simulatedData) { result in
+            BarcodeScannerView(settings: settings, simulatedData: simulatedData) { result in
                 if let metrics = result.metrics { lab.log(metrics) }
                 completion(result.code)
-            }
+            } onGiveUp: { lab.log($0) }
+        }
+    }
+
+    private func legacyMetrics(code: String?) -> ScanMetrics {
+        ScanMetrics(date: .now, device: CameraController.deviceModel, detector: .legacy, code: code, msToRead: nil,
+                    msSinceOpen: Int(Date.now.timeIntervalSince(openedAt) * 1000), frames: 0, misreads: 0,
+                    topConfidence: nil, settingsTag: "legacy")
+    }
+
+    /// Which bench-plan mode this is, so nobody loses track mid-test.
+    @ViewBuilder private var benchBadge: some View {
+        if let plan = lab.plan, let mode = plan.current {
+            Text("Prueba · \(mode.name) · \(plan.count)/\(plan.target)")
+                .font(.caption.bold())
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(.yellow, in: .capsule)
+                .foregroundStyle(.black)
+                .padding(.top, 8)
+                .allowsHitTesting(false)
         }
     }
 }
 
-/// The scanner's tunable settings and the metrics log. Settings live in memory; the
-/// DEBUG Escáner screen edits them.
-// ponytail: settings reset on relaunch; persist them if benchmarking spans launches.
+/// The scanner's tunable settings, the metrics log and (DEBUG) the bench plan. The
+/// DEBUG Escáner screen edits them; DEBUG builds keep metrics and the plan across
+/// launches so a benchmark can span them.
+// ponytail: hand-tuned settings outside a plan still reset on relaunch.
 @MainActor @Observable
 final class ScannerLab {
     static let shared = ScannerLab()
 
     var settings = ScanSettings()
+    /// Shown once by the next scanner on screen (bench plan mode changes).
+    var announcement: String?
+    private(set) var metrics: [ScanMetrics] = []
+    private(set) var plan: BenchPlan?
+
     #if DEBUG
     var useLegacy = false
+
+    private init() {
+        let defaults = UserDefaults.standard
+        metrics = defaults.data(forKey: Keys.metrics).flatMap { try? JSONDecoder().decode([ScanMetrics].self, from: $0) } ?? []
+        plan = defaults.data(forKey: Keys.plan).flatMap { try? JSONDecoder().decode(BenchPlan.self, from: $0) }
+        if let mode = plan?.current { apply(mode) }
+    }
     #else
     let useLegacy = true
+    private init() {}
     #endif
-    private(set) var metrics: [ScanMetrics] = []
 
-    func log(_ scan: ScanMetrics) { metrics.append(scan) }
-    func clearMetrics() { metrics.removeAll() }
+    func log(_ scan: ScanMetrics) {
+        metrics.append(scan)
+        #if DEBUG
+        if var plan {
+            let finishedMode = plan.current
+            let event = plan.record()
+            self.plan = plan
+            switch event {
+            case .next(let mode):
+                apply(mode)
+                announcement = "\(finishedMode?.name ?? "") listo (\(plan.target) escaneos). Ahora: \(mode.name)."
+            case .finished:
+                announcement = "Prueba completa. Exporta el CSV en Ajustes › Escáner (DEBUG)."
+            case nil:
+                break
+            }
+        }
+        save()
+        #endif
+    }
+
+    func clearMetrics() {
+        metrics.removeAll()
+        #if DEBUG
+        save()
+        #endif
+    }
+
+    #if DEBUG
+    /// Starts the standard plan: `target` openings per mode, switching by itself.
+    func startPlan(target: Int) {
+        let plan = BenchPlan(target: target)
+        self.plan = plan
+        if let mode = plan.current { apply(mode) }
+        save()
+    }
+
+    func stopPlan() {
+        plan = nil
+        save()
+    }
+
+    private func apply(_ mode: BenchPlan.Mode) {
+        useLegacy = mode.legacy
+        settings.camera = mode.camera
+        settings.preset = mode.preset
+    }
+
+    private enum Keys {
+        static let metrics = "scanner.lab.metrics"
+        static let plan = "scanner.lab.plan"
+    }
+
+    private func save() {
+        let defaults = UserDefaults.standard
+        defaults.set(try? JSONEncoder().encode(metrics), forKey: Keys.metrics)
+        defaults.set(plan.flatMap { try? JSONEncoder().encode($0) }, forKey: Keys.plan)
+    }
+    #endif
 }
 
 // MARK: - Vision camera scanner
@@ -77,6 +186,8 @@ struct BarcodeScannerView: View {
     let settings: ScanSettings
     var simulatedData = ""
     let completion: (Result) -> Void
+    /// The camera closed without reading anything (its give-up metrics row).
+    var onGiveUp: @MainActor (ScanMetrics) -> Void = { _ in }
 
     @State private var accepted = 0
 
@@ -104,6 +215,8 @@ struct BarcodeScannerView: View {
             completion(Result(code: .success(code), metrics: metrics))
         } onFailure: { failure in
             completion(Result(code: .failure(failure)))
+        } onGiveUp: { metrics in
+            onGiveUp(metrics)
         }
         .overlay { ScanBoxOverlay(width: settings.scanBoxWidth, height: settings.scanBoxHeight) }
         #endif
@@ -140,6 +253,7 @@ private struct CameraPreview: UIViewRepresentable {
     let settings: ScanSettings
     let onAccept: @MainActor (String, ScanMetrics) -> Void
     let onFailure: @MainActor (CameraController.Failure) -> Void
+    let onGiveUp: @MainActor (ScanMetrics) -> Void
 
     func makeUIView(context: Context) -> PreviewView {
         let view = PreviewView()
@@ -147,7 +261,9 @@ private struct CameraPreview: UIViewRepresentable {
             settings: settings,
             onAccept: { [weak coordinator = context.coordinator] code, metrics in coordinator?.onAccept(code, metrics) },
             onFailure: { [weak coordinator = context.coordinator] failure in coordinator?.onFailure(failure) },
-            onConfigured: { [weak view] device in view?.configured(device) }
+            onConfigured: { [weak view] device in view?.configured(device) },
+            // Strong on purpose: the give-up arrives after the view is dismantled.
+            onGiveUp: { [onGiveUp] metrics in onGiveUp(metrics) }
         )
         view.attach(camera, box: CGSize(width: settings.scanBoxWidth, height: settings.scanBoxHeight))
         camera.start()
