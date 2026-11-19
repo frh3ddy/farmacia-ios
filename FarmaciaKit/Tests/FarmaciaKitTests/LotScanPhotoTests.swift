@@ -151,4 +151,20 @@ struct LotScanPhotoTests {
         #expect(scan(["Atención 800 1234567", "OCT 27"]).lot == nil)
         #expect(scan(["Tel. 5551234567", "OCT 27"]).lot == nil)
     }
+
+    // Photos 2026-11-19 (IMG_5794, 5797), lines as Vision read them on the Mac (lot OCR lab epic).
+
+    @Test("IMG_5794: embossed white box, May read as HAY, the labels beside the wrong lines")
+    func embossed() {
+        let s = scan(["Lote:", "Caducidad:", "Precio", "máximo", "al público:", "513302288", "HAY 27", "$ 161, 25"])
+        #expect(s.lot == "513302288")
+        #expect(s.expiry == MonthYear(year: 2027, month: 5))
+    }
+
+    @Test("IMG_5797: dot-matrix on a bottle cap, JUL read as IUL on the line after CAD:")
+    func bottleCap() {
+        let s = scan(["LOTE: D26U908", "CAD:", "IUL 28", "PRECIO:$ 52.63"])
+        #expect(s.lot == "D26U908")
+        #expect(s.expiry == MonthYear(year: 2028, month: 7))
+    }
 }

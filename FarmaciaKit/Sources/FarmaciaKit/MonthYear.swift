@@ -6,7 +6,7 @@ import Foundation
 // of that month, so the store has the whole month to sell it at a discount
 // (tasks/lot-expiry-capture-epic.md).
 
-public struct MonthYear: Equatable, Hashable, Sendable {
+public struct MonthYear: Equatable, Hashable, Sendable, Codable {
     public let year: Int
     public let month: Int
 
