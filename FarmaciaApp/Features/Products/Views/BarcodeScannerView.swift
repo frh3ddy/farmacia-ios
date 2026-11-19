@@ -58,10 +58,7 @@ struct ProductBarcodeScanner: View {
                 if !finished { lab.log(legacyMetrics(code: nil)) }
             }
         } else {
-            BarcodeScannerView(settings: settings, simulatedData: simulatedData) { result in
-                if let metrics = result.metrics { lab.log(metrics) }
-                completion(result.code)
-            } onGiveUp: { lab.log($0) }
+            BarcodeScannerView(settings: settings, simulatedData: simulatedData, completion: completion) { lab.log($0) }
         }
     }
 
@@ -114,9 +111,10 @@ final class ScannerLab {
     private init() {}
     #endif
 
+    /// DEBUG only: Release has no screen to read the log, so it would just grow.
     func log(_ scan: ScanMetrics) {
-        metrics.append(scan)
         #if DEBUG
+        metrics.append(scan)
         if var plan {
             let finishedMode = plan.current
             let event = plan.record()
@@ -178,16 +176,12 @@ final class ScannerLab {
 // MARK: - Vision camera scanner
 
 struct BarcodeScannerView: View {
-    struct Result {
-        var code: Swift.Result<String, Error>
-        var metrics: ScanMetrics?
-    }
-
     let settings: ScanSettings
     var simulatedData = ""
-    let completion: (Result) -> Void
-    /// The camera closed without reading anything (its give-up metrics row).
-    var onGiveUp: @MainActor (ScanMetrics) -> Void = { _ in }
+    let completion: (Result<String, Error>) -> Void
+    /// Each opening's one metrics row (its accept, else a give-up at close), straight from
+    /// the camera, so it still arrives when the read lands as the scanner closes.
+    var onMetrics: @MainActor (ScanMetrics) -> Void = { _ in }
 
     @State private var accepted = 0
 
@@ -199,7 +193,7 @@ struct BarcodeScannerView: View {
     @ViewBuilder private var content: some View {
         #if targetEnvironment(simulator)
         Button {
-            completion(Result(code: .success(simulatedData)))
+            completion(.success(simulatedData))
         } label: {
             ContentUnavailableView("Simulador sin cámara", systemImage: "barcode.viewfinder",
                                    description: Text("Toca para enviar el código simulado."))
@@ -208,15 +202,15 @@ struct BarcodeScannerView: View {
         }
         .buttonStyle(.plain)
         #else
-        CameraPreview(settings: settings) { code, metrics in
+        CameraPreview(settings: settings) { code in
             guard accepted == 0 else { return } // one scan per opening, like CodeScanner's .once
             accepted += 1
             AudioServicesPlaySystemSound(1057)
-            completion(Result(code: .success(code), metrics: metrics))
+            completion(.success(code))
         } onFailure: { failure in
-            completion(Result(code: .failure(failure)))
-        } onGiveUp: { metrics in
-            onGiveUp(metrics)
+            completion(.failure(failure))
+        } onMetrics: { metrics in
+            onMetrics(metrics)
         }
         .overlay { ScanBoxOverlay(width: settings.scanBoxWidth, height: settings.scanBoxHeight) }
         #endif
@@ -251,19 +245,19 @@ private struct ScanBoxOverlay: View {
 /// region of interest once the camera is configured and whenever the layout changes.
 private struct CameraPreview: UIViewRepresentable {
     let settings: ScanSettings
-    let onAccept: @MainActor (String, ScanMetrics) -> Void
+    let onAccept: @MainActor (String) -> Void
     let onFailure: @MainActor (CameraController.Failure) -> Void
-    let onGiveUp: @MainActor (ScanMetrics) -> Void
+    let onMetrics: @MainActor (ScanMetrics) -> Void
 
     func makeUIView(context: Context) -> PreviewView {
         let view = PreviewView()
         let camera = CameraController(
             settings: settings,
-            onAccept: { [weak coordinator = context.coordinator] code, metrics in coordinator?.onAccept(code, metrics) },
+            onAccept: { [weak coordinator = context.coordinator] code in coordinator?.onAccept(code) },
             onFailure: { [weak coordinator = context.coordinator] failure in coordinator?.onFailure(failure) },
             onConfigured: { [weak view] device in view?.configured(device) },
-            // Strong on purpose: the give-up arrives after the view is dismantled.
-            onGiveUp: { [onGiveUp] metrics in onGiveUp(metrics) }
+            // Strong on purpose: a give-up (or a read as it closes) arrives after the dismantle.
+            onMetrics: { [onMetrics] metrics in onMetrics(metrics) }
         )
         view.attach(camera, box: CGSize(width: settings.scanBoxWidth, height: settings.scanBoxHeight))
         camera.start()
@@ -282,10 +276,10 @@ private struct CameraPreview: UIViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator(onAccept: onAccept, onFailure: onFailure) }
 
     @MainActor final class Coordinator {
-        var onAccept: @MainActor (String, ScanMetrics) -> Void
+        var onAccept: @MainActor (String) -> Void
         var onFailure: @MainActor (CameraController.Failure) -> Void
 
-        init(onAccept: @escaping @MainActor (String, ScanMetrics) -> Void,
+        init(onAccept: @escaping @MainActor (String) -> Void,
              onFailure: @escaping @MainActor (CameraController.Failure) -> Void) {
             self.onAccept = onAccept
             self.onFailure = onFailure

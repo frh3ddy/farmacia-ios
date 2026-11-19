@@ -39,6 +39,13 @@ struct BenchPlanTests {
         #expect(plan.record() == nil)
     }
 
+    @Test("given a target below 1, should use 1 scan per mode", arguments: [0, -3])
+    func clampsTarget(target: Int) {
+        var plan = BenchPlan(modes: modes, target: target)
+        #expect(plan.target == 1)
+        #expect(plan.record() == .next(modes[1]))
+    }
+
     @Test("given a saved plan, should decode to the same mode and count")
     func roundTrips() throws {
         var plan = BenchPlan(modes: BenchPlan.standard, target: 2)

@@ -298,7 +298,12 @@ last (6.5 s); that failed opening left no give-up row, though closing the sheet 
 elsewhere in the same run. Open: verify the give-up row on a closed sheet.
 - **`minConfidence` 0.6 → 0.7 (✅):** the weakest correct read was 0.76 and the glare misread
   0.61. Test: *given the 0.61 misread in 2 frames before the right code at 0.76, should accept
-  only the right code* (red at 0.6).
+  only the right code* (red at 0.6). (e71eac4)
+- **One row per opening (✅):** the camera logs the accept's row itself, through the same
+  strong callback as give-ups, so a read landing as the sheet closes still logs; after
+  the first accept it stops decoding. `BenchPlan` keeps the target at 1 or more (test
+  first). Release no longer collects metrics. A camera failure in the scan sheet now
+  shows "No se pudo usar la cámara" instead of closing the sheet silently.
 
 ---
 

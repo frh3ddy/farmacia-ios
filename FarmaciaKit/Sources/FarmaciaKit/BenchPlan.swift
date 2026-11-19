@@ -36,7 +36,7 @@ public struct BenchPlan: Equatable, Sendable, Codable {
 
     public init(modes: [Mode] = standard, target: Int) {
         self.modes = modes
-        self.target = target
+        self.target = max(target, 1)
     }
 
     /// The mode to scan with; nil once every mode is done.

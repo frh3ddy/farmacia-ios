@@ -23,10 +23,10 @@ final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDele
     let session = AVCaptureSession()
     private let settings: ScanSettings
     private let detector: VisionBarcodeDetector
-    private let onAccept: @MainActor @Sendable (String, ScanMetrics) -> Void
+    private let onAccept: @MainActor @Sendable (String) -> Void
     private let onFailure: @MainActor @Sendable (Failure) -> Void
     private let onConfigured: @MainActor @Sendable (AVCaptureDevice) -> Void
-    private let onGiveUp: @MainActor @Sendable (ScanMetrics) -> Void
+    private let onMetrics: @MainActor @Sendable (ScanMetrics) -> Void
 
     private let sessionQueue = DispatchQueue(label: "scanner.session")
     private let frameQueue = DispatchQueue(label: "scanner.frames")
@@ -37,8 +37,7 @@ final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDele
 
     // processingQueue only
     private var aggregator: ResultAggregator
-    private var framesSinceAccept = 0
-    private var misreadsAtAccept = 0
+    private var frames = 0
     private var countingFrom = Date()
     private var clock: SightingClock
     private var acceptedAny = false
@@ -50,10 +49,10 @@ final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDele
     private var stopped = false
 
     init(settings: ScanSettings,
-         onAccept: @escaping @MainActor @Sendable (String, ScanMetrics) -> Void,
+         onAccept: @escaping @MainActor @Sendable (String) -> Void,
          onFailure: @escaping @MainActor @Sendable (Failure) -> Void,
          onConfigured: @escaping @MainActor @Sendable (AVCaptureDevice) -> Void,
-         onGiveUp: @escaping @MainActor @Sendable (ScanMetrics) -> Void) {
+         onMetrics: @escaping @MainActor @Sendable (ScanMetrics) -> Void) {
         self.settings = settings
         detector = VisionBarcodeDetector(symbologies: settings.symbologies)
         aggregator = ResultAggregator(settings: settings)
@@ -61,7 +60,7 @@ final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDele
         self.onAccept = onAccept
         self.onFailure = onFailure
         self.onConfigured = onConfigured
-        self.onGiveUp = onGiveUp
+        self.onMetrics = onMetrics
     }
 
     /// The scan box in Vision's coordinates (`ScanROI.visionRect`), from the main thread.
@@ -102,9 +101,9 @@ final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDele
         let now = Date()
         let metrics = ScanMetrics(date: now, device: Self.deviceModel, detector: .vision, code: nil, msToRead: nil,
                                   msSinceOpen: Int(now.timeIntervalSince(countingFrom) * 1000),
-                                  frames: framesSinceAccept, misreads: aggregator.misreads,
+                                  frames: frames, misreads: aggregator.misreads,
                                   topConfidence: clock.topConfidence, settingsTag: settings.tag)
-        Task { @MainActor in onGiveUp(metrics) }
+        Task { @MainActor in onMetrics(metrics) }
     }
 
     private func startSession() {
@@ -212,10 +211,14 @@ final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDele
         processingQueue.async { self.process(frame, roi: roi) }
     }
 
+    /// One accept per opening (the scanner closes on it): the accept's row goes to
+    /// onMetrics, which outlives the view, so a read landing as the scanner closes still
+    /// logs; then frames are dropped, so later codes can't add rows.
     private func process(_ buffer: CVPixelBuffer, roi: CGRect) {
         defer { shared.withLock { $0.busy = false } }
+        guard !acceptedAny else { return }
         let reads = (try? detector.detect(in: buffer, roi: roi)) ?? []
-        framesSinceAccept += 1
+        frames += 1
         let now = Date()
         clock.frame(reads, now: now)
         guard let code = aggregator.ingest(reads, now: now) else { return }
@@ -223,13 +226,13 @@ final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDele
         let metrics = ScanMetrics(date: now, device: Self.deviceModel, detector: .vision, code: code,
                                   msToRead: clock.since.map { Int(now.timeIntervalSince($0) * 1000) },
                                   msSinceOpen: Int(now.timeIntervalSince(countingFrom) * 1000),
-                                  frames: framesSinceAccept, misreads: aggregator.misreads - misreadsAtAccept,
+                                  frames: frames, misreads: aggregator.misreads,
                                   topConfidence: clock.topConfidence, settingsTag: settings.tag)
         acceptedAny = true
-        framesSinceAccept = 0
-        misreadsAtAccept = aggregator.misreads
-        countingFrom = now
-        Task { @MainActor in onAccept(code, metrics) }
+        Task { @MainActor in
+            onMetrics(metrics)
+            onAccept(code)
+        }
     }
 
     /// The hardware model, e.g. "iPhone16,1".

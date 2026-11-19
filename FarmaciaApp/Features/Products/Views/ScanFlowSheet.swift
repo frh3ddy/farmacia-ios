@@ -39,6 +39,8 @@ struct ScanFlowSheet: View {
     @StateObject private var inventoryViewModel = InventoryViewModel()
     @State private var step: Step = .scan
     @State private var isLookingUp = false
+    /// No camera or no permission: say so in the sheet instead of closing it silently.
+    @State private var cameraFailed = false
     /// The last receive or count, and its product (the strip opens it).
     @State private var recent: (save: RecentScanSave, product: Product)?
     /// Recibir's "Recibiendo de": the delivery's supplier, picked over each product's
@@ -129,7 +131,14 @@ struct ScanFlowSheet: View {
 
     private var scanner: some View {
         NavigationStack {
-            ProductBarcodeScanner(simulatedData: Self.simulatedCode, completion: handleScan)
+            Group {
+                if cameraFailed {
+                    ContentUnavailableView("No se pudo usar la cámara", systemImage: "camera",
+                                           description: Text("Revisa el permiso de cámara en Ajustes."))
+                } else {
+                    ProductBarcodeScanner(simulatedData: Self.simulatedCode, completion: handleScan)
+                }
+            }
             .ignoresSafeArea(edges: .bottom)
             .overlay {
                 if isLookingUp {
@@ -252,7 +261,7 @@ struct ScanFlowSheet: View {
                 }
             }
         case .failure:
-            dismiss()
+            cameraFailed = true
         }
     }
 
