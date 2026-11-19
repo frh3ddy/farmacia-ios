@@ -9,7 +9,10 @@ receive form's save marking `edited` (`LotScanMetrics.recordSave`, tested). 983 
 Debug, Release and simulator builds pass.
 Gaps in the lab reader (DEBUG only): no GS1 DataMatrix (live text still reads it); a lote alone
 can't be used with "Usar" (the card fills at the date); only Recibir marks `edited`, from the last
-scan that filled a form; the camera runs 1 s after the sheet closes (the follow-up). Next: step 6 (lab reader on the iPhone). Branch `feature/lot-ocr-lab`.
+scan that filled a form; the camera runs 1 s after the sheet closes (the follow-up).
+Review dev-f8 on 37d17de (fixed, tested): the follow-up runs only after a read (a give-up stops
+at once; `LotReading.stop()` keeps late frames from turning it into a read), and `LotScanLog`
+forgets the fill on a give-up or a form closed unsaved, so typed values never mark an older read. Next: step 6 (lab reader on the iPhone). Branch `feature/lot-ocr-lab`.
 
 ## Why
 

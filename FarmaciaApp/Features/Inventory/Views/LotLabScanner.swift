@@ -23,44 +23,44 @@ final class LotLab {
     var settings = ScanSettings()
     /// How long the lab reader keeps counting after it fills the form (`LotReading`).
     let followUp: TimeInterval = 1
-    private(set) var metrics: [LotScanMetrics] = []
-    /// The row whose values filled the form last; the form's save marks it edited or not.
-    private var lastFilled: Int?
+    /// The rows, and which one filled the form last (`LotScanLog`).
+    private var log = LotScanLog()
+    var metrics: [LotScanMetrics] { log.rows }
 
     private init() {
-        metrics = UserDefaults.standard.data(forKey: Self.key)
-            .flatMap { try? JSONDecoder().decode([LotScanMetrics].self, from: $0) } ?? []
+        log = UserDefaults.standard.data(forKey: Self.key)
+            .flatMap { try? JSONDecoder().decode(LotScanLog.self, from: $0) } ?? LotScanLog()
     }
 
     func log(_ row: LotScanMetrics) {
-        metrics.append(row)
-        if row.lot != nil || row.expiry != nil { lastFilled = metrics.count - 1 }
+        log.log(row)
         save()
     }
 
     /// The form that the last scan filled was saved with these values.
     func saved(lot: String?, expiry: MonthYear?) {
-        guard let index = lastFilled, metrics.indices.contains(index) else { return }
-        metrics[index].recordSave(lot: lot, expiry: expiry)
-        lastFilled = nil
+        log.saved(lot: lot, expiry: expiry)
         save()
     }
+
+    /// The form closed without saving: its fill must not mark a later save.
+    func formClosed() { log.formClosed() }
 
     func clearMetrics() {
-        metrics.removeAll()
-        lastFilled = nil
+        log.clear()
         save()
     }
 
-    private static let key = "lot.lab.metrics"
+    private static let key = "lot.lab.log"
 
     private func save() {
-        UserDefaults.standard.set(try? JSONEncoder().encode(metrics), forKey: Self.key)
+        UserDefaults.standard.set(try? JSONEncoder().encode(log), forKey: Self.key)
     }
     #else
     let useLab = false
     private init() {}
     func saved(lot: String?, expiry: MonthYear?) {}
+    func formClosed() {}
     #endif
 }
 
@@ -105,7 +105,10 @@ final class LotFrameHandler: CameraFrameHandler, @unchecked Sendable {
         }
     }
 
-    func stopped() { log() }
+    func stopped() {
+        reading.stop() // frames still in flight can't turn a give-up into a read
+        log()
+    }
 
     private func log() {
         guard !logged else { return }
@@ -159,7 +162,10 @@ private struct LotCameraPreview: UIViewRepresentable {
         let view = PreviewView()
         let handler = LotFrameHandler(
             followUp: followUp,
-            onAccept: { [weak coordinator = context.coordinator] scan in coordinator?.onAccept(scan) },
+            onAccept: { [weak coordinator = context.coordinator] scan in
+                coordinator?.accepted = true
+                coordinator?.onAccept(scan)
+            },
             // Strong on purpose: the row arrives after the follow-up, once the sheet is gone.
             onMetrics: { [onMetrics] row in onMetrics(row) }
         )
@@ -180,10 +186,12 @@ private struct LotCameraPreview: UIViewRepresentable {
         context.coordinator.onFailure = onFailure
     }
 
-    /// The camera runs on for the follow-up after the sheet closes (DEBUG data for
-    /// "1 read or 2"), then stops; the row is logged then.
+    /// After a read the camera runs on for the follow-up (DEBUG data for "1 read or 2"),
+    /// then stops and logs the row. A give-up stops at once: reading on with the sheet gone
+    /// would log a read nobody saw (review dev-f8).
     static func dismantleUIView(_ view: PreviewView, coordinator: Coordinator) {
         guard let camera = view.camera else { return }
+        guard coordinator.accepted else { return camera.stop() }
         DispatchQueue.main.asyncAfter(deadline: .now() + coordinator.followUp) { camera.stop() }
     }
 
@@ -193,6 +201,8 @@ private struct LotCameraPreview: UIViewRepresentable {
         var onAccept: @MainActor (LotScan) -> Void
         var onFailure: @MainActor (CameraController.Failure) -> Void
         var followUp: TimeInterval = 0
+        /// A date was taken (the form was filled): the follow-up runs.
+        var accepted = false
 
         init(onAccept: @escaping @MainActor (LotScan) -> Void,
              onFailure: @escaping @MainActor (CameraController.Failure) -> Void) {

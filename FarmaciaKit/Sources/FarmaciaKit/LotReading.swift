@@ -33,6 +33,13 @@ public struct LotReading: Sendable {
         self.followUp = followUp
     }
 
+    /// A date was taken: the camera runs the follow-up; otherwise it stops at once on close.
+    public var hasAccepted: Bool { accepted != nil }
+
+    /// The scanner closed: later passes (frames still in flight) change nothing, so a
+    /// give-up stays a give-up.
+    public mutating func stop() { finished = true }
+
     @discardableResult
     public mutating func pass(_ scan: LotScan, filter: LotFilter, at now: Date) -> Event? {
         guard !finished else { return nil }

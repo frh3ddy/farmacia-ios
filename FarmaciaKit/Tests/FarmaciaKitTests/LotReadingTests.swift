@@ -55,6 +55,24 @@ struct LotReadingTests {
         #expect(reading.metrics(device: "x").lot == "D26U908")
     }
 
+    @Test("given a stop before any date, a later pass reading one should not accept: the row stays a give-up (review dev-f8)")
+    func stopThenDate() {
+        var reading = LotReading(today: today, openedAt: opened)
+        #expect(reading.hasAccepted == false)
+        reading.stop()
+        #expect(reading.pass(LotScan(lot: nil, expiry: jul28), filter: .plain, at: at(0.5)) == nil)
+        #expect(reading.hasAccepted == false)
+        #expect(reading.metrics(device: "x").expiry == nil)
+        #expect(reading.metrics(device: "x").filter == nil)
+    }
+
+    @Test("given a date, should say it accepted (the camera then runs the follow-up)")
+    func hasAccepted() {
+        var reading = LotReading(today: today, openedAt: opened)
+        reading.pass(LotScan(lot: nil, expiry: jul28), filter: .plain, at: at(0.5))
+        #expect(reading.hasAccepted)
+    }
+
     @Test("given a close with no date, should log a give-up row")
     func giveUp() {
         var reading = LotReading(today: today, openedAt: opened)
