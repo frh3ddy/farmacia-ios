@@ -1,6 +1,5 @@
 import SwiftUI
 import FarmaciaKit
-import CodeScanner
 
 // MARK: - Scan Flow Sheet
 //
@@ -40,6 +39,8 @@ struct ScanFlowSheet: View {
     @StateObject private var inventoryViewModel = InventoryViewModel()
     @State private var step: Step = .scan
     @State private var isLookingUp = false
+    /// No camera or no permission: say so in the sheet instead of closing it silently.
+    @State private var cameraFailed = false
     /// The last receive or count, and its product (the strip opens it).
     @State private var recent: (save: RecentScanSave, product: Product)?
     /// Recibir's "Recibiendo de": the delivery's supplier, picked over each product's
@@ -130,14 +131,14 @@ struct ScanFlowSheet: View {
 
     private var scanner: some View {
         NavigationStack {
-            CodeScannerView(
-                codeTypes: [.ean13, .ean8, .upce, .code128, .code39, .code93, .itf14],
-                scanMode: .once,
-                showViewfinder: true,
-                simulatedData: Self.simulatedCode,
-                shouldVibrateOnSuccess: true,
-                completion: handleScan
-            )
+            Group {
+                if cameraFailed {
+                    ContentUnavailableView("No se pudo usar la cámara", systemImage: "camera",
+                                           description: Text("Revisa el permiso de cámara en Ajustes."))
+                } else {
+                    ProductBarcodeScanner(simulatedData: Self.simulatedCode, completion: handleScan)
+                }
+            }
             .ignoresSafeArea(edges: .bottom)
             .overlay {
                 if isLookingUp {
@@ -243,10 +244,9 @@ struct ScanFlowSheet: View {
         )
     }
 
-    private func handleScan(result: Result<ScanResult, ScanError>) {
+    private func handleScan(result: Result<String, Error>) {
         switch result {
-        case .success(let scanResult):
-            let code = scanResult.string
+        case .success(let code):
             Task {
                 isLookingUp = true
                 let outcome = await lookup(code)
@@ -261,7 +261,7 @@ struct ScanFlowSheet: View {
                 }
             }
         case .failure:
-            dismiss()
+            cameraFailed = true
         }
     }
 
@@ -296,7 +296,7 @@ struct ScanFlowSheet: View {
         dismiss()
     }
 
-    /// The simulator has no camera: CodeScanner's simulated scan sends this code.
+    /// The simulator has no camera: tapping the scanner sends this code.
     /// Set it with `xcrun simctl spawn booted defaults write <bundle id> simScanCode <code>`.
     /// Sueltos' scanner uses it too.
     static var simulatedCode: String {

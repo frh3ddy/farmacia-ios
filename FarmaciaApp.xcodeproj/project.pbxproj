@@ -18,6 +18,10 @@
 		37E697362F32AC3200F6CB5D /* ExpenseDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E6972F2F32AC3200F6CB5D /* ExpenseDetailView.swift */; };
 		37E6973C2F32F2A400F6CB5D /* ProductDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E697382F32F2A400F6CB5D /* ProductDetailView.swift */; };
 		37E6973D2F32F2A400F6CB5D /* ProductsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E697392F32F2A400F6CB5D /* ProductsView.swift */; };
+		SC00000100000001 /* CameraController.swift in Sources */ = {isa = PBXBuildFile; fileRef = SC00000200000001 /* CameraController.swift */; };
+		SC00000100000002 /* BarcodeScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SC00000200000002 /* BarcodeScannerView.swift */; };
+		SC00000100000003 /* ScannerDebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SC00000200000003 /* ScannerDebugView.swift */; };
+		FF00000100000004 /* FarmaciaScan in Frameworks */ = {isa = PBXBuildFile; productRef = FF00000200000004 /* FarmaciaScan */; };
 		DD00000100000010 /* ScanFlowSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000010 /* ScanFlowSheet.swift */; };
 		37E6973E2F32F2A400F6CB5D /* CreateProductView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E697372F32F2A400F6CB5D /* CreateProductView.swift */; };
 		DD00000100000005 /* CreateProductViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000005 /* CreateProductViewModel.swift */; };
@@ -149,6 +153,9 @@
 		DD00000200000005 /* CreateProductViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateProductViewModel.swift; sourceTree = "<group>"; };
 		37E697382F32F2A400F6CB5D /* ProductDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductDetailView.swift; sourceTree = "<group>"; };
 		37E697392F32F2A400F6CB5D /* ProductsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductsView.swift; sourceTree = "<group>"; };
+		SC00000200000001 /* CameraController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraController.swift; sourceTree = "<group>"; };
+		SC00000200000002 /* BarcodeScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarcodeScannerView.swift; sourceTree = "<group>"; };
+		SC00000200000003 /* ScannerDebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerDebugView.swift; sourceTree = "<group>"; };
 		DD00000200000010 /* ScanFlowSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanFlowSheet.swift; sourceTree = "<group>"; };
 		37E6973F2F34065A00F6CB5D /* InitialSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InitialSetupView.swift; sourceTree = "<group>"; };
 		37E697412F3408EF00F6CB5D /* Setup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Setup.swift; sourceTree = "<group>"; };
@@ -277,6 +284,7 @@
 				FF00000100000001 /* CodeScanner in Frameworks */,
 				FF00000100000002 /* SwiftyCrop in Frameworks */,
 				FF00000100000003 /* FarmaciaKit in Frameworks */,
+				FF00000100000004 /* FarmaciaScan in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -328,6 +336,9 @@
 				A7C3E1F2B4D5469788990001 /* ProductSearchPicker.swift */,
 				5B36C1CAC70495EFA1EEFDC2 /* CostSupplierViewModel.swift */,
 				37E697392F32F2A400F6CB5D /* ProductsView.swift */,
+				SC00000200000001 /* CameraController.swift */,
+				SC00000200000002 /* BarcodeScannerView.swift */,
+				SC00000200000003 /* ScannerDebugView.swift */,
 				DD00000200000010 /* ScanFlowSheet.swift */,
 				3B554D9AF0B85104FDC78630 /* ProductRow.swift */,
 				D0C003E1536E46E7A7E549C6 /* ProductCard.swift */,
@@ -661,6 +672,7 @@
 				FF00000200000001 /* CodeScanner */,
 				FF00000200000002 /* SwiftyCrop */,
 				FF00000200000003 /* FarmaciaKit */,
+				FF00000200000004 /* FarmaciaScan */,
 			);
 			productName = FarmaciaApp;
 			productReference = F100000000000000 /* FarmaciaApp.app */;
@@ -750,6 +762,9 @@
 				A7C3E1F2B4D5469788990002 /* ProductSearchPicker.swift in Sources */,
 				D419F61DEDDF944288D2F152 /* CostSupplierViewModel.swift in Sources */,
 				37E6973D2F32F2A400F6CB5D /* ProductsView.swift in Sources */,
+				SC00000100000001 /* CameraController.swift in Sources */,
+				SC00000100000002 /* BarcodeScannerView.swift in Sources */,
+				SC00000100000003 /* ScannerDebugView.swift in Sources */,
 				DD00000100000010 /* ScanFlowSheet.swift in Sources */,
 				6251561FA87E93ECDA322277 /* ProductRow.swift in Sources */,
 				1CC8E0BA2B6C4966B77D1951 /* ProductCard.swift in Sources */,
@@ -1095,6 +1110,10 @@
 		FF00000200000003 /* FarmaciaKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = FarmaciaKit;
+		};
+		FF00000200000004 /* FarmaciaScan */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = FarmaciaScan;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

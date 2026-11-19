@@ -16,6 +16,8 @@ device, zoom, focus range, region of interest, validation or multi-frame confirm
 - **QR off now**, in its own small fix (step 0), before the rebuild.
 - **Symbologies:** EAN-13, EAN-8, UPC-E, Code 128 only. Code 39, Code 93 and ITF-14 are
   dropped. They stay configurable in `ScanSettings.symbologies` so they can come back.
+  **Revised 2026-11-19:** Code 39 is back on by default (the user confirmed). Store labels
+  like `124111SP` are Code 39 and only the old scanner read them (56d3f5e).
 - **Debug/benchmark screen:** DEBUG builds only, under Ajustes. Device benchmarks use a
   Debug build pointed at the local API (never prod).
 - **Simple mode = the old `CodeScanner`**, behind a DEBUG toggle, kept as the benchmark
@@ -82,25 +84,25 @@ None of steps 1–16 uses the three flagged methods. `LEGAL_REVIEW.md` records w
 
 ### Logic (FarmaciaKit, red/green)
 
-1. **Scaffolding.** Add the `FarmaciaScan` target, the `scan-bench` executable,
+1. ✅ (uncommitted; the target and executable moved to step 12, with the detector's real test) **Scaffolding.** Add the `FarmaciaScan` target, the `scan-bench` executable,
    `THIRD_PARTY_NOTICES` (CodeScanner MIT, SwiftyCrop, plus later additions) and
    `LEGAL_REVIEW.md` (the posture above, plus a "stage 2 to review" list).
    - First test (FarmaciaScanTests): *given the package builds, `VisionBarcodeDetector`
      type exists*. A placeholder that goes red→green once the target is wired.
 
-2. **GS1 mod-10 check digit** (`GTINCheck.isValid(_:)`).
+2. ✅ (uncommitted) **GS1 mod-10 check digit** (`GTINCheck.isValid(_:)`).
    - *given `4006381333931`, should be valid* (EAN-13)
    - *given `4006381333932`, should be invalid*
    - *given `96385074`, should be valid* (EAN-8)
    - *given a 12-digit UPC-A `036000291452`, should be valid*
    - *given non-digits or a wrong length, should be invalid*
 
-3. **UPC-E: expand to UPC-A for validation** (`UPCE.expanded(_:)`).
+3. ✅ (uncommitted) **UPC-E: expand to UPC-A for validation** (`UPCE.expanded(_:)`).
    - *given UPC-E `04252614`, should expand to `042100005264` and be valid*
    - *given a UPC-E with a bad check digit, should be invalid*
    - The scanner still reports the 8 digits, as CodeScanner does today.
 
-4. **Per-symbology validation and normalization** (`ScannedCode.validated(symbology:payload:)`, returning the value or a rejection reason).
+4. ✅ (uncommitted) **Per-symbology validation and normalization** (`BarcodeRead.validated(symbology:payload:enabled:)`, named so to avoid `ProductSearchPicker`'s private `ScannedCode`). It returns the value or a rejection reason. A 12-digit `.ean13` (an unpadded UPC-A) yields 0 + 12.
    - *given EAN-13 from a 14-digit read `04006381333931`, should yield `4006381333931`*
      (reuses `BarcodeLookup.newProductBarcode`)
    - *given EAN-13 `0036000291452` (a UPC-A), should yield it unchanged*. It's the
@@ -109,43 +111,43 @@ None of steps 1–16 uses the three flagged methods. `LEGAL_REVIEW.md` records w
    - *given Code 128 with a non-printable character or an empty payload, should reject*
    - *given a symbology not in settings, should reject*
 
-5. **`ScanSettings`** (one struct for every threshold, with defaults from the brief).
+5. ✅ (uncommitted) **`ScanSettings`** (one struct for every threshold, with defaults from the brief).
    - *given defaults, should list exactly ean13/ean8/upce/code128*
    - *given `votesRequired` 5, should clamp to 3; given 1, should clamp to 2*
-   - Fields: `symbologies`, `minConfidence` 0.6, `votesRequired` 2, `voteWindow` 10,
+   - Fields: `symbologies`, `minConfidence` 0.6 (0.7 after the device bench), `votesRequired` 2, `voteWindow` 10,
      `cooldown` 1.5 s, `scanBox` (0.8 × 0.3), `targetCodeWidthMM` 35, `camera`
      (`.wide | .dualWide | .triple`), `preset` (`.hd1080 | .hd4K`), `fps` 30.
 
-6. **`ResultAggregator` multi-frame voting** (`ingest(frame: [Candidate], now:) -> Accepted?`).
+6. ✅ (uncommitted) **`ResultAggregator` multi-frame voting** (`ingest(_: [BarcodeCandidate], now:) -> String?`).
    - *given one frame reading X, should not accept*
    - *given X in 2 frames inside the last 10, should accept X*
    - *given X twice but 11 frames apart, should not accept*
    - *given X below `minConfidence`, should not count the vote*
    - *given an invalid check digit, should not count it and should add one misread*
-   - *given X and Y both reaching the vote count in the same frame, should accept the one with more votes*
+   - *given X and Y reaching the vote count in the same frame, should accept the one read with higher confidence*. A code is accepted the moment it reaches N, so a tie is the only way two codes get there together.
 
-7. **Cooldown and de-duplication.**
+7. ✅ (uncommitted) **Cooldown and de-duplication.**
    - *given X just accepted, X again 1.0 s later, should not accept*
    - *given X accepted, X again 1.6 s later, should accept*
    - *given X accepted, Y 0.2 s later, should accept Y* (cooldown is per code)
 
-8. **Startup zoom from minimum focus distance** (`StartupZoom.factor(minFocusMM:fovDegrees:codeWidthMM:boxWidthFraction:maxZoom:)`, the AVCamBarcode formula).
+8. ✅ (uncommitted) **Startup zoom from minimum focus distance** (`StartupZoom.factor(minFocusMM:fovDegrees:codeWidthMM:boxWidthFraction:maxZoom:)`, the AVCamBarcode approach but with the correct `2·d·tan(fov/2)` geometry). The caller passes the FOV along the code's axis, which in portrait is the sensor's short side.
    - *given a lens that focuses close enough for a 35 mm code to fill the box, should be 1.0*
    - *given min focus 200 mm and a FOV whose fill distance is 100 mm, should be 2.0*
    - *given a needed zoom above `maxZoom`, should clamp to `maxZoom`*
 
-9. **ROI conversion** (`ScanROI.visionRect(fromMetadataRect:)`).
+9. ✅ (uncommitted) **ROI conversion** (`ScanROI.visionRect(fromMetadataRect:)`).
    `metadataOutputRectConverted` returns a normalized rect with a top-left origin in
    sensor orientation. Vision wants a bottom-left origin.
    - *given metadata rect (x 0.35, y 0.1, w 0.3, h 0.8), should give Vision rect (x 0.35, y 0.1, w 0.3, h 0.8) with y flipped as `1 − y − h`*
    - *given a rect spilling outside 0…1, should clamp to the unit square*
 
-10. **`ScanMetrics` and CSV** (`ScanMetricsLog.append(_:)`, `.csv()`).
+10. ✅ (uncommitted) **`ScanMetrics` and CSV** (`ScanMetrics.csv(_:)`). The app keeps the list.
     - *given two scans, csv should have a header plus 2 rows: date, device model,
       detector, code, ms to first read, frames processed, misreads, settings tag*
     - *given a code containing a comma, should quote it*
 
-11. **`BenchReport`** (summary for the harness).
+11. ✅ (uncommitted) **`BenchReport`** (summary for the harness).
     - *given 9 of 10 images read correctly, should report a 90% read rate*
     - *given a read that differs from the expected code, should count an accepted misread, not a hit*
     - *given times 10/20/300 ms, should report a 20 ms median*
@@ -154,24 +156,23 @@ None of steps 1–16 uses the three flagged methods. `LEGAL_REVIEW.md` records w
 
 ### Detector (FarmaciaScan, macOS-hosted tests)
 
-12. **`VisionBarcodeDetector`**: `VNDetectBarcodesRequest` at **revision 4**
+12. ✅ (uncommitted) **`VisionBarcodeDetector`**: `VNDetectBarcodesRequest` at **revision 4**
     (iOS 17+). Inputs: a CVPixelBuffer or CGImage, the orientation, the ROI and
     `settings.symbologies`. Output: `[Candidate(symbology, payload, confidence)]`.
     - *given fixture `ean13_4006381333931.jpg`, should return that payload*
     - *given fixture `qr-and-ean_<code>.jpg`, should return only the EAN*
     - *given an ROI excluding the code, should return nothing*
-    - Fixtures: 3–4 small photos committed under `Tests/FarmaciaScanTests/Fixtures`.
-    - Portrait-only app: back-camera buffers map to `.right`. That's one constant,
-      tested through the ROI fixture.
+    - Fixtures: synthetic EAN-13/EAN-8/UPC-A bars and a CIQRCodeGenerator QR, rendered in `SyntheticBarcode` (no committed photos). Vision returns a UPC-A as `.ean13` with all 13 digits.
+    - Orientation: Vision gets the sensor buffer as `.up` (it reads barcodes at any rotation), so the ROI is the metadata rect with y flipped (step 9). No rotation mapping is needed.
 
-13. **`scan-bench` executable**: runs every image in a folder through each detector
+13. ✅ (uncommitted) **`scan-bench` executable**: runs every image in a folder through each detector
     (stage 1: Vision only) and prints the `BenchReport` table per detector (read rate,
     median and mean ms, misreads). CSV output with `--csv`.
     - Covered by step 11's tests. Smoke: `swift run scan-bench Tests/FarmaciaScanTests/Fixtures`.
 
 ### UI / camera (app)
 
-14. **`CameraController`** (AVFoundation, its own `sessionQueue`):
+14. ✅ (uncommitted; device run pending) **`CameraController`** (AVFoundation, its own `sessionQueue`):
     - Device: `.builtInWideAngleCamera` back by default; `.builtInTripleCamera` or
       `.builtInDualWideCamera` from settings (macro auto-switch on Pro models), falling
       back to wide when the device has neither.
@@ -187,7 +188,7 @@ None of steps 1–16 uses the three flagged methods. `LEGAL_REVIEW.md` records w
       `@MainActor`. Review with `swift-concurrency-pro`.
     - Smoke: device only (the simulator has no camera).
 
-15. **`BarcodeScannerView`** (UIViewControllerRepresentable around `ScannerViewController`):
+15. ✅ (uncommitted; simulator smoke pending, needs the local API) **`BarcodeScannerView`** (UIViewControllerRepresentable around `ScannerViewController`):
     preview layer, scan-box overlay (80% × 30%, dimmed outside), ROI from
     `metadataOutputRectConverted` → `ScanROI`, haptic (`.sensoryFeedback(.success)`)
     plus a short system sound on accept. Its API mirrors today's call shape:
@@ -201,11 +202,34 @@ None of steps 1–16 uses the three flagged methods. `LEGAL_REVIEW.md` records w
       set → the receive form opens → save → the strip shows. Repeat once with the legacy
       toggle on.
 
-16. **`ScannerDebugView`** (DEBUG, under Ajustes): every `ScanSettings` field as a
+16. ✅ (uncommitted) **`ScannerDebugView`** (DEBUG, under Ajustes): every `ScanSettings` field as a
     control (camera, preset, votes, confidence, cooldown), the legacy toggle, the metrics
     list, and a `ShareLink` exporting the CSV. The scanner logs a `ScanMetrics` row per
     accept (device model from `utsname`).
     - Simulator smoke: open the screen and export the CSV (empty, header only).
+
+**As built (14–16):**
+- All three call sites (`ScanFlowSheet`, `ProductSearchPicker`, `CreateProductView`) use
+  one wrapper, `ProductBarcodeScanner` (in `BarcodeScannerView.swift`), with
+  `Result<String, Error>`. It shows the legacy CodeScanner or the new view, and it holds
+  the only CodeScanner import and the only legacy symbology list. Legacy scans log metrics
+  too (`detector: legacy`, time from opening), so the baseline comes from the same CSV.
+- `ScannerLab` (@Observable, shared) holds the settings, the legacy flag (fixed `true` in
+  Release) and the metrics list. Everything is in memory and resets on relaunch.
+- New files: `CameraController.swift`, `BarcodeScannerView.swift`, `ScannerDebugView.swift`
+  (Products/Views). The app links the `FarmaciaScan` product.
+- `CameraController`: a virtual device's zoom never goes below its wide lens (its first
+  switch-over factor). The startup zoom uses the short-side FOV, portrait only (ponytail
+  note). `stop()` clears the output delegate so the controller is freed, and it sets a
+  `stopped` flag (owned by sessionQueue). A start that lands later (permission granted
+  after the scanner closed) doesn't turn the camera back on.
+- Once configured, the camera hands its device to the preview on main
+  (`onConfigured`). The preview builds its RotationCoordinator there and sets the ROI, so
+  it never reads `session.inputs` on main and there's no retry loop.
+- Simulator: the new view is a "Toca para enviar el código simulado" button that sends
+  `simScanCode`.
+- Skipped: the torch API (stage 2's step 10 adds it with its button).
+- Builds: Debug simulator, Debug device and Release device (no signing) all succeed.
 
 ### ⏸ Benchmark checkpoint (stop here)
 
@@ -218,9 +242,94 @@ None of steps 1–16 uses the three flagged methods. `LEGAL_REVIEW.md` records w
 - Docs: README Escanear section (how to run the bench and tune settings), and this epic
   marked ✅ with hashes.
 
+**First device run (2026-11-19, iPhone 13 Pro, 64 scans):** 0 misreads in every mode.
+Not usable for time or read rate: `ms_to_read` ran from the opening/previous accept (it
+included picking up the next box; one row was 166 s for 125 frames), and give-ups left
+no row. Photos of the misses, through raw Vision:
+- `124111SP` is **Code 39** (0.999), off in the new scanner → Code 39 back on by default.
+- `7503003406600` (small, blue bars): EAN-13 at 0.73 on the 12 MP photo; likely under
+  the 0.6 cutoff at 1080p. Tune `minConfidence` from the new `top_confidence` column.
+- `7500435138635` (crumpled bag): reads at 0.99 from the photo; device cause unknown.
+- `7503005950017` (red bars): unreadable by anything. The printed check digit is wrong
+  (`750300595001` → 9, label says 7), and red bars are invisible to red-light scanners.
+  Needs manual entry/search (stage 2 step 13).
+
+**Metrics fix (✅):** `ScanSettings` default + Code 39; `SightingClock`
+(time from first sighting, any confidence; restarts after `voteWindow` empty frames;
+best confidence); `ScanMetrics` code/msToRead optional + `msSinceOpen`,
+`topConfidence`, `outcome` column, Codable; give-up rows (camera stop with no accept,
+legacy `onDisappear` without a result); `BenchPlan` (standard 4 modes, `target` openings
+each, `.next`/`.finished`) with the alert, the scanner badge and the debug section;
+metrics + plan saved in UserDefaults (DEBUG). Simulator-checked: 5 cancels finished
+the legacy mode and switched to wide 1080p with the alert. (56d3f5e)
+
+**`scan-bench --list` (✅):** prints what each photo reads (and what was seen but not
+accepted), ignoring filenames, for iPhone-named photos (`IMG_5756.HEIC` would otherwise
+be scored as code `5756`).
+
+**No-read photos (2026-11-19, `~/barcdoes/no reads`):** 0 of 5 read from the stills.
+All have valid check digits, and 3 did read live in the first run (triple 4K, 1.8–28 s).
+- `6928928377421` (clip in a crinkled bag), `7702018880409` (Gillette card): the photos
+  are out of focus; retake them focused before using them as decoder fixtures.
+- `8888021206074` (Energizer): torn card, the bottom of the bars and the digits missing.
+  Stage 2 ZXing candidate; ⚠ damaged-code recovery sits near 11893764, so legal review first.
+- `7503003406730` (bandage): curved roll, shiny wrap, small vertical bars → preprocess/ZXing.
+- `7891317048815` (Melox): a glare streak across the bars → exposure bias. **Near-misread:**
+  with every symbology on, Vision decoded it as `2056708016841` (valid check digit) at
+  0.61, above the 0.6 cutoff. Only multi-frame voting stops that, so never set
+  `votesRequired` to 1 (the 2–3 clamp in `ScanSettings.votesRequired` enforces it, so
+  don't remove the clamp), and keep this photo as a misread regression fixture.
+  Decided: `minConfidence` 0.7 (see the bench below), so this misread can't vote at all.
+
+**Device bench (2026-11-19, iPhone 13 Pro, the same 20 products per mode, 0.6 cutoff):**
+0 misreads in every mode, and every product read in every mode.
+
+| Mode | Distinct read | Open → read (median) | Slowest | Lowest correct `top_confidence` |
+|---|---|---|---|---|
+| Legacy | 20/20 | 2.76 s | 6.7 s | – |
+| Wide 1080p | 19/19 ¹ | 1.93 s | 6.1 s | 0.83 |
+| Triple 1080p | 20/20 | 1.98 s | 6.0 s | 0.79 |
+| Wide 4K | 20/20 ² | 1.76 s | 6.5 s | 0.76 |
+
+From first sighting to accept takes a median of ~35 ms in every Vision mode, so most of the
+open → read time is aiming. ¹ One box was read twice (it was already in view when the
+scanner reopened), so one product was skipped. ² `7503003406600` failed once and was read
+last (6.5 s); that failed opening left no give-up row, though closing the sheet logged one
+elsewhere in the same run. Open: verify the give-up row on a closed sheet.
+- **`minConfidence` 0.6 → 0.7 (✅):** the weakest correct read was 0.76 and the glare misread
+  0.61. Test: *given the 0.61 misread in 2 frames before the right code at 0.76, should accept
+  only the right code* (red at 0.6). (e71eac4)
+- **One row per opening (✅):** the camera logs the accept's row itself, through the same
+  strong callback as give-ups, so a read landing as the sheet closes still logs; after
+  the first accept it stops decoding. `BenchPlan` keeps the target at 1 or more (test
+  first). Release no longer collects metrics. A camera failure in the scan sheet now
+  shows "No se pudo usar la cámara" instead of closing the sheet silently. (e3d4ace)
+
+## Decision after the bench (2026-11-19, user)
+
+Stage 1 met the brief's targets on the 20-product set: every product read in every
+mode (20 of 21 openings in 4K), ~35 ms from first sighting to accept, 0 misreads in 80
+scans, and 0.8–1 s faster per product than the old scanner.
+- **Release uses the new scanner** (`ScannerLab.useLegacy` false in Release). DEBUG keeps
+  the CodeScanner toggle and the bench plan's baseline mode. Release no longer reads
+  Code 93 or ITF-14 (already dropped in §Decisions).
+- **Defaults stay wide camera + 1080p.** 4K's median was 0.17 s faster, which is within
+  the aiming noise, for about 4× the pixels per frame, and it had the one failed
+  opening. Triple was no better.
+- **Torch button (✅):** under the scan box, switched by hand only (late night, dim
+  shelves). The camera applies a tap made before it's ready once it starts. No auto
+  torch, so nothing reacts to frames (11087105 stays clear).
+- **Stage 2 is on hold.** Nothing on the bench failed in a way that preprocessing, blur
+  filtering, ZXing or OCR would fix, and ZXing needs a legal review first. Step 13
+  (manual entry) is covered by searching the last 4+ barcode digits in Productos (ops
+  f36e86d), which also handles the box nothing reads (`7503005950017`). Reopen a step
+  when field misses show it's needed.
+- Not checked on the phone yet: the 0.7 cutoff on real boxes, the torch button, and the
+  "Sin lectura" row on a closed sheet.
+
 ---
 
-## Stage 2 (outline, re-plan after the benchmark)
+## Stage 2 (on hold, see the decision above)
 
 | Brief step | First failing test | Notes / legal |
 |---|---|---|
@@ -229,7 +338,7 @@ None of steps 1–16 uses the three flagged methods. `LEGAL_REVIEW.md` records w
 | 10 Torch + exposure bias | *given mean ROI luma below the threshold for N frames, `TorchHint` should suggest it* | Bias is a fixed setting (−0.5 to −1.0 EV), never driven by detections (11087105). |
 | 11 ZXing-cpp fallback | *given the fixture Vision misses, ZXing should read it* | Feature flag. Apache-2.0 → THIRD_PARTY_NOTICES. ⚠ LEGAL_REVIEW: check whether ZXing's multi-row 1D reading (TryHarder) resembles 11893764's segment stitching before shipping. |
 | 12 OCR digits | *given OCR text `7 501055 300075`, `DigitsExtractor` should yield a valid EAN-13; given an invalid check digit, nothing* | 2 matching frames, `source: .ocr`, asks for confirmation. |
-| 13 Manual entry | *given typed `4006381333931`, should route like a scan* (through `ScannedCode.validated`) | A keypad button on the scanner feeds `handleScan`. |
+| 13 Manual entry | *given typed `4006381333931`, should route like a scan* (through `BarcodeRead.validated`) | A keypad button on the scanner feeds `handleScan`. |
 
 ## Migrate-as-touched
 
