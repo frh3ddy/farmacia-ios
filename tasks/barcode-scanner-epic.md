@@ -303,11 +303,33 @@ elsewhere in the same run. Open: verify the give-up row on a closed sheet.
   strong callback as give-ups, so a read landing as the sheet closes still logs; after
   the first accept it stops decoding. `BenchPlan` keeps the target at 1 or more (test
   first). Release no longer collects metrics. A camera failure in the scan sheet now
-  shows "No se pudo usar la cámara" instead of closing the sheet silently.
+  shows "No se pudo usar la cámara" instead of closing the sheet silently. (e3d4ace)
+
+## Decision after the bench (2026-11-19, user)
+
+Stage 1 met the brief's targets on the 20-product set: every product read in every
+mode (20 of 21 openings in 4K), ~35 ms from first sighting to accept, 0 misreads in 80
+scans, and 0.8–1 s faster per product than the old scanner.
+- **Release uses the new scanner** (`ScannerLab.useLegacy` false in Release). DEBUG keeps
+  the CodeScanner toggle and the bench plan's baseline mode. Release no longer reads
+  Code 93 or ITF-14 (already dropped in §Decisions).
+- **Defaults stay wide camera + 1080p.** 4K's median was 0.17 s faster, which is within
+  the aiming noise, for about 4× the pixels per frame, and it had the one failed
+  opening. Triple was no better.
+- **Torch button (✅):** under the scan box, switched by hand only (late night, dim
+  shelves). The camera applies a tap made before it's ready once it starts. No auto
+  torch, so nothing reacts to frames (11087105 stays clear).
+- **Stage 2 is on hold.** Nothing on the bench failed in a way that preprocessing, blur
+  filtering, ZXing or OCR would fix, and ZXing needs a legal review first. Step 13
+  (manual entry) is covered by searching the last 4+ barcode digits in Productos (ops
+  f36e86d), which also handles the box nothing reads (`7503005950017`). Reopen a step
+  when field misses show it's needed.
+- Not checked on the phone yet: the 0.7 cutoff on real boxes, the torch button, and the
+  "Sin lectura" row on a closed sheet.
 
 ---
 
-## Stage 2 (outline, re-plan after the benchmark)
+## Stage 2 (on hold, see the decision above)
 
 | Brief step | First failing test | Notes / legal |
 |---|---|---|

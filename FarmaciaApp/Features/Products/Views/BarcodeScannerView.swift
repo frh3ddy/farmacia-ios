@@ -6,10 +6,10 @@ import SwiftUI
 
 // MARK: - Product barcode scanner
 //
-// What every product scan button opens. It shows the new camera scanner
-// (BarcodeScannerView: Vision + multi-frame voting) or, while it's being benchmarked,
-// the old CodeScanner (AVCaptureMetadataOutput) as the baseline. Release builds use
-// the old one until the benchmark passes (tasks/barcode-scanner-epic.md).
+// What every product scan button opens: the new camera scanner (BarcodeScannerView:
+// Vision + multi-frame voting), in Release too since the 2026-11-19 device bench
+// (tasks/barcode-scanner-epic.md). DEBUG builds can still switch to the old
+// CodeScanner (AVCaptureMetadataOutput) as the benchmark baseline.
 
 struct ProductBarcodeScanner: View {
     /// What the simulator "scans" when tapped (it has no camera).
@@ -107,7 +107,7 @@ final class ScannerLab {
         if let mode = plan?.current { apply(mode) }
     }
     #else
-    let useLegacy = true
+    let useLegacy = false
     private init() {}
     #endif
 
@@ -184,6 +184,7 @@ struct BarcodeScannerView: View {
     var onMetrics: @MainActor (ScanMetrics) -> Void = { _ in }
 
     @State private var accepted = 0
+    @State private var torch = false
 
     var body: some View {
         content
@@ -202,7 +203,7 @@ struct BarcodeScannerView: View {
         }
         .buttonStyle(.plain)
         #else
-        CameraPreview(settings: settings) { code in
+        CameraPreview(settings: settings, torch: torch) { code in
             guard accepted == 0 else { return } // one scan per opening, like CodeScanner's .once
             accepted += 1
             AudioServicesPlaySystemSound(1057)
@@ -213,7 +214,27 @@ struct BarcodeScannerView: View {
             onMetrics(metrics)
         }
         .overlay { ScanBoxOverlay(width: settings.scanBoxWidth, height: settings.scanBoxHeight) }
+        .overlay { torchButton }
         #endif
+    }
+}
+
+extension BarcodeScannerView {
+    /// Just under the scan box: clear of the bench badge on top and the save strip below.
+    private var torchButton: some View {
+        GeometryReader { geo in
+            Button {
+                torch.toggle()
+            } label: {
+                Image(systemName: torch ? "flashlight.on.fill" : "flashlight.off.fill")
+                    .font(.title2)
+                    .frame(width: 56, height: 56)
+                    .background(.ultraThinMaterial, in: .circle)
+            }
+            .foregroundStyle(torch ? .yellow : .white)
+            .accessibilityLabel(torch ? "Apagar linterna" : "Encender linterna")
+            .position(x: geo.size.width / 2, y: geo.size.height * (0.5 + settings.scanBoxHeight / 2) + 52)
+        }
     }
 }
 
@@ -245,6 +266,7 @@ private struct ScanBoxOverlay: View {
 /// region of interest once the camera is configured and whenever the layout changes.
 private struct CameraPreview: UIViewRepresentable {
     let settings: ScanSettings
+    let torch: Bool
     let onAccept: @MainActor (String) -> Void
     let onFailure: @MainActor (CameraController.Failure) -> Void
     let onMetrics: @MainActor (ScanMetrics) -> Void
@@ -265,6 +287,7 @@ private struct CameraPreview: UIViewRepresentable {
     }
 
     func updateUIView(_ view: PreviewView, context: Context) {
+        view.camera?.setTorch(torch)
         context.coordinator.onAccept = onAccept
         context.coordinator.onFailure = onFailure
     }

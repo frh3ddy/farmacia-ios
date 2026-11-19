@@ -44,6 +44,8 @@ final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDele
 
     // sessionQueue only
     private var configured = false
+    private var device: AVCaptureDevice?
+    private var torchOn = false
     /// Set by stop(). A start that lands after it (the permission prompt answered after
     /// the scanner closed, or a dismantle racing start) must not turn the camera back on.
     private var stopped = false
@@ -112,11 +114,31 @@ final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDele
             if !self.configured {
                 guard let device = self.configure() else { return self.fail(.noCamera) }
                 self.configured = true
+                self.device = device
                 Task { @MainActor in self.onConfigured(device) }
             }
             self.processingQueue.async { self.countingFrom = Date() }
             self.session.startRunning()
+            self.applyTorch() // a tap before the camera was ready
         }
+    }
+
+    /// The torch (late night, a dim shelf), switched by hand only; nothing here turns it
+    /// on by itself. Applies once the camera is configured; a no-op without a torch.
+    func setTorch(_ on: Bool) {
+        sessionQueue.async {
+            self.torchOn = on
+            self.applyTorch()
+        }
+    }
+
+    /// sessionQueue only.
+    private func applyTorch() {
+        let mode: AVCaptureDevice.TorchMode = torchOn ? .on : .off
+        guard !stopped, let device, device.hasTorch, device.isTorchModeSupported(.on), device.torchMode != mode,
+              (try? device.lockForConfiguration()) != nil else { return }
+        device.torchMode = mode
+        device.unlockForConfiguration()
     }
 
     private func fail(_ failure: Failure) {
