@@ -1,6 +1,6 @@
 # Receiving Cost Fix Epic (Corregir costo)
 
-**Status**: 🔍 IN REVIEW (2026-11-19)
+**Status**: ✅ MERGED (2026-11-19): `e338a3d`, merged to main as `dceacad`; dev-f8 approved. Item 3 still open.
 **Goal**: Let the owner fix a receiving saved with the wrong unit cost. The trigger was Dolprin Susp 120 ml (SKU 780083141929), real cost $26.71.
 
 ## Overview
