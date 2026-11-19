@@ -1,6 +1,6 @@
 # Buscar por foto Epic
 
-**Status**: 🚧 IN PROGRESS. Steps 1–4 ✅ (merged 7a94de3, 8551bca, 4fd1428)
+**Status**: 🚧 IN PROGRESS. Steps 1–5 ✅ (merged 7a94de3, 8551bca, 4fd1428, 1ff752f)
 **Branch**: `feature/photo-search`. Steps 1–12 are farmacia-ios only. Step 14 adds one API endpoint (farmacia-ops).
 **Photos are never changed.** Reference photos are downloaded, background-removed and turned into vectors in memory only; nothing is uploaded and the Square images stay as they are. The search photo isn't saved or uploaded either.
 **Goal**: Find a product that has no barcode by taking its photo. The result is a short ranked list to tap, not one guessed answer.
@@ -79,7 +79,7 @@ The full "sin código" grid is always the fallback: a photo that reads no text a
    - given equal text scores, the higher image score should come first
    - given a blue and a pink variant with the photo closest to blue, blue should be first and pink still in the top 5
 
-5. **`FeatureIndex` (Codable value plus rules)**: entries keyed by `productId`, each storing its `imageUrl` and vector, with one Vision `revision` for the whole index. `refreshed(for: [Ref], revision:) -> (index, queue)` keeps the valid entries and lists what to index next; `insert`, `vector(for:)`. Step 8's bench set must include IMG_5770 vs 5771, the hardest unrelated pair found so far at cos 0.58.
+5. ✅ **`FeatureIndex` (Codable value plus rules)**: entries keyed by `productId`, each storing its `imageUrl` and vector, with one Vision `revision` for the whole index. `refreshed(for: [Ref], revision:) -> (index, queue)` keeps the valid entries and lists what to index next; `insert`, `vector(for:)`. Step 8's bench set must include IMG_5770 vs 5771, the hardest unrelated pair found so far at cos 0.58.
    - given an entry whose `imageUrl` differs from the product's current `squareImageUrl`, should need reindexing *(first failing test)*
    - given a stored revision different from the current one, every entry should be stale
    - given a product no longer "sin código" (a barcode was added), its entry should be dropped
@@ -89,7 +89,7 @@ The full "sin código" grid is always the fallback: a photo that reads no text a
 
 6. **Migrate the subject lift into FarmaciaScan** (migrate-as-touched): `SubjectMask.lift(_ CGImage) -> CGImage?`, using `VNGenerateForegroundInstanceMaskRequest`. The app's `SubjectLifter` (UIImage) becomes a thin wrapper over it, and its behavior is unchanged.
    - given a plain single-color image, should return nil (no subject) *(first failing test)*
-   - given a test photo of a box on a counter (fixture), should return an image with transparent corners
+   - given a synthetic box on a gray counter, should keep the box and turn the counter white (the composite is over white, as SubjectLifter always did; synthetic images instead of a photo fixture, because Vision lifts them on the Mac)
 
 7. **`FeaturePrinter.vector(_ CGImage) -> (vector: [Float], revision: Int)?`**, using `VNGenerateImageFeaturePrintRequest` with its revision pinned.
    - given the same fixture twice, `FeatureVector.similarity` should be ≥ 0.99 *(first failing test)*
