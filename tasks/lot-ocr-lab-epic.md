@@ -19,9 +19,10 @@
   itself with an alert and a badge. Ajustes › Escáner › Prueba automática de lote. The CSV gains
   `setup` (e.g. wide-hd4K). Both labs share the tested `BenchPlan.recordOpening`; the lot
   scanner counts an opening when it closes, not when the row arrives 1 s later.
-- Gaps in the lab reader (DEBUG only): no GS1 DataMatrix (live text still reads it); a lote alone
-  can't be used with "Usar" (the card fills at the date); only Recibir marks `edited`; the camera
-  runs 1 s after the sheet closes after a read (the follow-up).
+- Gaps in the lab reader (DEBUG only): no GS1 DataMatrix (live text still reads it); **no lote
+  without a date**: it has no found card since 09d696f (it covered the torch), so a lote read
+  alone can't be taken, it's typed; only Recibir marks `edited`; the camera runs 1 s after the
+  sheet closes after a read (the follow-up).
 - **Bench 1 (iPhone 13 Pro, 2026-11-20, 20 products per mode):** dates read Apple 11/20
   (5/10 on the first 10 in order), lab 1080p 18/20, lab 4K 18/20 (same 18 dates); median time
   to the date 6.9 s / 1.5 s / 1.5 s. Lotes: the two lab rounds agree on 5 of 12. A different
