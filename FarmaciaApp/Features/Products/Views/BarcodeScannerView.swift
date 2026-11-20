@@ -321,6 +321,14 @@ final class PreviewView: UIView {
         previewLayer.videoGravity = .resizeAspectFill
     }
 
+    /// A box that follows the view's size (the lot scanner's square): the ROI is recomputed on
+    /// the next layout so the area read matches the square drawn.
+    func setBox(_ size: CGSize) {
+        guard size != box else { return }
+        box = size
+        setNeedsLayout()
+    }
+
     /// The session has its input (so the preview has a connection): rotate and set the ROI.
     func configured(_ device: AVCaptureDevice) {
         rotation = AVCaptureDevice.RotationCoordinator(device: device, previewLayer: previewLayer)

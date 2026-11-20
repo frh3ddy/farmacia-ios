@@ -238,6 +238,7 @@ private struct LotCameraPreview: UIViewRepresentable {
 
     func updateUIView(_ view: PreviewView, context: Context) {
         view.camera?.setTorch(torch)
+        view.setBox(CGSize(width: settings.scanBoxWidth, height: settings.scanBoxHeight))
         context.coordinator.onAccept = onAccept
         context.coordinator.onFailure = onFailure
     }
