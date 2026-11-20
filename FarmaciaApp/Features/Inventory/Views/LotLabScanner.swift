@@ -189,7 +189,7 @@ struct LotLabCamera: View {
                              onAccept: onAccept, onFailure: onFailure, onMetrics: onMetrics)
                 .overlay { ScanBoxOverlay(width: box.scanBoxWidth, height: box.scanBoxHeight) }
                 .overlay {
-                    // Just under the scan box: clear of the test badge on top and the found card below.
+                    // Just under the scan box, clear of the test badge on top.
                     Button {
                         torch.toggle()
                     } label: {

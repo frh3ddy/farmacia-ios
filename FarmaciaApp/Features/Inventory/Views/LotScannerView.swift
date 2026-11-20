@@ -8,8 +8,8 @@ import FarmaciaKit
 // text, or exactly from a GS1 DataMatrix when the box has one (`LotScan`).
 // Once it has both it fills them in and closes; the user checks them in the
 // form. The caducidad is what matters: as soon as one is read it's taken (with
-// the lote if read too), since some boxes show it for a split second. A lote
-// alone waits for "Usar".
+// the lote if read too), since some boxes show it for a split second. With live
+// text a lote alone waits for "Usar"; the lab reader (DEBUG) has no card.
 
 struct LotScannerView: View {
     /// What was found; called once, then the sheet closes.
@@ -32,7 +32,11 @@ struct LotScannerView: View {
         NavigationStack {
             reader
             .ignoresSafeArea(edges: .bottom)
-            .overlay(alignment: .bottom) { foundCard }
+            .overlay(alignment: .bottom) {
+                // The lab reader takes the date the moment it reads it, so no card: it only
+                // covered the torch (user, 2026-11-20). Live text keeps it for a lote alone.
+                if !useLab { foundCard }
+            }
             #if DEBUG
             .overlay(alignment: .top) { planBadge }
             .alert(LotLab.shared.announcement ?? "", isPresented: Binding(
