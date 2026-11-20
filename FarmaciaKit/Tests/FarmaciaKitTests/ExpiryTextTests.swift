@@ -72,7 +72,8 @@ extension ExpiryTextTests {
     }
 
     @Test("given a real word one letter from a month (review dev-f8), should read nothing: only OCR-confusable letters count",
-          arguments: ["1 AL DIA 30 TABLETAS", "PAR 27", "NOS 27", "ABS 27", "ONE 28"])
+          arguments: ["1 AL DIA 30 TABLETAS", "PAR 27", "NOS 27", "ABS 27", "ONE 28",
+                      "DIA 2030", "CON 2027", "LOT 2028", "REG 2029", "BIO 2027", "SOL 2028", "DOS 2030"])
     func wordsAreNotMonths(line: String) {
         #expect(ExpiryText.read(lines: [line], today: today) == nil)
     }
@@ -80,6 +81,20 @@ extension ExpiryTextTests {
     @Test("given a misread month that's one character from two months, should read nothing")
     func ambiguousMonth() {
         #expect(ExpiryText.read(lines: ["JUI 27"], today: today) == nil)
+    }
+
+    @Test("given MMYY glued or spaced after its keyword (IMG_5837), should read the month and year", arguments: [
+        ("CAD0228", 2, 2028), ("CADO228", 2, 2028), ("EXP1229", 12, 2029), ("VTO1027", 10, 2027),
+        ("VENCE0330", 3, 2030), ("CAD 0228", 2, 2028), ("CAD: O228", 2, 2028), ("EXP. 1229", 12, 2029),
+    ])
+    func keywordMonthYear(line: String, month: Int, year: Int) {
+        #expect(ExpiryText.read(lines: [line], today: today) == MonthYear(year: year, month: month))
+    }
+
+    @Test("given 4 digits that aren't MMYY after a keyword, or no keyword, should read nothing (review dev-f8)",
+          arguments: ["CAD0228X", "CAD022028", "EXP2812", "CAD 2028", "CAD 0028", "LOTE A0228", "LOTE 0228"])
+    func notKeywordMonthYear(line: String) {
+        #expect(ExpiryText.read(lines: [line], today: today) == nil)
     }
 
     @Test("given FAB before a 2-digit year, should not read it as FEB")

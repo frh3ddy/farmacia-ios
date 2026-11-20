@@ -15,6 +15,11 @@ public enum LotFilter: String, CaseIterable, Sendable, Codable {
     case dotJoin
     /// Gray, unsharp mask and contrast: blind-embossed digits' shadows.
     case relief
+    /// Gray, gamma 3: white paper stays white, the faint shadows of blind embossing go dark
+    /// (IMG_5846 read whole, 5841, 5843).
+    case darkened
+    /// Relief with a wider, stronger unsharp mask: shallow embossing (IMG_5844's NOV 27).
+    case deepRelief
 
     public static func forPass(_ pass: Int) -> LotFilter {
         allCases[pass % allCases.count]

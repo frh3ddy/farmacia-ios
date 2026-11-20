@@ -334,6 +334,9 @@ struct ReceiveInventoryFormView: View {
                     if let expiry = scan.expiry { expiryMonth = expiry }
                 }
             }
+            // DEBUG lot bench: a fill this form didn't save must not mark a later save.
+            // (Scan rows log as the scanner closes, after any disappear the cover causes here.)
+            .onDisappear { LotLab.shared.formClosed() }
             .task(id: authManager.currentLocation?.id) { await loadHistory() }
             .task {
                 guard StoreStock.isExpected(tracksInventory: product.tracksInventory,
@@ -780,6 +783,8 @@ struct ReceiveInventoryFormView: View {
 
         if success {
             isDone = true
+            // DEBUG lot bench: whether the scanned lote/caducidad were changed before saving.
+            LotLab.shared.saved(lot: batchNumber.isEmpty ? nil : batchNumber, expiry: expiryMonth)
             onComplete?(qty)
             // Long enough to read the checkmark, short enough not to wait on.
             try? await Task.sleep(for: .milliseconds(600))

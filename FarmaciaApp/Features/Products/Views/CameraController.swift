@@ -5,28 +5,37 @@ import os
 
 // MARK: - Camera controller
 //
-// The barcode scanner's camera: device choice, close-up focus, the one-time startup
-// zoom (StartupZoom), and frames → VisionBarcodeDetector → ResultAggregator.
+// The scanners' camera: device choice, close-up focus, the one-time startup zoom
+// (StartupZoom), the torch, and frames → a `CameraFrameHandler` (barcodes:
+// `BarcodeFrameHandler`; lot text: `LotFrameHandler`).
 //
 // Queues: the session is configured/started/stopped on `sessionQueue`; frames arrive on
 // `frameQueue` and are handed to `processingQueue`, skipping any frame that arrives
 // while the previous one is still being decoded (plus alwaysDiscardsLateVideoFrames).
-// The aggregator and per-scan counters are only touched on `processingQueue`; the ROI
-// and busy flag cross queues behind a lock. Accepts hop to the main actor.
+// The handler is only called on `processingQueue`; the ROI and busy flag cross queues
+// behind a lock. Handlers hop to the main actor for their callbacks.
 //
 // Focus and exposure stay in the system's continuous auto modes with a fixed point at
 // the scan-box center; nothing here reacts to a detection (see LEGAL_REVIEW.md).
+
+/// What the camera does with its frames. Every call is on the camera's processing queue.
+protocol CameraFrameHandler: AnyObject, Sendable {
+    /// The camera started running: restart any clocks.
+    func started()
+    /// One frame, with the scan box in Vision's coordinates (`ScanROI.visionRect`).
+    func frame(_ buffer: CVPixelBuffer, roi: CGRect)
+    /// The camera stopped for good (it had been configured): log a give-up if nothing was read.
+    func stopped()
+}
 
 final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate, @unchecked Sendable {
     enum Failure: Error { case noCamera, denied }
 
     let session = AVCaptureSession()
     private let settings: ScanSettings
-    private let detector: VisionBarcodeDetector
-    private let onAccept: @MainActor @Sendable (String) -> Void
+    private let handler: CameraFrameHandler
     private let onFailure: @MainActor @Sendable (Failure) -> Void
     private let onConfigured: @MainActor @Sendable (AVCaptureDevice) -> Void
-    private let onMetrics: @MainActor @Sendable (ScanMetrics) -> Void
 
     private let sessionQueue = DispatchQueue(label: "scanner.session")
     private let frameQueue = DispatchQueue(label: "scanner.frames")
@@ -34,13 +43,6 @@ final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDele
 
     private struct Shared { var busy = false; var roi = CGRect(x: 0, y: 0, width: 1, height: 1) }
     private let shared = OSAllocatedUnfairLock(initialState: Shared())
-
-    // processingQueue only
-    private var aggregator: ResultAggregator
-    private var frames = 0
-    private var countingFrom = Date()
-    private var clock: SightingClock
-    private var acceptedAny = false
 
     // sessionQueue only
     private var configured = false
@@ -50,19 +52,13 @@ final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDele
     /// the scanner closed, or a dismantle racing start) must not turn the camera back on.
     private var stopped = false
 
-    init(settings: ScanSettings,
-         onAccept: @escaping @MainActor @Sendable (String) -> Void,
+    init(settings: ScanSettings, handler: CameraFrameHandler,
          onFailure: @escaping @MainActor @Sendable (Failure) -> Void,
-         onConfigured: @escaping @MainActor @Sendable (AVCaptureDevice) -> Void,
-         onMetrics: @escaping @MainActor @Sendable (ScanMetrics) -> Void) {
+         onConfigured: @escaping @MainActor @Sendable (AVCaptureDevice) -> Void) {
         self.settings = settings
-        detector = VisionBarcodeDetector(symbologies: settings.symbologies)
-        aggregator = ResultAggregator(settings: settings)
-        clock = SightingClock(gapFrames: settings.voteWindow)
-        self.onAccept = onAccept
+        self.handler = handler
         self.onFailure = onFailure
         self.onConfigured = onConfigured
-        self.onMetrics = onMetrics
     }
 
     /// The scan box in Vision's coordinates (`ScanROI.visionRect`), from the main thread.
@@ -84,8 +80,8 @@ final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDele
     }
 
     /// Stops the camera for good: the output's delegate is cleared so this controller
-    /// (and its session) can be freed once the scanner closes. A camera that ran without
-    /// reading anything reports a give-up row (read rates need the misses).
+    /// (and its session) can be freed once the scanner closes. The handler then logs its
+    /// give-up row if it read nothing (read rates need the misses).
     func stop() {
         sessionQueue.async {
             self.stopped = true
@@ -94,18 +90,8 @@ final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDele
                 output.setSampleBufferDelegate(nil, queue: nil)
             }
             guard self.configured else { return }
-            self.processingQueue.async { self.reportGiveUp() }
+            self.processingQueue.async { self.handler.stopped() }
         }
-    }
-
-    private func reportGiveUp() {
-        guard !acceptedAny else { return }
-        let now = Date()
-        let metrics = ScanMetrics(date: now, device: Self.deviceModel, detector: .vision, code: nil, msToRead: nil,
-                                  msSinceOpen: Int(now.timeIntervalSince(countingFrom) * 1000),
-                                  frames: frames, misreads: aggregator.misreads,
-                                  topConfidence: clock.topConfidence, settingsTag: settings.tag)
-        Task { @MainActor in onMetrics(metrics) }
     }
 
     private func startSession() {
@@ -117,7 +103,7 @@ final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDele
                 self.device = device
                 Task { @MainActor in self.onConfigured(device) }
             }
-            self.processingQueue.async { self.countingFrom = Date() }
+            self.processingQueue.async { self.handler.started() }
             self.session.startRunning()
             self.applyTorch() // a tap before the camera was ready
         }
@@ -230,30 +216,9 @@ final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDele
         }
         guard let roi else { return } // still decoding the previous frame: skip this one
         nonisolated(unsafe) let frame = buffer
-        processingQueue.async { self.process(frame, roi: roi) }
-    }
-
-    /// One accept per opening (the scanner closes on it): the accept's row goes to
-    /// onMetrics, which outlives the view, so a read landing as the scanner closes still
-    /// logs; then frames are dropped, so later codes can't add rows.
-    private func process(_ buffer: CVPixelBuffer, roi: CGRect) {
-        defer { shared.withLock { $0.busy = false } }
-        guard !acceptedAny else { return }
-        let reads = (try? detector.detect(in: buffer, roi: roi)) ?? []
-        frames += 1
-        let now = Date()
-        clock.frame(reads, now: now)
-        guard let code = aggregator.ingest(reads, now: now) else { return }
-
-        let metrics = ScanMetrics(date: now, device: Self.deviceModel, detector: .vision, code: code,
-                                  msToRead: clock.since.map { Int(now.timeIntervalSince($0) * 1000) },
-                                  msSinceOpen: Int(now.timeIntervalSince(countingFrom) * 1000),
-                                  frames: frames, misreads: aggregator.misreads,
-                                  topConfidence: clock.topConfidence, settingsTag: settings.tag)
-        acceptedAny = true
-        Task { @MainActor in
-            onMetrics(metrics)
-            onAccept(code)
+        processingQueue.async {
+            defer { self.shared.withLock { $0.busy = false } }
+            self.handler.frame(frame, roi: roi)
         }
     }
 
@@ -263,4 +228,65 @@ final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDele
         uname(&info)
         return withUnsafeBytes(of: &info.machine) { String(decoding: $0.prefix { $0 != 0 }, as: UTF8.self) }
     }()
+}
+
+// MARK: - Barcode frames
+
+/// Frames → VisionBarcodeDetector → ResultAggregator. One accept per opening (the scanner
+/// closes on it): the accept's row goes to onMetrics, which outlives the view, so a read
+/// landing as the scanner closes still logs; then frames are dropped, so later codes can't
+/// add rows. Processing queue only (`CameraFrameHandler`).
+final class BarcodeFrameHandler: CameraFrameHandler, @unchecked Sendable {
+    private let settings: ScanSettings
+    private let detector: VisionBarcodeDetector
+    private let onAccept: @MainActor @Sendable (String) -> Void
+    private let onMetrics: @MainActor @Sendable (ScanMetrics) -> Void
+    private var aggregator: ResultAggregator
+    private var frames = 0
+    private var countingFrom = Date()
+    private var clock: SightingClock
+    private var acceptedAny = false
+
+    init(settings: ScanSettings,
+         onAccept: @escaping @MainActor @Sendable (String) -> Void,
+         onMetrics: @escaping @MainActor @Sendable (ScanMetrics) -> Void) {
+        self.settings = settings
+        detector = VisionBarcodeDetector(symbologies: settings.symbologies)
+        aggregator = ResultAggregator(settings: settings)
+        clock = SightingClock(gapFrames: settings.voteWindow)
+        self.onAccept = onAccept
+        self.onMetrics = onMetrics
+    }
+
+    func started() { countingFrom = Date() }
+
+    func frame(_ buffer: CVPixelBuffer, roi: CGRect) {
+        guard !acceptedAny else { return }
+        let reads = (try? detector.detect(in: buffer, roi: roi)) ?? []
+        frames += 1
+        let now = Date()
+        clock.frame(reads, now: now)
+        guard let code = aggregator.ingest(reads, now: now) else { return }
+
+        let metrics = row(code: code, now: now)
+        acceptedAny = true
+        Task { @MainActor in
+            onMetrics(metrics)
+            onAccept(code)
+        }
+    }
+
+    func stopped() {
+        guard !acceptedAny else { return }
+        let metrics = row(code: nil, now: Date())
+        Task { @MainActor in onMetrics(metrics) }
+    }
+
+    private func row(code: String?, now: Date) -> ScanMetrics {
+        ScanMetrics(date: now, device: CameraController.deviceModel, detector: .vision, code: code,
+                    msToRead: code == nil ? nil : clock.since.map { Int(now.timeIntervalSince($0) * 1000) },
+                    msSinceOpen: Int(now.timeIntervalSince(countingFrom) * 1000),
+                    frames: frames, misreads: aggregator.misreads,
+                    topConfidence: clock.topConfidence, settingsTag: settings.tag)
+    }
 }

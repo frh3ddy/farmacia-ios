@@ -18,7 +18,7 @@ let package = Package(
         .target(name: "FarmaciaKit"),
         .testTarget(name: "FarmaciaKitTests", dependencies: ["FarmaciaKit"]),
         .target(name: "FarmaciaScan", dependencies: ["FarmaciaKit"]),
-        .testTarget(name: "FarmaciaScanTests", dependencies: ["FarmaciaScan"]),
+        .testTarget(name: "FarmaciaScanTests", dependencies: ["FarmaciaScan"], resources: [.copy("Photos")]),
         .executableTarget(name: "scan-bench", dependencies: ["FarmaciaScan"]),
     ],
     swiftLanguageModes: [.v5]

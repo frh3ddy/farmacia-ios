@@ -1,6 +1,62 @@
 # Epic: faster, surer lot and expiry reading (lot OCR lab)
 
-**Status:** steps 1–5 (logic) ✅ 23f1453 + the confusable-letters fix (dev-f8's review), 976 tests pass. Next: step 6 (lab reader on the iPhone). Branch `feature/lot-ocr-lab`.
+**Status** (branch `feature/lot-ocr-lab`):
+- Steps 1–5 (logic) ✅ on main: 23f1453 + 2358e81, merged as 5a82f79.
+- Steps 6–7 ✅ 37d17de + 230a3db (dev-f8 approved), not on main yet. **Before pushing:** a short
+  barcode check on the iPhone (the camera split touches the Release barcode scanner).
+  - `LotReading`: accept + 1 s follow-up + metrics row; tested.
+  - `LotTextReader` (FarmaciaScan): crop, filter, upright, Vision text; tested on rendered labels,
+    including both 90° turns.
+  - `CameraController` split into the shared camera + `BarcodeFrameHandler` (barcode logic moved
+    as is) + `LotFrameHandler`.
+  - The DEBUG switch and metrics in Ajustes › Escáner › Lector de lote; Recibir's save marks
+    `edited` (`LotScanMetrics.recordSave`, `LotScanLog`; tested).
+  - Review dev-f8 (fixed in 230a3db): the follow-up runs only after a read (a give-up stops at
+    once; `LotReading.stop()` keeps late frames from turning it into a read); `LotScanLog`
+    forgets the fill on a give-up or a form closed unsaved.
+- Automatic lot test (user, 2026-11-19): `BenchPlan.lotStandard` (Apple's live text, then the lab
+  at 1080p and 4K) drives `LotLab` like the barcode bench: N openings per mode, switching by
+  itself with an alert and a badge. Ajustes › Escáner › Prueba automática de lote. The CSV gains
+  `setup` (e.g. wide-hd4K). Both labs share the tested `BenchPlan.recordOpening`; the lot
+  scanner counts an opening when it closes, not when the row arrives 1 s later.
+- Gaps in the lab reader (DEBUG only): no GS1 DataMatrix (live text still reads it); **no lote
+  without a date**: it has no found card since 09d696f (it covered the torch), so a lote read
+  alone can't be taken, it's typed; only Recibir marks `edited`; the camera runs 1 s after the
+  sheet closes after a read (the follow-up).
+- **Bench 1 (iPhone 13 Pro, 2026-11-20, 20 products per mode):** dates read Apple 11/20
+  (5/10 on the first 10 in order), lab 1080p 18/20, lab 4K 18/20 (same 18 dates); median time
+  to the date 6.9 s / 1.5 s / 1.5 s. Lotes: the two lab rounds agree on 5 of 12. A different
+  date in the 1 s follow-up 3 times in 49, and the other round confirmed the accepted one, so
+  `votesNeeded` stays 1. 1080p = 4K, so 1080p. `edited` empty (nothing saved via Recibir).
+- **Misses fixed in the parser** (photos IMG_5837–5839, Mac Vision reads them): "CADO228" (MMYY
+  glued to CAD, 0 as O); "FEB 2031" with a 4-digit year read as PEB/FED (F←P, B←D added).
+  IMG_5838 only reads with a tight crop on the CAD line (the dots are far apart); IMG_5839
+  (embossed, clear bottle) and IMG_5845 (blind embossing under a big printed "C/10") stay
+  unread: the user types them.
+- **Slow reads** (IMG_5836, 5840–5844, 5846; mostly blind embossing): NOV as NOU and SEP as SEB
+  added (V←U, P←B). Spaced years ("ENE 2 8") already read. The same box reads with light from
+  the side (5841: 260085 ENE 28) and not under flat light (5842), so step 8's "Inclina la caja
+  hacia la luz" hint is the lever for embossing; 5840 and 5844 barely read even at 12 MP.
+- **Two more filters** (Mac test of 16 colour/contrast filters on the embossed photos):
+  `darkened` (gray, gamma 3) read IMG_5846 whole and 5841/5843's dates; `deepRelief` (unsharp
+  r25 ×6, contrast 3) read 5844's NOV 27, which nothing else did. Grayscale alone, single
+  channels, black/white thresholds, edge maps and high-pass added nothing. The cycle is now 6
+  filters (each one every ~0.6 s at 10 passes/s). The Vision tests run serialized (in
+  parallel they deadlocked on Vision's queue).
+- **Review follow-ups (/tdd-review of f6936c9):** the keyword+MMYY rule also takes the spaced
+  form ("CAD 0228", "CAD: O228", "EXP. 1229") and has tests for every keyword and non-MMYY
+  tails; 20xx years have the words-stay-words tests. Three small real crops in
+  `FarmaciaScanTests/Photos` test the filters through the app's reader: deep relief reads
+  IMG_5844's NOV 27 (as NOY, so V←Y added); darkened reads IMG_5846's lote right at ~4K size
+  (plain reads 26010513); 5843's SEB 27 reads as September. At 1080p size darkened wins no
+  date on its own: watch its share in the next bench.
+- **Lab by default, square box (user, 2026-11-20):** the DEBUG switch wasn't kept, so every
+  launch went back to live text (no box, no torch). The lab is now the DEBUG default (bench 1),
+  at 1080p, with a square box 70% of the preview's width (`ScanSettings.squareBox`, tested).
+- **Month and year apart:** wide embossing at frame size reads "ENE" and "28" (or "2 8") as two
+  lines (IMG_5846, 3 filters); a lone month-like word followed by a lone year is joined
+  before parsing. Words still need to be a month or one misread away ("ONE" / "28" stays unread).
+- Next: the barcode check, then the push; then make the lab at 1080p the store reader.
 
 ## Why
 

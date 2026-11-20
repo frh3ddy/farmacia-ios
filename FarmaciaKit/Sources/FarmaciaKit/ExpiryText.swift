@@ -24,7 +24,7 @@ public enum ExpiryText {
     }
 
     public static func find(lines: [String], today: MonthYear) -> Found? {
-        let lines = lines.map(normalize)
+        let lines = joiningMonthAndYear(lines).map(normalize)
         for (i, line) in lines.enumerated() {
             guard let keyword = firstMatch(expiryKeyword, in: line) else { continue }
             let rest = String(line[keyword.upperBound...])
@@ -52,6 +52,24 @@ public enum ExpiryText {
         guard loose.count == 1, let only = loose.first, !only.date.isBefore(today) else { return nil }
         return only
     }
+
+    /// Wide embossing gives the month and its year apart ("ENE" then "28" or "2 8", IMG_5846):
+    /// a lone 3-character word followed by a lone year becomes one line, the year's line left
+    /// empty so line numbers stay put. The word still has to be a month (or one misread away).
+    private static func joiningMonthAndYear(_ lines: [String]) -> [String] {
+        var lines = lines.map { $0.trimmingCharacters(in: .whitespaces) }
+        for i in lines.indices.dropLast()
+        where firstMatch(monthAlone, in: lines[i]) != nil && firstMatch(yearAlone, in: lines[i + 1]) != nil {
+            lines[i] = "\(lines[i]) \(lines[i + 1].filter(\.isNumber))"
+            lines[i + 1] = ""
+        }
+        return lines
+    }
+
+    /// A whole line: 3 characters, at least two letters, maybe a period ("ENE", "NOY", "FEB.").
+    private static let monthAlone = regex(#"^(?=[A-Za-z0-9]*[A-Za-z][A-Za-z0-9]*[A-Za-z])[A-Za-z0-9]{3}\.?$"#)
+    /// A whole line: a 2-digit year, maybe read apart ("2 8"), or 20xx.
+    private static let yearAlone = regex(#"^(?:\d ?\d|20\d{2})$"#)
 
     // MARK: Matching
 
@@ -146,14 +164,15 @@ public enum ExpiryText {
     }
 
     /// A month's letter → what OCR read it as on dot-matrix and embossed labels (photos IMG_5794,
-    /// 5797: MAY as KAY/HAY/M4Y, JUL as IUL). Add pairs only from a seen misread.
+    /// 5797: MAY as KAY/HAY/M4Y, JUL as IUL; 5838: FEB as PEB/FED; 5836: NOV as NOU, 5844 as NOY;
+    /// 5843: SEP as SEB). Add pairs only from a seen misread.
     private static let confusable: [Character: Set<Character>] = [
         "M": ["K", "H", "N"], "N": ["M"], "A": ["4"], "J": ["I", "1", "L"],
-        "O": ["0"], "S": ["5"], "B": ["8"],
+        "O": ["0"], "S": ["5"], "B": ["8", "D"], "F": ["P"], "V": ["U", "Y"], "P": ["B"],
     ]
 
-    /// A 3-character word with at least two letters, followed by a spaced 2-digit year.
-    private static let monthLike = regex(#"(?<![A-Z0-9])(?=[A-Z0-9]*[A-Z][A-Z0-9]*[A-Z])[A-Z0-9]{3}(?![A-Z0-9])(?=\s+\d{2}(?!\d))"#)
+    /// A 3-character word with at least two letters, followed by a spaced 2-digit or 20xx year.
+    private static let monthLike = regex(#"(?<![A-Z0-9])(?=[A-Z0-9]*[A-Z][A-Z0-9]*[A-Z])[A-Z0-9]{3}(?![A-Z0-9])(?=\s+(?:20)?\d{2}(?!\d))"#)
 
     /// A price is never a date ("$10.30" isn't October 2030); dot-matrix O read as a zero.
     private static let fixes: [(NSRegularExpression, String)] = [
@@ -161,6 +180,10 @@ public enum ExpiryText {
         (regex(#"(?<![A-Z])0CT"#), "OCT"),
         (regex(#"(?<![A-Z])AG0"#), "AGO"),
         (regex(#"(?<![A-Z])N0V"#), "NOV"),
+        // MMYY after its keyword, glued or not ("CAD0228", "CAD: 0228"), the month's zero often
+        // read as O ("CADO228"). Only right after the keyword: a lote is never read this way.
+        (regex(#"\b(CAD|EXP|VTO|VENCE)[:.]?\s*[O0](\d)(\d{2})(?![\dA-Z])"#), "$1 0$2/$3"),
+        (regex(#"\b(CAD|EXP|VTO|VENCE)[:.]?\s*(1[0-2])(\d{2})(?![\dA-Z])"#), "$1 $2/$3"),
         // A lote glued to "AGO 27" ("254875AGO 27") is split off. Only before a spaced 2-digit
         // year, so a month inside a lote code ("A23DIC45") stays part of it.
         (regex(#"(\d)("# + monthNames + #")(?=\s+\d{2}(?!\d))"#), "$1 $2"),

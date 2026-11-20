@@ -8,8 +8,8 @@ import FarmaciaKit
 // text, or exactly from a GS1 DataMatrix when the box has one (`LotScan`).
 // Once it has both it fills them in and closes; the user checks them in the
 // form. The caducidad is what matters: as soon as one is read it's taken (with
-// the lote if read too), since some boxes show it for a split second. A lote
-// alone waits for "Usar".
+// the lote if read too), since some boxes show it for a split second. With live
+// text a lote alone waits for "Usar"; the lab reader (DEBUG) has no card.
 
 struct LotScannerView: View {
     /// What was found; called once, then the sheet closes.
@@ -19,18 +19,33 @@ struct LotScannerView: View {
     @State private var scan = LotScan(lines: [], barcodes: [], today: MonthYear(date: .now))
     /// The scanner keeps reporting until the sheet is gone: use it once.
     @State private var used = false
+    @State private var openedAt = Date()
+    /// DEBUG: the lot OCR lab reader instead of live text (fixed when the sheet opens).
+    @State private var useLab = LotLab.shared.useLab
+    @State private var cameraFailed = false
+    @State private var usedAt = Date()
 
     /// DataScannerViewController needs an A12 chip or later; the form hides the button otherwise.
     static var isSupported: Bool { DataScannerViewController.isSupported }
 
     var body: some View {
         NavigationStack {
-            LiveTextScanner { lines, barcodes in
-                scan = LotScan(lines: lines, barcodes: barcodes, today: MonthYear(date: .now))
-                if scan.autoAccept == .now { use() }
-            }
+            reader
             .ignoresSafeArea(edges: .bottom)
-            .overlay(alignment: .bottom) { foundCard }
+            .overlay(alignment: .bottom) {
+                // The lab reader takes the date the moment it reads it, so no card: it only
+                // covered the torch (user, 2026-11-20). Live text keeps it for a lote alone.
+                if !useLab { foundCard }
+            }
+            #if DEBUG
+            .overlay(alignment: .top) { planBadge }
+            .alert(LotLab.shared.announcement ?? "", isPresented: Binding(
+                get: { LotLab.shared.announcement != nil },
+                set: { if !$0 { LotLab.shared.announcement = nil } }
+            )) {
+                Button("OK") {}
+            }
+            #endif
             .navigationTitle("Escanear lote")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -40,6 +55,57 @@ struct LotScannerView: View {
             }
         }
         .sensoryFeedback(.success, trigger: used) { _, done in done }
+        #if DEBUG
+        .onDisappear {
+            LotLab.shared.opened()
+            // Live text's row (the lab reader logs its own): a read, or a give-up.
+            guard !useLab else { return }
+            LotLab.shared.log(LotScanMetrics(
+                date: openedAt, device: CameraController.deviceModel, reader: .liveText,
+                lot: used ? scan.lot : nil, expiry: used ? scan.expiry : nil,
+                msToExpiry: used && scan.expiry != nil ? Int(usedAt.timeIntervalSince(openedAt) * 1000) : nil,
+                msToLot: nil, passes: nil, filter: nil, edited: nil))
+        }
+        #endif
+    }
+
+    #if DEBUG
+    /// Which plan mode this opening is, so nobody loses track mid-test (like the barcode bench).
+    @ViewBuilder private var planBadge: some View {
+        if let plan = LotLab.shared.plan, let mode = plan.current {
+            Text("Prueba · \(mode.name) · \(plan.count)/\(plan.target)")
+                .font(.caption.bold())
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(.yellow, in: .capsule)
+                .foregroundStyle(.black)
+                .padding(.top, 8)
+                .allowsHitTesting(false)
+        }
+    }
+    #endif
+
+    @ViewBuilder private var reader: some View {
+        if cameraFailed {
+            ContentUnavailableView("No se pudo usar la cámara", systemImage: "camera",
+                                   description: Text("Revisa el permiso de cámara en Ajustes."))
+        } else if useLab {
+            #if DEBUG
+            LotLabCamera(settings: LotLab.shared.settings, followUp: LotLab.shared.followUp) { found in
+                scan = found
+                use()
+            } onFailure: { _ in
+                cameraFailed = true
+            } onMetrics: { row in
+                LotLab.shared.log(row)
+            }
+            #endif
+        } else {
+            LiveTextScanner { lines, barcodes in
+                scan = LotScan(lines: lines, barcodes: barcodes, today: MonthYear(date: .now))
+                if scan.autoAccept == .now { use() }
+            }
+        }
     }
 
     private var foundCard: some View {
@@ -60,6 +126,7 @@ struct LotScannerView: View {
     private func use() {
         guard !used else { return }
         used = true
+        usedAt = .now
         onUse(scan)
         dismiss()
     }

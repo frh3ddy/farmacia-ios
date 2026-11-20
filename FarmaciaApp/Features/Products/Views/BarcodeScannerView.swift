@@ -116,18 +116,10 @@ final class ScannerLab {
         #if DEBUG
         metrics.append(scan)
         if var plan {
-            let finishedMode = plan.current
-            let event = plan.record()
+            let step = plan.recordOpening(finished: "Prueba completa. Exporta el CSV en Ajustes › Escáner (DEBUG).")
             self.plan = plan
-            switch event {
-            case .next(let mode):
-                apply(mode)
-                announcement = "\(finishedMode?.name ?? "") listo (\(plan.target) escaneos). Ahora: \(mode.name)."
-            case .finished:
-                announcement = "Prueba completa. Exporta el CSV en Ajustes › Escáner (DEBUG)."
-            case nil:
-                break
-            }
+            if let mode = step.switchTo { apply(mode) }
+            if let message = step.announcement { announcement = message }
         }
         save()
         #endif
@@ -239,7 +231,7 @@ extension BarcodeScannerView {
 }
 
 /// Dims everything but the centered scan box.
-private struct ScanBoxOverlay: View {
+struct ScanBoxOverlay: View {
     let width: Double
     let height: Double
 
@@ -273,13 +265,16 @@ private struct CameraPreview: UIViewRepresentable {
 
     func makeUIView(context: Context) -> PreviewView {
         let view = PreviewView()
-        let camera = CameraController(
+        let handler = BarcodeFrameHandler(
             settings: settings,
             onAccept: { [weak coordinator = context.coordinator] code in coordinator?.onAccept(code) },
-            onFailure: { [weak coordinator = context.coordinator] failure in coordinator?.onFailure(failure) },
-            onConfigured: { [weak view] device in view?.configured(device) },
             // Strong on purpose: a give-up (or a read as it closes) arrives after the dismantle.
             onMetrics: { [onMetrics] metrics in onMetrics(metrics) }
+        )
+        let camera = CameraController(
+            settings: settings, handler: handler,
+            onFailure: { [weak coordinator = context.coordinator] failure in coordinator?.onFailure(failure) },
+            onConfigured: { [weak view] device in view?.configured(device) }
         )
         view.attach(camera, box: CGSize(width: settings.scanBoxWidth, height: settings.scanBoxHeight))
         camera.start()
@@ -310,7 +305,9 @@ private struct CameraPreview: UIViewRepresentable {
     }
 }
 
-private final class PreviewView: UIView {
+/// The camera's preview; turns the centered scan box into the camera's ROI. Shared with
+/// the lot lab reader (`LotLabScannerView`).
+final class PreviewView: UIView {
     override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
     private var previewLayer: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
     private(set) var camera: CameraController?
@@ -322,6 +319,14 @@ private final class PreviewView: UIView {
         self.box = box
         previewLayer.session = camera.session
         previewLayer.videoGravity = .resizeAspectFill
+    }
+
+    /// A box that follows the view's size (the lot scanner's square): the ROI is recomputed on
+    /// the next layout so the area read matches the square drawn.
+    func setBox(_ size: CGSize) {
+        guard size != box else { return }
+        box = size
+        setNeedsLayout()
     }
 
     /// The session has its input (so the preview has a connection): rotate and set the ROI.

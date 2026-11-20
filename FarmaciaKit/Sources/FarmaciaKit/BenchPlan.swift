@@ -27,6 +27,14 @@ public struct BenchPlan: Equatable, Sendable, Codable {
         Mode(name: "Gran angular 4K", legacy: false, camera: .wide, preset: .hd4K),
     ]
 
+    /// The lot reader's plan (tasks/lot-ocr-lab-epic.md): `legacy` is VisionKit's live text,
+    /// the baseline; the rest are the lab reader at each resolution.
+    public static let lotStandard: [Mode] = [
+        Mode(name: "Lector de Apple", legacy: true, camera: .wide, preset: .hd1080),
+        Mode(name: "Laboratorio 1080p", legacy: false, camera: .wide, preset: .hd1080),
+        Mode(name: "Laboratorio 4K", legacy: false, camera: .wide, preset: .hd4K),
+    ]
+
     public let modes: [Mode]
     /// Scanner openings per mode.
     public let target: Int
@@ -41,6 +49,27 @@ public struct BenchPlan: Equatable, Sendable, Codable {
 
     /// The mode to scan with; nil once every mode is done.
     public var current: Mode? { modes.indices.contains(index) ? modes[index] : nil }
+
+    /// What a lab does after an opening: switch to a mode, and show a message once.
+    public struct Step: Equatable, Sendable {
+        public var switchTo: Mode?
+        public var announcement: String?
+    }
+
+    /// Counts one opening (`record()`) and words it for the scanner labs: a finished mode
+    /// names the next one, the last mode shows `finished`.
+    @discardableResult
+    public mutating func recordOpening(finished: String) -> Step {
+        let done = current
+        switch record() {
+        case .next(let mode):
+            return Step(switchTo: mode, announcement: "\(done?.name ?? "") listo (\(target) escaneos). Ahora: \(mode.name).")
+        case .finished:
+            return Step(switchTo: nil, announcement: finished)
+        case nil:
+            return Step(switchTo: nil, announcement: nil)
+        }
+    }
 
     /// Counts one scanner opening in the current mode; says when the mode changes.
     @discardableResult
