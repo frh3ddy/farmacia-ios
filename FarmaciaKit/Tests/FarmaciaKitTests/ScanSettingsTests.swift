@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import FarmaciaKit
 
@@ -37,5 +38,23 @@ struct ScanSettingsTests {
         s.preset = preset
         s.votesRequired = votes
         #expect(s.tag == expected)
+    }
+}
+
+/// The lot scanner's box is square (user, 2026-11-20): a lote and a caducidad sit in a block,
+/// not a strip like a barcode.
+extension ScanSettingsTests {
+    @Test("given a 390×844 preview, should make the box as tall as it is wide")
+    func squareBox() {
+        var s = ScanSettings()
+        s.scanBoxWidth = 0.7
+        let square = s.squareBox(in: CGSize(width: 390, height: 844))
+        #expect(square.scanBoxWidth == 0.7)
+        #expect(abs(square.scanBoxHeight * 844 - 0.7 * 390) < 0.001)
+    }
+
+    @Test("given a preview with no size yet, should keep the box as it is")
+    func squareBoxNoSize() {
+        #expect(ScanSettings().squareBox(in: .zero) == ScanSettings())
     }
 }

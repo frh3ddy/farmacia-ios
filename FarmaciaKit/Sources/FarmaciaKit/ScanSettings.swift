@@ -42,6 +42,14 @@ public struct ScanSettings: Equatable, Sendable {
 
     public init() {}
 
+    /// The same box made square on a preview of `size` (the lot scanner): as tall as it is wide.
+    public func squareBox(in size: CGSize) -> ScanSettings {
+        guard size.height > 0 else { return self }
+        var square = self
+        square.scanBoxHeight = scanBoxWidth * size.width / size.height
+        return square
+    }
+
     /// Labels metrics rows with the settings that produced them, e.g. "wide-1080-v2".
     public var tag: String {
         "\(camera.rawValue)-\(preset == .hd4K ? "4k" : "1080")-v\(votesRequired)"

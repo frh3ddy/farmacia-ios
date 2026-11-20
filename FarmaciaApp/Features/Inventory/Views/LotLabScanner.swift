@@ -17,10 +17,16 @@ final class LotLab {
     static let shared = LotLab()
 
     #if DEBUG
-    /// Our camera + filters instead of live text.
-    var useLab = false
-    /// Camera and box for the lab reader (the barcode defaults; 4K to try small print).
-    var settings = ScanSettings()
+    /// Our camera + filters instead of live text: on by default since bench 1 (18/20 dates in
+    /// 1.5 s vs 11/20 in 6.9 s); the switch stays to compare.
+    var useLab = true
+    /// Camera and box for the lab reader: 1080p (4K read no more in bench 1), a box 70% of the
+    /// preview's width, made square by `LotLabCamera`.
+    var settings: ScanSettings = {
+        var s = ScanSettings()
+        s.scanBoxWidth = 0.7
+        return s
+    }()
     /// How long the lab reader keeps counting after it fills the form (`LotReading`).
     let followUp: TimeInterval = 1
     /// The rows, and which one filled the form last (`LotScanLog`).
@@ -176,12 +182,14 @@ struct LotLabCamera: View {
     @State private var torch = false
 
     var body: some View {
-        LotCameraPreview(settings: settings, torch: torch, followUp: followUp,
-                         onAccept: onAccept, onFailure: onFailure, onMetrics: onMetrics)
-            .overlay { ScanBoxOverlay(width: settings.scanBoxWidth, height: settings.scanBoxHeight) }
-            .overlay {
-                // Just under the scan box: clear of the test badge on top and the found card below.
-                GeometryReader { geo in
+        GeometryReader { geo in
+            // Square: a lote and a caducidad sit in a block, not a strip like a barcode.
+            let box = settings.squareBox(in: geo.size)
+            LotCameraPreview(settings: box, torch: torch, followUp: followUp,
+                             onAccept: onAccept, onFailure: onFailure, onMetrics: onMetrics)
+                .overlay { ScanBoxOverlay(width: box.scanBoxWidth, height: box.scanBoxHeight) }
+                .overlay {
+                    // Just under the scan box: clear of the test badge on top and the found card below.
                     Button {
                         torch.toggle()
                     } label: {
@@ -192,9 +200,9 @@ struct LotLabCamera: View {
                     }
                     .foregroundStyle(torch ? .yellow : .white)
                     .accessibilityLabel(torch ? "Apagar linterna" : "Encender linterna")
-                    .position(x: geo.size.width / 2, y: geo.size.height * (0.5 + settings.scanBoxHeight / 2) + 52)
+                    .position(x: geo.size.width / 2, y: geo.size.height * (0.5 + box.scanBoxHeight / 2) + 52)
                 }
-            }
+        }
     }
 }
 

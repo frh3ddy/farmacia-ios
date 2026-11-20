@@ -49,6 +49,9 @@
   IMG_5844's NOV 27 (as NOY, so V←Y added); darkened reads IMG_5846's lote right at ~4K size
   (plain reads 26010513); 5843's SEB 27 reads as September. At 1080p size darkened wins no
   date on its own: watch its share in the next bench.
+- **Lab by default, square box (user, 2026-11-20):** the DEBUG switch wasn't kept, so every
+  launch went back to live text (no box, no torch). The lab is now the DEBUG default (bench 1),
+  at 1080p, with a square box 70% of the preview's width (`ScanSettings.squareBox`, tested).
 - **Month and year apart:** wide embossing at frame size reads "ENE" and "28" (or "2 8") as two
   lines (IMG_5846, 3 filters); a lone month-like word followed by a lone year is joined
   before parsing. Words still need to be a month or one misread away ("ONE" / "28" stays unread).
