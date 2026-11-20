@@ -25,7 +25,13 @@
     if another lote takes the lead; "Usar lote …" shows under the torch (tested).
   - GS1 DataMatrix: `LotTextReader.codes` finds codes in the scan box each pass and `LotScan`
     takes their exact lote and date (tested with a QR, since Core Image draws no DataMatrix).
-  - Live text stays as the DEBUG baseline. Gaps left: only Recibir marks `edited` (DEBUG).
+  - Live text stays as the DEBUG baseline. Gaps left: only Recibir marks `edited` (DEBUG); in
+    the DEBUG CSV a lote taken with "Usar lote" looks like a give-up that read a lote (lote, no
+    date): add a column if the bench needs to count them.
+  - /tdd-review (dev-f8): tests added that no lote is offered after a date or a stop, and that
+    `codes()` ignores code types it wasn't asked for (each one red on a deliberate break).
+    The Release wiring has no logic to pull out: followUp 0 is `LotReading` (tested), and the
+    tap passes on the lote `LotReading` offered.
 - **Bench 1 (iPhone 13 Pro, 2026-11-20, 20 products per mode):** dates read Apple 11/20
   (5/10 on the first 10 in order), lab 1080p 18/20, lab 4K 18/20 (same 18 dates); median time
   to the date 6.9 s / 1.5 s / 1.5 s. Lotes: the two lab rounds agree on 5 of 12. A different

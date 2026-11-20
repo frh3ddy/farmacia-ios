@@ -120,4 +120,19 @@ struct LotReadingTests {
         #expect(reading.pass(LotScan(lot: nil, expiry: jul28), filter: .plain, at: at(4))
                 == .accept(LotScan(lot: "A12345", expiry: jul28)))
     }
+
+    @Test("given a date already taken, should never offer a lote, even past the wait (review dev-f8)")
+    func noOfferAfterAccept() {
+        var reading = LotReading(today: today, openedAt: opened, followUp: 5, lotOfferAfter: 3)
+        reading.pass(LotScan(lot: nil, expiry: jul28), filter: .plain, at: at(1))
+        #expect(reading.pass(LotScan(lot: "A12345", expiry: nil), filter: .plain, at: at(3.5)) == nil)
+    }
+
+    @Test("given the scanner stopped, should never offer a lote from frames still in flight (review dev-f8)")
+    func noOfferAfterStop() {
+        var reading = LotReading(today: today, openedAt: opened, lotOfferAfter: 3)
+        reading.pass(LotScan(lot: "A12345", expiry: nil), filter: .plain, at: at(1))
+        reading.stop()
+        #expect(reading.pass(LotScan(lot: "A12345", expiry: nil), filter: .plain, at: at(3.5)) == nil)
+    }
 }

@@ -116,6 +116,11 @@ extension LotTextReaderTests {
         #expect(LotScan(lines: [], barcodes: codes, today: today) == LotScan(lot: "D26U908", expiry: MonthYear(year: 2028, month: 7)))
     }
 
+    @Test("given a QR and the default (DataMatrix only), should return nothing: other codes never feed the lote (review dev-f8)")
+    func otherSymbology() throws {
+        #expect(try reader.codes(qr("0107501234567890" + "17280731" + "10D26U908"), roi: whole).isEmpty)
+    }
+
     @Test("given the code outside the scan box, should return nothing")
     func codeOutsideBox() throws {
         let image = qr("0107501234567890" + "17280731" + "10D26U908")
