@@ -96,3 +96,29 @@ extension LotTextReaderTests {
         #expect(try scan("emboss-5843", .plain).expiry == MonthYear(year: 2027, month: 9))
     }
 }
+
+/// GS1 codes (DataMatrix on many boxes): exact lote and date, read alongside the text.
+/// Core Image draws no DataMatrix, so a QR carries the payload; the symbology is a parameter.
+extension LotTextReaderTests {
+    private func qr(_ payload: String, size: CGFloat = 600) -> CIImage {
+        let code = CIFilter(name: "CIQRCodeGenerator", parameters: ["inputMessage": Data(payload.utf8)])!.outputImage!
+        let scaled = code.transformed(by: .init(scaleX: size / code.extent.width, y: size / code.extent.height))
+        // A white margin, as on a box.
+        return scaled.transformed(by: .init(translationX: 100, y: 100))
+            .composited(over: CIImage(color: .white).cropped(to: CGRect(x: 0, y: 0, width: size + 200, height: size + 200)))
+    }
+
+    @Test("given a GS1 code in the box, should return its payload, which reads as lote and date")
+    func codeInBox() throws {
+        let payload = "0107501234567890" + "17280731" + "10D26U908"
+        let codes = try reader.codes(qr(payload), roi: whole, symbologies: [.qr])
+        #expect(codes == [payload])
+        #expect(LotScan(lines: [], barcodes: codes, today: today) == LotScan(lot: "D26U908", expiry: MonthYear(year: 2028, month: 7)))
+    }
+
+    @Test("given the code outside the scan box, should return nothing")
+    func codeOutsideBox() throws {
+        let image = qr("0107501234567890" + "17280731" + "10D26U908")
+        #expect(try reader.codes(image, roi: CGRect(x: 0, y: 0, width: 0.1, height: 0.1), symbologies: [.qr]).isEmpty)
+    }
+}

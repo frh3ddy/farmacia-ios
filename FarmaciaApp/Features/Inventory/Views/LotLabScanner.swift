@@ -103,8 +103,17 @@ final class LotLab {
         defaults.set(plan.flatMap { try? JSONEncoder().encode($0) }, forKey: Self.planKey)
     }
     #else
-    let useLab = false
+    /// The store version reads with the lab reader too (bench 1), without the DEBUG data:
+    /// no follow-up after a read, no metrics rows.
+    let useLab = true
+    let settings: ScanSettings = {
+        var s = ScanSettings()
+        s.scanBoxWidth = 0.7
+        return s
+    }()
+    let followUp: TimeInterval = 0
     private init() {}
+    func log(_ row: LotScanMetrics) {}
     func saved(lot: String?, expiry: MonthYear?) {}
     func formClosed() {}
     #endif
@@ -120,6 +129,7 @@ final class LotFrameHandler: CameraFrameHandler, @unchecked Sendable {
     /// Camera and resolution, for the row ("wide-hd4K").
     private let setup: String
     private let onAccept: @MainActor @Sendable (LotScan) -> Void
+    private let onOfferLot: @MainActor @Sendable (String) -> Void
     private let onMetrics: @MainActor @Sendable (LotScanMetrics) -> Void
     private var reading: LotReading
     private var pass = 0
@@ -127,10 +137,12 @@ final class LotFrameHandler: CameraFrameHandler, @unchecked Sendable {
 
     init(followUp: TimeInterval, setup: String,
          onAccept: @escaping @MainActor @Sendable (LotScan) -> Void,
+         onOfferLot: @escaping @MainActor @Sendable (String) -> Void,
          onMetrics: @escaping @MainActor @Sendable (LotScanMetrics) -> Void) {
         self.followUp = followUp
         self.setup = setup
         self.onAccept = onAccept
+        self.onOfferLot = onOfferLot
         self.onMetrics = onMetrics
         // Replaced in started(), so the times count from when the camera runs.
         reading = LotReading(today: MonthYear(date: .now), openedAt: .now, followUp: followUp)
@@ -146,10 +158,14 @@ final class LotFrameHandler: CameraFrameHandler, @unchecked Sendable {
         let filter = LotFilter.forPass(pass)
         pass += 1
         // ponytail: portrait only (.right); landscape would follow the device rotation.
-        let lines = (try? reader.read(CIImage(cvPixelBuffer: buffer), roi: roi, orientation: .right, filter: filter)) ?? []
-        let scan = LotScan(lines: lines, barcodes: [], today: MonthYear(date: .now))
+        let frame = CIImage(cvPixelBuffer: buffer)
+        let lines = (try? reader.read(frame, roi: roi, orientation: .right, filter: filter)) ?? []
+        // A GS1 DataMatrix gives the lote and date exactly (`LotScan` prefers it to the text).
+        let codes = (try? reader.codes(frame, roi: roi)) ?? []
+        let scan = LotScan(lines: lines, barcodes: codes, today: MonthYear(date: .now))
         switch reading.pass(scan, filter: filter, at: .now) {
         case .accept(let found): Task { @MainActor in onAccept(found) }
+        case .offerLot(let lot): Task { @MainActor in onOfferLot(lot) }
         case .done: log()
         case nil: break
         }
@@ -180,13 +196,16 @@ struct LotLabCamera: View {
     let onMetrics: @MainActor (LotScanMetrics) -> Void
 
     @State private var torch = false
+    /// A lote read with no date after a few seconds (`LotReading.offerLot`): tap to take it alone.
+    @State private var offeredLot: String?
 
     var body: some View {
         GeometryReader { geo in
             // Square: a lote and a caducidad sit in a block, not a strip like a barcode.
             let box = settings.squareBox(in: geo.size)
             LotCameraPreview(settings: box, torch: torch, followUp: followUp,
-                             onAccept: onAccept, onFailure: onFailure, onMetrics: onMetrics)
+                             onAccept: onAccept, onOfferLot: { offeredLot = $0 },
+                             onFailure: onFailure, onMetrics: onMetrics)
                 .overlay { ScanBoxOverlay(width: box.scanBoxWidth, height: box.scanBoxHeight) }
                 .overlay {
                     // Just under the scan box, clear of the test badge on top.
@@ -202,6 +221,17 @@ struct LotLabCamera: View {
                     .accessibilityLabel(torch ? "Apagar linterna" : "Encender linterna")
                     .position(x: geo.size.width / 2, y: geo.size.height * (0.5 + box.scanBoxHeight / 2) + 52)
                 }
+                .overlay {
+                    // Under the torch: no date read yet, but a lote was.
+                    if let offeredLot {
+                        Button("Usar lote \(offeredLot)") {
+                            onAccept(LotScan(lot: offeredLot, expiry: nil))
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .monospacedDigit()
+                        .position(x: geo.size.width / 2, y: geo.size.height * (0.5 + box.scanBoxHeight / 2) + 120)
+                    }
+                }
         }
     }
 }
@@ -211,6 +241,7 @@ private struct LotCameraPreview: UIViewRepresentable {
     let torch: Bool
     let followUp: TimeInterval
     let onAccept: @MainActor (LotScan) -> Void
+    let onOfferLot: @MainActor (String) -> Void
     let onFailure: @MainActor (CameraController.Failure) -> Void
     let onMetrics: @MainActor (LotScanMetrics) -> Void
 
@@ -222,6 +253,7 @@ private struct LotCameraPreview: UIViewRepresentable {
                 coordinator?.accepted = true
                 coordinator?.onAccept(scan)
             },
+            onOfferLot: { [weak coordinator = context.coordinator] lot in coordinator?.onOfferLot(lot) },
             // Strong on purpose: the row arrives after the follow-up, once the sheet is gone.
             onMetrics: { [onMetrics] row in onMetrics(row) }
         )
@@ -240,6 +272,7 @@ private struct LotCameraPreview: UIViewRepresentable {
         view.camera?.setTorch(torch)
         view.setBox(CGSize(width: settings.scanBoxWidth, height: settings.scanBoxHeight))
         context.coordinator.onAccept = onAccept
+        context.coordinator.onOfferLot = onOfferLot
         context.coordinator.onFailure = onFailure
     }
 
@@ -252,18 +285,21 @@ private struct LotCameraPreview: UIViewRepresentable {
         DispatchQueue.main.asyncAfter(deadline: .now() + coordinator.followUp) { camera.stop() }
     }
 
-    func makeCoordinator() -> Coordinator { Coordinator(onAccept: onAccept, onFailure: onFailure) }
+    func makeCoordinator() -> Coordinator { Coordinator(onAccept: onAccept, onOfferLot: onOfferLot, onFailure: onFailure) }
 
     @MainActor final class Coordinator {
         var onAccept: @MainActor (LotScan) -> Void
+        var onOfferLot: @MainActor (String) -> Void
         var onFailure: @MainActor (CameraController.Failure) -> Void
         var followUp: TimeInterval = 0
         /// A date was taken (the form was filled): the follow-up runs.
         var accepted = false
 
         init(onAccept: @escaping @MainActor (LotScan) -> Void,
+             onOfferLot: @escaping @MainActor (String) -> Void,
              onFailure: @escaping @MainActor (CameraController.Failure) -> Void) {
             self.onAccept = onAccept
+            self.onOfferLot = onOfferLot
             self.onFailure = onFailure
         }
     }

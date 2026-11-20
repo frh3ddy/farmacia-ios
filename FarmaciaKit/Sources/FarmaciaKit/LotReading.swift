@@ -15,6 +15,9 @@ public struct LotReading: Sendable {
         case accept(LotScan)
         /// The follow-up is over: stop the camera and log the row.
         case done
+        /// No date yet after `lotOfferAfter`, but this lote was read: offer to take it alone
+        /// (said again when another lote takes the lead).
+        case offerLot(String)
     }
 
     private var vote: LotVote
@@ -26,11 +29,15 @@ public struct LotReading: Sendable {
     private var sameDateReads = 0
     private var otherDateReads = 0
     private var finished = false
+    private let lotOfferAfter: TimeInterval
+    private var offeredLot: String?
 
-    public init(today: MonthYear, openedAt: Date, votesNeeded: Int = 1, followUp: TimeInterval = 1) {
+    public init(today: MonthYear, openedAt: Date, votesNeeded: Int = 1, followUp: TimeInterval = 1,
+                lotOfferAfter: TimeInterval = 3) {
         vote = LotVote(today: today, votesNeeded: votesNeeded)
         self.openedAt = openedAt
         self.followUp = followUp
+        self.lotOfferAfter = lotOfferAfter
     }
 
     /// A date was taken: the camera runs the follow-up; otherwise it stops at once on close.
@@ -56,7 +63,11 @@ public struct LotReading: Sendable {
         passes += 1
         if let lot = scan.lot, lotFirstRead[lot] == nil { lotFirstRead[lot] = now }
         vote.add(scan)
-        guard vote.expiry != nil else { return nil }
+        guard vote.expiry != nil else {
+            guard let lot = vote.lot, lot != offeredLot, now.timeIntervalSince(openedAt) >= lotOfferAfter else { return nil }
+            offeredLot = lot
+            return .offerLot(lot)
+        }
         let result = vote.scan
         accepted = (result, now, filter)
         return .accept(result)
