@@ -6,8 +6,8 @@ import Testing
 import FarmaciaKit
 @testable import FarmaciaScan
 
-/// Clean rendered labels, so the tests need no committed photos; real photos go through
-/// `lot-bench` (lot OCR lab epic, step 9).
+/// Clean rendered labels for the reader's mechanics; three small real crops (Photos/) for
+/// the embossing filters. Read rates over many photos go through `lot-bench` (epic, step 9).
 /// Serialized: each Vision read blocks its thread on Vision's own queue, and with one case per
 /// filter running in parallel they took every thread and deadlocked (the app reads one frame
 /// at a time, so it never does this).
@@ -65,5 +65,34 @@ struct LotTextReaderTests {
         let lines = try reader.read(label(["CAD: JUL 28"]), roi: CGRect(x: 0, y: 0, width: 1, height: 0.4),
                                     orientation: .up, filter: .plain)
         #expect(lines.isEmpty)
+    }
+}
+
+/// Blind-embossed boxes (no ink, only relief): label crops of photos IMG_5843, 5844 and 5846
+/// (2026-11-20), 5843 and 5844 cut at about the size a 1080p frame gives the label.
+extension LotTextReaderTests {
+    private func photo(_ name: String) throws -> CIImage {
+        let url = try #require(Bundle.module.url(forResource: name, withExtension: "jpg", subdirectory: "Photos"))
+        return try #require(CIImage(contentsOf: url))
+    }
+
+    private func scan(_ name: String, _ filter: LotFilter) throws -> LotScan {
+        LotScan(lines: try reader.read(photo(name), roi: whole, orientation: .up, filter: filter), barcodes: [], today: today)
+    }
+
+    @Test("given shallow embossing under flat light (IMG_5844), the deep relief filter should read NOV 27")
+    func deepRelief() throws {
+        #expect(try scan("emboss-5844", .deepRelief).expiry == MonthYear(year: 2027, month: 11))
+    }
+
+    /// The full-size crop (~4K frame size): plain reads 26010513, the other filters less.
+    @Test("given embossing whose 5s read as 3s (IMG_5846), the darkened filter should read the lote right")
+    func darkened() throws {
+        #expect(try reader.read(photo("emboss-5846"), roi: whole, orientation: .up, filter: .darkened).contains("26010515"))
+    }
+
+    @Test("given embossing with SEP read as SEB (IMG_5843), should read September 2027")
+    func sepAsSeb() throws {
+        #expect(try scan("emboss-5843", .plain).expiry == MonthYear(year: 2027, month: 9))
     }
 }

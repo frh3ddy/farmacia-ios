@@ -183,6 +183,28 @@ struct LotScanPhotoTests {
         #expect(scan([line]).expiry == MonthYear(year: 2031, month: 2))
     }
 
+    @Test("IMG_5846 at frame size: the month and its year read as two lines", arguments: [
+        (["26010313", "ENE", "28", "$158.00"], 1, 2028),
+        (["26010513", "NE", "ENE", "2 8", "$158.00"], 1, 2028),
+        (["CAD:", "FEB", "2031"], 2, 2031),
+        (["NOY", "27"], 11, 2027),
+    ])
+    func monthAndYearApart(lines: [String], month: Int, year: Int) {
+        #expect(scan(lines).expiry == MonthYear(year: year, month: month))
+    }
+
+    @Test("given a word on its own line before a year, or a month before a non-year, should read nothing")
+    func apartNotDates() {
+        #expect(scan(["ONE", "28"]).expiry == nil)
+        #expect(scan(["ENE", "285"]).expiry == nil)
+        #expect(scan(["ENE", "PRECIO 28"]).expiry == nil)
+    }
+
+    @Test("IMG_5844: blind embossing through the deep relief filter, NOV read as NOY")
+    func novAsNoy() {
+        #expect(scan(["182000", "NOY 27", "S8or0C"]).expiry == MonthYear(year: 2027, month: 11))
+    }
+
     @Test("IMG_5836: dot-matrix cap, NOV read as NOU")
     func novAsNou() {
         #expect(scan(["LOTE: E25N111", "CAD: NOU 27", "PRECIO:$25.00"]).expiry == MonthYear(year: 2027, month: 11))
