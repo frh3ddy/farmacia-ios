@@ -167,4 +167,44 @@ struct LotScanPhotoTests {
         #expect(s.lot == "D26U908")
         #expect(s.expiry == MonthYear(year: 2028, month: 7))
     }
+
+    // Photos 2026-11-20, missed by every reader on the phone; lines as the Mac's Vision reads them.
+
+    @Test("IMG_5837: \"CAD\" glued to MMYY, its zero read as O", arguments: ["CADO228", "CAD0228"])
+    func cadGluedToMonthYear(line: String) {
+        let s = scan(["Lote No.", "Fecha de", "Caducidad:", "0151885", line])
+        #expect(s.lot == "0151885")
+        #expect(s.expiry == MonthYear(year: 2028, month: 2))
+    }
+
+    @Test("IMG_5838: sparse dot-matrix, a 4-digit year, F read as P and B as D",
+          arguments: ["S5b: FEB 2031", "PEB 2031", "25D: FED 2031", "E50: FÉB 2031"])
+    func sparseDots(line: String) {
+        #expect(scan([line]).expiry == MonthYear(year: 2031, month: 2))
+    }
+
+    @Test("IMG_5836: dot-matrix cap, NOV read as NOU")
+    func novAsNou() {
+        #expect(scan(["LOTE: E25N111", "CAD: NOU 27", "PRECIO:$25.00"]).expiry == MonthYear(year: 2027, month: 11))
+        #expect(scan(["LOTE:", "E25N111", "CHD:", "NOU 27", "PRECIO:$25.00"]).expiry == MonthYear(year: 2027, month: 11))
+    }
+
+    @Test("IMG_5843: blind embossing, SEP read as SEB")
+    func sepAsSeb() {
+        let s = scan(["Lote:", "Caducidad:", "00240101", "SEB 27", "$550.00"])
+        #expect(s.expiry == MonthYear(year: 2027, month: 9))
+        #expect(s.lot == "00240101")
+    }
+
+    @Test("IMG_5841 and 5846: wide blind embossing, the year's digits read apart",
+          arguments: [["2600", "ENE 2 8", "$1,531.64"], ["26010513", "ENE 2 8", "$158.00"]])
+    func yearDigitsApart(lines: [String]) {
+        #expect(scan(lines).expiry == MonthYear(year: 2028, month: 1))
+    }
+
+    @Test("IMG_5839: embossed on a clear bottle, FAB day before the CAD month/year")
+    func clearBottle() {
+        let s = scan(["ОТЕ ЗА04602", "FAB 20101/26", "CAD 01/31"])
+        #expect(s.expiry == MonthYear(year: 2031, month: 1))
+    }
 }

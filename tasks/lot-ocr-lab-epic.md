@@ -22,7 +22,27 @@
 - Gaps in the lab reader (DEBUG only): no GS1 DataMatrix (live text still reads it); a lote alone
   can't be used with "Usar" (the card fills at the date); only Recibir marks `edited`; the camera
   runs 1 s after the sheet closes after a read (the follow-up).
-- Next: the device run (barcode check, then the lot plan), then the CSV.
+- **Bench 1 (iPhone 13 Pro, 2026-11-20, 20 products per mode):** dates read Apple 11/20
+  (5/10 on the first 10 in order), lab 1080p 18/20, lab 4K 18/20 (same 18 dates); median time
+  to the date 6.9 s / 1.5 s / 1.5 s. Lotes: the two lab rounds agree on 5 of 12. A different
+  date in the 1 s follow-up 3 times in 49, and the other round confirmed the accepted one, so
+  `votesNeeded` stays 1. 1080p = 4K, so 1080p. `edited` empty (nothing saved via Recibir).
+- **Misses fixed in the parser** (photos IMG_5837–5839, Mac Vision reads them): "CADO228" (MMYY
+  glued to CAD, 0 as O); "FEB 2031" with a 4-digit year read as PEB/FED (F←P, B←D added).
+  IMG_5838 only reads with a tight crop on the CAD line (the dots are far apart); IMG_5839
+  (embossed, clear bottle) and IMG_5845 (blind embossing under a big printed "C/10") stay
+  unread: the user types them.
+- **Slow reads** (IMG_5836, 5840–5844, 5846; mostly blind embossing): NOV as NOU and SEP as SEB
+  added (V←U, P←B). Spaced years ("ENE 2 8") already read. The same box reads with light from
+  the side (5841: 260085 ENE 28) and not under flat light (5842), so step 8's "Inclina la caja
+  hacia la luz" hint is the lever for embossing; 5840 and 5844 barely read even at 12 MP.
+- **Two more filters** (Mac test of 16 colour/contrast filters on the embossed photos):
+  `darkened` (gray, gamma 3) read IMG_5846 whole and 5841/5843's dates; `deepRelief` (unsharp
+  r25 ×6, contrast 3) read 5844's NOV 27, which nothing else did. Grayscale alone, single
+  channels, black/white thresholds, edge maps and high-pass added nothing. The cycle is now 6
+  filters (each one every ~0.6 s at 10 passes/s). The Vision tests run serialized (in
+  parallel they deadlocked on Vision's queue).
+- Next: the barcode check, then the push; then make the lab at 1080p the store reader.
 
 ## Why
 

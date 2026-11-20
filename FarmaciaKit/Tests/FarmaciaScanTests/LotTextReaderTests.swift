@@ -8,6 +8,10 @@ import FarmaciaKit
 
 /// Clean rendered labels, so the tests need no committed photos; real photos go through
 /// `lot-bench` (lot OCR lab epic, step 9).
+/// Serialized: each Vision read blocks its thread on Vision's own queue, and with one case per
+/// filter running in parallel they took every thread and deadlocked (the app reads one frame
+/// at a time, so it never does this).
+@Suite(.serialized)
 struct LotTextReaderTests {
     let reader = LotTextReader()
     let today = MonthYear(year: 2026, month: 11)

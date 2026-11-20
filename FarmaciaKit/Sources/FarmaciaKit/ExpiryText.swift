@@ -146,14 +146,15 @@ public enum ExpiryText {
     }
 
     /// A month's letter → what OCR read it as on dot-matrix and embossed labels (photos IMG_5794,
-    /// 5797: MAY as KAY/HAY/M4Y, JUL as IUL). Add pairs only from a seen misread.
+    /// 5797: MAY as KAY/HAY/M4Y, JUL as IUL; 5838: FEB as PEB/FED; 5836: NOV as NOU; 5843: SEP
+    /// as SEB). Add pairs only from a seen misread.
     private static let confusable: [Character: Set<Character>] = [
         "M": ["K", "H", "N"], "N": ["M"], "A": ["4"], "J": ["I", "1", "L"],
-        "O": ["0"], "S": ["5"], "B": ["8"],
+        "O": ["0"], "S": ["5"], "B": ["8", "D"], "F": ["P"], "V": ["U"], "P": ["B"],
     ]
 
-    /// A 3-character word with at least two letters, followed by a spaced 2-digit year.
-    private static let monthLike = regex(#"(?<![A-Z0-9])(?=[A-Z0-9]*[A-Z][A-Z0-9]*[A-Z])[A-Z0-9]{3}(?![A-Z0-9])(?=\s+\d{2}(?!\d))"#)
+    /// A 3-character word with at least two letters, followed by a spaced 2-digit or 20xx year.
+    private static let monthLike = regex(#"(?<![A-Z0-9])(?=[A-Z0-9]*[A-Z][A-Z0-9]*[A-Z])[A-Z0-9]{3}(?![A-Z0-9])(?=\s+(?:20)?\d{2}(?!\d))"#)
 
     /// A price is never a date ("$10.30" isn't October 2030); dot-matrix O read as a zero.
     private static let fixes: [(NSRegularExpression, String)] = [
@@ -161,6 +162,9 @@ public enum ExpiryText {
         (regex(#"(?<![A-Z])0CT"#), "OCT"),
         (regex(#"(?<![A-Z])AG0"#), "AGO"),
         (regex(#"(?<![A-Z])N0V"#), "NOV"),
+        // MMYY glued to its keyword ("CAD0228"), the month's zero often read as O ("CADO228").
+        (regex(#"\b(CAD|EXP|VTO|VENCE)[O0](\d)(\d{2})(?![\dA-Z])"#), "$1 0$2/$3"),
+        (regex(#"\b(CAD|EXP|VTO|VENCE)(1[0-2])(\d{2})(?![\dA-Z])"#), "$1 $2/$3"),
         // A lote glued to "AGO 27" ("254875AGO 27") is split off. Only before a spaced 2-digit
         // year, so a month inside a lote code ("A23DIC45") stays part of it.
         (regex(#"(\d)("# + monthNames + #")(?=\s+\d{2}(?!\d))"#), "$1 $2"),

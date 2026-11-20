@@ -61,6 +61,13 @@ public final class LotTextReader: @unchecked Sendable {
             return image.applyingFilter("CIColorControls", parameters: [kCIInputSaturationKey: 0])
                 .applyingFilter("CIUnsharpMask", parameters: [kCIInputRadiusKey: max(2, 15 * scale), kCIInputIntensityKey: 3])
                 .applyingFilter("CIColorControls", parameters: [kCIInputContrastKey: 2])
+        case .darkened:
+            return image.applyingFilter("CIColorControls", parameters: [kCIInputSaturationKey: 0])
+                .applyingFilter("CIGammaAdjust", parameters: ["inputPower": 3])
+        case .deepRelief:
+            return image.applyingFilter("CIColorControls", parameters: [kCIInputSaturationKey: 0])
+                .applyingFilter("CIUnsharpMask", parameters: [kCIInputRadiusKey: max(2, 25 * scale), kCIInputIntensityKey: 6])
+                .applyingFilter("CIColorControls", parameters: [kCIInputContrastKey: 3])
         }
     }
 }
