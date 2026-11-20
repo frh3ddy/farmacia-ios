@@ -1,9 +1,8 @@
 # Epic: faster, surer lot and expiry reading (lot OCR lab)
 
-**Status** (branch `feature/lot-ocr-lab`):
+**Status:**
 - Steps 1–5 (logic) ✅ on main: 23f1453 + 2358e81, merged as 5a82f79.
-- Steps 6–7 ✅ 37d17de + 230a3db (dev-f8 approved), not on main yet. **Before pushing:** a short
-  barcode check on the iPhone (the camera split touches the Release barcode scanner).
+- Steps 6–7, the automatic test, bench 1 and its fixes ✅ on main: merged as 1c56c0f.
   - `LotReading`: accept + 1 s follow-up + metrics row; tested.
   - `LotTextReader` (FarmaciaScan): crop, filter, upright, Vision text; tested on rendered labels,
     including both 90° turns.
@@ -19,10 +18,20 @@
   itself with an alert and a badge. Ajustes › Escáner › Prueba automática de lote. The CSV gains
   `setup` (e.g. wide-hd4K). Both labs share the tested `BenchPlan.recordOpening`; the lot
   scanner counts an opening when it closes, not when the row arrives 1 s later.
-- Gaps in the lab reader (DEBUG only): no GS1 DataMatrix (live text still reads it); **no lote
-  without a date**: it has no found card since 09d696f (it covered the torch), so a lote read
-  alone can't be taken, it's typed; only Recibir marks `edited`; the camera runs 1 s after the
-  sheet closes after a read (the follow-up).
+- **Lab reader in the store version** (branch `feature/lot-lab-release`, user 2026-11-20): Release
+  reads lots with the lab at 1080p and the square box, without the DEBUG data (no follow-up,
+  no metrics). Its two gaps closed first:
+  - A lote with no date: `LotReading` offers it (`.offerLot`) after 3 s without a date, again
+    if another lote takes the lead; "Usar lote …" shows under the torch (tested).
+  - GS1 DataMatrix: `LotTextReader.codes` finds codes in the scan box each pass and `LotScan`
+    takes their exact lote and date (tested with a QR, since Core Image draws no DataMatrix).
+  - Live text stays as the DEBUG baseline. Gaps left: only Recibir marks `edited` (DEBUG); in
+    the DEBUG CSV a lote taken with "Usar lote" looks like a give-up that read a lote (lote, no
+    date): add a column if the bench needs to count them.
+  - /tdd-review (dev-f8): tests added that no lote is offered after a date or a stop, and that
+    `codes()` ignores code types it wasn't asked for (each one red on a deliberate break).
+    The Release wiring has no logic to pull out: followUp 0 is `LotReading` (tested), and the
+    tap passes on the lote `LotReading` offered.
 - **Bench 1 (iPhone 13 Pro, 2026-11-20, 20 products per mode):** dates read Apple 11/20
   (5/10 on the first 10 in order), lab 1080p 18/20, lab 4K 18/20 (same 18 dates); median time
   to the date 6.9 s / 1.5 s / 1.5 s. Lotes: the two lab rounds agree on 5 of 12. A different
@@ -56,7 +65,7 @@
 - **Month and year apart:** wide embossing at frame size reads "ENE" and "28" (or "2 8") as two
   lines (IMG_5846, 3 filters); a lone month-like word followed by a lone year is joined
   before parsing. Words still need to be a month or one misread away ("ONE" / "28" stays unread).
-- Next: the barcode check, then the push; then make the lab at 1080p the store reader.
+- Next: a Release build on the iPhone (real boxes, a DataMatrix box, a lote-only box), review, push.
 
 ## Why
 

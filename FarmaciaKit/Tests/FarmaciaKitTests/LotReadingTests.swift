@@ -85,4 +85,54 @@ struct LotReadingTests {
         #expect(row.passes == 2)
         #expect(row.filter == nil)
     }
+
+    // A lote with no date (store version, no found card): offered after a wait, since the
+    // date usually comes within 2 s (bench 1 median 1.5 s) and is worth waiting for.
+
+    @Test("given a lote read and no date yet, should offer it only once the wait is over")
+    func offersLotAfterWait() {
+        var reading = LotReading(today: today, openedAt: opened, lotOfferAfter: 3)
+        #expect(reading.pass(LotScan(lot: "A12345", expiry: nil), filter: .plain, at: at(1)) == nil)
+        #expect(reading.pass(LotScan(lot: nil, expiry: nil), filter: .plain, at: at(2.9)) == nil)
+        #expect(reading.pass(LotScan(lot: nil, expiry: nil), filter: .plain, at: at(3)) == .offerLot("A12345"))
+        #expect(reading.pass(LotScan(lot: "A12345", expiry: nil), filter: .plain, at: at(3.5)) == nil)
+    }
+
+    @Test("given a different lote taking the lead after the offer, should offer the new one")
+    func offersNewLeader() {
+        var reading = LotReading(today: today, openedAt: opened, lotOfferAfter: 3)
+        reading.pass(LotScan(lot: "026U908", expiry: nil), filter: .plain, at: at(1))
+        #expect(reading.pass(LotScan(lot: nil, expiry: nil), filter: .plain, at: at(3)) == .offerLot("026U908"))
+        reading.pass(LotScan(lot: "D26U908", expiry: nil), filter: .plain, at: at(3.2))
+        #expect(reading.pass(LotScan(lot: "D26U908", expiry: nil), filter: .plain, at: at(3.4)) == .offerLot("D26U908"))
+    }
+
+    @Test("given no lote read, should never offer one")
+    func noLotNoOffer() {
+        var reading = LotReading(today: today, openedAt: opened, lotOfferAfter: 3)
+        #expect(reading.pass(LotScan(lot: nil, expiry: nil), filter: .plain, at: at(5)) == nil)
+    }
+
+    @Test("given a date after the lote was offered, should still accept it with the lote")
+    func dateAfterOffer() {
+        var reading = LotReading(today: today, openedAt: opened, lotOfferAfter: 3)
+        reading.pass(LotScan(lot: "A12345", expiry: nil), filter: .plain, at: at(3))
+        #expect(reading.pass(LotScan(lot: nil, expiry: jul28), filter: .plain, at: at(4))
+                == .accept(LotScan(lot: "A12345", expiry: jul28)))
+    }
+
+    @Test("given a date already taken, should never offer a lote, even past the wait (review dev-f8)")
+    func noOfferAfterAccept() {
+        var reading = LotReading(today: today, openedAt: opened, followUp: 5, lotOfferAfter: 3)
+        reading.pass(LotScan(lot: nil, expiry: jul28), filter: .plain, at: at(1))
+        #expect(reading.pass(LotScan(lot: "A12345", expiry: nil), filter: .plain, at: at(3.5)) == nil)
+    }
+
+    @Test("given the scanner stopped, should never offer a lote from frames still in flight (review dev-f8)")
+    func noOfferAfterStop() {
+        var reading = LotReading(today: today, openedAt: opened, lotOfferAfter: 3)
+        reading.pass(LotScan(lot: "A12345", expiry: nil), filter: .plain, at: at(1))
+        reading.stop()
+        #expect(reading.pass(LotScan(lot: "A12345", expiry: nil), filter: .plain, at: at(3.5)) == nil)
+    }
 }

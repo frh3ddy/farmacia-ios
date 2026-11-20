@@ -8,8 +8,9 @@ import FarmaciaKit
 // text, or exactly from a GS1 DataMatrix when the box has one (`LotScan`).
 // Once it has both it fills them in and closes; the user checks them in the
 // form. The caducidad is what matters: as soon as one is read it's taken (with
-// the lote if read too), since some boxes show it for a split second. With live
-// text a lote alone waits for "Usar"; the lab reader (DEBUG) has no card.
+// the lote if read too), since some boxes show it for a split second. The lab
+// reader (our camera + filters, the default since bench 1) offers a lote read alone
+// under the torch after a few seconds; live text (DEBUG baseline) has its card.
 
 struct LotScannerView: View {
     /// What was found; called once, then the sheet closes.
@@ -20,7 +21,7 @@ struct LotScannerView: View {
     /// The scanner keeps reporting until the sheet is gone: use it once.
     @State private var used = false
     @State private var openedAt = Date()
-    /// DEBUG: the lot OCR lab reader instead of live text (fixed when the sheet opens).
+    /// The lab reader (always in Release; DEBUG can switch to live text to compare).
     @State private var useLab = LotLab.shared.useLab
     @State private var cameraFailed = false
     @State private var usedAt = Date()
@@ -90,7 +91,6 @@ struct LotScannerView: View {
             ContentUnavailableView("No se pudo usar la cámara", systemImage: "camera",
                                    description: Text("Revisa el permiso de cámara en Ajustes."))
         } else if useLab {
-            #if DEBUG
             LotLabCamera(settings: LotLab.shared.settings, followUp: LotLab.shared.followUp) { found in
                 scan = found
                 use()
@@ -99,7 +99,6 @@ struct LotScannerView: View {
             } onMetrics: { row in
                 LotLab.shared.log(row)
             }
-            #endif
         } else {
             LiveTextScanner { lines, barcodes in
                 scan = LotScan(lines: lines, barcodes: barcodes, today: MonthYear(date: .now))

@@ -23,12 +23,7 @@ public final class LotTextReader: @unchecked Sendable {
 
     public func read(_ frame: CIImage, roi: CGRect, orientation: CGImagePropertyOrientation,
                      filter: LotFilter) throws -> [String] {
-        let e = frame.extent
-        let box = CGRect(x: e.minX + roi.minX * e.width, y: e.minY + roi.minY * e.height,
-                         width: roi.width * e.width, height: roi.height * e.height).integral
-        let crop = frame.cropped(to: box)
-        let image = Self.apply(filter, to: crop.transformed(by: .init(translationX: -box.minX, y: -box.minY)))
-            .oriented(orientation)
+        let image = Self.apply(filter, to: Self.crop(frame, to: roi)).oriented(orientation)
 
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
@@ -43,6 +38,24 @@ public final class LotTextReader: @unchecked Sendable {
             return (text, CGRect(x: b.minX, y: 1 - b.maxY, width: b.width, height: b.height))
         }
         return ReadingOrder.lines(blocks)
+    }
+
+    /// GS1 codes in the scan box (DataMatrix on many boxes): their payloads, for `LotScan`,
+    /// which reads the lote and date exactly. Barcodes read at any rotation, so no orientation.
+    public func codes(_ frame: CIImage, roi: CGRect,
+                      symbologies: [VNBarcodeSymbology] = [.dataMatrix]) throws -> [String] {
+        let request = VNDetectBarcodesRequest()
+        request.symbologies = symbologies
+        try VNImageRequestHandler(ciImage: Self.crop(frame, to: roi), options: [.ciContext: context]).perform([request])
+        return (request.results ?? []).compactMap(\.payloadStringValue)
+    }
+
+    /// The scan box cut out of the frame, moved to the origin.
+    private static func crop(_ frame: CIImage, to roi: CGRect) -> CIImage {
+        let e = frame.extent
+        let box = CGRect(x: e.minX + roi.minX * e.width, y: e.minY + roi.minY * e.height,
+                         width: roi.width * e.width, height: roi.height * e.height).integral
+        return frame.cropped(to: box).transformed(by: .init(translationX: -box.minX, y: -box.minY))
     }
 
     /// The Core Image recipe for each filter, sized to the crop (the Mac bench used 2–4 px
